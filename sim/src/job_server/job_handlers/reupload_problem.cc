@@ -1,5 +1,5 @@
-#include "reupload_problem.h"
-#include "../main.h"
+#include "reupload_problem.hh"
+#include "../main.hh"
 
 namespace job_handlers {
 
@@ -13,7 +13,7 @@ void ReuploadProblem::run() {
 		if (failed())
 			return;
 
-		if (need_model_solution_judge_report_) {
+		if (need_main_solution_judge_report_) {
 			bool canceled;
 			job_done(canceled);
 			if (not canceled) {
@@ -24,7 +24,7 @@ void ReuploadProblem::run() {
 		}
 	}
 
-	replace_problem_in_DB();
+	replace_problem_in_db();
 
 	submit_solutions();
 

@@ -79,7 +79,7 @@ constexpr const char* to_extension(SubmissionLanguage x) {
 	return "Unknown";
 }
 
-constexpr const char* to_MIME(SubmissionLanguage x) {
+constexpr const char* to_mime(SubmissionLanguage x) {
 	switch (x) {
 	case SubmissionLanguage::C11: return "text/x-csrc";
 	case SubmissionLanguage::CPP11:

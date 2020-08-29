@@ -13,7 +13,7 @@
 #include "users.hh"
 
 #include <iostream>
-#include <sim/mysql.h>
+#include <sim/mysql.hh>
 #include <simlib/config_file.hh>
 #include <simlib/defer.hh>
 #include <simlib/file_info.hh>

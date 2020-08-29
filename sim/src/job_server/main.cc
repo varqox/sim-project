@@ -1,4 +1,4 @@
-#include "dispatcher.h"
+#include "dispatcher.hh"
 
 #include <climits>
 #include <cstdint>
@@ -6,11 +6,11 @@
 #include <map>
 #include <poll.h>
 #include <queue>
-#include <sim/constants.h>
-#include <sim/jobs.h>
-#include <sim/mysql.h>
-#include <sim/submission.h>
-#include <simlib/avl_dict.hh>
+#include <set>
+#include <sim/constants.hh>
+#include <sim/jobs.hh>
+#include <sim/mysql.hh>
+#include <sim/submission.hh>
 #include <simlib/config_file.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/process.hh>
@@ -62,7 +62,7 @@ public:
 private:
 	struct ProblemJobs {
 		uint64_t problem_id;
-		AVLDictSet<Job> jobs;
+		std::set<Job> jobs;
 	};
 
 	struct ProblemInfo {
@@ -72,49 +72,51 @@ private:
 
 	struct {
 		// Strong assumption: any job must belong to AT MOST one problem
-		AVLDictMap<uint64_t, ProblemInfo> problem_info;
-		AVLDictMap<Job, ProblemJobs>
+		std::map<uint64_t, ProblemInfo> problem_info;
+		std::map<Job, ProblemJobs>
 		   queue; // (best problem's job => all jobs of the problem)
-		AVLDictMap<int64_t, ProblemJobs>
+		std::map<int64_t, ProblemJobs>
 		   locked_problems; // (problem_id  => (locks, problem's jobs))
 	} judge_jobs, problem_jobs; // (judge jobs - they need judge machines)
 
-	AVLDictSet<Job> other_jobs;
+	std::set<Job> other_jobs;
 
 	void dump_queues() const {
 		auto impl = [](auto&& job_category) {
 			if (job_category.problem_info.size()) {
 				stdlog("problem_info = {");
-				job_category.problem_info.for_each([](auto&& p) {
-					stdlog("   ", p.first, " => {", p.second.its_best_job.id,
-					       ", ", p.second.locks_no, "},");
-				});
+				for (auto&& [prob_id, pinfo] : job_category.problem_info) {
+					stdlog("   ", prob_id, " => {", pinfo.its_best_job.id,
+					       ", ", pinfo.locks_no, "},");
+				}
 				stdlog("}");
 			}
 
-			auto log_problem_job = [](auto&& logger, const ProblemJobs& pj) {
+			auto log_problem_jobs = [](auto&& logger, const ProblemJobs& pj) {
 				logger("{", pj.problem_id, ", {");
-				pj.jobs.for_each([&](Job j) { logger(j.id, " "); });
+				for (auto const& job : pj.jobs) {
+					logger(job.id, " ");
+				}
 				logger("}}");
 			};
 
 			if (job_category.queue.size()) {
 				stdlog("queue = {");
-				job_category.queue.for_each([&](auto&& p) {
-					auto tmplog = stdlog("   ", p.first.id, " => ");
-					log_problem_job(tmplog, p.second);
+				for (auto&& [job, problem_jobs] : job_category.queue) {
+					auto tmplog = stdlog("   ", job.id, " => ");
+					log_problem_jobs(tmplog, problem_jobs);
 					tmplog(',');
-				});
+				};
 				stdlog("}");
 			}
 
 			if (job_category.locked_problems.size()) {
 				stdlog("locked_problems = {");
-				job_category.locked_problems.for_each([&](auto&& p) {
-					auto tmplog = stdlog("   ", p.first, " => ");
-					log_problem_job(tmplog, p.second);
+				for (auto&& [prob_id, prob_jobs] : job_category.locked_problems) {
+					auto tmplog = stdlog("   ", prob_id, " => ");
+					log_problem_jobs(tmplog, prob_jobs);
 					tmplog(',');
-				});
+				};
 				stdlog("}");
 			}
 		};
@@ -154,13 +156,14 @@ public:
 				auto queue_job = [&jid, &priority](auto& job_category,
 				                                   uint64_t problem_id,
 				                                   bool locks_problem) {
-					auto pinfo = job_category.problem_info.find(problem_id);
+					auto it = job_category.problem_info.find(problem_id);
 					Job curr_job {jid, priority, locks_problem};
-					if (pinfo) {
-						Job best_job = pinfo->second.its_best_job;
+					if (it != job_category.problem_info.end()) {
+						ProblemInfo& pinfo = it->second;
+						Job best_job = pinfo.its_best_job;
 						// Get the problem's jobs (the problem may be locked)
 						auto& pjobs =
-						   (pinfo->second.locks_no > 0
+						   (pinfo.locks_no > 0
 						       ? job_category.locked_problems[problem_id]
 						       : job_category.queue[best_job]);
 						// Ensure field 'problem_id' is set properly (in case of
@@ -170,11 +173,13 @@ public:
 						pjobs.jobs.emplace(curr_job);
 						// Alter the problem's best job
 						if (curr_job < best_job) {
-							pinfo->second.its_best_job = curr_job;
+							pinfo.its_best_job = curr_job;
 							// Update queue (rekey ProblemJobs)
-							if (pinfo->second.locks_no == 0)
-								job_category.queue.alter_key(best_job,
-								                             curr_job);
+							if (pinfo.locks_no == 0) {
+								auto nh = job_category.queue.extract(best_job);
+								nh.key() = curr_job;
+								job_category.queue.insert(std::move(nh));
+							}
 						}
 
 					} else {
@@ -191,7 +196,7 @@ public:
 				case JT::JUDGE_SUBMISSION:
 				case JT::REJUDGE_SUBMISSION: {
 					auto opt = str2num<uint64_t>(intentional_unsafe_string_view(
-					   jobs::extractDumpedString(info)));
+					   jobs::extract_dumped_string(info)));
 					if (not opt)
 						THROW("Corrupted job's info field");
 
@@ -244,15 +249,16 @@ public:
 		DEBUG_JOB_SERVER(stdlog("DEBUG: Locking problem ", pid, "...");)
 
 		auto lock_impl = [&pid](auto& job_category) {
-			auto pinfo = job_category.problem_info.find(pid);
-			if (not pinfo)
-				pinfo = job_category.problem_info.insert(pid, {Job::least(), 0})
-				           .first;
+			auto it = job_category.problem_info.find(pid);
+			if (it == job_category.problem_info.end()) {
+				it = job_category.problem_info.try_emplace(pid, ProblemInfo{Job::least(), 0}).first;
+			}
 
-			if (++pinfo->second.locks_no == 1) {
-				auto pj = job_category.queue.find(pinfo->second.its_best_job);
-				if (pj) {
-					job_category.locked_problems.insert(pid,
+			auto& pinfo = it->second;
+			if (++pinfo.locks_no == 1) {
+				auto pj = job_category.queue.find(pinfo.its_best_job);
+				if (pj != job_category.queue.end()) {
+					job_category.locked_problems.try_emplace(pid,
 					                                    std::move(pj->second));
 					job_category.queue.erase(pj->first);
 				}
@@ -272,22 +278,24 @@ public:
 		DEBUG_JOB_SERVER(stdlog("DEBUG: Unlocking problem ", pid, "...");)
 
 		auto unlock_impl = [&pid, this](auto& job_category) {
-			auto pinfo = job_category.problem_info.find(pid);
-			if (not pinfo) {
+			auto it = job_category.problem_info.find(pid);
+			if (it == job_category.problem_info.end()) {
 				dump_queues();
 				THROW("BUG: unlocking problem that is not locked!");
 			}
 
-			if (--pinfo->second.locks_no == 0) {
+			auto& pinfo = it->second;
+			if (--pinfo.locks_no == 0) {
 				auto pl = job_category.locked_problems.find(pid);
-				if (pl) {
-					job_category.queue.insert(pinfo->second.its_best_job,
+				if (pl != job_category.locked_problems.end()) {
+					job_category.queue.try_emplace(pinfo.its_best_job,
 					                          std::move(pl->second));
 					job_category.locked_problems.erase(pl->first);
-				} else
+				} else {
 					job_category.problem_info.erase(pid); /* There are no jobs
 					    that belong to this problem and it is lock-free now, so
 					    its records can be safely removed */
+				}
 			}
 		};
 
@@ -327,12 +335,13 @@ public:
 		void was_passed() const {
 			STACK_UNWINDING_MARK;
 
-			auto pinfo = job_category->problem_info.find(problem_id);
-			if (not pinfo)
+			auto it = job_category->problem_info.find(problem_id);
+			if (it == job_category->problem_info.end())
 				return; // There is no such problem
 
-			Job best_job = pinfo->second.its_best_job;
-			auto& pjobs = (pinfo->second.locks_no > 0
+			auto& pinfo = it->second;
+			Job best_job = pinfo.its_best_job;
+			auto& pjobs = (pinfo.locks_no > 0
 			                  ? job_category->locked_problems[problem_id]
 			                  : job_category->queue[best_job]);
 
@@ -343,21 +352,24 @@ public:
 
 			if (pjobs.jobs.empty()) {
 				// That was the last job of it's problem
-				if (pinfo->second.locks_no == 0) {
+				if (pinfo.locks_no == 0) {
 					job_category->queue.erase(best_job);
 					job_category->problem_info.erase(problem_id);
 				} else { // Problem is locked
 					job_category->locked_problems.erase(problem_id);
-					pinfo->second.its_best_job = Job::least();
+					pinfo.its_best_job = Job::least();
 				}
 
 			} else {
 				// The best job of the extracted job's problem changed
-				Job new_best = *pjobs.jobs.front();
-				pinfo->second.its_best_job = new_best;
+				Job new_best = *pjobs.jobs.begin();
+				pinfo.its_best_job = new_best;
 				// Update queue (rekey ProblemJobs)
-				if (pinfo->second.locks_no == 0)
-					job_category->queue.alter_key(best_job, new_best);
+				if (pinfo.locks_no == 0) {
+					auto nh = job_category->queue.extract(best_job);
+					nh.key() = new_best;
+					job_category->queue.insert(std::move(nh));
+				}
 			}
 
 			if (job.locks_problem)
@@ -370,7 +382,7 @@ private:
 		if (job_category.queue.empty())
 			return {*this, job_category}; // No one left
 
-		auto it = job_category.queue.front();
+		auto it = job_category.queue.begin();
 		return {*this, job_category, it->first, it->second.problem_id};
 	}
 
@@ -417,7 +429,7 @@ public:
 		if (other_jobs.empty())
 			return {other_jobs}; // No one left
 
-		return {other_jobs, *other_jobs.front()};
+		return {other_jobs, *other_jobs.begin()};
 	}
 } jobs_queue;
 
@@ -540,7 +552,7 @@ private:
 
 			if (wp_.worker_dies_callback_) {
 				EventsQueue::register_event(
-				   make_shared_function([& callback = wp_.worker_dies_callback_,
+				   shared_function([&callback = wp_.worker_dies_callback_,
 				                         winfo = std::move(wi)]() mutable {
 					   callback(std::move(winfo));
 				   }));
@@ -830,7 +842,7 @@ static void sync_and_assign_jobs() {
 	}
 }
 
-static void eventsLoop() noexcept {
+static void events_loop() noexcept {
 	int inotify_fd = -1;
 	int inotify_wd = -1;
 
@@ -1039,7 +1051,7 @@ static void eventsLoop() noexcept {
 }
 
 // Clean up database
-static void cleanUpDB() {
+static void clean_up_db() {
 	STACK_UNWINDING_MARK;
 
 	try {
@@ -1110,7 +1122,7 @@ int main() {
 	try {
 		mysql = MySQL::make_conn_with_credential_file(".db.config");
 
-		cleanUpDB();
+		clean_up_db();
 
 		ConfigFile cf;
 		cf.add_vars("js_local_workers", "js_judge_workers");
@@ -1144,7 +1156,7 @@ int main() {
 		return 1;
 	}
 
-	eventsLoop();
+	events_loop();
 
 	return 0;
 }

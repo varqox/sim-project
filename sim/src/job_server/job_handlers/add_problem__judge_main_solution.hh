@@ -1,6 +1,6 @@
 #pragma once
 
-#include "add_or_reupload_problem__judge_model_solution_base.h"
+#include "add_or_reupload_problem__judge_main_solution_base.hh"
 
 namespace job_handlers {
 

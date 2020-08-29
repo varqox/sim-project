@@ -1,6 +1,6 @@
 #pragma once
 
-#include "judge_base.h"
+#include "judge_base.hh"
 
 namespace job_handlers {
 

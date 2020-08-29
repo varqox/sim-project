@@ -5,7 +5,7 @@ DESTDIR := build
 MYSQL_CONFIG := $(shell which mariadb_config 2> /dev/null || which mysql_config 2> /dev/null)
 
 define SIM_FLAGS =
-INTERNAL_EXTRA_CXX_FLAGS = -I '$(CURDIR)/src/include' -isystem '$(CURDIR)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
+INTERNAL_EXTRA_CXX_FLAGS = -I '$(CURDIR)/src/include' -I '$(CURDIR)/src/lib/simlib/include' -isystem '$(CURDIR)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
 INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs) -lsupc++ -pthread -lrt -lzip -lseccomp
 endef
 
@@ -122,7 +122,7 @@ $(eval $(call add_static_library, src/lib/sqlite3.a, $(SQLITE_FLAGS), \
 
 $(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
 	src/job_server/dispatcher.cc \
-	src/job_server/job_handlers/add_or_reupload_problem__judge_model_solution_base.cc \
+	src/job_server/job_handlers/add_or_reupload_problem__judge_main_solution_base.cc \
 	src/job_server/job_handlers/add_or_reupload_problem_base.cc \
 	src/job_server/job_handlers/add_problem.cc \
 	src/job_server/job_handlers/change_problem_statement.cc \

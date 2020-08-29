@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>

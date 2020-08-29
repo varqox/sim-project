@@ -1,7 +1,7 @@
 #pragma once
 
-#include "add_or_reupload_problem_base.h"
-#include "reset_time_limits_in_problem_package_base.h"
+#include "add_or_reupload_problem_base.hh"
+#include "reset_time_limits_in_problem_package_base.hh"
 
 namespace job_handlers {
 

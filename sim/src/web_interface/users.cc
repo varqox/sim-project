@@ -1,8 +1,8 @@
-#include "sim.h"
+#include "sim.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/user.hh>
-#include <sim/utilities.h>
+#include <sim/utilities.hh>
 #include <simlib/random.hh>
 #include <simlib/sha.hh>
 #include <simlib/string_transform.hh>
@@ -150,7 +150,7 @@ void Sim::login() {
 		InplaceBuff<4096> password;
 		// Validate all fields
 		form_validate_not_blank(
-		   username, "username", "Username", isUsername,
+		   username, "username", "Username", is_username,
 		   "Username can only consist of characters [a-zA-Z0-9_-]",
 		   decltype(User::username)::max_len);
 
@@ -244,7 +244,7 @@ void Sim::sign_up() {
 	if (request.method == server::HttpRequest::POST) {
 		// Validate all fields
 		form_validate_not_blank(
-		   username, "username", "Username", isUsername,
+		   username, "username", "Username", is_username,
 		   "Username can only consist of characters [a-zA-Z0-9_-]",
 		   username.max_len);
 		form_validate_not_blank(first_name, "first_name", "First Name",

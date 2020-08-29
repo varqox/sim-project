@@ -1,6 +1,6 @@
-#include "add_or_reupload_problem_base.h"
-#include "../main.h"
-#include "sim/constants.h"
+#include "add_or_reupload_problem_base.hh"
+#include "../main.hh"
+#include "sim/constants.hh"
 
 #include <sim/problem.hh>
 #include <simlib/libzip.hh>
@@ -10,7 +10,7 @@ using sim::Problem;
 
 namespace job_handlers {
 
-void AddOrReuploadProblemBase::load_job_log_from_DB() {
+void AddOrReuploadProblemBase::load_job_log_from_db() {
 	STACK_UNWINDING_MARK;
 	auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
 	stmt.bind_and_execute(job_id_);
@@ -49,12 +49,14 @@ void AddOrReuploadProblemBase::build_package() {
 
 	// Set Conver options
 	sim::Conver::Options copts;
-	copts.name = (info_.name.empty() ? std::nullopt : std::optional(info_.name));
-	copts.label = (info_.label.empty() ? std::nullopt : std::optional(info_.label));
+	copts.name =
+	   (info_.name.empty() ? std::nullopt : std::optional(info_.name));
+	copts.label =
+	   (info_.label.empty() ? std::nullopt : std::optional(info_.label));
 	copts.memory_limit = info_.memory_limit;
 	copts.global_time_limit = info_.global_time_limit;
 	copts.max_time_limit = MAX_TIME_LIMIT;
-	copts.reset_time_limits_using_model_solution = info_.reset_time_limits;
+	copts.reset_time_limits_using_main_solution = info_.reset_time_limits;
 	copts.ignore_simfile = info_.ignore_simfile;
 	copts.seek_for_new_tests = info_.seek_for_new_tests;
 	copts.reset_scoring = info_.reset_scoring;
@@ -95,7 +97,7 @@ void AddOrReuploadProblemBase::build_package() {
 	{
 		ZipFile src_zip(source_package, ZIP_RDONLY);
 		simfile_str_ = cr.simfile.dump();
-		auto simfile_path = concat(cr.pkg_master_dir, "Simfile");
+		auto simfile_path = concat(cr.pkg_main_dir, "Simfile");
 
 		package_file_remover_.reset(tmp_package);
 		ZipFile dest_zip(tmp_package, ZIP_CREATE | ZIP_TRUNCATE);
@@ -116,10 +118,10 @@ void AddOrReuploadProblemBase::build_package() {
 
 	switch (cr.status) {
 	case sim::Conver::Status::COMPLETE:
-		need_model_solution_judge_report_ = false;
+		need_main_solution_judge_report_ = false;
 		return;
 	case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT:
-		need_model_solution_judge_report_ = true;
+		need_main_solution_judge_report_ = true;
 		return;
 	}
 }
@@ -131,7 +133,7 @@ void AddOrReuploadProblemBase::job_done(bool& job_was_canceled) {
 
 	EnumVal<JobStatus> status = JobStatus::DONE;
 	EnumVal<JobType> type = job_type_;
-	if (need_model_solution_judge_report_) {
+	if (need_main_solution_judge_report_) {
 		status = JobStatus::PENDING;
 		switch (job_type_) {
 		case JobType::ADD_PROBLEM:
@@ -198,9 +200,9 @@ void AddOrReuploadProblemBase::open_package() {
 	assert_transaction_is_open();
 
 	zip_ = ZipFile(internal_file_path(tmp_file_id_.value()), ZIP_RDONLY);
-	master_dir_ = sim::zip_package_master_dir(zip_);
+	main_dir_ = sim::zip_package_main_dir(zip_);
 	simfile_str_ =
-	   zip_.extract_to_str(zip_.get_index(concat(master_dir_, "Simfile")));
+	   zip_.extract_to_str(zip_.get_index(concat(main_dir_, "Simfile")));
 
 	simfile_ = sim::Simfile(simfile_str_);
 	simfile_.load_name();
@@ -210,7 +212,7 @@ void AddOrReuploadProblemBase::open_package() {
 	current_date_ = mysql_date();
 }
 
-void AddOrReuploadProblemBase::add_problem_to_DB() {
+void AddOrReuploadProblemBase::add_problem_to_db() {
 	STACK_UNWINDING_MARK;
 	if (failed())
 		return;
@@ -229,7 +231,7 @@ void AddOrReuploadProblemBase::add_problem_to_DB() {
 	problem_id_ = stmt.insert_id();
 }
 
-void AddOrReuploadProblemBase::replace_problem_in_DB() {
+void AddOrReuploadProblemBase::replace_problem_in_db() {
 	STACK_UNWINDING_MARK;
 	if (failed())
 		return;
@@ -308,7 +310,7 @@ void AddOrReuploadProblemBase::submit_solutions() {
 		   EnumVal(SubmissionStatus::PENDING), current_date_, zero_date);
 
 		// Save the submission source code
-		zip_.extract_to_file(zip_.get_index(concat(master_dir_, solution)),
+		zip_.extract_to_file(zip_.get_index(concat(main_dir_, solution)),
 		                     internal_file_path(file_id), S_0600);
 	}
 
@@ -323,7 +325,7 @@ void AddOrReuploadProblemBase::submit_solutions() {
 	   .bind_and_execute(EnumVal(JobType::JUDGE_SUBMISSION),
 	                     priority(JobType::JUDGE_SUBMISSION) + 1,
 	                     EnumVal(JobStatus::PENDING), current_date_,
-	                     jobs::dumpString(intentional_unsafe_string_view(
+	                     jobs::dump_string(intentional_unsafe_string_view(
 	                        to_string(problem_id_.value()))),
 	                     problem_id_.value(),
 	                     EnumVal(SubmissionType::PROBLEM_SOLUTION));

@@ -1,5 +1,5 @@
-#include <sim/constants.h>
-#include <sim/mysql.h>
+#include <sim/constants.hh>
+#include <sim/mysql.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/sim/problem_package.hh>
@@ -87,7 +87,7 @@ int main2(int argc, char** argv) {
 		// Remove internal files that do not have an entry in internal_files
 		sim::PackageContents fc;
 		fc.load_from_directory(INTERNAL_FILES_DIR);
-		AVLDictSet<std::string> orphaned_files;
+		std::set<std::string, std::less<>> orphaned_files;
 		fc.for_each_with_prefix("", [&](StringView file) {
 			orphaned_files.emplace(file.to_string());
 		});
@@ -97,16 +97,16 @@ int main2(int argc, char** argv) {
 		InplaceBuff<32> file_id;
 		stmt.res_bind_all(file_id);
 		while (stmt.next())
-			orphaned_files.erase(file_id);
+			orphaned_files.erase(orphaned_files.find(file_id));
 
 		// Remove orphaned files that are older than 2h (not to delete files
 		// that are just created but not committed)
-		orphaned_files.for_each([&](std::string const& file) {
+		for (const std::string& file : orphaned_files) {
 			struct stat64 st;
 			auto file_path = concat(INTERNAL_FILES_DIR, file);
 			if (stat64(file_path.to_cstr().data(), &st)) {
 				if (errno == ENOENT)
-					return;
+					break;
 
 				THROW("stat64", errmsg());
 			}
@@ -115,7 +115,7 @@ int main2(int argc, char** argv) {
 				stdlog("Deleting: ", file);
 				(void)unlink(file_path);
 			}
-		});
+		}
 
 		transaction.commit();
 	}

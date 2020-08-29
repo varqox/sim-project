@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <sim/random.hh>
 #include <simlib/debug.hh>
@@ -12,7 +12,7 @@ bool Sim::session_open() {
 	if (session_is_open)
 		return true;
 
-	session_id = request.getCookie("session");
+	session_id = request.get_cookie("session");
 	// Cookie does not exist (or has no value)
 	if (session_id.size == 0)
 		return false;
@@ -35,7 +35,7 @@ bool Sim::session_open() {
 		return (session_is_open = true);
 	}
 
-	resp.setCookie("session", "", 0); // Delete cookie
+	resp.set_cookie("session", "", 0); // Delete cookie
 	return false;
 }
 
@@ -68,13 +68,13 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	} while (stmt.affected_rows() == 0);
 
 	if (temporary_session)
-		exp_time = -1; // -1 causes setCookie() to not set Expire= field
+		exp_time = -1; // -1 causes set_cookie() to not set Expire= field
 
 	// There is no better method than looking on the referer
 	bool is_https = has_prefix(request.headers["referer"], "https://");
-	resp.setCookie("csrf_token", session_csrf_token.to_string(), exp_time, "/",
+	resp.set_cookie("csrf_token", session_csrf_token.to_string(), exp_time, "/",
 	               "", false, is_https);
-	resp.setCookie("session", session_id.to_string(), exp_time, "/", "", true,
+	resp.set_cookie("session", session_id.to_string(), exp_time, "/", "", true,
 	               is_https);
 	session_is_open = true;
 }
@@ -92,8 +92,8 @@ void Sim::session_destroy() {
 		ERRLOG_CATCH(e);
 	}
 
-	resp.setCookie("csrf_token", "", 0); // Delete cookie
-	resp.setCookie("session", "", 0); // Delete cookie
+	resp.set_cookie("csrf_token", "", 0); // Delete cookie
+	resp.set_cookie("session", "", 0); // Delete cookie
 	session_is_open = false;
 }
 

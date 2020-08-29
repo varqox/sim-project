@@ -1,13 +1,13 @@
 #pragma once
 
-#include "http_request.h"
-#include "http_response.h"
+#include "http_request.hh"
+#include "http_response.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/contest_file_permissions.hh>
 #include <sim/contest_permissions.hh>
-#include <sim/cpp_syntax_highlighter.h>
-#include <sim/mysql.h>
+#include <sim/cpp_syntax_highlighter.hh>
+#include <sim/mysql.hh>
 #include <sim/problem_permissions.hh>
 #include <sim/user.hh>
 #include <simlib/http/response.hh>
@@ -358,21 +358,20 @@ class Sim final {
 	                   StringView name_to_print, size_t max_size = -1) {
 		STACK_UNWINDING_MARK;
 
-		auto const& form = request.form_data.other;
-		auto it = form.find(name);
-		if (not it) {
+		auto val_opt = request.form_data.get_opt(name);
+		if (not val_opt) {
 			form_validation_error = true;
 			add_notification("error", "Invalid ", html_escape(name_to_print));
 			return false;
 
-		} else if (it->second.size() > max_size) {
+		} else if (val_opt->size() > max_size) {
 			form_validation_error = true;
 			add_notification("error", html_escape(name_to_print),
 			                 " cannot be longer than ", max_size, " bytes");
 			return false;
 		}
 
-		var = it->second;
+		var = *val_opt;
 		return true;
 	}
 
@@ -409,27 +408,26 @@ class Sim final {
 	                             size_t max_size = -1) {
 		STACK_UNWINDING_MARK;
 
-		auto const& form = request.form_data.other;
-		auto it = form.find(name);
-		if (not it) {
+		auto val_opt = request.form_data.get_opt(name);
+		if (not val_opt) {
 			form_validation_error = true;
 			add_notification("error", "Invalid ", html_escape(name_to_print));
 			return false;
 
-		} else if (it->second.empty()) {
+		} else if (val_opt->empty()) {
 			form_validation_error = true;
 			add_notification("error", html_escape(name_to_print),
 			                 " cannot be blank");
 			return false;
 
-		} else if (it->second.size() > max_size) {
+		} else if (val_opt->size() > max_size) {
 			form_validation_error = true;
 			add_notification("error", html_escape(name_to_print),
 			                 " cannot be longer than ", max_size, " bytes");
 			return false;
 		}
 
-		var = it->second;
+		var = *val_opt;
 		return true;
 	}
 
@@ -468,9 +466,9 @@ class Sim final {
 	                                       StringView name_to_print) {
 		STACK_UNWINDING_MARK;
 
-		auto const& form = request.form_data.files;
-		auto it = form.find(name);
-		if (not it) {
+		auto const& files = request.form_data.files;
+		auto it = files.find(name);
+		if (it == files.end()) {
 			form_validation_error = true;
 			add_notification("error", html_escape(name_to_print),
 			                 " has to be submitted as a file");

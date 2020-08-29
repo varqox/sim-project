@@ -1,9 +1,9 @@
-#include "merge_problems.h"
-#include "../main.h"
+#include "merge_problems.hh"
+#include "../main.hh"
 
 #include <deque>
-#include <sim/constants.h>
-#include <sim/submission.h>
+#include <sim/constants.hh>
+#include <sim/submission.hh>
 
 namespace job_handlers {
 
@@ -106,7 +106,7 @@ void MergeProblems::run_impl() {
 		   .bind_and_execute(EnumVal(JobStatus::PENDING),
 		                     priority(JobType::REJUDGE_SUBMISSION),
 		                     EnumVal(JobType::REJUDGE_SUBMISSION), mysql_date(),
-		                     jobs::dumpString(intentional_unsafe_string_view(
+		                     jobs::dump_string(intentional_unsafe_string_view(
 		                        to_string(info_.target_problem_id))),
 		                     donor_problem_id_);
 	}

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "job_handler.h"
+#include "job_handler.hh"
 
-#include <sim/jobs.h>
+#include <sim/jobs.hh>
 
 namespace job_handlers {
 

@@ -1,5 +1,5 @@
-#include <sim/constants.h>
-#include <sim/jobs.h>
+#include <sim/constants.hh>
+#include <sim/jobs.hh>
 #include <simlib/time.hh>
 
 namespace jobs {

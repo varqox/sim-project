@@ -36,8 +36,8 @@ public:
 
 	~Statement() { sqlite3_finalize(stmt); }
 
-	int prepare(sqlite3* db, CStringView zSql) {
-		return sqlite3_prepare_v2(db, zSql.data(), zSql.size() + 1, &stmt,
+	int prepare(sqlite3* db, CStringView sql) {
+		return sqlite3_prepare_v2(db, sql.data(), sql.size() + 1, &stmt,
 		                          nullptr);
 	}
 
@@ -53,7 +53,7 @@ public:
 
 	int reset() noexcept { return sqlite3_reset(stmt); }
 
-	int clearBindings() noexcept { return sqlite3_clear_bindings(stmt); }
+	int clear_bindings() noexcept { return sqlite3_clear_bindings(stmt); }
 
 	// TODO: this is buggy, no time now to fix it
 	// int finalize() noexcept {
@@ -63,72 +63,72 @@ public:
 	// }
 
 	// Bind data (throwing)
-	void bindNull(int iCol) {
-		if (sqlite3_bind_null(stmt, iCol))
+	void bind_null(int i_col) {
+		if (sqlite3_bind_null(stmt, i_col))
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt), "sqlite3_bind_null()");
 	}
 
-	void bindText(int iCol, StringView val, void (*func)(void*)) {
-		if (sqlite3_bind_text(stmt, iCol, val.data(), val.size(), func))
+	void bind_text(int i_col, StringView val, void (*func)(void*)) {
+		if (sqlite3_bind_text(stmt, i_col, val.data(), val.size(), func))
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt), "sqlite3_bind_text()");
 	}
 
-	void bindInt(int iCol, int val) {
-		if (sqlite3_bind_int(stmt, iCol, val))
+	void bind_int(int i_col, int val) {
+		if (sqlite3_bind_int(stmt, i_col, val))
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt), "sqlite3_bind_int()");
 	}
 
-	void bindInt64(int iCol, sqlite3_int64 val) {
-		if (sqlite3_bind_int64(stmt, iCol, val))
+	void bind_int64(int i_col, sqlite3_int64 val) {
+		if (sqlite3_bind_int64(stmt, i_col, val))
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt), "sqlite3_bind_int64()");
 	}
 
-	void bindDouble(int iCol, double val) {
-		if (sqlite3_bind_double(stmt, iCol, val))
+	void bind_double(int i_col, double val) {
+		if (sqlite3_bind_double(stmt, i_col, val))
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt),
 			                   "sqlite3_bind_double()");
 	}
 
 	// Bind data (nothrow)
-	int bindNull_nothrow(int iCol) noexcept {
-		return sqlite3_bind_null(stmt, iCol);
+	int bind_null_nothrow(int i_col) noexcept {
+		return sqlite3_bind_null(stmt, i_col);
 	}
 
-	int bindText_nothrow(int iCol, StringView val,
+	int bind_text_nothrow(int i_col, StringView val,
 	                     void (*func)(void*)) noexcept {
-		return sqlite3_bind_text(stmt, iCol, val.data(), val.size(), func);
+		return sqlite3_bind_text(stmt, i_col, val.data(), val.size(), func);
 	}
 
-	int bindInt_nothrow(int iCol, int val) noexcept {
-		return sqlite3_bind_int(stmt, iCol, val);
+	int bind_int_nothrow(int i_col, int val) noexcept {
+		return sqlite3_bind_int(stmt, i_col, val);
 	}
 
-	int bindInt64_nothrow(int iCol, sqlite3_int64 val) noexcept {
-		return sqlite3_bind_int64(stmt, iCol, val);
+	int bind_int64_nothrow(int i_col, sqlite3_int64 val) noexcept {
+		return sqlite3_bind_int64(stmt, i_col, val);
 	}
 
-	int bindDouble_nothrow(int iCol, double val) noexcept {
-		return sqlite3_bind_double(stmt, iCol, val);
+	int bind_double_nothrow(int i_col, double val) noexcept {
+		return sqlite3_bind_double(stmt, i_col, val);
 	}
 
 	// Retrieve data
-	const char* getCStr(int iCol) noexcept {
-		return (const char*)sqlite3_column_text(stmt, iCol);
+	const char* get_c_str(int i_col) noexcept {
+		return (const char*)sqlite3_column_text(stmt, i_col);
 	}
 
-	CStringView getStr(int iCol) noexcept {
-		return CStringView((const char*)sqlite3_column_text(stmt, iCol),
-		                   sqlite3_column_bytes(stmt, iCol));
+	CStringView get_str(int i_col) noexcept {
+		return CStringView((const char*)sqlite3_column_text(stmt, i_col),
+		                   sqlite3_column_bytes(stmt, i_col));
 	}
 
-	int getInt(int iCol) noexcept { return sqlite3_column_int(stmt, iCol); }
+	int get_int(int i_col) noexcept { return sqlite3_column_int(stmt, i_col); }
 
-	auto getInt64(int iCol) noexcept {
-		return sqlite3_column_int64(stmt, iCol);
+	auto get_int64(int i_col) noexcept {
+		return sqlite3_column_int64(stmt, i_col);
 	}
 
-	double getDouble(int iCol) noexcept {
-		return sqlite3_column_double(stmt, iCol);
+	double get_double(int i_col) noexcept {
+		return sqlite3_column_double(stmt, i_col);
 	}
 
 	friend class Connection;
@@ -140,8 +140,8 @@ class Connection {
 public:
 	Connection() noexcept = default;
 
-	Connection(FilePath file, int flags, const char* zVfs = nullptr) {
-		if (sqlite3_open_v2(file, &db, flags, zVfs))
+	Connection(FilePath file, int flags, const char* z_vfs = nullptr) {
+		if (sqlite3_open_v2(file, &db, flags, z_vfs))
 			THROW_SQLITE_ERROR(db, "sqlite3_open_v2()");
 	}
 
@@ -169,14 +169,14 @@ public:
 		db = nullptr;
 	}
 
-	void execute(CStringView zSql) {
-		if (sqlite3_exec(db, zSql.data(), nullptr, nullptr, nullptr))
+	void execute(CStringView sql) {
+		if (sqlite3_exec(db, sql.data(), nullptr, nullptr, nullptr))
 			THROW_SQLITE_ERROR(db, "sqlite3_exec()");
 	}
 
-	Statement prepare(CStringView zSql) {
+	Statement prepare(CStringView sql) {
 		sqlite3_stmt* stmt;
-		if (sqlite3_prepare_v2(db, zSql.data(), zSql.size() + 1, &stmt,
+		if (sqlite3_prepare_v2(db, sql.data(), sql.size() + 1, &stmt,
 		                       nullptr)) {
 			THROW_SQLITE_ERROR(db, "sqlite3_prepare_v2()");
 		}

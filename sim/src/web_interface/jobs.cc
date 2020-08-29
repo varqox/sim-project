@@ -1,6 +1,6 @@
-#include "sim.h"
+#include "sim.hh"
 
-#include <sim/jobs.h>
+#include <sim/jobs.hh>
 #include <sim/problem_permissions.hh>
 
 using sim::Problem;

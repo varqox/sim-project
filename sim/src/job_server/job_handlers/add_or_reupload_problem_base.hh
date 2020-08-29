@@ -1,8 +1,8 @@
 #pragma once
 
-#include "job_handler.h"
+#include "job_handler.hh"
 
-#include <sim/jobs.h>
+#include <sim/jobs.hh>
 #include <simlib/libzip.hh>
 
 namespace job_handlers {
@@ -17,17 +17,17 @@ protected:
 	std::optional<uint64_t> tmp_file_id_;
 	std::optional<uint64_t> problem_id_;
 	// Internal state
-	bool need_model_solution_judge_report_ = false;
+	bool need_main_solution_judge_report_ = false;
 
 private:
 	bool replace_db_job_log_ = false;
 	ZipFile zip_;
-	std::string master_dir_;
+	std::string main_dir_;
 	std::string current_date_;
 	std::string simfile_str_;
 	sim::Simfile simfile_;
 
-	void load_job_log_from_DB();
+	void load_job_log_from_db();
 
 protected:
 	AddOrReuploadProblemBase(JobType job_type, StringView job_creator,
@@ -39,13 +39,13 @@ protected:
 	     job_file_id_(job_file_id), tmp_file_id_(tmp_file_id),
 	     problem_id_(problem_id) {
 		if (tmp_file_id.has_value())
-			load_job_log_from_DB();
+			load_job_log_from_db();
 	}
 
 	static void assert_transaction_is_open();
 
 	// Runs conver and places package into a temporary internal file. Sets
-	// need_model_solution_judge_report
+	// need_main_solution_judge_report
 	void build_package();
 
 private:
@@ -53,9 +53,9 @@ private:
 	void open_package();
 
 protected:
-	void add_problem_to_DB();
+	void add_problem_to_db();
 
-	void replace_problem_in_DB();
+	void replace_problem_in_db();
 
 	void submit_solutions();
 

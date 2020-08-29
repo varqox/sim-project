@@ -1,7 +1,7 @@
 #pragma once
 
-#include "http_request.h"
-#include "http_response.h"
+#include "http_request.hh"
+#include "http_response.hh"
 
 #include <simlib/likely.hh>
 
@@ -24,7 +24,7 @@ private:
 
 	int peek();
 
-	int getChar() {
+	int get_char() {
 		int res = peek();
 		++pos_;
 		return res;
@@ -39,25 +39,25 @@ private:
 
 		size_t limit() const { return read_limit_; }
 
-		int getChar() {
+		int get_char() {
 			if (UNLIKELY(read_limit_ == 0))
 				return -1;
 
 			--read_limit_;
-			return conn_.getChar();
+			return conn_.get_char();
 		}
 	};
 
-	std::string getHeaderLine();
+	std::string get_header_line();
 	std::pair<std::string, std::string>
-	parseHeaderline(const std::string& header);
-	void readPOST(HttpRequest& req);
+	parse_header_line(const std::string& header);
+	void read_post(HttpRequest& req);
 
 public:
 	explicit Connection(int client_socket_fd)
 	   : state_(OK), sock_fd_(client_socket_fd), buff_size_(0), pos_(0) {}
 
-	~Connection() {}
+	~Connection() = default;
 
 	State state() const { return state_; }
 
@@ -84,10 +84,10 @@ public:
 	void error504();
 	void error507();
 
-	HttpRequest getRequest();
+	HttpRequest get_request();
 	void send(const char* str, size_t len);
 	void send(const std::string& str) { send(str.c_str(), str.size()); }
-	void sendResponse(const HttpResponse& res);
+	void send_response(const HttpResponse& res);
 };
 
 } // namespace server

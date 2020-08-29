@@ -1,6 +1,6 @@
 #include <cmath>
 #include <dirent.h>
-#include <sim/cpp_syntax_highlighter.h>
+#include <sim/cpp_syntax_highlighter.hh>
 #include <simlib/directory.hh>
 #include <simlib/spawner.hh>
 #include <simlib/string_compare.hh>
@@ -10,7 +10,7 @@
 using std::string;
 using std::vector;
 
-vector<string> findTests(string path = "tests") {
+vector<string> find_tests(string path = "tests") {
 	if (path.empty())
 		return {};
 
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 		}
 
 		chdir_to_executable_dirpath();
-		vector<string> tests = findTests();
+		vector<string> tests = find_tests();
 
 		if (regen) {
 			regenerate(tests);

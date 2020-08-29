@@ -1,4 +1,4 @@
-#include "add_or_reupload_problem__judge_model_solution_base.h"
+#include "add_or_reupload_problem__judge_main_solution_base.hh"
 
 #include <simlib/sim/problem_package.hh>
 
@@ -14,7 +14,7 @@ void AddOrReuploadProblemJudgeModelSolutionBase::run() {
 
 	// Put the Simfile in the package
 	ZipFile zip(package_path);
-	zip.file_add(concat(sim::zip_package_master_dir(zip), "Simfile"),
+	zip.file_add(concat(sim::zip_package_main_dir(zip), "Simfile"),
 	             zip.source_buffer(new_simfile_), ZIP_FL_OVERWRITE);
 	zip.close();
 

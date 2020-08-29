@@ -1,4 +1,4 @@
-#include "connection.h"
+#include "connection.hh"
 
 #include <iostream>
 #include <poll.h>
@@ -46,11 +46,11 @@ int Connection::peek() {
 	return buffer_[pos_];
 }
 
-string Connection::getHeaderLine() {
+string Connection::get_header_line() {
 	string line;
 	int c;
 
-	while ((c = getChar()) != -1) {
+	while ((c = get_char()) != -1) {
 		if (c == '\n' && line.size() && line.back() == '\r') {
 			line.pop_back();
 			break;
@@ -66,7 +66,7 @@ string Connection::getHeaderLine() {
 	return (state_ == OK ? line : "");
 }
 
-pair<string, string> Connection::parseHeaderline(const string& header) {
+pair<string, string> Connection::parse_header_line(const string& header) {
 	size_t beg = header.find(':'), end;
 	if (beg == string::npos) {
 		error400();
@@ -93,7 +93,7 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 	return make_pair(ret, header.substr(beg, end - beg));
 }
 
-void Connection::readPOST(HttpRequest& req) {
+void Connection::read_post(HttpRequest& req) {
 	size_t content_length = 0;
 	{
 		auto opt =
@@ -116,10 +116,10 @@ void Connection::readPOST(HttpRequest& req) {
 			field_name = field_content = "";
 			is_name = true;
 
-			while ((c = reader.getChar()) != -1) {
+			while ((c = reader.get_char()) != -1) {
 				if (c == '\r') {
 					if (peek() == '\n')
-						c = reader.getChar();
+						c = reader.get_char();
 					break;
 				}
 
@@ -142,7 +142,7 @@ void Connection::readPOST(HttpRequest& req) {
 			field_name = field_content = "";
 			is_name = true;
 
-			while ((c = reader.getChar()) != -1) {
+			while ((c = reader.get_char()) != -1) {
 				if (c == '&')
 					break;
 
@@ -194,7 +194,7 @@ void Connection::readPOST(HttpRequest& req) {
 		// TODO: consider changing structure of the while below
 		// While we can read
 		// In each loop pass parse EXACTLY one field
-		while ((c = reader.getChar()) != -1) {
+		while ((c = reader.get_char()) != -1) {
 			while (k > 0 && boundary[k] != c)
 				k = p[k - 1];
 
@@ -235,8 +235,8 @@ void Connection::readPOST(HttpRequest& req) {
 
 				// Prepare next field
 				// Ignore LFCR or "--"
-				(void)reader.getChar();
-				if (reader.getChar() == -1) {
+				(void)reader.get_char();
+				if (reader.get_char() == -1) {
 					error400();
 					goto safe_return;
 				}
@@ -245,7 +245,7 @@ void Connection::readPOST(HttpRequest& req) {
 				for (;;) {
 					field_content = ""; // Header in this case
 
-					while ((c = reader.getChar()) != -1) {
+					while ((c = reader.get_char()) != -1) {
 						// Found CRLF
 						if (c == '\n' && field_content.size() &&
 						    field_content.back() == '\r') {
@@ -268,7 +268,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 					D(stdlog("header: '", field_content, '\'');)
 					pair<string, string> header =
-					   parseHeaderline(field_content);
+					   parse_header_line(field_content);
 					if (state_ != OK) // Something went wrong
 						goto safe_return;
 
@@ -537,13 +537,13 @@ void Connection::error507() {
 	state_ = CLOSED;
 }
 
-HttpRequest Connection::getRequest() {
+HttpRequest Connection::get_request() {
 	HttpRequest req;
 
 	// Get request line
-	string request_line = getHeaderLine(), tmp;
+	string request_line = get_header_line(), tmp;
 	while (state_ == OK && request_line.empty())
-		request_line = getHeaderLine();
+		request_line = get_header_line();
 
 	if (state_ == CLOSED)
 		return req;
@@ -600,9 +600,9 @@ HttpRequest Connection::getRequest() {
 	string header;
 
 	D(auto tmplog = stdlog("HEADERS:\n");)
-	while ((header = getHeaderLine()).size()) {
+	while ((header = get_header_line()).size()) {
 		D(tmplog("\t", header, "\n");)
-		pair<string, string> hdr = parseHeaderline(header);
+		pair<string, string> hdr = parse_header_line(header);
 
 		if (state_ == CLOSED)
 			return req;
@@ -616,7 +616,7 @@ HttpRequest Connection::getRequest() {
 
 	// Read content
 	if (req.method == HttpRequest::POST) {
-		readPOST(req);
+		read_post(req);
 		return req;
 	}
 
@@ -644,7 +644,7 @@ HttpRequest Connection::getRequest() {
 		}
 
 		for (beg = 0; beg < end; ++beg) {
-			int c = getChar();
+			int c = get_char();
 			if (c == -1)
 				return req;
 
@@ -675,32 +675,32 @@ void Connection::send(const char* str, size_t len) {
 	}
 }
 
-void Connection::sendResponse(const HttpResponse& res) {
+void Connection::send_response(const HttpResponse& res) {
 	string str = "HTTP/1.1 ";
 	str.reserve(res.content.size + 500);
 	str.append(res.status_code.data(), res.status_code.size).append("\r\n");
 	str += "Server: sim-server\r\n";
 	str += "Connection: close\r\n";
 
-	res.headers.for_each([&](auto&& i) {
-		if (i.first == "server" || i.first == "connection" ||
-		    i.first == "content-length") {
-			return;
+	for (auto&& [name, val] : res.headers) {
+		if (name == "server" || name == "connection" ||
+		    name == "content-length") {
+			continue;
 		}
 
-		str += i.first;
+		str += name;
 		str += ": ";
-		str += i.second;
+		str += val;
 		str += "\r\n";
-	});
+	}
 
-	res.cookies.for_each([&](auto&& i) {
+	for (auto&& [name, val] : res.cookies) {
 		str += "Set-Cookie: ";
-		str += i.first;
+		str += name;
 		str += '=';
-		str += i.second;
+		str += val;
 		str += "\r\n";
-	});
+	}
 
 	D({
 		int pos = str.find('\r');

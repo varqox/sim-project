@@ -1,7 +1,7 @@
-#include "delete_contest_problem.h"
-#include "../main.h"
+#include "delete_contest_problem.hh"
+#include "../main.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 
 namespace job_handlers {
 

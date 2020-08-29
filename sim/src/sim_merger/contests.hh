@@ -2,7 +2,7 @@
 
 #include "merger.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/contest.hh>
 #include <sim/datetime_field.hh>
 

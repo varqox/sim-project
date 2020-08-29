@@ -1,16 +1,16 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <cstdint>
 #include <map>
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/contest.hh>
 #include <sim/contest_permissions.hh>
 #include <sim/contest_problem.hh>
 #include <sim/contest_round.hh>
 #include <sim/contest_user.hh>
 #include <sim/inf_datetime.hh>
-#include <sim/jobs.h>
-#include <sim/utilities.h>
+#include <sim/jobs.hh>
+#include <sim/utilities.hh>
 #include <type_traits>
 
 using sim::Contest;
@@ -143,7 +143,7 @@ class ContestInfoResponseBuilder {
 	sim::contest::OverallPermissions contest_overall_perms_;
 	sim::contest::Permissions contest_perms_;
 	std::string curr_date_;
-	AVLDictMap<uint64_t, InfDatetime> round_to_full_results_;
+	std::map<uint64_t, InfDatetime> round_to_full_results_;
 
 public:
 	ContestInfoResponseBuilder(
@@ -1142,7 +1142,7 @@ void Sim::api_contest_problem_add(uintmax_t contest_id,
 	form_validate(name, "name", "Problem's name",
 	              decltype(ContestProblem::name)::max_len);
 	form_validate(problem_id, "problem_id", "Problem ID",
-	              (bool (*)(StringView))is_digit, "Problem ID: invalid value");
+	              (bool (*)(const StringView&))is_digit, "Problem ID: invalid value");
 	// Validate score_revealing
 	auto score_revealing_str = request.form_data.get("score_revealing");
 	decltype(ContestProblem::score_revealing) score_revealing;
@@ -1226,7 +1226,7 @@ void Sim::api_contest_problem_rejudge_all_submissions(
 	   .bind_and_execute(session_user_id, EnumVal(JobStatus::PENDING),
 	                     priority(JobType::REJUDGE_SUBMISSION),
 	                     EnumVal(JobType::REJUDGE_SUBMISSION), mysql_date(),
-	                     jobs::dumpString(problem_id), contest_problem_id);
+	                     jobs::dump_string(problem_id), contest_problem_id);
 
 	jobs::notify_job_server();
 }

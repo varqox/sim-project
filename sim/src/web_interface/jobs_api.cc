@@ -1,7 +1,7 @@
-#include "sim.h"
+#include "sim.hh"
 
-#include <sim/constants.h>
-#include <sim/jobs.h>
+#include <sim/constants.hh>
+#include <sim/jobs.hh>
 #include <simlib/path.hh>
 #include <type_traits>
 
@@ -255,7 +255,7 @@ void Sim::api_jobs() {
 		switch (job_type) {
 		case JobType::JUDGE_SUBMISSION:
 		case JobType::REJUDGE_SUBMISSION: {
-			append("\"problem\":", jobs::extractDumpedString(res[JINFO]));
+			append("\"problem\":", jobs::extract_dumped_string(res[JINFO]));
 			append(",\"submission\":", res[AUX_ID]);
 			break;
 		}

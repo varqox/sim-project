@@ -1,6 +1,6 @@
 #pragma once
 
-#include "add_or_reupload_problem_base.h"
+#include "add_or_reupload_problem_base.hh"
 
 namespace job_handlers {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "reset_time_limits_in_problem_package_base.h"
+#include "reset_time_limits_in_problem_package_base.hh"
 
 namespace job_handlers {
 

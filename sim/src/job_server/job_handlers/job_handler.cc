@@ -1,7 +1,7 @@
-#include "job_handler.h"
-#include "../main.h"
+#include "job_handler.hh"
+#include "../main.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 
 namespace job_handlers {
 

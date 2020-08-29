@@ -1,5 +1,5 @@
-#include "add_problem.h"
-#include "../main.h"
+#include "add_problem.hh"
+#include "../main.hh"
 
 namespace job_handlers {
 
@@ -13,7 +13,7 @@ void AddProblem::run() {
 		if (failed())
 			return;
 
-		if (need_model_solution_judge_report_) {
+		if (need_main_solution_judge_report_) {
 			bool canceled;
 			job_done(canceled);
 			if (not canceled) {
@@ -24,7 +24,7 @@ void AddProblem::run() {
 		}
 	}
 
-	add_problem_to_DB();
+	add_problem_to_db();
 
 	submit_solutions();
 

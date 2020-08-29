@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <sim/contest.hh>
 #include <sim/contest_user.hh>

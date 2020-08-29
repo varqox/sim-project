@@ -1,5 +1,5 @@
-#include "connection.h"
-#include "sim.h"
+#include "connection.hh"
+#include "sim.hh"
 
 #include <arpa/inet.h>
 #include <chrono>
@@ -39,7 +39,7 @@ static void* worker(void*) {
 			stdlog("Connection accepted: ", pthread_self(), " form ", ip);
 
 			conn.assign(client_socket_fd);
-			HttpRequest req = conn.getRequest();
+			HttpRequest req = conn.get_request();
 
 			if (conn.state() == Connection::OK) {
 				using namespace std::chrono;
@@ -52,7 +52,7 @@ static void* worker(void*) {
 				stdlog("Response generated in ", to_string(microdur * 1000),
 				       " ms.");
 
-				conn.sendResponse(std::move(resp));
+				conn.send_response(std::move(resp));
 			}
 
 			stdlog("Closing...");

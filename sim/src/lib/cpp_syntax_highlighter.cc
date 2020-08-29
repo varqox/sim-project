@@ -1,5 +1,5 @@
 #include <limits>
-#include <sim/cpp_syntax_highlighter.h>
+#include <sim/cpp_syntax_highlighter.hh>
 #include <simlib/debug.hh>
 #include <simlib/logger.hh>
 #include <simlib/meta.hh>
@@ -384,7 +384,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			else if (str[i] == '\r')
 				tmplog("\\r'  ");
 			else
-				tmplog("\\x", toHex({&str[i], 1}), '\'');
+				tmplog("\\x", to_hex({&str[i], 1}), '\'');
 			tmplog(" -> ");
 
 			if (ends[i] == 0)
@@ -607,7 +607,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 	DEBUG_CSH(dump_begs_ends();)
 
-	auto isOperator = [](unsigned char c) {
+	auto is_operator = [](unsigned char c) {
 		// In xxx are marked characters from "!%&()*+,-./:;<=>?[\\]^{|}~";
 		constexpr array<bool, 128> xxx {{
 		   //      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -648,7 +648,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				i = j;
 				continue;
 
-			} else if (isOperator(str[i])) {
+			} else if (is_operator(str[i])) {
 				begs[i] = OPERATOR;
 				++ends[i + 1];
 			}

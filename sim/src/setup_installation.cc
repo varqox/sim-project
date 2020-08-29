@@ -1,9 +1,9 @@
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/contest.hh>
 #include <sim/contest_problem.hh>
 #include <sim/contest_round.hh>
 #include <sim/contest_user.hh>
-#include <sim/mysql.h>
+#include <sim/mysql.hh>
 #include <sim/user.hh>
 #include <simlib/concat.hh>
 #include <simlib/inplace_buff.hh>
@@ -33,7 +33,7 @@ static void help(const char* program_name) {
 	puts("  --only-drop-tables     Drop database tables and exit");
 }
 
-static void parseOptions(int& argc, char** argv) {
+static void parse_options(int& argc, char** argv) {
 	int new_argc = 1;
 	for (int i = 1; i < argc; ++i) {
 
@@ -114,7 +114,7 @@ struct TryToCreateTable {
 int main(int argc, char** argv) {
 	errlog.label(false);
 
-	parseOptions(argc, argv);
+	parse_options(argc, argv);
 
 	if (argc != 2) {
 		help(argc > 0 ? argv[0] : nullptr);

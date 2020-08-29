@@ -1,7 +1,7 @@
 #include <climits>
 #include <sim/contest_round.hh>
 #include <sim/inf_datetime.hh>
-#include <sim/mysql.h>
+#include <sim/mysql.hh>
 #include <simlib/defer.hh>
 #include <simlib/process.hh>
 #include <simlib/spawner.hh>

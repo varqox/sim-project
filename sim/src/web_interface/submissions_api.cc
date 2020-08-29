@@ -1,13 +1,13 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <functional>
 #include <optional>
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/contest_problem.hh>
 #include <sim/inf_datetime.hh>
-#include <sim/jobs.h>
-#include <sim/submission.h>
-#include <sim/utilities.h>
+#include <sim/jobs.hh>
+#include <sim/submission.hh>
+#include <sim/utilities.hh>
 #include <simlib/call_in_destructor.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_info.hh>
@@ -880,7 +880,7 @@ void Sim::api_submission_add() {
 	   .bind_and_execute(session_user_id, EnumVal(JobStatus::PENDING),
 	                     priority(JobType::JUDGE_SUBMISSION),
 	                     EnumVal(JobType::JUDGE_SUBMISSION), mysql_date(),
-	                     submission_id, jobs::dumpString(problem_id));
+	                     submission_id, jobs::dump_string(problem_id));
 
 	transaction.commit();
 	file_remover.cancel();
@@ -905,7 +905,7 @@ void Sim::api_submission_download() {
 	if (uint(~submissions_perms & SubmissionPermissions::VIEW_SOURCE))
 		return api_error403();
 
-	resp.headers["Content-type"] = to_MIME(submissions_slang);
+	resp.headers["Content-type"] = to_mime(submissions_slang);
 	resp.headers["Content-Disposition"] =
 	   concat_tostr("attachment; filename=", submissions_sid,
 	                to_extension(submissions_slang));
@@ -932,7 +932,7 @@ void Sim::api_submission_rejudge() {
 	stmt.bind_and_execute(session_user_id, EnumVal(JobStatus::PENDING),
 	                      priority(JobType::REJUDGE_SUBMISSION),
 	                      EnumVal(JobType::REJUDGE_SUBMISSION), mysql_date(),
-	                      submissions_sid, jobs::dumpString(problem_id));
+	                      submissions_sid, jobs::dump_string(problem_id));
 
 	jobs::notify_job_server();
 }
