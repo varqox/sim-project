@@ -72,7 +72,7 @@ TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_order) {
 TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_transparency) {
 	TRANSPARENT_MEMBER_COMPARATOR(Foo, x) cmp{};
 	EXPECT_TRUE(
-	   (std::is_same_v<decltype(cmp)::is_transparent, std::true_type>));
+	   (std::is_same_v<std::void_t<decltype(cmp)::is_transparent>, void>));
 
 	EXPECT_EQ(cmp(Foo{0, "abc"}, 0), false);
 	EXPECT_EQ(cmp(Foo{0, "abc"}, 1), true);

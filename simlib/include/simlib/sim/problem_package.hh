@@ -15,7 +15,7 @@ class PackageContents {
 
 	InplaceBuff<1> buff;
 	struct Comparer {
-		struct is_transparent {};
+		struct is_transparent;
 
 		decltype(buff)* buff_ref;
 

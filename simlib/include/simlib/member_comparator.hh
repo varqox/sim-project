@@ -37,7 +37,7 @@ class TransparentMemberComparator {
 	}
 
 public:
-	using is_transparent = std::true_type;
+	struct is_transparent;
 
 	TransparentMemberComparator() = default;
 
