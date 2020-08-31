@@ -117,7 +117,7 @@ simlib_dep = declare_dependency(
 
 alias_target('base', simlib)
 run_target('format', command : [find_program('format.py'), meson.current_source_dir()])
-run_target('tidy', command : [find_program('tidy.sh')], depends : simlib)
+run_target('tidy', command : [find_program('tidy')], depends : simlib)
 
 #################################### Tests ####################################
 
