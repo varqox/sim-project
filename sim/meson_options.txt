@@ -1,0 +1,1 @@
+option('static', type : 'boolean', value : false, description : 'Whether to link executables statically', yield : true)

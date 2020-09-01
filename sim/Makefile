@@ -1,11 +1,11 @@
-include src/lib/simlib/makefile-utils/Makefile.config
+include subprojects/simlib/makefile-utils/Makefile.config
 
 DESTDIR := sim
 
 MYSQL_CONFIG := $(shell which mariadb_config 2> /dev/null || which mysql_config 2> /dev/null)
 
 define SIM_FLAGS =
-INTERNAL_EXTRA_CXX_FLAGS = -I '$(CURDIR)/src/include' -I '$(CURDIR)/src/lib/simlib/include' -isystem '$(CURDIR)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
+INTERNAL_EXTRA_CXX_FLAGS = -I '$(CURDIR)/src/include' -I '$(CURDIR)/subprojects/simlib/include' $(shell $(MYSQL_CONFIG) --include)
 INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs) -lsupc++ -pthread -lrt -lzip -lseccomp
 endef
 
@@ -13,14 +13,14 @@ endef
 all: src/setup-installation src/backup src/sim-merger src/job-server src/sim-server src/sim-upgrader src/manage
 	@printf "\033[32mBuild finished\033[0m\n"
 
-$(eval $(call include_makefile, src/lib/simlib/Makefile))
+$(eval $(call include_makefile, subprojects/simlib/Makefile))
 
 .PHONY: test
 test: test-sim test-simlib
 	@printf "\033[1;32mAll tests passed\033[0m\n"
 
 .PHONY: test-simlib
-test-simlib: src/lib/simlib/test
+test-simlib: subprojects/simlib/test
 
 .PHONY: test-sim
 test-sim: test/exec
@@ -113,36 +113,36 @@ $(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
 	src/job_server/job_handlers/reupload_problem.cc \
 	src/job_server/main.cc \
 	src/lib/sim.a \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, src/sim-merger, $(SIM_FLAGS), \
 	src/lib/sim.a \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/simlib.a \
 	src/sim_merger/sim_merger.cc \
 ))
 
 $(eval $(call add_executable, src/sim-upgrader, $(SIM_FLAGS), \
 	src/lib/sim.a \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/simlib.a \
 	src/sim_upgrader.cc \
 ))
 
 $(eval $(call add_executable, src/setup-installation, $(SIM_FLAGS), \
 	src/lib/sim.a \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/simlib.a \
 	src/setup_installation.cc \
 ))
 
 $(eval $(call add_executable, src/backup, $(SIM_FLAGS), \
 	src/backup.cc \
 	src/lib/sim.a \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, src/sim-server, $(SIM_FLAGS), \
 	src/lib/sim.a \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/simlib.a \
 	src/web_interface/api.cc \
 	src/web_interface/connection.cc \
 	src/web_interface/contest_entry_token_api.cc \
@@ -168,18 +168,18 @@ $(eval $(call add_executable, src/sim-server, $(SIM_FLAGS), \
 ))
 
 $(eval $(call add_executable, src/manage, $(SIM_FLAGS), \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/simlib.a \
 	src/manage.cc \
 ))
 
 $(eval $(call add_executable, test/exec, $(SIM_FLAGS), \
 	src/lib/sim.a \
-	src/lib/simlib/gtest_main.a \
-	src/lib/simlib/simlib.a \
+	subprojects/simlib/gtest_main.a \
+	subprojects/simlib/simlib.a \
 	test/cpp_syntax_highlighter.cc \
 	test/jobs.cc \
 ))
 
 .PHONY: format
-format: src/lib/simlib/format
-format: $(shell find bin scripts src test | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/include/others/.*)$$' | sed 's/$$/-make-format/')
+format:
+	python3 format.py .

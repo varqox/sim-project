@@ -19,7 +19,9 @@
 *.deps
 
 # Others
-build/
+.clangd/
+*build/
+compile_commands.json
 *.sublime-project
 *.sublime-workspace
 sim/

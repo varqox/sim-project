@@ -1,1 +1,1 @@
-src/lib/simlib/.clang-format
+subprojects/simlib/.clang-format
