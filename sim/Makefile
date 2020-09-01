@@ -23,10 +23,8 @@ test: test-sim test-simlib
 test-simlib: src/lib/simlib/test
 
 .PHONY: test-sim
-test-sim: test/exec test/cpp_syntax_highlighter/check
+test-sim: test/exec
 	test/exec
-	@echo cpp_syntax_highlighter:
-	test/cpp_syntax_highlighter/check
 
 .PHONY: install
 install: $(filter-out install run, $(MAKECMDGOALS))
@@ -206,14 +204,8 @@ $(eval $(call add_executable, test/exec, $(SIM_FLAGS), \
 	src/lib/sim.a \
 	src/lib/simlib/gtest_main.a \
 	src/lib/simlib/simlib.a \
+	test/cpp_syntax_highlighter.cc \
 	test/jobs.cc \
-))
-
-BUILD_ARTIFACTS += $(wildcard test/cpp_syntax_highlighter/tests/*.ans)
-$(eval $(call add_executable, test/cpp_syntax_highlighter/check, $(SIM_FLAGS), \
-	src/lib/sim.a \
-	src/lib/simlib/simlib.a \
-	test/cpp_syntax_highlighter/check.cc \
 ))
 
 .PHONY: format
