@@ -106,18 +106,6 @@ $(eval $(call add_static_library, src/lib/sim.a, $(SIM_FLAGS), \
 	src/lib/submission.cc \
 ))
 
-define SQLITE_FLAGS =
-INTERNAL_EXTRA_C_FLAGS = -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_OMIT_DEPRECATED \
-	-DSQLITE_OMIT_PROGRESS_CALLBACK -DSQLITE_OMIT_SHARED_CACHE \
-	-DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_DEFAULT_MEMSTATUS=0 \
-	# -DSQLITE_ENABLE_API_ARMOR
-endef
-
-src/lib/sqlite3.c: src/lib/sqlite/sqlite3.c # It is a symlink
-$(eval $(call add_static_library, src/lib/sqlite3.a, $(SQLITE_FLAGS), \
-	src/lib/sqlite3.c \
-))
-
 $(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
 	src/job_server/dispatcher.cc \
 	src/job_server/job_handlers/add_or_reupload_problem__judge_main_solution_base.cc \
@@ -210,4 +198,4 @@ $(eval $(call add_executable, test/exec, $(SIM_FLAGS), \
 
 .PHONY: format
 format: src/lib/simlib/format
-format: $(shell find bin scripts src test | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/include/others/.*|src/lib/sqlite(/.*|3.c))$$' | sed 's/$$/-make-format/')
+format: $(shell find bin scripts src test | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/include/others/.*)$$' | sed 's/$$/-make-format/')
