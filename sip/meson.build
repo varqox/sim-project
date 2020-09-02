@@ -44,18 +44,6 @@ dump_file_as_c_array = generator(find_program('subprojects/simlib/dump_file_as_c
 simlib_proj = subproject('simlib')
 simlib_dep = simlib_proj.get_variable('simlib_dep')
 
-sip_sources = [
-    'src/command_version.cc',
-    'src/commands.cc',
-    'src/compilation_cache.cc',
-    'src/main.cc',
-    'src/sip_package.cc',
-    'src/sipfile.cc',
-    'src/templates.cc',
-    'src/tests_files.cc',
-    'src/utils.cc',
-]
-
 if host_machine.cpu_family() == 'x86'
     proot_bin = 'bin/proot-x86'
 elif host_machine.cpu_family() == 'x86_64'
@@ -64,8 +52,17 @@ else
     error('This CPU architecture is not supported')
 endif
 
-sip = executable('sip', sources : [
-        sip_sources,
+sip = executable('sip',
+    sources : [
+        'src/command_version.cc',
+        'src/commands.cc',
+        'src/compilation_cache.cc',
+        'src/main.cc',
+        'src/sip_package.cc',
+        'src/sipfile.cc',
+        'src/templates.cc',
+        'src/tests_files.cc',
+        'src/utils.cc',
         dump_file_as_c_array.process(
             proot_bin,
             extra_args : 'proot_dump'
@@ -100,6 +97,7 @@ sip = executable('sip', sources : [
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 
-alias_target('base', sip)
+base_targets = [sip]
+alias_target('base', base_targets)
 run_target('format', command : [find_program('format.py'), meson.current_source_dir()])
-run_target('tidy', command : [find_program('tidy.sh')], depends : sip)
+run_target('tidy', command : [find_program('tidy')], depends : base_targets)
