@@ -250,7 +250,7 @@ public:
 	 *     "line: 1\nab d E\n" -> "line: 1\nab d E\n" (double quoted string)
 	 *     " My awesome text" -> ' My awesome text' (single quoted string)
 	 *     " \\\\\\\\ " -> ' \\\\ ' (single quoted string)
-	 *     " '\t\n' ś " -> " '\t\n' ś " (double quoted string)
+	 *     " '\t\n' ś " -> " '\t\n' \xc5\x9b " (double quoted string)
 	 *
 	 * @param str input string
 	 *
