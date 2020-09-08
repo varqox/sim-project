@@ -15,7 +15,7 @@ bool sip_verbose = false;
  * parameters)
  * @param argv like in main (holds arguments)
  */
-static void parseOptions(int& argc, char** argv) {
+static void parse_options(int& argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	int new_argc = 1;
@@ -58,6 +58,7 @@ static void parseOptions(int& argc, char** argv) {
 	}
 
 	argc = new_argc;
+	argv[argc] = nullptr;
 }
 
 static void run_command(int argc, char** argv) {
@@ -166,10 +167,10 @@ int real_main(int argc, char** argv) {
 	stdlog.label(false);
 	errlog.label(false);
 
-	parseOptions(argc, argv);
+	parse_options(argc, argv);
 
 	if (argc < 2) {
-		commands::help(argc > 0 ? argv[0] : nullptr);
+		commands::help(argv[0]);
 		return 1;
 	}
 
