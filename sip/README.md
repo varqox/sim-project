@@ -84,15 +84,13 @@ ninja -C static-build/ base
 ## Installing
 Run after building:
 ```sh
-cd release-build/ # or other build directory
-# if you want to install to default prefix
-meson install
+# we will use release-build build directory, if you use other just change all release-build below
+meson install -C release-build/
 # specifying other install directory
-DESTDIR=other/install/dir/ meson install
+DESTDIR=other/install/dir/ meson install -C release-build/
 ```
 
 ## Running tests
-Run after building:
 ```sh
 ninja -C build/ test # or other build directory
 ```
@@ -114,13 +112,13 @@ ninja -C build tidy
 ```
 or
 ```sh
-./tidy.sh
+./tidy
 ```
 
 #### Specified sources
 To lint specified sources:
 ```sh
-./tidy.sh path/to/source.cc other/source.h
+./tidy path/to/source.cc other/source.h
 ```
 
 ### Static analysis
