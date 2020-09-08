@@ -49,11 +49,14 @@ public:
 InplaceBuff<PATH_MAX> get_cwd();
 
 /**
- * @brief Change current working directory to process's executable path
- * directory
+ * @brief Change current working directory to the @p path interpreted relative
+ *   to the process's executable path directory
  * @details Uses executable_path() and chdir(2)
+ *
+ * @param path path interpreted relative to the current process's executable
+ *   path's directory's path, @p path == "" is equivalent to @p path == "."
  *
  * @errors Exceptions from executable_path() or if chdir(2) fails then
  *   std::runtime_error will be thrown
  */
-void chdir_to_executable_dirpath();
+void chdir_relative_to_executable_dirpath(StringView path = ".");

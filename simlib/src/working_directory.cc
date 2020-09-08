@@ -1,7 +1,10 @@
 #include "simlib/working_directory.hh"
+#include "simlib/debug.hh"
 #include "simlib/defer.hh"
 #include "simlib/path.hh"
 #include "simlib/process.hh"
+
+#include <unistd.h>
 
 using std::string;
 
@@ -29,10 +32,15 @@ InplaceBuff<PATH_MAX> get_cwd() {
 	return res;
 }
 
-void chdir_to_executable_dirpath() {
-	InplaceBuff<PATH_MAX> exec_dir{
-	   path_dirpath(intentional_unsafe_string_view(executable_path(getpid())))};
-	if (chdir(exec_dir.to_cstr().c_str())) {
-		THROW("chdir('", exec_dir, "')", errmsg());
+void chdir_relative_to_executable_dirpath(StringView path) {
+	if (path == ".") {
+		path = "";
+	}
+
+	auto new_cwd = executable_path(getpid());
+	new_cwd.resize(path_dirpath(new_cwd).size());
+	new_cwd += path;
+	if (chdir(new_cwd.data())) {
+		THROW("chdir(", new_cwd, ')', errmsg());
 	}
 }
