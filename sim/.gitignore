@@ -22,6 +22,7 @@
 build/
 *.sublime-project
 *.sublime-workspace
+sim/
 
 # Coverity
 cov-int/

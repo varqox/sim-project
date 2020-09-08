@@ -1,11 +1,14 @@
-#include <sim/constants.hh>
-#include <sim/mysql.hh>
-#include <simlib/file_info.hh>
-#include <simlib/file_manip.hh>
-#include <simlib/sim/problem_package.hh>
-#include <simlib/spawner.hh>
-#include <simlib/time.hh>
-#include <simlib/working_directory.hh>
+#include "sim/constants.hh"
+#include "sim/mysql.hh"
+#include "simlib/debug.hh"
+#include "simlib/file_info.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/path.hh"
+#include "simlib/process.hh"
+#include "simlib/sim/problem_package.hh"
+#include "simlib/spawner.hh"
+#include "simlib/time.hh"
+#include "simlib/working_directory.hh"
 
 using std::string;
 using std::vector;
@@ -27,7 +30,7 @@ int main2(int argc, char** argv) {
 		return 1;
 	}
 
-	chdir_to_executable_dirpath();
+	chdir_relative_to_executable_dirpath("..");
 
 #define MYSQL_CNF ".mysql.cnf"
 	FileRemover mysql_cnf_guard;

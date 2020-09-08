@@ -1,18 +1,28 @@
-#include <sim/constants.hh>
-#include <sim/contest.hh>
-#include <sim/contest_problem.hh>
-#include <sim/contest_round.hh>
-#include <sim/contest_user.hh>
-#include <sim/mysql.hh>
-#include <sim/user.hh>
-#include <simlib/concat.hh>
-#include <simlib/inplace_buff.hh>
-#include <simlib/random.hh>
-#include <simlib/sha.hh>
+#include "sim/constants.hh"
+#include "sim/contest.hh"
+#include "sim/contest_problem.hh"
+#include "sim/contest_round.hh"
+#include "sim/contest_user.hh"
+#include "sim/mysql.hh"
+#include "sim/user.hh"
+#include "simlib/concat.hh"
+#include "simlib/concat_tostr.hh"
+#include "simlib/config_file.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/file_info.hh"
+#include "simlib/file_path.hh"
+#include "simlib/file_perms.hh"
+#include "simlib/inplace_buff.hh"
+#include "simlib/random.hh"
+#include "simlib/sha.hh"
+#include "simlib/string_view.hh"
+
+#include <fcntl.h>
+#include <iostream>
 
 using std::array;
 using std::string;
-using std::unique_ptr;
 
 inline static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
 
@@ -66,6 +76,32 @@ static void parse_options(int& argc, char** argv) {
 	argc = new_argc;
 }
 
+static void create_db_config(FilePath db_config_path) {
+	string user;
+	string password;
+	string database;
+	string host;
+	stdlog("Type MariaDB user to use:");
+	getline(std::cin, user);
+	stdlog("Type password for the MariaDB user:");
+	getline(std::cin, password);
+	stdlog("Type name of the MariaDB database for Sim to use:");
+	getline(std::cin, database);
+	stdlog("Type name or IP address of the MariaDB database [localhost]:");
+	getline(std::cin, host);
+	if (host.empty()) {
+		host = "localhost";
+	}
+
+	FileDescriptor fd(db_config_path, O_CREAT | O_TRUNC | O_WRONLY, S_0600);
+	write_all_throw(fd, intentional_unsafe_string_view(concat(
+		"user: ", ConfigFile::escape_string(user),
+		"\npassword: ", ConfigFile::escape_string(password),
+		"\ndb: ", ConfigFile::escape_string(database),
+		"\nhost: ", ConfigFile::escape_string(host),
+		'\n')));
+}
+
 constexpr std::array<CStringView, 13> tables = {{
    "contest_entry_tokens",
    "contest_files",
@@ -112,6 +148,8 @@ struct TryToCreateTable {
 };
 
 int main(int argc, char** argv) {
+	stdlog.use(stdout);
+	stdlog.label(false);
 	errlog.label(false);
 
 	parse_options(argc, argv);
@@ -121,15 +159,20 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	auto db_config_path = concat(argv[1], "/.db.config");
+	if (not path_exists(db_config_path)) {
+		create_db_config(db_config_path);
+	}
+
 	MySQL::Connection conn;
 	try {
 		// Get connection
-		conn = MySQL::make_conn_with_credential_file(
-		   concat(argv[1], "/.db.config"));
+		conn = MySQL::make_conn_with_credential_file(db_config_path);
 		conn.update("SET foreign_key_checks=1"); // Just for sure
 
 	} catch (const std::exception& e) {
-		errlog("\033[31mFailed to connect to database\033[m");
+		errlog("\033[31mFailed to connect to database, please edit or remove '",
+		       db_config_path, "' file and try again\033[m");
 		ERRLOG_CATCH(e);
 		return 4;
 	}

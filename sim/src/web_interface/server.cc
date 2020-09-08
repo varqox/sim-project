@@ -76,7 +76,7 @@ int main() {
 	// Init server
 	// Change directory to process executable directory
 	try {
-		chdir_to_executable_dirpath();
+		chdir_relative_to_executable_dirpath("..");
 	} catch (const std::exception& e) {
 		errlog("Failed to change working directory: ", e.what());
 	}

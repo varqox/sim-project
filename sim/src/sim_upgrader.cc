@@ -1,3 +1,6 @@
+#include "simlib/concat_tostr.hh"
+#include "simlib/file_info.hh"
+#include "simlib/file_manip.hh"
 #include <climits>
 #include <sim/contest_round.hh>
 #include <sim/inf_datetime.hh>
@@ -5,8 +8,6 @@
 #include <simlib/defer.hh>
 #include <simlib/process.hh>
 #include <simlib/spawner.hh>
-
-using std::vector;
 
 namespace {
 
@@ -22,19 +23,19 @@ struct CmdOptions {
 static int perform_upgrade() {
 	STACK_UNWINDING_MARK;
 
-	conn
-	   .prepare(
-	      "UPDATE contest_rounds SET ranking_exposure=IF(ranking_exposure=?, "
-	      "full_results, ranking_exposure)")
-	   .bind_and_execute(sim::InfDatetime().set_neg_inf().to_str());
+	(void)remove(concat_tostr(sim_build, "sim-server"));
+	(void)remove(concat_tostr(sim_build, "job-server"));
+	(void)remove(concat_tostr(sim_build, "backup"));
+	(void)remove(concat_tostr(sim_build, "sim-merger"));
 
 	stdlog("\033[1;32mSim upgrading is complete\033[m");
 	return 0;
 }
 
 static void print_help(const char* program_name) {
-	if (not program_name)
+	if (not program_name) {
 		program_name = "sim-upgrader";
+	}
 
 	errlog.label(false);
 	errlog(
@@ -68,11 +69,13 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 				eprintf("Unknown option: '%s'\n", argv[i]);
 			}
 
-		} else
+		} else {
 			argv[new_argc++] = argv[i];
+		}
 	}
 
 	argc = new_argc;
+	argv[argc] = nullptr;
 	return cmd_options;
 }
 
@@ -99,8 +102,9 @@ static int true_main(int argc, char** argv) {
 	}
 
 	sim_build.append(argv[1]);
-	if (not has_suffix(sim_build, "/"))
+	if (not has_suffix(sim_build, "/")) {
 		sim_build.append('/');
+	}
 
 	try {
 		// Get connection
@@ -111,21 +115,20 @@ static int true_main(int argc, char** argv) {
 		return 1;
 	}
 
+	auto manage_path = concat_tostr(sim_build, "manage");
 	// Stop server and job server
+	Spawner::run(manage_path, {manage_path, "stop"});
+	// TODO: remove this after the upgrade
 	kill_processes_by_exec({concat_tostr(sim_build, "sim-server"),
 	                        concat_tostr(sim_build, "job-server")});
-	Defer servers_restorer([] {
+
+	Defer servers_restorer([&] {
 		try {
 			stdlog("Restoring servers");
 		} catch (...) {
 		}
 
-		Spawner::run(
-		   "sh",
-		   {"sh", "-c", concat_tostr('"', sim_build, "sim-server\"& disown")});
-		Spawner::run(
-		   "sh",
-		   {"sh", "-c", concat_tostr('"', sim_build, "job-server\"& disown")});
+		Spawner::run(manage_path, {manage_path, "-b", "start"});
 	});
 
 	return perform_upgrade();

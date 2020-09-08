@@ -66,7 +66,7 @@ Sim is an open source platform for carrying out algorithmic contests
   ```
   It will ask for MariaDB credentials. By default, step 4 created MariaDB username `sim`, password `sim`, database `simdb` and user host `localhost`.
 
-  If you want to install Sim in other location that `build/` type
+  If you want to install Sim in other location that `sim/`, type
 
   ```sh
   make install DESTDIR=where-you-want-Sim-to-install
@@ -97,14 +97,14 @@ Sim is an open source platform for carrying out algorithmic contests
 
   Remember to change the password now (or later) if you want to make Sim website accessible to others. Do not make hacker's life easier!
 
-8. Well done! You have just installed Sim. There is a sim-server configuration file `where-you-installed-Sim/sim.conf` (`build/sim.conf` by default) where server parameters like `address`, `workers` etc. are. Also, there are log files `log/*.log` that you would find useful if something didn't work.
+8. Well done! You have just installed Sim. There is a sim-server configuration file `where-you-installed-Sim/sim.conf` (`sim/sim.conf` by default) where server parameters like `address`, `workers` etc. are. Also, there are log files `log/*.log` that you would find useful if something didn't work.
 
 9. If you want to run Sim at system startup then you can use `crontab` -- just add these lines to your crontab (using command `crontab -e`):
 ```
 @reboot sh -c 'until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; BUILD="where-you-installed-Sim"; "$BUILD/sim-server"& "$BUILD/job-server"&'
 ```
 
-`where-you-installed-Sim` = absolute path to Sim build directory e.g. `/home/your_username/sim/build`
+`where-you-installed-Sim` = absolute path to Sim build directory e.g. `/home/your_username/sim/sim`
 
 10. Feel free to report any bugs or things you don't like.
 
