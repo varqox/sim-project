@@ -49,7 +49,7 @@ constexpr auto path_extension(T&& path) noexcept {
 }
 
 /**
- * @brief Returns the dirpath of the path @p path
+ * @brief Returns prefix of the @p path that is a dirpath of the @p path
  * @details Examples:
  *   "/my/path/foo.bar" -> "/my/path/"
  *   "/my/path/" -> "/my/path/"
