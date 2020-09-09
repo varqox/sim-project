@@ -12,7 +12,7 @@ class ContestUsersMerger : public Merger<sim::ContestUser> {
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
 
-		sim::ContestUser cu;
+		sim::ContestUser cu{};
 		auto stmt = conn.prepare("SELECT user_id, contest_id, mode FROM ",
 		                         record_set.sql_table_name);
 		stmt.bind_and_execute();
@@ -29,7 +29,8 @@ class ContestUsersMerger : public Merger<sim::ContestUser> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const sim::ContestUser&) { return nullptr; });
+		Merger::merge(
+		   [&](const sim::ContestUser& /*unused*/) { return nullptr; });
 	}
 
 	sim::ContestUser::Id new_id_for_record_to_merge_into_new_records(

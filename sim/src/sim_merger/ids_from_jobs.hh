@@ -24,20 +24,23 @@ struct IdsWithTime {
 			return;
 		}
 
-		if (it->second > tp)
+		if (it->second > tp) {
 			it->second = tp;
+		}
 	}
 
 	void normalize_times() {
-		if (ids.empty())
+		if (ids.empty()) {
 			return;
+		}
 
 		auto last_tp = (--ids.end())->second;
 		for (auto& [id, tp] : reverse_view(ids)) {
-			if (tp > last_tp)
+			if (tp > last_tp) {
 				tp = last_tp;
-			else
+			} else {
 				last_tp = tp;
+			}
 		}
 	}
 };
@@ -89,9 +92,9 @@ struct IdsFromJobs {
 	void initialize(StringView job_table_name) {
 		STACK_UNWINDING_MARK;
 
-		uintmax_t id;
+		uintmax_t id = 0;
 		MySQL::Optional<uintmax_t> creator;
-		EnumVal<JobType> type;
+		EnumVal<JobType> type{};
 		MySQL::Optional<uintmax_t> file_id;
 		MySQL::Optional<uintmax_t> tmp_file_id;
 		sim::DatetimeField added_str;
@@ -109,12 +112,15 @@ struct IdsFromJobs {
 
 			// Process non-type-specific ids
 			jobs.add_id(id, added);
-			if (file_id.has_value())
+			if (file_id.has_value()) {
 				internal_files.add_id(file_id.value(), added);
-			if (tmp_file_id.has_value())
+			}
+			if (tmp_file_id.has_value()) {
 				internal_files.add_id(tmp_file_id.value(), added);
-			if (creator.has_value())
+			}
+			if (creator.has_value()) {
 				users.add_id(creator.value(), added);
+			}
 
 			// Process type-specific ids
 			switch (type) {
@@ -165,8 +171,9 @@ struct IdsFromJobs {
 
 			case JobType::ADD_PROBLEM:
 			case JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
-				if (aux_id.has_value())
+				if (aux_id.has_value()) {
 					problems.add_id(aux_id.value(), added);
+				}
 				break;
 
 			case JobType::EDIT_PROBLEM: THROW("TODO");

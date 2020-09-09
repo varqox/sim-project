@@ -50,7 +50,7 @@ std::optional<Permissions> get_permissions(MySQL::Connection& mysql,
                                            std::optional<U> user_id) {
 	STACK_UNWINDING_MARK;
 
-	uint8_t is_public;
+	uint8_t is_public = false;
 	MySQL::Optional<decltype(User::type)> user_type;
 	MySQL::Optional<decltype(ContestUser::mode)> cu_mode;
 
@@ -70,8 +70,9 @@ std::optional<Permissions> get_permissions(MySQL::Connection& mysql,
 		stmt.res_bind_all(is_public);
 	}
 
-	if (not stmt.next())
+	if (not stmt.next()) {
 		return std::nullopt;
+	}
 
 	return get_permissions(user_type, is_public, cu_mode);
 }

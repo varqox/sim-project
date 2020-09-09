@@ -17,7 +17,9 @@ void DeleteContestRound::run() {
 		                          " JOIN contests c ON c.id=r.contest_id"
 		                          " WHERE r.id=?");
 		stmt.bind_and_execute(contest_round_id_);
-		InplaceBuff<32> cname, cid, rname;
+		InplaceBuff<32> cname;
+		InplaceBuff<32> cid;
+		InplaceBuff<32> rname;
 		stmt.res_bind_all(cname, cid, rname);
 		if (not stmt.next()) {
 			return set_failure("Contest round with id: ", contest_round_id_,

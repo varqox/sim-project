@@ -20,12 +20,14 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(
 
 	auto compilation_errors = compile_solution_from_problem_package(
 	   simfile.solutions[0], sim::filename_to_lang(simfile.solutions[0]));
-	if (compilation_errors.has_value())
+	if (compilation_errors.has_value()) {
 		return set_failure();
+	}
 
 	compilation_errors = compile_checker();
-	if (compilation_errors.has_value())
+	if (compilation_errors.has_value()) {
 		return set_failure();
+	}
 
 	job_log("Judging...");
 

@@ -15,11 +15,14 @@ void JudgeOrRejudge::run() {
 	                          "FROM submissions s, problems p "
 	                          "WHERE p.id=problem_id AND s.id=?");
 	stmt.bind_and_execute(submission_id_);
-	uint64_t submission_file_id, problem_file_id;
-	uint64_t problem_id;
-	MySQL::Optional<uint64_t> sowner, contest_problem_id;
-	InplaceBuff<64> last_judgment, p_last_edit;
-	EnumVal<SubmissionLanguage> lang;
+	uint64_t submission_file_id = 0;
+	uint64_t problem_file_id = 0;
+	uint64_t problem_id = 0;
+	MySQL::Optional<uint64_t> sowner;
+	MySQL::Optional<uint64_t> contest_problem_id;
+	InplaceBuff<64> last_judgment;
+	InplaceBuff<64> p_last_edit;
+	EnumVal<SubmissionLanguage> lang{};
 	stmt.res_bind_all(submission_file_id, lang, sowner, contest_problem_id,
 	                  problem_id, last_judgment, problem_file_id, p_last_edit);
 	// If the submission doesn't exist (probably was removed)
@@ -57,10 +60,11 @@ void JudgeOrRejudge::run() {
 			// Get the submission's ACTUAL type
 			stmt = mysql.prepare("SELECT type FROM submissions WHERE id=?");
 			stmt.bind_and_execute(submission_id_);
-			EnumVal<ST> stype;
+			EnumVal<ST> stype{};
 			stmt.res_bind_all(stype);
-			if (not stmt.next())
+			if (not stmt.next()) {
 				return; // Ignore errors (deleted submission)
+			}
 
 			// Update submission
 			stmt = mysql.prepare("UPDATE submissions "
@@ -70,14 +74,16 @@ void JudgeOrRejudge::run() {
 			                     "WHERE id=?");
 
 			if (is_fatal(full_status)) {
-				stmt.bind_and_execute(
-				   false, (uint)initial_status, (uint)full_status, nullptr,
-				   judging_began, initial_report, final_report, submission_id_);
+				stmt.bind_and_execute(false, static_cast<uint>(initial_status),
+				                      static_cast<uint>(full_status), nullptr,
+				                      judging_began, initial_report,
+				                      final_report, submission_id_);
 			} else {
 				stmt.bind_and_execute(
 				   (stype == ST::NORMAL and score.has_value()),
-				   (uint)initial_status, (uint)full_status, score,
-				   judging_began, initial_report, final_report, submission_id_);
+				   static_cast<uint>(initial_status),
+				   static_cast<uint>(full_status), score, judging_began,
+				   initial_report, final_report, submission_id_);
 			}
 
 			submission::update_final(mysql, sowner, problem_id,
@@ -114,15 +120,16 @@ void JudgeOrRejudge::run() {
 
 	auto send_judge_report = [&, initial_status = SubmissionStatus::OK,
 	                          initial_report = InplaceBuff<1 << 16>(),
-	                          initial_score =
-	                             (int64_t)0](const sim::JudgeReport& jreport,
-	                                         bool final, bool partial) mutable {
+	                          initial_score = static_cast<int64_t>(0)](
+	                            const sim::JudgeReport& jreport, bool final,
+	                            bool partial) mutable {
 		auto rep = construct_report(jreport, final);
 		auto status = calc_status(jreport);
 		// Count score
 		int64_t score = 0;
-		for (auto&& group : jreport.groups)
+		for (auto&& group : jreport.groups) {
 			score += group.score;
+		}
 
 		// Log reports
 		auto job_log_len = job_log_holder_.size;
@@ -132,8 +139,9 @@ void JudgeOrRejudge::run() {
 
 		stmt = mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
 		stmt.bind_and_execute(get_log(), job_id_);
-		if (partial)
+		if (partial) {
 			job_log_holder_.size = job_log_len;
+		}
 
 		if (not final) {
 			initial_report = rep;
@@ -172,14 +180,17 @@ void JudgeOrRejudge::run() {
 		send_judge_report(final_jrep, true, false);
 
 		// Log checker errors
-		for (auto&& rep : {initial_jrep, final_jrep})
-			for (auto&& group : rep.groups)
-				for (auto&& test : group.tests)
+		for (auto&& rep : {initial_jrep, final_jrep}) {
+			for (auto&& group : rep.groups) {
+				for (auto&& test : group.tests) {
 					if (test.status == sim::JudgeReport::Test::CHECKER_ERROR) {
 						errlog("Checker error: submission ", submission_id_,
 						       " (problem id: ", problem_id, ") test `",
 						       test.name, '`');
 					}
+				}
+			}
+		}
 
 		// Log syscall problems (to errlog)
 		for (auto&& rep : {initial_jrep, final_jrep}) {

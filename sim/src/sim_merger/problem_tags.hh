@@ -4,7 +4,7 @@
 
 struct ProblemTag {
 	ProblemTagId id;
-	bool hidden;
+	bool hidden = false;
 };
 
 class ProblemTagsMerger : public Merger<ProblemTag> {
@@ -14,7 +14,7 @@ class ProblemTagsMerger : public Merger<ProblemTag> {
 		STACK_UNWINDING_MARK;
 
 		ProblemTag ptag;
-		unsigned char b_hidden;
+		uint8_t b_hidden = false;
 		auto stmt = conn.prepare("SELECT problem_id, tag, hidden FROM ",
 		                         record_set.sql_table_name);
 		stmt.bind_and_execute();
@@ -32,7 +32,7 @@ class ProblemTagsMerger : public Merger<ProblemTag> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const ProblemTag&) { return nullptr; });
+		Merger::merge([&](const ProblemTag& /*unused*/) { return nullptr; });
 	}
 
 	ProblemTagId new_id_for_record_to_merge_into_new_records(

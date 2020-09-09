@@ -19,7 +19,8 @@
 class Sim final {
 	/* ============================== General ============================== */
 
-	MySQL::Connection mysql;
+	MySQL::Connection mysql =
+	   MySQL::make_conn_with_credential_file(".db.config");
 	CStringView client_ip; // TODO: put in request?
 	server::HttpRequest request;
 	server::HttpResponse resp;
@@ -44,7 +45,7 @@ class Sim final {
 	void set_response(StringView status_code, StringView response_body = {}) {
 		STACK_UNWINDING_MARK;
 
-		resp.status_code = std::move(status_code);
+		resp.status_code = status_code;
 		resp.content = response_body;
 
 #ifdef DEBUG
@@ -363,8 +364,8 @@ class Sim final {
 			form_validation_error = true;
 			add_notification("error", "Invalid ", html_escape(name_to_print));
 			return false;
-
-		} else if (val_opt->size() > max_size) {
+		}
+		if (val_opt->size() > max_size) {
 			form_validation_error = true;
 			add_notification("error", html_escape(name_to_print),
 			                 " cannot be longer than ", max_size, " bytes");
@@ -385,8 +386,9 @@ class Sim final {
 		STACK_UNWINDING_MARK;
 
 		if (form_validate(var, name, name_to_print, max_size)) {
-			if (string_length(var) == 0 || check(var))
+			if (string_length(var) == 0 or check(var)) {
 				return true;
+			}
 
 			form_validation_error = true;
 			if (error_msg.empty()) {
@@ -413,14 +415,14 @@ class Sim final {
 			form_validation_error = true;
 			add_notification("error", "Invalid ", html_escape(name_to_print));
 			return false;
-
-		} else if (val_opt->empty()) {
+		}
+		if (val_opt->empty()) {
 			form_validation_error = true;
 			add_notification("error", html_escape(name_to_print),
 			                 " cannot be blank");
 			return false;
-
-		} else if (val_opt->size() > max_size) {
+		}
+		if (val_opt->size() > max_size) {
 			form_validation_error = true;
 			add_notification("error", html_escape(name_to_print),
 			                 " cannot be longer than ", max_size, " bytes");
@@ -442,8 +444,9 @@ class Sim final {
 		STACK_UNWINDING_MARK;
 
 		if (form_validate_not_blank(var, name, name_to_print, max_size)) {
-			if (check(var))
+			if (check(var)) {
 				return true;
+			}
 
 			form_validation_error = true;
 			if (error_msg.empty()) {
@@ -584,7 +587,7 @@ private:
 
 	/* ============================== Problems ============================== */
 	InplaceBuff<32> problems_pid;
-	uint64_t problems_file_id;
+	uint64_t problems_file_id{};
 
 	/// Main Problems handler
 	void problems_handle();
@@ -674,8 +677,8 @@ private:
 	   decltype(sim::Problem::owner) problem_owner) noexcept;
 
 	StringView submissions_sid;
-	uint64_t submissions_file_id;
-	SubmissionLanguage submissions_slang;
+	uint64_t submissions_file_id{};
+	SubmissionLanguage submissions_slang{};
 	SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
 	// Pages
@@ -696,15 +699,12 @@ private:
 	void view_logs();
 
 public:
-	Sim()
-	: mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
-
-	~Sim() {}
-
+	Sim() = default;
 	Sim(const Sim&) = delete;
 	Sim(Sim&&) = delete;
 	Sim& operator=(const Sim&) = delete;
 	Sim& operator=(Sim&&) = delete;
+	~Sim() = default;
 
 	/**
 	 * @brief Handles request

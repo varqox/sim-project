@@ -5,12 +5,15 @@ void Sim::contests_handle() {
 
 	StringView next_arg = url_args.extract_next_arg();
 	if (not next_arg.empty() and is_digit(next_arg.substr(1))) {
-		if (next_arg[0] == 'c')
+		if (next_arg[0] == 'c') {
 			return contests_contest(next_arg.substr(1));
-		else if (next_arg[0] == 'r')
+		}
+		if (next_arg[0] == 'r') {
 			return contests_contest_round(next_arg.substr(1));
-		else if (next_arg[0] == 'p')
+		}
+		if (next_arg[0] == 'p') {
 			return contests_contest_problem(next_arg.substr(1));
+		}
 	}
 
 	if (next_arg == "add") { // Add contest
@@ -78,10 +81,12 @@ void Sim::contests_contest(StringView contest_id) {
 				append("<script>expel_contest_user(false, ", contest_id, ",",
 				       user_id, ", window.location.hash);</script>");
 
-			} else
+			} else {
 				error404();
-		} else
+			}
+		} else {
 			error404();
+		}
 
 	} else if (next_arg == "files") {
 		StringView arg = url_args.extract_next_arg();
@@ -89,11 +94,13 @@ void Sim::contests_contest(StringView contest_id) {
 			page_template("Add contest file", "body{padding-left:20px}");
 			append("<script>add_contest_file(false, ", contest_id,
 			       ", window.location.hash);</script>");
-		} else
+		} else {
 			error404();
+		}
 
-	} else
+	} else {
 		return error404();
+	}
 }
 
 void Sim::contests_contest_round(StringView contest_round_id) {
@@ -166,8 +173,9 @@ void Sim::contests_contest_problem(StringView contest_problem_id) {
 		append("<script>delete_contest_problem(false, ", contest_problem_id,
 		       ", window.location.hash);</script>");
 
-	} else
+	} else {
 		return error404();
+	}
 }
 
 void Sim::enter_contest() {

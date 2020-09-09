@@ -37,15 +37,17 @@ void MergeProblems::run_impl() {
 		stmt.bind_and_execute(donor_problem_id_);
 		InplaceBuff<1> simfile;
 		stmt.res_bind_all(simfile);
-		if (not stmt.next())
+		if (not stmt.next()) {
 			return set_failure("Problem does not exist");
+		}
 
 		job_log("Merged problem Simfile:\n", simfile);
 
 		stmt = mysql.prepare("SELECT 1 FROM problems WHERE id=?");
 		stmt.bind_and_execute(info_.target_problem_id);
-		if (not stmt.next())
+		if (not stmt.next()) {
 			return set_failure("Target problem does not exist");
+		}
 	}
 
 	// Transfer contest problems
@@ -93,8 +95,9 @@ void MergeProblems::run_impl() {
 		stmt.bind_and_execute(donor_problem_id_);
 		FTU ftu_elem;
 		stmt.res_bind_all(ftu_elem.owner, ftu_elem.contest_problem_id);
-		while (stmt.next())
+		while (stmt.next()) {
 			finals_to_update.emplace_back(ftu_elem);
+		}
 	}
 
 	// Schedule rejudge of the transferred submissions

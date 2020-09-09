@@ -5,6 +5,7 @@
 #include <sim/constants.hh>
 #include <sim/submission.hh>
 #include <sim/user.hh>
+#include <simlib/defer.hh>
 
 // Merges users by username
 class UsersMerger : public Merger<sim::User> {
@@ -32,8 +33,9 @@ class UsersMerger : public Merger<sim::User> {
 		                  user.last_name, user.email, user.salt, user.password,
 		                  user.type);
 
-		while (stmt.next())
+		while (stmt.next()) {
 			record_set.add_record(user, time);
+		}
 	}
 
 	void merge() override {
@@ -78,7 +80,7 @@ public:
 		transaction.commit();
 	}
 
-	UsersMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
+	explicit UsersMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
 	: Merger("users", ids_from_both_jobs.main.users,
 	         ids_from_both_jobs.other.users) {
 		STACK_UNWINDING_MARK;
@@ -91,7 +93,7 @@ public:
 		auto transaction = conn.start_transaction();
 		for (auto const& user : new_table_) {
 			if (user.main_ids.size() > 1 or user.other_ids.size() > 1) {
-				uintmax_t problem_id;
+				uintmax_t problem_id = 0;
 				MySQL::Optional<uintmax_t> contest_problem_id;
 
 				auto stmt =

@@ -44,8 +44,9 @@ void MergeUsers::run_impl() {
 		stmt.bind_and_execute(donor_user_id_);
 		InplaceBuff<32> donor_username;
 		stmt.res_bind_all(donor_username, donor_user_type);
-		if (not stmt.next())
+		if (not stmt.next()) {
 			return set_failure("User to delete does not exist");
+		}
 
 		// Logging
 		job_log("Merged user's username: ", donor_username);
@@ -57,8 +58,9 @@ void MergeUsers::run_impl() {
 
 		stmt = mysql.prepare("SELECT 1 FROM users WHERE id=?");
 		stmt.bind_and_execute(info_.target_user_id);
-		if (not stmt.next())
+		if (not stmt.next()) {
 			return set_failure("Target user does not exist");
+		}
 	}
 
 	// Transfer user type if gives more permissions
@@ -132,7 +134,7 @@ void MergeUsers::run_impl() {
 
 	// Collect update finals
 	struct FTU {
-		uint64_t problem_id;
+		uint64_t problem_id{};
 		MySQL::Optional<uint64_t> contest_problem_id;
 	};
 	std::deque<FTU> finals_to_update;
@@ -143,8 +145,9 @@ void MergeUsers::run_impl() {
 		stmt.bind_and_execute(donor_user_id_);
 		FTU ftu_elem;
 		stmt.res_bind_all(ftu_elem.problem_id, ftu_elem.contest_problem_id);
-		while (stmt.next())
+		while (stmt.next()) {
 			finals_to_update.emplace_back(ftu_elem);
+		}
 	}
 
 	// Transfer submissions

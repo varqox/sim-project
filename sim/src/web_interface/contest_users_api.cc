@@ -12,8 +12,9 @@ get_overall_perm(std::optional<ContestUser::Mode> viewer_mode) noexcept {
 	using PERM = Sim::ContestUserPermissions;
 	using CUM = ContestUser::Mode;
 
-	if (not viewer_mode.has_value())
+	if (not viewer_mode.has_value()) {
 		return PERM::NONE;
+	}
 
 	switch (viewer_mode.value()) {
 	case CUM::OWNER:
@@ -33,11 +34,13 @@ Sim::ContestUserPermissions Sim::contest_user_get_overall_permissions(
 	using PERM = ContestUserPermissions;
 	using CUM = ContestUser::Mode;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return PERM::NONE;
+	}
 
-	if (session_user_type == User::Type::ADMIN)
+	if (session_user_type == User::Type::ADMIN) {
 		viewer_mode = CUM::OWNER;
+	}
 
 	return get_overall_perm(viewer_mode);
 }
@@ -49,14 +52,17 @@ Sim::ContestUserPermissions Sim::contest_user_get_permissions(
 	using PERM = ContestUserPermissions;
 	using CUM = ContestUser::Mode;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return PERM::NONE;
+	}
 
-	if (session_user_type == User::Type::ADMIN)
+	if (session_user_type == User::Type::ADMIN) {
 		viewer_mode = CUM::OWNER;
+	}
 
-	if (not viewer_mode.has_value() or not user_mode.has_value())
+	if (not viewer_mode.has_value() or not user_mode.has_value()) {
 		return get_overall_perm(viewer_mode);
+	}
 
 	switch (viewer_mode.value()) {
 	case CUM::OWNER:
@@ -82,9 +88,10 @@ pair<std::optional<ContestUser::Mode>, Sim::ContestUserPermissions>
 Sim::contest_user_get_overall_permissions(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return {std::nullopt,
 		        contest_user_get_overall_permissions(std::nullopt)};
+	}
 
 	auto stmt =
 	   mysql.prepare("SELECT cu.mode FROM contests c LEFT JOIN contest_users "
@@ -93,8 +100,9 @@ Sim::contest_user_get_overall_permissions(StringView contest_id) {
 
 	MySQL::Optional<decltype(ContestUser::mode)> cu_mode;
 	stmt.res_bind_all(cu_mode);
-	if (not stmt.next())
+	if (not stmt.next()) {
 		return {std::nullopt, ContestUserPermissions::NONE};
+	}
 
 	return {cu_mode, contest_user_get_overall_permissions(cu_mode)};
 }
@@ -104,10 +112,11 @@ std::tuple<std::optional<ContestUser::Mode>, Sim::ContestUserPermissions,
 Sim::contest_user_get_permissions(StringView contest_id, StringView user_id) {
 	STACK_UNWINDING_MARK;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return {std::nullopt,
 		        contest_user_get_overall_permissions(std::nullopt),
 		        std::nullopt};
+	}
 
 	auto stmt = mysql.prepare("SELECT v.mode, u.mode FROM contests c "
 	                          "LEFT JOIN contest_users v ON v.user_id=?"
@@ -120,8 +129,9 @@ Sim::contest_user_get_permissions(StringView contest_id, StringView user_id) {
 	MySQL::Optional<decltype(ContestUser::mode)> v_mode;
 	MySQL::Optional<decltype(ContestUser::mode)> u_mode;
 	stmt.res_bind_all(v_mode, u_mode);
-	if (not stmt.next())
+	if (not stmt.next()) {
 		return {std::nullopt, ContestUserPermissions::NONE, std::nullopt};
+	}
 
 	return {v_mode, contest_user_get_permissions(v_mode, u_mode), u_mode};
 }
@@ -131,8 +141,9 @@ void Sim::api_contest_users() {
 	using CUP = ContestUserPermissions;
 	using CUM = ContestUser::Mode;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return api_error403();
+	}
 
 	bool allow_access = false; // Contest argument must occur
 
@@ -140,7 +151,8 @@ void Sim::api_contest_users() {
 	// used to ensure data consistency
 	auto transaction = mysql.start_transaction();
 
-	InplaceBuff<512> qfields, qwhere;
+	InplaceBuff<512> qfields;
+	InplaceBuff<512> qwhere;
 	qfields.append(
 	   "SELECT cu.user_id, u.username, u.first_name, u.last_name, cu.mode");
 	qwhere.append(" FROM contest_users cu STRAIGHT_JOIN users u ON "
@@ -187,43 +199,48 @@ void Sim::api_contest_users() {
 			StringView arg_id = StringView(arg).substr(1);
 
 			if (cond_c == 'm') { // User's mode
-				if (mode_condition_occurred)
+				if (mode_condition_occurred) {
 					return api_error400("User mode specified more than once");
+				}
 
 				mode_condition_occurred = true;
 
-				if (arg_id == "O")
+				if (arg_id == "O") {
 					qwhere.append(" AND cu.mode=",
 					              EnumVal(ContestUser::Mode::OWNER).int_val());
-				else if (arg_id == "M")
+				} else if (arg_id == "M") {
 					qwhere.append(
 					   " AND cu.mode=",
 					   EnumVal(ContestUser::Mode::MODERATOR).int_val());
-				else if (arg_id == "C")
+				} else if (arg_id == "C") {
 					qwhere.append(
 					   " AND cu.mode=",
 					   EnumVal(ContestUser::Mode::CONTESTANT).int_val());
-				else
+				} else {
 					return api_error400(intentional_unsafe_string_view(
 					   concat("Invalid user mode: ", arg_id)));
+				}
 
+				// NOLINTNEXTLINE(bugprone-branch-clone)
 			} else if (not is_digit(arg_id)) { // Next conditions require arg_id
 				                               // to be a valid ID
 				return api_error400();
 
 			} else if (is_one_of(cond_c, '<', '>', '=')) { // User id
-				if (user_id_condition_occurred)
+				if (user_id_condition_occurred) {
 					return api_error400(
 					   "User ID condition specified more than once");
+				}
 
 				rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 				user_id_condition_occurred = true;
 				qwhere.append(" AND cu.user_id", arg);
 
 			} else if (cond_c == 'c') { // Contest id
-				if (contest_id_condition_occurred)
+				if (contest_id_condition_occurred) {
 					return api_error400(
 					   "Contest ID condition specified more than once");
+				}
 
 				contest_id_condition_occurred = true;
 				qwhere.append(" AND cu.contest_id=", arg_id);
@@ -231,8 +248,9 @@ void Sim::api_contest_users() {
 				std::tie(cuser_mode, overall_perms) =
 				   contest_user_get_overall_permissions(arg_id);
 
-				if (uint(overall_perms & CUP::ACCESS_API))
+				if (uint(overall_perms & CUP::ACCESS_API)) {
 					allow_access = true;
+				}
 
 			} else {
 				return api_error400();
@@ -240,8 +258,9 @@ void Sim::api_contest_users() {
 		}
 	}
 
-	if (not allow_access)
+	if (not allow_access) {
 		return set_empty_response();
+	}
 
 	// Execute query
 	auto res = mysql.query(qfields, qwhere, " ORDER BY cu.user_id DESC LIMIT ",
@@ -251,20 +270,24 @@ void Sim::api_contest_users() {
 
 	// Overall actions
 	append(",\n\"");
-	if (uint(overall_perms & CUP::ADD_CONTESTANT))
+	if (uint(overall_perms & CUP::ADD_CONTESTANT)) {
 		append("Ac");
-	if (uint(overall_perms & CUP::ADD_MODERATOR))
+	}
+	if (uint(overall_perms & CUP::ADD_MODERATOR)) {
 		append("Am");
-	if (uint(overall_perms & CUP::ADD_OWNER))
+	}
+	if (uint(overall_perms & CUP::ADD_OWNER)) {
 		append("Ao");
+	}
 	append("\",[");
 
 	auto curr_date = mysql_date();
 	for (bool first = true; res.next();) {
-		if (first)
+		if (first) {
 			first = false;
-		else
+		} else {
 			append(',');
+		}
 
 		// User id, username, first name, last name
 		append("\n[", res[UID], ',', json_stringify(res[USERNAME]), ',',
@@ -284,14 +307,18 @@ void Sim::api_contest_users() {
 		CUP perms = contest_user_get_permissions(cuser_mode, mode);
 		// Actions
 		append("\"");
-		if (uint(perms & CUP::MAKE_CONTESTANT))
+		if (uint(perms & CUP::MAKE_CONTESTANT)) {
 			append("Mc");
-		if (uint(perms & CUP::MAKE_MODERATOR))
+		}
+		if (uint(perms & CUP::MAKE_MODERATOR)) {
 			append("Mm");
-		if (uint(perms & CUP::MAKE_OWNER))
+		}
+		if (uint(perms & CUP::MAKE_OWNER)) {
 			append("Mo");
-		if (uint(perms & CUP::EXPEL))
+		}
+		if (uint(perms & CUP::EXPEL)) {
 			append("E");
+		}
 		append("\"]");
 	}
 
@@ -301,32 +328,40 @@ void Sim::api_contest_users() {
 void Sim::api_contest_user() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return api_error403();
+	}
 
 	StringView contest_id = url_args.extract_next_arg();
-	if (contest_id.empty())
+	if (contest_id.empty()) {
 		return api_error400("Missing contest id");
+	}
 	if (contest_id[0] != 'c' or not is_digit(contest_id = contest_id.substr(1)))
+	{
 		return api_error400("Invalid contest id");
+	}
 
 	StringView next_arg = url_args.extract_next_arg();
-	if (next_arg == "add")
+	if (next_arg == "add") {
 		return api_contest_user_add(contest_id);
+	}
 
 	StringView user_id = next_arg;
-	if (user_id.empty())
+	if (user_id.empty()) {
 		return api_error400("Missing user id");
-	if (user_id[0] != 'u' or not is_digit(user_id = user_id.substr(1)))
+	}
+	if (user_id[0] != 'u' or not is_digit(user_id = user_id.substr(1))) {
 		return api_error400("Invalid user id");
+	}
 
 	next_arg = url_args.extract_next_arg();
-	if (next_arg == "change_mode")
+	if (next_arg == "change_mode") {
 		return api_contest_user_change_mode(contest_id, user_id);
-	else if (next_arg == "expel")
+	}
+	if (next_arg == "expel") {
 		return api_contest_user_expel(contest_id, user_id);
-	else
-		return api_error404();
+	}
+	return api_error404();
 }
 
 void Sim::api_contest_user_add(StringView contest_id) {
@@ -354,14 +389,16 @@ void Sim::api_contest_user_add(StringView contest_id) {
 
 	StringView user_id;
 	form_validate(user_id, "user_id", "User ID",
-	              (bool (*)(const StringView&))is_digit,
+	              static_cast<bool (*)(const StringView&)>(is_digit),
 	              "User ID: invalid value");
 
-	if (notifications.size)
+	if (notifications.size) {
 		return api_error400(notifications);
+	}
 
-	if (uint(~perms & needed_perm))
+	if (uint(~perms & needed_perm)) {
 		return api_error403();
+	}
 
 	UserPermissions user_perms = users_get_permissions(user_id);
 	if (uint(~user_perms & UserPermissions::VIEW)) {
@@ -372,8 +409,9 @@ void Sim::api_contest_user_add(StringView contest_id) {
 	auto stmt = mysql.prepare("INSERT IGNORE contest_users(contest_id, "
 	                          "user_id, mode) VALUES(?, ?, ?)");
 	stmt.bind_and_execute(contest_id, user_id, mode);
-	if (stmt.affected_rows() == 0)
+	if (stmt.affected_rows() == 0) {
 		return api_error400("Specified user is already in the contest");
+	}
 }
 
 void Sim::api_contest_user_change_mode(StringView contest_id,
@@ -402,11 +440,13 @@ void Sim::api_contest_user_change_mode(StringView contest_id,
 		                 "Invalid mode, it must be one of those: C, M, or O");
 	}
 
-	if (notifications.size)
+	if (notifications.size) {
 		return api_error400(notifications);
+	}
 
-	if (uint(~perms & needed_perm))
+	if (uint(~perms & needed_perm)) {
 		return api_error403();
+	}
 
 	mysql
 	   .prepare(
@@ -420,8 +460,9 @@ void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
 
 	PERMS perms =
 	   std::get<1>(contest_user_get_permissions(contest_id, user_id));
-	if (uint(~perms & PERMS::EXPEL))
+	if (uint(~perms & PERMS::EXPEL)) {
 		return api_error403();
+	}
 
 	mysql.prepare("DELETE FROM contest_users WHERE contest_id=? AND user_id=?")
 	   .bind_and_execute(contest_id, user_id);

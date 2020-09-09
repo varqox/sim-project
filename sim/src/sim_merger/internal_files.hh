@@ -7,9 +7,10 @@
 #include <simlib/time.hh>
 
 static std::chrono::system_clock::time_point file_mtime(FilePath path) {
-	struct stat st;
-	if (stat(path, &st))
+	struct stat st {};
+	if (stat(path, &st)) {
 		THROW("stat()", errmsg());
+	}
 
 	return std::chrono::system_clock::time_point(to_duration(st.st_mtim));
 }
@@ -21,7 +22,7 @@ struct InternalFile {
 class InternalFilesMerger : public Merger<InternalFile> {
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
-		InternalFile file;
+		InternalFile file{};
 		auto stmt = conn.prepare("SELECT id FROM ", record_set.sql_table_name);
 		stmt.bind_and_execute();
 		stmt.res_bind_all(file.id);
@@ -34,8 +35,9 @@ class InternalFilesMerger : public Merger<InternalFile> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge(
-		   [&](const InternalFile&) -> NewRecord* { return nullptr; });
+		Merger::merge([&](const InternalFile & /*unused*/) -> NewRecord* {
+			return nullptr;
+		});
 	}
 
 	static auto internal_files_backup_path() {
@@ -58,30 +60,36 @@ public:
 		auto bkp_path = internal_files_backup_path();
 		auto dest_path = concat(main_sim_build, "internal_files/");
 		auto trash_path = internal_files_trash_path();
-		if (remove_r(trash_path) and errno != ENOENT)
+		if (remove_r(trash_path) and errno != ENOENT) {
 			THROW("remove_r()", errmsg());
-		if (remove_r(bkp_path) and errno != ENOENT)
+		}
+		if (remove_r(bkp_path) and errno != ENOENT) {
 			THROW("remove_r()", errmsg());
+		}
 
-		if (rename(dest_path, bkp_path))
+		if (rename(dest_path, bkp_path)) {
 			THROW("rename()", errmsg());
+		}
 
 		bool saving_successful = false;
 		Defer internal_files_restorer([&] {
-			if (saving_successful)
+			if (saving_successful) {
 				return;
+			}
 
-			if (rename(dest_path, trash_path))
+			if (rename(dest_path, trash_path)) {
 				(void)remove_r(dest_path);
+			}
 
 			(void)rename(bkp_path, dest_path);
 			(void)remove_r(trash_path);
 		});
 
-		if (mkdir(dest_path))
+		if (mkdir(dest_path)) {
 			THROW("mkdir()", errmsg());
+		}
 
-		decltype(InternalFile::id) id;
+		decltype(InternalFile::id) id = 0;
 		stmt.bind_all(id);
 
 		ProgressBar progress_bar("Internal files saved:", new_table_.size(),
@@ -122,14 +130,16 @@ public:
 		auto dest_path = concat<PATH_MAX>(main_sim_build, "internal_files/");
 		auto trash_path = internal_files_trash_path();
 
-		if (rename(dest_path, trash_path))
+		if (rename(dest_path, trash_path)) {
 			(void)remove_r(dest_path);
+		}
 
 		(void)rename(bkp_path, dest_path);
 		(void)remove_r(trash_path);
 	}
 
-	InternalFilesMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
+	explicit InternalFilesMerger(
+	   const IdsFromMainAndOtherJobs& ids_from_both_jobs)
 	: Merger("internal_files", ids_from_both_jobs.main.internal_files,
 	         ids_from_both_jobs.other.internal_files) {
 		STACK_UNWINDING_MARK;
@@ -138,28 +148,34 @@ public:
 
 	auto path_to_file(uintmax_t new_id) const {
 		STACK_UNWINDING_MARK;
-		if (new_table_.empty())
+		if (new_table_.empty()) {
 			THROW("Invalid new_id");
+		}
 
-		size_t b = 0, e = new_table_.size() - 1;
+		size_t b = 0;
+		size_t e = new_table_.size() - 1;
 		while (b < e) {
 			auto m = b + (e - b) / 2;
-			if (new_table_[m].data.id < new_id)
+			if (new_table_[m].data.id < new_id) {
 				b = m + 1;
-			else
+			} else {
 				e = m;
+			}
 		}
 
 		auto& elem = new_table_[b];
-		if (elem.data.id != new_id)
+		if (elem.data.id != new_id) {
 			THROW("Invalid new_id");
+		}
 
-		if (not elem.main_ids.empty())
+		if (not elem.main_ids.empty()) {
 			return concat(main_sim_build, "internal_files/",
 			              elem.main_ids.front());
-		if (not elem.other_ids.empty())
+		}
+		if (not elem.other_ids.empty()) {
 			return concat(other_sim_build, "internal_files/",
 			              elem.other_ids.front());
+		}
 
 		THROW("Invalid new_id");
 	}

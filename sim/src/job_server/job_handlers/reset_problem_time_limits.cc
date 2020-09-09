@@ -9,20 +9,22 @@ namespace job_handlers {
 void ResetProblemTimeLimits::run() {
 	STACK_UNWINDING_MARK;
 
-	uint64_t problem_file_id;
+	uint64_t problem_file_id = 0;
 	{
 		auto stmt = mysql.prepare("SELECT file_id FROM problems WHERE id=?");
 		stmt.bind_and_execute(problem_id_);
 		stmt.res_bind_all(problem_file_id);
-		if (not stmt.next())
+		if (not stmt.next()) {
 			return set_failure("Problem with ID = ", problem_id_,
 			                   " does not exist");
+		}
 	}
 
 	auto pkg_path = internal_file_path(problem_file_id);
 	reset_package_time_limits(pkg_path);
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	auto transaction = mysql.start_transaction();
 

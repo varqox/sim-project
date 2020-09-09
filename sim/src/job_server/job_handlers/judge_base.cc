@@ -32,8 +32,9 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 	using sim::JudgeReport;
 
 	InplaceBuff<65536> report;
-	if (jr.groups.empty())
+	if (jr.groups.empty()) {
 		return report;
+	}
 
 	// clang-format off
 	report.append("<h2>", (final ? "Final" : "Initial"),
@@ -78,29 +79,31 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 		report.append("<td>", html_escape(test.name), "</td>",
 		              as_td_string(test.status), "<td>");
 
-		if (test.status == JudgeReport::Test::SKIPPED)
+		if (test.status == JudgeReport::Test::SKIPPED) {
 			report.append('?');
-		else
+		} else {
 			report.append(to_string(floor_to_10ms(test.runtime), false));
+		}
 
 		report.append(" / ", to_string(floor_to_10ms(test.time_limit), false),
 		              "</td><td>");
 
-		if (test.status == JudgeReport::Test::SKIPPED)
+		if (test.status == JudgeReport::Test::SKIPPED) {
 			report.append('?');
-		else
+		} else {
 			report.append(test.memory_consumed >> 10);
+		}
 
 		report.append(" / ", test.memory_limit >> 10, "</td>");
 	};
 
 	bool there_are_comments = false;
 	for (auto&& group : jr.groups) {
-		throw_assert(group.tests.size() > 0);
+		throw_assert(!group.tests.empty());
 		// First row
 		report.append("<tr>");
 		append_normal_columns(group.tests[0]);
-		report.append("<td class=\"groupscore\" rowspan=\"", group.tests.size(),
+		report.append(R"(<td class="groupscore" rowspan=")", group.tests.size(),
 		              "\">", group.score, " / ", group.max_score, "</td></tr>");
 		// Other rows
 		std::for_each(group.tests.begin() + 1, group.tests.end(),
@@ -110,8 +113,9 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 			              report.append("</tr>");
 		              });
 
-		for (auto&& test : group.tests)
+		for (auto&& test : group.tests) {
 			there_are_comments |= !test.comment.empty();
+		}
 	}
 
 	report.append("</tbody></table>");
@@ -121,7 +125,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 		report.append("<ul class=\"tests-comments\">");
 		for (auto&& group : jr.groups) {
 			for (auto&& test : group.tests) {
-				if (test.comment.size()) {
+				if (!test.comment.empty()) {
 					report.append("<li><span class=\"test-id\">",
 					              html_escape(test.name), "</span>",
 					              html_escape(test.comment), "</li>");
@@ -140,13 +144,16 @@ SubmissionStatus JudgeBase::calc_status(const sim::JudgeReport& jr) {
 	using sim::JudgeReport;
 
 	// Check for judge errors
-	for (auto&& group : jr.groups)
-		for (auto&& test : group.tests)
-			if (test.status == JudgeReport::Test::CHECKER_ERROR)
+	for (auto&& group : jr.groups) {
+		for (auto&& test : group.tests) {
+			if (test.status == JudgeReport::Test::CHECKER_ERROR) {
 				return SubmissionStatus::JUDGE_ERROR;
+			}
+		}
+	}
 
-	for (auto&& group : jr.groups)
-		for (auto&& test : group.tests)
+	for (auto&& group : jr.groups) {
+		for (auto&& test : group.tests) {
 			switch (test.status) {
 			case JudgeReport::Test::OK:
 			case JudgeReport::Test::SKIPPED: continue;
@@ -158,14 +165,17 @@ SubmissionStatus JudgeBase::calc_status(const sim::JudgeReport& jr) {
 				throw_assert(
 				   false); // This should be handled in the above loops
 			}
+		}
+	}
 
 	return SubmissionStatus::OK;
 }
 
 void JudgeBase::load_problem_package(FilePath problem_pkg_path) {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	auto tmplog = job_log("Loading problem package...");
 	tmplog.flush_no_nl();
@@ -179,8 +189,9 @@ JudgeBase::compile_solution_impl(FilePath solution_path,
                                  sim::SolutionLanguage lang,
                                  MethodPtr compile_method) {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return std::nullopt;
+	}
 
 	auto tmplog = job_log("Compiling solution...");
 	tmplog.flush_no_nl();
@@ -216,8 +227,9 @@ JudgeBase::compile_solution_from_problem_package(FilePath solution_path,
 
 std::optional<std::string> JudgeBase::compile_checker() {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return std::nullopt;
+	}
 
 	auto tmplog = job_log("Compiling checker...");
 	tmplog.flush_no_nl();

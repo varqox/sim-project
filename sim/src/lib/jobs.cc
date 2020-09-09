@@ -49,19 +49,21 @@ void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
 		   .bind_and_execute(EnumVal(JobStatus::PENDING), job_id);
 	}
 
-	if (notify_job_server)
+	if (notify_job_server) {
 		jobs::notify_job_server();
+	}
 }
 
 void restart_job(MySQL::Connection& mysql, StringView job_id,
                  bool notify_job_server) {
-	uint8_t jtype;
+	uint8_t jtype = 0;
 	InplaceBuff<128> jinfo;
 	auto stmt = mysql.prepare("SELECT type, info FROM jobs WHERE id=?");
 	stmt.res_bind_all(jtype, jinfo);
 	stmt.bind_and_execute(job_id);
-	if (stmt.next())
+	if (stmt.next()) {
 		restart_job(mysql, job_id, JobType(jtype), jinfo, notify_job_server);
+	}
 }
 
 } // namespace jobs

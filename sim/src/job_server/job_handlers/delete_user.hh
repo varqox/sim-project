@@ -12,7 +12,7 @@ public:
 	: JobHandler(job_id)
 	, user_id_(user_id) {}
 
-	void run() override final;
+	void run() final;
 };
 
 } // namespace job_handlers

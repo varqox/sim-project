@@ -7,8 +7,9 @@ using sim::User;
 Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 	using PERM = SubmissionPermissions;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return PERM::NONE;
+	}
 
 	switch (session_user_type) {
 	case User::Type::ADMIN: return PERM::VIEW_ALL;
@@ -29,10 +30,11 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
 	PERM overall_perms = submissions_get_overall_permissions();
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return PERM::NONE;
+	}
 
-	static_assert((uint)PERM::NONE == 0, "Needed below");
+	static_assert(static_cast<uint>(PERM::NONE) == 0, "Needed below");
 	PERM PERM_SUBMISSION_ADMIN =
 	   PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FINAL_REPORT |
 	   PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
@@ -53,10 +55,11 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
 	       problem_owner.value())
 	{
-		if (stype == STYPE::PROBLEM_SOLUTION)
+		if (stype == STYPE::PROBLEM_SOLUTION) {
 			return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE |
 			       PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS |
 			       PERM::REJUDGE;
+		}
 
 		if (submission_owner and
 		    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==

@@ -18,9 +18,7 @@ protected:
 	                           tmp_file_id, problem_id) {}
 
 public:
-	void run() override final;
-
-	virtual ~AddOrReuploadProblemJudgeModelSolutionBase() = default;
+	void run() final;
 };
 
 } // namespace job_handlers

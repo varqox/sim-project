@@ -12,7 +12,7 @@ public:
 	: JobHandler(job_id)
 	, contest_id_(contest_id) {}
 
-	void run() override final;
+	void run() final;
 };
 
 } // namespace job_handlers

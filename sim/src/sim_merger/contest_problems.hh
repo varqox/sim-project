@@ -49,7 +49,8 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const sim::ContestProblem&) { return nullptr; });
+		Merger::merge(
+		   [&](const sim::ContestProblem& /*unused*/) { return nullptr; });
 	}
 
 public:

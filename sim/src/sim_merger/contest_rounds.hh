@@ -40,7 +40,8 @@ class ContestRoundsMerger : public Merger<sim::ContestRound> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const sim::ContestRound&) { return nullptr; });
+		Merger::merge(
+		   [&](const sim::ContestRound& /*unused*/) { return nullptr; });
 	}
 
 public:

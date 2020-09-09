@@ -21,7 +21,7 @@ void AddOrReuploadProblemBase::load_job_log_from_db() {
 void AddOrReuploadProblemBase::assert_transaction_is_open() {
 	STACK_UNWINDING_MARK;
 
-	unsigned char in_transaction;
+	uint8_t in_transaction = 0;
 	auto stmt = mysql.prepare("SELECT @@in_transaction");
 	stmt.bind_and_execute();
 	stmt.res_bind_all(in_transaction);
@@ -30,8 +30,9 @@ void AddOrReuploadProblemBase::assert_transaction_is_open() {
 
 void AddOrReuploadProblemBase::build_package() {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	assert_transaction_is_open();
 
@@ -130,8 +131,9 @@ void AddOrReuploadProblemBase::build_package() {
 
 void AddOrReuploadProblemBase::job_done(bool& job_was_canceled) {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	EnumVal<JobStatus> status = JobStatus::DONE;
 	EnumVal<JobType> type = job_type_;
@@ -196,8 +198,9 @@ static SubmissionLanguage filename_to_lang(StringView extension) {
 
 void AddOrReuploadProblemBase::open_package() {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	assert_transaction_is_open();
 
@@ -216,8 +219,9 @@ void AddOrReuploadProblemBase::open_package() {
 
 void AddOrReuploadProblemBase::add_problem_to_db() {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	open_package();
 
@@ -235,8 +239,9 @@ void AddOrReuploadProblemBase::add_problem_to_db() {
 
 void AddOrReuploadProblemBase::replace_problem_in_db() {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	open_package();
 
@@ -284,8 +289,9 @@ void AddOrReuploadProblemBase::replace_problem_in_db() {
 
 void AddOrReuploadProblemBase::submit_solutions() {
 	STACK_UNWINDING_MARK;
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	assert_transaction_is_open();
 

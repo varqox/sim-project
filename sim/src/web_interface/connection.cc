@@ -8,16 +8,15 @@
 #include <simlib/logger.hh>
 #include <unistd.h>
 
-using std::cerr;
-using std::endl;
 using std::pair;
 using std::string;
 
 namespace server {
 
 int Connection::peek() {
-	if (state_ == CLOSED)
+	if (state_ == CLOSED) {
 		return -1;
+	}
 
 	if (pos_ >= buff_size_) {
 		// wait for data
@@ -48,26 +47,26 @@ int Connection::peek() {
 
 string Connection::get_header_line() {
 	string line;
-	int c;
+	int c = 0;
 
 	while ((c = get_char()) != -1) {
-		if (c == '\n' && line.size() && line.back() == '\r') {
+		if (c == '\n' && !line.empty() && line.back() == '\r') {
 			line.pop_back();
 			break;
-
-		} else if (line.size() > MAX_HEADER_LENGTH) {
+		}
+		if (line.size() > MAX_HEADER_LENGTH) {
 			error431();
 			return "";
-
-		} else
-			line += c;
+		}
+		line += static_cast<unsigned char>(c);
 	}
 
 	return (state_ == OK ? line : "");
 }
 
 pair<string, string> Connection::parse_header_line(const string& header) {
-	size_t beg = header.find(':'), end;
+	size_t beg = header.find(':');
+	size_t end = 0;
 	if (beg == string::npos) {
 		error400();
 		return pair<string, string>();
@@ -83,8 +82,9 @@ pair<string, string> Connection::parse_header_line(const string& header) {
 	string ret = header.substr(0, beg);
 	// Erase leading white space
 	end = header.size();
-	while (is_space(header[end - 1]))
+	while (is_space(header[end - 1])) {
 		--end;
+	}
 
 	// Erase trailing white space
 	while (++beg < header.size() && is_space(header[beg])) {
@@ -98,15 +98,17 @@ void Connection::read_post(HttpRequest& req) {
 	{
 		auto opt =
 		   str2num<decltype(content_length)>(req.headers["Content-Length"]);
-		if (not opt)
+		if (not opt) {
 			return error400();
+		}
 
 		content_length = *opt;
 	}
 
 	int c = '\0';
-	string field_name, field_content;
-	bool is_name;
+	string field_name;
+	string field_content;
+	bool is_name = false;
 	string& con_type = req.headers["Content-Type"];
 	LimitedReader reader(*this, content_length);
 
@@ -118,20 +120,23 @@ void Connection::read_post(HttpRequest& req) {
 
 			while ((c = reader.get_char()) != -1) {
 				if (c == '\r') {
-					if (peek() == '\n')
+					if (peek() == '\n') {
 						c = reader.get_char();
+					}
 					break;
 				}
 
-				if (is_name && c == '=')
+				if (is_name && c == '=') {
 					is_name = false;
-				else if (is_name)
-					field_name += c;
-				else
-					field_content += c;
+				} else if (is_name) {
+					field_name += static_cast<unsigned char>(c);
+				} else {
+					field_content += static_cast<unsigned char>(c);
+				}
 			}
-			if (state_ == CLOSED)
+			if (state_ == CLOSED) {
 				return;
+			}
 
 			req.form_data[field_name] = field_content;
 		}
@@ -143,18 +148,21 @@ void Connection::read_post(HttpRequest& req) {
 			is_name = true;
 
 			while ((c = reader.get_char()) != -1) {
-				if (c == '&')
+				if (c == '&') {
 					break;
+				}
 
-				if (is_name && c == '=')
+				if (is_name && c == '=') {
 					is_name = false;
-				else if (is_name)
-					field_name += c;
-				else
-					field_content += c;
+				} else if (is_name) {
+					field_name += static_cast<unsigned char>(c);
+				} else {
+					field_content += static_cast<unsigned char>(c);
+				}
 			}
-			if (state_ == CLOSED)
+			if (state_ == CLOSED) {
 				return;
+			}
 
 			req.form_data[decode_uri(field_name).to_string()] =
 			   decode_uri(field_content).to_string();
@@ -177,11 +185,13 @@ void Connection::read_post(HttpRequest& req) {
 		p[0] = 0;
 
 		for (size_t i = 1; i < boundary.size(); ++i) {
-			while (k > 0 && boundary[k] != boundary[i])
+			while (k > 0 && boundary[k] != boundary[i]) {
 				k = p[k - 1];
+			}
 
-			if (boundary[k] == boundary[i])
+			if (boundary[k] == boundary[i]) {
 				++k;
+			}
 			p[i] = k;
 		}
 
@@ -195,11 +205,13 @@ void Connection::read_post(HttpRequest& req) {
 		// While we can read
 		// In each loop pass parse EXACTLY one field
 		while ((c = reader.get_char()) != -1) {
-			while (k > 0 && boundary[k] != c)
+			while (k > 0 && boundary[k] != c) {
 				k = p[k - 1];
+			}
 
-			if (boundary[k] == c)
+			if (boundary[k] == c) {
 				++k;
+			}
 			// If we have found a boundary
 			if (k == boundary.size()) {
 				if (first_boundary) {
@@ -247,44 +259,50 @@ void Connection::read_post(HttpRequest& req) {
 
 					while ((c = reader.get_char()) != -1) {
 						// Found CRLF
-						if (c == '\n' && field_content.size() &&
+						if (c == '\n' && !field_content.empty() &&
 						    field_content.back() == '\r') {
 							field_content.pop_back();
 							break;
-
-						} else if (field_content.size() > MAX_HEADER_LENGTH) {
+						}
+						if (field_content.size() > MAX_HEADER_LENGTH) {
 							error431();
 							goto safe_return;
 						}
 
-						field_content += c;
+						field_content += static_cast<unsigned char>(c);
 					}
 
-					if (state_ != OK) // Something went wrong
+					if (state_ != OK) { // Something went wrong
 						goto safe_return;
+					}
 
-					if (field_content.empty()) // End of headers
+					if (field_content.empty()) { // End of headers
 						break;
+					}
 
 					D(stdlog("header: '", field_content, '\'');)
 					pair<string, string> header =
 					   parse_header_line(field_content);
-					if (state_ != OK) // Something went wrong
+					if (state_ != OK) { // Something went wrong
 						goto safe_return;
+					}
 
 					if (to_lower(header.first) == "content-disposition") {
 						// extract all needed information
-						size_t st = 0, last = 0;
+						size_t st = 0;
+						size_t last = 0;
 						field_name = "";
 						header.second += ';';
-						string var_name, var_val;
+						string var_name;
+						string var_val;
 						char tmp_filename[] = "/tmp/sim-server-tmp.XXXXXX";
 
 						// extract all variables from header content
 						while ((last = header.second.find(';', st)) !=
 						       string::npos) {
-							while (is_blank(header.second[st]))
+							while (is_blank(header.second[st])) {
 								++st;
+							}
 
 							var_name = var_val = "";
 							// extract var_name
@@ -298,20 +316,21 @@ void Connection::read_post(HttpRequest& req) {
 								++st; // this is safe because last character is
 								      // always ';'
 
-								if (header.second[st] == '"')
+								if (header.second[st] == '"') {
 									while (++st < last &&
 									       header.second[st] != '"') {
-										if (header.second[st] == '\\')
+										if (header.second[st] == '\\') {
 											++st; // safe because last character
 											      // is ';'
+										}
 										var_val += header.second[st];
 									}
-
-								else
+								} else {
 									while (st < last &&
 									       !is_blank(header.second[st])) {
 										var_val += header.second[st++];
 									}
+								}
 							}
 							st = last + 1;
 
@@ -327,8 +346,9 @@ void Connection::read_post(HttpRequest& req) {
 								// store client filename
 								field_content = var_val;
 
-							} else if (var_name == "name")
+							} else if (var_name == "name") {
 								field_name = var_val;
+							}
 						}
 
 						// Add file field to req.form_data
@@ -348,23 +368,24 @@ void Connection::read_post(HttpRequest& req) {
 				k = p[k - 1];
 
 			} else if (fd == -1) {
-				field_content += c;
+				field_content += static_cast<unsigned char>(c);
 				if (field_content.size() > MAX_CONTENT_LENGTH) {
 					error413();
 					goto safe_return;
 				}
-
-			} else
+			} else {
 				putc(c, tmp_file);
+			}
 		}
 
 	safe_return:
 		// Remove trash
-		if (fd != -1)
+		if (fd != -1) {
 			fclose(tmp_file);
-
-	} else
+		}
+	} else {
 		error415();
+	}
 }
 
 void Connection::error400() {
@@ -541,38 +562,45 @@ HttpRequest Connection::get_request() {
 	HttpRequest req;
 
 	// Get request line
-	string request_line = get_header_line(), tmp;
-	while (state_ == OK && request_line.empty())
+	string request_line = get_header_line();
+	string tmp;
+	while (state_ == OK && request_line.empty()) {
 		request_line = get_header_line();
+	}
 
-	if (state_ == CLOSED)
+	if (state_ == CLOSED) {
 		return req;
+	}
 
 	D(stdlog("\033[33mREQUEST: ", request_line, "\033[m");)
 	// Extract method
-	size_t beg = 0, end = 0;
+	size_t beg = 0;
+	size_t end = 0;
 
-	while (end < request_line.size() && !is_space(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end])) {
 		++end;
+	}
 
-	if (request_line.compare(0, end, "GET") == 0)
+	if (request_line.compare(0, end, "GET") == 0) {
 		req.method = HttpRequest::GET;
-	else if (request_line.compare(0, end, "POST") == 0)
+	} else if (request_line.compare(0, end, "POST") == 0) {
 		req.method = HttpRequest::POST;
-	else if (request_line.compare(0, end, "HEAD") == 0)
+	} else if (request_line.compare(0, end, "HEAD") == 0) {
 		req.method = HttpRequest::HEAD;
-	else {
+	} else {
 		req.method = HttpRequest::GET; // Do not care - worker will handle error
 		error400();
 		return req;
 	}
 
 	// Extract target
-	while (end < request_line.size() && is_space(request_line[end]))
+	while (end < request_line.size() && is_space(request_line[end])) {
 		++end;
+	}
 	beg = end;
-	while (end < request_line.size() && !is_space(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end])) {
 		++end;
+	}
 
 	req.target = request_line.substr(beg, end - beg);
 	if (req.target.compare(0, 1, "/") != 0) {
@@ -581,11 +609,13 @@ HttpRequest Connection::get_request() {
 	}
 
 	// Extract http version
-	while (end < request_line.size() && is_space(request_line[end]))
+	while (end < request_line.size() && is_space(request_line[end])) {
 		++end;
+	}
 	beg = end;
-	while (end < request_line.size() && !is_space(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end])) {
 		++end;
+	}
 
 	req.http_version = request_line.substr(beg, end - beg);
 	if (req.http_version.compare(0, 7, "HTTP/1.") != 0 ||
@@ -601,19 +631,21 @@ HttpRequest Connection::get_request() {
 	string header;
 
 	D(auto tmplog = stdlog("HEADERS:\n");)
-	while ((header = get_header_line()).size()) {
+	while (!(header = get_header_line()).empty()) {
 		D(tmplog("\t", header, "\n");)
 		pair<string, string> hdr = parse_header_line(header);
 
-		if (state_ == CLOSED)
+		if (state_ == CLOSED) {
 			return req;
+		}
 
 		req.headers[hdr.first] = hdr.second;
 	}
 	D(tmplog.flush();)
 
-	if (state_ == CLOSED)
+	if (state_ == CLOSED) {
 		return req;
+	}
 
 	// Read content
 	if (req.method == HttpRequest::POST) {
@@ -646,8 +678,9 @@ HttpRequest Connection::get_request() {
 
 		for (beg = 0; beg < end; ++beg) {
 			int c = get_char();
-			if (c == -1)
+			if (c == -1) {
 				return req;
+			}
 
 			req.content[beg] = c;
 		}
@@ -657,11 +690,12 @@ HttpRequest Connection::get_request() {
 }
 
 void Connection::send(const char* str, size_t len) {
-	if (state_ == CLOSED)
+	if (state_ == CLOSED) {
 		return;
+	}
 
 	size_t pos = 0;
-	ssize_t written;
+	ssize_t written = 0;
 
 	while (pos < len) {
 		written = write(sock_fd_, str + pos, len - pos);
@@ -737,21 +771,25 @@ void Connection::send_response(const HttpResponse& res) {
 		FileRemover remover(
 		   res.content_type == HttpResponse::FILE_TO_REMOVE ? filename : "");
 		FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
-		if (fd == -1)
+		if (fd == -1) {
 			return error404();
+		}
 
 #ifdef __x86_64__
-		struct stat sb;
-		if (fstat(fd, &sb) == -1)
+		struct stat sb {};
+		if (fstat(fd, &sb) == -1) {
 			return error500();
+		}
 #else
 		struct stat64 sb;
-		if (fstat64(fd, &sb) == -1)
+		if (fstat64(fd, &sb) == -1) {
 			return error500();
+		}
 #endif
 
-		if (!S_ISREG(sb.st_mode))
+		if (!S_ISREG(sb.st_mode)) {
 			return error404();
+		}
 
 		off64_t fsize = sb.st_size;
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
@@ -763,12 +801,13 @@ void Connection::send_response(const HttpResponse& res) {
 		char buff[buff_length];
 
 		send(str);
-		if (state_ == CLOSED)
+		if (state_ == CLOSED) {
 			return;
+		}
 
 		// Read from file and write to socket
 		off64_t pos = 0;
-		ssize_t read_len;
+		ssize_t read_len = 0;
 		while (pos < fsize && state_ == OK &&
 		       (read_len = read(fd, buff, buff_length)) != -1)
 		{

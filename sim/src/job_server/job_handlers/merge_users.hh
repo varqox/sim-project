@@ -17,7 +17,7 @@ public:
 	, donor_user_id_(donor_user_id)
 	, info_(info) {}
 
-	void run() override final;
+	void run() final;
 
 private:
 	void run_impl();

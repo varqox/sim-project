@@ -2,9 +2,6 @@
 
 #include <sim/problem_permissions.hh>
 
-using sim::User;
-using std::optional;
-
 void Sim::problems_handle() {
 	STACK_UNWINDING_MARK;
 

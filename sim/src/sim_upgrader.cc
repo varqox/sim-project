@@ -83,9 +83,9 @@ static int true_main(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	// Signal control
-	struct sigaction sa;
+	struct sigaction sa {};
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = SIG_IGN;
+	sa.sa_handler = SIG_IGN; // NOLINT
 
 	(void)sigaction(SIGINT, &sa, nullptr);
 	(void)sigaction(SIGTERM, &sa, nullptr);

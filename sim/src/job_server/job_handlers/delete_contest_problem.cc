@@ -21,7 +21,13 @@ void DeleteContestProblem::run() {
 		                 "JOIN problems p ON p.id=cp.problem_id "
 		                 "WHERE cp.id=?");
 		stmt.bind_and_execute(contest_problem_id_);
-		InplaceBuff<32> cname, cid, rname, rid, cpname, pname, pid;
+		InplaceBuff<32> cname;
+		InplaceBuff<32> cid;
+		InplaceBuff<32> rname;
+		InplaceBuff<32> rid;
+		InplaceBuff<32> cpname;
+		InplaceBuff<32> pname;
+		InplaceBuff<32> pid;
 		stmt.res_bind_all(cname, cid, rname, rid, cpname, pname, pid);
 		if (not stmt.next()) {
 			return set_failure(

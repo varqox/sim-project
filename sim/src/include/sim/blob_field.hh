@@ -10,16 +10,13 @@ public:
 	using StrType = InplaceBuff<STATIC_LEN>;
 
 	using StrType::StrType;
-
-	constexpr BlobField(const BlobField&) = default;
-
-	constexpr BlobField(BlobField&&) noexcept = default;
-
 	using StrType::operator=;
 
+	constexpr BlobField(const BlobField&) = default;
+	constexpr BlobField(BlobField&&) noexcept = default;
 	constexpr BlobField& operator=(const BlobField&) = default;
-
 	constexpr BlobField& operator=(BlobField&&) noexcept = default;
+	~BlobField() = default;
 };
 
 } // namespace sim

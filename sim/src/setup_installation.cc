@@ -30,8 +30,9 @@ inline static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
  * @brief Displays help
  */
 static void help(const char* program_name) {
-	if (program_name == nullptr)
+	if (program_name == nullptr) {
 		program_name = "setup-installation";
+	}
 
 	printf("Usage: %s [options] INSTALL_DIR\n", program_name);
 	puts("Setup database after SIM installation");
@@ -49,29 +50,30 @@ static void parse_options(int& argc, char** argv) {
 
 		if (argv[i][0] == '-') {
 			// Drop tables
-			if (0 == strcmp(argv[i], "--drop-tables"))
+			if (0 == strcmp(argv[i], "--drop-tables")) {
 				DROP_TABLES = true;
-
+			}
 			// Help
 			else if (0 == strcmp(argv[i], "-h") ||
-			         0 == strcmp(argv[i], "--help")) {
+			         0 == strcmp(argv[i], "--help"))
+			{
 				help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 			}
-
 			// Drop tables
 			else if (0 == strcmp(argv[i], "--only-drop-tables"))
 			{
 				DROP_TABLES = true;
 				ONLY_DROP_TABLES = true;
 			}
-
 			// Unknown
 			else
+			{
 				errlog("Unknown option: '", argv[i], '\'');
-
-		} else
+			}
+		} else {
 			argv[new_argc++] = argv[i];
+		}
 	}
 
 	argc = new_argc;
@@ -129,8 +131,9 @@ struct TryToCreateTable {
 	void operator()(const char* table_name, Str&& query, Func&& f) noexcept {
 		try {
 			static_assert(is_sorted(tables), "Needed for binary search");
-			if (not binary_search(tables, StringView{table_name}))
+			if (not binary_search(tables, StringView{table_name})) {
 				THROW("Table `", table_name, "` not found in the table list");
+			}
 
 			conn_.update(std::forward<Str>(query));
 			f();
@@ -181,12 +184,14 @@ int main(int argc, char** argv) {
 	if (DROP_TABLES) {
 		try {
 			conn.update("SET foreign_key_checks=0");
-			for (auto&& table : tables)
+			for (auto&& table : tables) {
 				conn.update("DROP TABLE IF EXISTS `", table, '`');
+			}
 			conn.update("SET foreign_key_checks=1");
 
-			if (ONLY_DROP_TABLES)
+			if (ONLY_DROP_TABLES) {
 				return 0;
+			}
 
 		} catch (const std::exception& e) {
 			errlog("\033[31mFailed to drop tables\033[m - ", e.what());
@@ -491,8 +496,9 @@ int main(int argc, char** argv) {
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 	// clang-format on
 
-	if (try_to_create_table.error)
+	if (try_to_create_table.error) {
 		return 7;
+	}
 
 	return 0;
 }

@@ -24,8 +24,9 @@ void Sim::api_handle() {
 				auto id = url_args.extract_next_arg();
 				request.target =
 				   concat_tostr("/api/", next_arg, '/', id, "/statement");
-			} else
+			} else {
 				return api_error404();
+			}
 
 		} else if (next_arg == "job") {
 			auto job_id = url_args.extract_next_arg();
@@ -38,79 +39,99 @@ void Sim::api_handle() {
 				return api_error404();
 			}
 
-		} else
+		} else {
 			return api_error404();
+		}
 
 		// Update url_args to reflect the changed URL
 		url_args = RequestUriParser(request.target);
 		url_args.extract_next_arg(); // extract "/api"
 		next_arg = url_args.extract_next_arg();
 
-	} else if (request.method != server::HttpRequest::POST)
+	} else if (request.method != server::HttpRequest::POST) {
 		return api_error403("To access API you have to use POST");
+	}
 
-	if (next_arg == "contest")
+	if (next_arg == "contest") {
 		return api_contest();
-	else if (next_arg == "contest_entry_token")
+	}
+	if (next_arg == "contest_entry_token") {
 		return api_contest_entry_token();
-	else if (next_arg == "contest_file")
+	}
+	if (next_arg == "contest_file") {
 		return api_contest_file();
-	else if (next_arg == "contest_files")
+	}
+	if (next_arg == "contest_files") {
 		return api_contest_files();
-	else if (next_arg == "contest_user")
+	}
+	if (next_arg == "contest_user") {
 		return api_contest_user();
-	else if (next_arg == "contest_users")
+	}
+	if (next_arg == "contest_users") {
 		return api_contest_users();
-	else if (next_arg == "contests")
+	}
+	if (next_arg == "contests") {
 		return api_contests();
-	else if (next_arg == "job")
+	}
+	if (next_arg == "job") {
 		return api_job();
-	else if (next_arg == "jobs")
+	}
+	if (next_arg == "jobs") {
 		return api_jobs();
-	else if (next_arg == "logs")
+	}
+	if (next_arg == "logs") {
 		return api_logs();
-	else if (next_arg == "problem")
+	}
+	if (next_arg == "problem") {
 		return api_problem();
-	else if (next_arg == "problems")
+	}
+	if (next_arg == "problems") {
 		return api_problems();
-	else if (next_arg == "submission")
+	}
+	if (next_arg == "submission") {
 		return api_submission();
-	else if (next_arg == "submissions")
+	}
+	if (next_arg == "submissions") {
 		return api_submissions();
-	else if (next_arg == "user")
+	}
+	if (next_arg == "user") {
 		return api_user();
-	else if (next_arg == "users")
+	}
+	if (next_arg == "users") {
 		return api_users();
-	else
-		return api_error404();
+	}
+	return api_error404();
 }
 
 void Sim::api_logs() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_is_open || session_user_type != User::Type::ADMIN)
+	if (not session_is_open || session_user_type != User::Type::ADMIN) {
 		return api_error403();
+	}
 
 	StringView type = url_args.extract_next_arg();
 	CStringView filename;
-	if (type == "web")
+	if (type == "web") {
 		filename = SERVER_LOG;
-	else if (type == "web_err")
+	} else if (type == "web_err") {
 		filename = SERVER_ERROR_LOG;
-	else if (type == "jobs")
+	} else if (type == "jobs") {
 		filename = JOB_SERVER_LOG;
-	else if (type == "jobs_err")
+	} else if (type == "jobs_err") {
 		filename = JOB_SERVER_ERROR_LOG;
-	else
+	} else {
 		return api_error404();
+	}
 
 	off64_t end_offset = 0;
 	StringView query = url_args.extract_query();
 	uint chunk_max_len = LOGS_FIRST_CHUNK_MAX_LEN;
-	if (query.size()) {
+	if (!query.empty()) {
 		auto opt = str2num<off64_t>(query);
-		if (not opt or *opt < 0)
+		if (not opt or *opt < 0) {
 			return api_error400();
+		}
 
 		end_offset = *opt;
 		chunk_max_len = LOGS_OTHER_CHUNK_MAX_LEN;
@@ -119,21 +140,22 @@ void Sim::api_logs() {
 	FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 	off64_t fsize = lseek64(fd, 0, SEEK_END);
 	throw_assert(fsize >= 0);
-	if (query.empty())
+	if (query.empty() or end_offset > fsize) {
 		end_offset = fsize;
-	else if (end_offset > fsize)
-		end_offset = fsize;
+	}
 
-	size_t len;
+	size_t len = 0;
 	if (end_offset < chunk_max_len) {
 		len = end_offset;
-		if (lseek64(fd, 0, SEEK_SET) == -1)
+		if (lseek64(fd, 0, SEEK_SET) == -1) {
 			THROW("lseek64()", errmsg());
+		}
 
 	} else {
 		len = chunk_max_len;
-		if (lseek64(fd, end_offset - chunk_max_len, SEEK_SET) == -1)
+		if (lseek64(fd, end_offset - chunk_max_len, SEEK_SET) == -1) {
 			THROW("lseek64()", errmsg());
+		}
 	}
 
 	// Read the data
@@ -142,8 +164,9 @@ void Sim::api_logs() {
 	auto ret = read_all(fd, buff.data(), len);
 	// TODO: read_all() and write_all() - support offset argument -
 	// p(write|read)
-	if (ret != len)
+	if (ret != len) {
 		THROW("read()", errmsg());
+	}
 
 	append(end_offset - len, '\n'); // New offset
 	append(to_hex(buff)); // Data

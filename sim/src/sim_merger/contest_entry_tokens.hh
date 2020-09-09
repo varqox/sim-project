@@ -7,7 +7,7 @@
 
 struct ContestEntryToken {
 	InplaceBuff<CONTEST_ENTRY_TOKEN_LEN> token;
-	uintmax_t contest_id;
+	uintmax_t contest_id{};
 	std::optional<InplaceBuff<CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
 	std::optional<InplaceBuff<24>> short_token_expiration;
 };
@@ -67,7 +67,8 @@ class ContestEntryTokensMerger
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const ContestEntryToken&) { return nullptr; });
+		Merger::merge(
+		   [&](const ContestEntryToken& /*unused*/) { return nullptr; });
 	}
 
 	InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>
@@ -75,8 +76,9 @@ class ContestEntryTokensMerger
 	   const InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>& record_id) override {
 		STACK_UNWINDING_MARK;
 		std::string new_id = record_id.to_string();
-		while (not taken_tokens_.emplace(new_id).second)
+		while (not taken_tokens_.emplace(new_id).second) {
 			new_id = generate_random_token(CONTEST_ENTRY_TOKEN_LEN);
+		}
 		return InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>(new_id);
 	}
 

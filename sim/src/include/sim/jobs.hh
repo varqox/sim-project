@@ -4,6 +4,7 @@
 #include "problem.hh"
 
 #include <simlib/mysql.hh>
+#include <utility>
 #include <utime.h>
 
 namespace jobs {
@@ -13,8 +14,9 @@ template <class Integer>
 inline std::enable_if_t<std::is_integral<Integer>::value, void>
 append_dumped(std::string& buff, Integer x) {
 	buff.append(sizeof(x), '\0');
-	for (uint i = 1, shift = 0; i <= sizeof(x); ++i, shift += 8)
+	for (uint i = 1, shift = 0; i <= sizeof(x); ++i, shift += 8) {
 		buff[buff.size() - i] = (x >> shift) & 0xFF;
+	}
 }
 
 template <class Integer>
@@ -22,8 +24,10 @@ inline std::enable_if_t<std::is_integral<Integer>::value, Integer>
 extract_dumped_int(StringView& dumped_str) {
 	throw_assert(dumped_str.size() >= sizeof(Integer));
 	Integer x = 0;
-	for (int i = sizeof(x) - 1, shift = 0; i >= 0; --i, shift += 8)
-		x |= ((static_cast<Integer>((uint8_t)dumped_str[i])) << shift);
+	for (int i = sizeof(x) - 1, shift = 0; i >= 0; --i, shift += 8) {
+		x |= ((static_cast<Integer>(static_cast<uint8_t>(dumped_str[i])))
+		      << shift);
+	}
 	dumped_str.remove_prefix(sizeof(x));
 	return x;
 }
@@ -67,10 +71,10 @@ inline void append_dumped(std::string& buff, const std::optional<T>& opt) {
 
 template <class T>
 inline void extract_dumped(std::optional<T>& opt, StringView& dumped_str) {
-	bool has_val;
+	bool has_val = false;
 	extract_dumped(has_val, dumped_str);
 	if (has_val) {
-		T val;
+		T val{};
 		extract_dumped(val, dumped_str);
 		opt = val;
 	} else {
@@ -87,7 +91,7 @@ inline std::string dump_string(StringView str) {
 }
 
 inline std::string extract_dumped_string(StringView& dumped_str) {
-	uint32_t size;
+	uint32_t size = 0;
 	extract_dumped(size, dumped_str);
 	throw_assert(dumped_str.size() >= size);
 	return dumped_str.extract_prefix(size).to_string();
@@ -115,12 +119,11 @@ struct AddProblemInfo {
 
 	AddProblemInfo() = default;
 
-	AddProblemInfo(const std::string& n, const std::string& l,
-	               std::optional<uint64_t> ml,
+	AddProblemInfo(std::string n, std::string l, std::optional<uint64_t> ml,
 	               std::optional<std::chrono::nanoseconds> gtl, bool rtl,
 	               bool is, bool sfnt, bool rs, sim::Problem::Type pt)
-	: name(n)
-	, label(l)
+	: name(std::move(n))
+	, label(std::move(l))
 	, memory_limit(ml)
 	, global_time_limit(gtl)
 	, reset_time_limits(rtl)
@@ -129,6 +132,7 @@ struct AddProblemInfo {
 	, reset_scoring(rs)
 	, problem_type(pt) {}
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	AddProblemInfo(StringView str) {
 		name = extract_dumped_string(str);
 		label = extract_dumped_string(str);
@@ -147,7 +151,7 @@ struct AddProblemInfo {
 		   extract_dumped_int<std::underlying_type_t<Stage>>(str));
 	}
 
-	std::string dump() const {
+	[[nodiscard]] std::string dump() const {
 		std::string res;
 		append_dumped(res, name);
 		append_dumped(res, label);
@@ -166,8 +170,8 @@ struct AddProblemInfo {
 };
 
 struct MergeProblemsInfo {
-	uint64_t target_problem_id;
-	bool rejudge_transferred_submissions;
+	uint64_t target_problem_id{};
+	bool rejudge_transferred_submissions{};
 
 	MergeProblemsInfo() = default;
 
@@ -175,14 +179,14 @@ struct MergeProblemsInfo {
 	: target_problem_id(tpid)
 	, rejudge_transferred_submissions(rts) {}
 
-	MergeProblemsInfo(StringView str) {
+	explicit MergeProblemsInfo(StringView str) {
 		extract_dumped(target_problem_id, str);
 
 		auto mask = extract_dumped_int<uint8_t>(str);
 		rejudge_transferred_submissions = (mask & 1);
 	}
 
-	std::string dump() {
+	[[nodiscard]] std::string dump() const {
 		std::string res;
 		append_dumped(res, target_problem_id);
 
@@ -197,23 +201,25 @@ struct ChangeProblemStatementInfo {
 
 	ChangeProblemStatementInfo() = default;
 
-	ChangeProblemStatementInfo(StringView nsp)
+	explicit ChangeProblemStatementInfo(StringView nsp)
 	: new_statement_path(nsp.to_string()) {}
 
-	std::string dump() { return new_statement_path; }
+	[[nodiscard]] std::string dump() const { return new_statement_path; }
 };
 
 struct MergeUsersInfo {
-	uint64_t target_user_id;
+	uint64_t target_user_id{};
 
 	MergeUsersInfo() = default;
 
-	MergeUsersInfo(uint64_t target_uid) noexcept
+	explicit MergeUsersInfo(uint64_t target_uid) noexcept
 	: target_user_id(target_uid) {}
 
-	MergeUsersInfo(StringView str) { extract_dumped(target_user_id, str); }
+	explicit MergeUsersInfo(StringView str) {
+		extract_dumped(target_user_id, str);
+	}
 
-	std::string dump() {
+	[[nodiscard]] std::string dump() const {
 		std::string res;
 		append_dumped(res, target_user_id);
 		return res;

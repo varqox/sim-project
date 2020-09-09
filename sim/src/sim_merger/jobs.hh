@@ -7,13 +7,13 @@
 #include "users.hh"
 
 struct Job {
-	uintmax_t id;
+	uintmax_t id{};
 	std::optional<uintmax_t> file_id;
 	std::optional<uintmax_t> tmp_file_id;
 	std::optional<uintmax_t> creator;
-	EnumVal<JobType> type;
-	uintmax_t priority;
-	EnumVal<JobStatus> status;
+	EnumVal<JobType> type{};
+	uintmax_t priority{};
+	EnumVal<JobStatus> status{};
 	InplaceBuff<24> added;
 	std::optional<uintmax_t> aux_id;
 	InplaceBuff<128> info;
@@ -144,7 +144,7 @@ class JobsMerger : public Merger<Job> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const Job&) { return nullptr; });
+		Merger::merge([&](const Job& /*unused*/) { return nullptr; });
 	}
 
 public:

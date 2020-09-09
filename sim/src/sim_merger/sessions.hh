@@ -4,11 +4,12 @@
 
 #include <set>
 #include <sim/random.hh>
+#include <simlib/defer.hh>
 
 struct Session {
 	InplaceBuff<SESSION_ID_LEN> id;
 	InplaceBuff<SESSION_CSRF_TOKEN_LEN> csrf_token;
-	uintmax_t user_id;
+	uintmax_t user_id{};
 	InplaceBuff<32> data;
 	InplaceBuff<SESSION_IP_LEN> ip;
 	InplaceBuff<128> user_agent;
@@ -49,15 +50,16 @@ class SessionsMerger : public Merger<Session> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const Session&) { return nullptr; });
+		Merger::merge([&](const Session& /*unused*/) { return nullptr; });
 	}
 
 	InplaceBuff<SESSION_ID_LEN> new_id_for_record_to_merge_into_new_records(
 	   const InplaceBuff<SESSION_ID_LEN>& record_id) override {
 		STACK_UNWINDING_MARK;
 		std::string new_id = record_id.to_string();
-		while (not taken_sessions_ids_.emplace(new_id).second)
+		while (not taken_sessions_ids_.emplace(new_id).second) {
 			new_id = generate_random_token(SESSION_ID_LEN);
+		}
 		return InplaceBuff<SESSION_ID_LEN>(new_id);
 	}
 

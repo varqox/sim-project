@@ -28,8 +28,9 @@ void DeleteProblem::run() {
 		stmt.bind_and_execute(problem_id_);
 		InplaceBuff<1> simfile;
 		stmt.res_bind_all(simfile);
-		if (not stmt.next())
+		if (not stmt.next()) {
 			return set_failure("Problem does not exist");
+		}
 
 		job_log("Deleted problem Simfile:\n", simfile);
 	}

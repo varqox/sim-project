@@ -9,8 +9,9 @@ void AddOrReuploadProblemJudgeModelSolutionBase::run() {
 
 	auto package_path = internal_file_path(tmp_file_id_.value());
 	reset_package_time_limits(package_path);
-	if (failed())
+	if (failed()) {
 		return;
+	}
 
 	// Put the Simfile in the package
 	ZipFile zip(package_path);
@@ -18,7 +19,7 @@ void AddOrReuploadProblemJudgeModelSolutionBase::run() {
 	             zip.source_buffer(new_simfile_), ZIP_FL_OVERWRITE);
 	zip.close();
 
-	bool canceled;
+	bool canceled = false;
 	job_done(canceled);
 }
 

@@ -16,7 +16,7 @@ constexpr bool is_safe_inf_timestamp(StringView str) noexcept {
 }
 
 class InfDatetime {
-	enum class Type { NEG_INF, DATE, INF } type;
+	enum class Type { NEG_INF, DATE, INF } type = Type::INF;
 	// Format: YYYY-mm-dd HH:MM:SS
 	InplaceBuff<19> date;
 
@@ -24,10 +24,12 @@ class InfDatetime {
 	static constexpr const char INF_STR[] = "@";
 
 public:
-	InfDatetime()
-	: type(Type::INF) {}
+	InfDatetime() = default;
 
-	template <class T>
+	template <class T,
+	          std::enable_if_t<not std::is_same_v<std::decay_t<T>, InfDatetime>,
+	                           int> = 0>
+	// NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
 	explicit InfDatetime(T&& str) {
 		from_str(std::forward<T>(str));
 	}
@@ -36,11 +38,12 @@ public:
 	InfDatetime(InfDatetime&&) noexcept = default;
 	InfDatetime& operator=(const InfDatetime&) = default;
 	InfDatetime& operator=(InfDatetime&&) noexcept = default;
+	~InfDatetime() = default;
 
 	/// Assumption: to_str(NEG_INF) < to_str(DATE) < to_str(INF)
 	/// WARNING: if type == DATE then returned value is ONLY a view on the
 	/// internal field date
-	StringView to_str() const noexcept {
+	[[nodiscard]] StringView to_str() const noexcept {
 		switch (type) {
 		case Type::NEG_INF: return NEG_INF_STR;
 		case Type::DATE: return date;
@@ -50,9 +53,11 @@ public:
 		__builtin_unreachable();
 	}
 
-	bool is_neg_inf() const noexcept { return type == Type::NEG_INF; }
+	[[nodiscard]] bool is_neg_inf() const noexcept {
+		return type == Type::NEG_INF;
+	}
 
-	bool is_inf() const noexcept { return type == Type::INF; }
+	[[nodiscard]] bool is_inf() const noexcept { return type == Type::INF; }
 
 	InfDatetime& set_neg_inf() noexcept {
 		type = Type::NEG_INF;
@@ -76,12 +81,13 @@ public:
 	}
 
 	InfDatetime& from_str(CStringView str) {
-		if (str == NEG_INF_STR)
+		if (str == NEG_INF_STR) {
 			set_neg_inf();
-		else if (str == INF_STR)
+		} else if (str == INF_STR) {
 			set_inf();
-		else
+		} else {
 			set_datetime(str);
+		}
 
 		return *this;
 	}
@@ -101,7 +107,7 @@ public:
 		return from_str(x.to_cstr());
 	}
 
-	StringView to_api_str() const noexcept {
+	[[nodiscard]] StringView to_api_str() const noexcept {
 		switch (type) {
 		case Type::NEG_INF: return "-inf";
 		case Type::DATE: return date;

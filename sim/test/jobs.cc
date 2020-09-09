@@ -1,26 +1,28 @@
 #include <gtest/gtest.h>
 #include <sim/jobs.hh>
 
-using namespace jobs;
+using namespace jobs; // NOLINT
 using std::string;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(jobs, append_dumped_int) {
 	string buff;
 
-	append_dumped(buff, (uint32_t)0x1ad35af6);
+	append_dumped(buff, static_cast<uint32_t>(0x1ad35af6));
 	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6");
 
-	append_dumped(buff, (uint8_t)0x92);
+	append_dumped(buff, static_cast<uint8_t>(0x92));
 	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6\x92");
 
-	append_dumped(buff, (uint16_t)0xb68a);
+	append_dumped(buff, static_cast<uint16_t>(0xb68a));
 	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6\x92\xb6\x8a");
 
-	append_dumped(buff, (uint64_t)0x1040aab9c4aa3973);
+	append_dumped(buff, static_cast<uint64_t>(0x1040aab9c4aa3973));
 	ASSERT_EQ(buff,
 	          "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(jobs, append_dumped_string) {
 	string buff;
 
@@ -41,6 +43,7 @@ TEST(jobs, append_dumped_string) {
 	                           42));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(jobs, extract_dumped_int1) {
 	StringView buff(
 	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
@@ -58,14 +61,15 @@ TEST(jobs, extract_dumped_int1) {
 	ASSERT_EQ(buff, "");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(jobs, extract_dumped_int2) {
 	StringView buff(
 	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	uint32_t a;
-	uint8_t b;
-	uint16_t c;
-	uint64_t d;
+	uint32_t a = 0;
+	uint8_t b = 0;
+	uint16_t c = 0;
+	uint64_t d = 0;
 
 	extract_dumped(a, buff);
 	ASSERT_EQ(a, 0x1ad35af6);
@@ -84,6 +88,7 @@ TEST(jobs, extract_dumped_int2) {
 	ASSERT_EQ(buff, "");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(jobs, extract_dumped_string) {
 	StringView buff("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
 	                "12213\0\0\0\x09qdsp\x03l\xffr3",

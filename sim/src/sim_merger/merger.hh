@@ -23,16 +23,18 @@ public:
 
 	void iter() {
 		++iter_;
-		if (iter_ % step_ == 0 or iter_ == iters_num_)
+		if (iter_ % step_ == 0 or iter_ == iters_num_) {
 			log();
+		}
 	}
 
 private:
 	void log() {
 		auto tmplog = stdlog("\033[2K\033[G", header_, ' ', iter_, " / ",
 		                     iters_num_, " = ", 100 * iter_ / iters_num_, "%");
-		if (iter_ < iters_num_)
+		if (iter_ < iters_num_) {
 			tmplog.flush_no_nl();
+		}
 	}
 };
 
@@ -44,13 +46,8 @@ void merge(CollA&& collection_a, CollB&& collection_b, FuncA&& a_merge,
 	auto b_beg = std::begin(collection_b);
 	auto b_end = std::end(collection_b);
 	while (a_beg != a_end or b_beg != b_end) {
-		if (a_beg == a_end) {
-			b_merge(*b_beg);
-			++b_beg;
-		} else if (b_beg == b_end) {
-			a_merge(*a_beg);
-			++a_beg;
-		} else if (is_left_lower(*a_beg, *b_beg)) {
+		if (b_beg == b_end or
+		    (a_beg != a_end and is_left_lower(*a_beg, *b_beg))) {
 			a_merge(*a_beg);
 			++a_beg;
 		} else {
@@ -76,6 +73,13 @@ public:
 	virtual void rollback_saving_merged_outside_database() noexcept {}
 
 	virtual void run_after_saving_hooks() {}
+
+	MergerBase() = default;
+	MergerBase(const MergerBase&) = delete;
+	MergerBase(MergerBase&&) = delete;
+	MergerBase& operator=(const MergerBase&) = delete;
+	MergerBase& operator=(MergerBase&&) = delete;
+	virtual ~MergerBase() = default;
 };
 
 enum class IdKind { Main, Other };
@@ -117,8 +121,9 @@ protected:
 		std::map<IdType, IdType> id_to_new_id = {}; // Filled up during merge()
 
 		void fill_id_to_table_idx() {
-			for (size_t i = 0; i < table.size(); ++i)
+			for (size_t i = 0; i < table.size(); ++i) {
 				id_to_table_idx.emplace(id_getter(table[i]), i);
+			}
 		}
 
 		RecordSet(IdKind my_kind, std::string my_sql_tbl_name,
@@ -137,7 +142,7 @@ protected:
 			table.emplace_back(std::move(record));
 		}
 
-		StringView sim_build() const {
+		[[nodiscard]] StringView sim_build() const {
 			switch (kind) {
 			case IdKind::Main: return main_sim_build;
 			case IdKind::Other: return other_sim_build;
@@ -292,13 +297,15 @@ protected:
 		   concat_tostr("(new id: ", id_getter_(new_record.data));
 		if (not new_record.main_ids.empty()) {
 			back_insert(res, " main ids:");
-			for (auto& id : new_record.main_ids)
+			for (auto& id : new_record.main_ids) {
 				back_insert(res, ' ', id);
+			}
 		}
 		if (not new_record.other_ids.empty()) {
 			back_insert(res, " other ids:");
-			for (auto& id : new_record.other_ids)
+			for (auto& id : new_record.other_ids) {
 				back_insert(res, ' ', id);
+			}
 		}
 
 		back_insert(res, ')');
@@ -306,15 +313,16 @@ protected:
 	}
 
 public:
-	const std::string& sql_table_name() noexcept override final {
+	const std::string& sql_table_name() noexcept final {
 		return sql_table_name_;
 	}
 
 	IdType new_main_id(IdType main_id) const {
 		STACK_UNWINDING_MARK;
 		auto it = main_.id_to_new_id.find(main_id);
-		if (it == main_.id_to_new_id.end())
+		if (it == main_.id_to_new_id.end()) {
 			THROW("Invalid main_id: ", main_id);
+		}
 
 		return it->second;
 	}
@@ -322,8 +330,9 @@ public:
 	IdType new_other_id(IdType other_id) const {
 		STACK_UNWINDING_MARK;
 		auto it = other_.id_to_new_id.find(other_id);
-		if (it == other_.id_to_new_id.end())
+		if (it == other_.id_to_new_id.end()) {
 			THROW("Invalid other_id: ", other_id);
+		}
 
 		return it->second;
 	}

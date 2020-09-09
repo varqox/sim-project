@@ -37,7 +37,7 @@ get_permissions(MySQL::Connection& mysql, T&& contest_file_id,
                 std::optional<U> user_id) {
 	STACK_UNWINDING_MARK;
 
-	uint8_t is_public;
+	uint8_t is_public = false;
 	MySQL::Optional<decltype(User::type)> user_type;
 	MySQL::Optional<decltype(ContestUser::mode)> cu_mode;
 
@@ -59,8 +59,9 @@ get_permissions(MySQL::Connection& mysql, T&& contest_file_id,
 		stmt.res_bind_all(is_public);
 	}
 
-	if (not stmt.next())
+	if (not stmt.next()) {
 		return std::nullopt;
+	}
 
 	auto cperms =
 	   contest::get_permissions(user_type.opt(), is_public, cu_mode.opt());
