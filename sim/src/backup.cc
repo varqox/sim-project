@@ -38,8 +38,8 @@ int main2(int argc, char** argv) {
 	// Get connection
 	auto conn = MySQL::make_conn_with_credential_file(".db.config");
 
-	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
-	                   S_0600};
+	FileDescriptor fd{MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
+	                  S_0600};
 	if (fd == -1) {
 		errlog("Failed to open file `" MYSQL_CNF "`: open()", errmsg());
 		return 1;
@@ -81,7 +81,8 @@ int main2(int argc, char** argv) {
 		while (stmt.next()) {
 			auto file_path = internal_file_path(tmp_file_id);
 			if (access(file_path, F_OK) == 0 and
-			    system_clock::now() - get_modification_time(file_path) > 2h) {
+			    system_clock::now() - get_modification_time(file_path) > 2h)
+			{
 				deleter.bind_and_execute(tmp_file_id);
 				(void)unlink(file_path);
 			}

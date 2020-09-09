@@ -42,7 +42,8 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
 	if (session_user_type == User::Type::ADMIN or
 	    (cu_mode.has_value() and
-	     is_one_of(cu_mode.value(), CUM::MODERATOR, CUM::OWNER))) {
+	     is_one_of(cu_mode.value(), CUM::MODERATOR, CUM::OWNER)))
+	{
 		return overall_perms | PERM_SUBMISSION_ADMIN;
 	}
 
@@ -50,7 +51,8 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	// permissions
 	if (session_is_open and problem_owner and
 	    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
-	       problem_owner.value()) {
+	       problem_owner.value())
+	{
 		if (stype == STYPE::PROBLEM_SOLUTION)
 			return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE |
 			       PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS |
@@ -58,7 +60,8 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
 		if (submission_owner and
 		    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
-		       submission_owner.value()) {
+		       submission_owner.value())
+		{
 			return overall_perms | PERM_SUBMISSION_ADMIN;
 		}
 
@@ -69,7 +72,8 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
 	if (session_is_open and submission_owner and
 	    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
-	       submission_owner.value()) {
+	       submission_owner.value())
+	{
 		return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
 	}
 

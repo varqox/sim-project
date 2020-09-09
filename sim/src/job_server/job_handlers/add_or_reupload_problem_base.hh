@@ -35,9 +35,12 @@ protected:
 	                         uint64_t job_file_id,
 	                         std::optional<uint64_t> tmp_file_id,
 	                         std::optional<uint64_t> problem_id)
-	   : job_type_(job_type), job_creator_(job_creator), info_(info),
-	     job_file_id_(job_file_id), tmp_file_id_(tmp_file_id),
-	     problem_id_(problem_id) {
+	: job_type_(job_type)
+	, job_creator_(job_creator)
+	, info_(info)
+	, job_file_id_(job_file_id)
+	, tmp_file_id_(tmp_file_id)
+	, problem_id_(problem_id) {
 		if (tmp_file_id.has_value())
 			load_job_log_from_db();
 	}

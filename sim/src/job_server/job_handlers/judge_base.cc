@@ -188,7 +188,8 @@ JudgeBase::compile_solution_impl(FilePath solution_path,
 	std::string compilation_errors;
 	if ((jworker_.*compile_method)(
 	       solution_path, lang, SOLUTION_COMPILATION_TIME_LIMIT,
-	       &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH)) {
+	       &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+	{
 		tmplog(" failed:\n", compilation_errors);
 		return compilation_errors;
 	}
@@ -224,7 +225,8 @@ std::optional<std::string> JudgeBase::compile_checker() {
 	std::string compilation_errors;
 	if (jworker_.compile_checker(SOLUTION_COMPILATION_TIME_LIMIT,
 	                             &compilation_errors,
-	                             COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH)) {
+	                             COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+	{
 		tmplog(" failed:\n", compilation_errors);
 		return compilation_errors;
 	}

@@ -84,9 +84,13 @@ public:
 
 	Connection(int fde, const sockaddr_in& sock_addr, bool idl = true,
 	           bool rd = false, bool wr = false)
-	   : fd_(fde), sin_addr_(sock_addr.sin_addr),
-	     port_(ntohs(sock_addr.sin_port)), making_headers(true), idle(idl),
-	     reading(rd), writing(wr) {}
+	: fd_(fde)
+	, sin_addr_(sock_addr.sin_addr)
+	, port_(ntohs(sock_addr.sin_port))
+	, making_headers(true)
+	, idle(idl)
+	, reading(rd)
+	, writing(wr) {}
 
 	Connection(const Connection&) = delete;
 
@@ -96,7 +100,7 @@ public:
 
 	Connection& operator=(Connection&&) = default; // TODO
 
-	~Connection() {};
+	~Connection(){};
 
 	int fd() const noexcept { return fd_; }
 
@@ -118,7 +122,7 @@ private:
 	// Parses @p str header to construct @p name and value on it; returns false
 	// on success, true on error
 	static bool parse_header(StringView str, StringView& name,
-	                        StringView& value);
+	                         StringView& value);
 
 	// Constructs headers, returns false on success, true otherwise (and may add
 	// proper response to TODO: where?)
@@ -180,7 +184,7 @@ public:
 	Job& operator=(const Job&) = delete;
 	Job& operator=(Job&&) = delete;
 
-	~Job() {};
+	~Job(){};
 };
 
 } // anonymous namespace
@@ -193,10 +197,11 @@ public:
 #endif
 
 bool Connection::parse_header(StringView str, StringView& name,
-                             StringView& value) {
+                              StringView& value) {
 	name = str.substr(0, str.find(':'));
 	if (name.find(' ') != StringView::npos || name.size() == 0 ||
-	    name.size() == str.size()) {
+	    name.size() == str.size())
+	{
 		return true; // Invalid header
 	}
 
@@ -281,8 +286,8 @@ bool Connection::construct_headers(StringView& data) {
 
 			// Target
 			header.remove_leading(is_space);
-			for (pos = 0; pos < header.size() && !is_space(header[pos]);
-			     ++pos) {
+			for (pos = 0; pos < header.size() && !is_space(header[pos]); ++pos)
+			{
 			}
 			req_.target = header.substr(0, pos);
 			header.remove_prefix(pos);
@@ -389,7 +394,7 @@ void Connection::parse(const char* str, size_t len) {
 			data.clear();
 
 		} else { // Bug
-			errlog(__FILE__, ':', meta::ToString<__LINE__> {},
+			errlog(__FILE__, ':', meta::ToString<__LINE__>{},
 			       ": Nothing to parse - this is probably a bug");
 			// TODO: connection state = CLOSE
 			return;
@@ -454,7 +459,7 @@ static void* reader_thread(void*) {
 	for (;;) {
 		int n = epoll_wait(epoll_fd, events.data(), events.size(), -1);
 		if (n < 0) {
-			errlog(__FILE__, ':', meta::ToString<__LINE__> {}, ": epoll_wait()",
+			errlog(__FILE__, ':', meta::ToString<__LINE__>{}, ": epoll_wait()",
 			       error());
 			continue;
 		}
@@ -524,7 +529,8 @@ static void main_process_cycle() {
 	// Run reader and writer threads
 	pthread_t reader_pid, writer_pid;
 	if (pthread_create(&reader_pid, nullptr, reader_thread, nullptr) == -1 ||
-	    pthread_create(&writer_pid, nullptr, writer_thread, nullptr) == -1) {
+	    pthread_create(&writer_pid, nullptr, writer_thread, nullptr) == -1)
+	{
 		errlog("Failed to spawn reader and writer threads", error());
 		exit(10);
 	}
@@ -573,7 +579,7 @@ static void main_process_cycle() {
 
 // Loads server configuration
 static void load_server_config(const CStringView config_path,
-                             sockaddr_in& sock_name) {
+                               sockaddr_in& sock_name) {
 	ConfigFile config;
 	try {
 		config.add_vars("address", "workers", "connections");
@@ -613,7 +619,8 @@ static void load_server_config(const CStringView config_path,
 	// Colon has been found
 	if (colon_pos < address.size()) {
 		if (strtou(address, port, colon_pos + 1) !=
-		    static_cast<int>(address.size() - colon_pos - 1)) {
+		    static_cast<int>(address.size() - colon_pos - 1))
+		{
 			errlog(config_path, ": incorrect port number");
 			exit(7);
 		}

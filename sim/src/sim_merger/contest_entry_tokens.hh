@@ -20,7 +20,7 @@ struct ContestEntryTokenIdGetter {
 };
 
 class ContestEntryTokensMerger
-   : public Merger<ContestEntryToken, ContestEntryTokenIdGetter> {
+: public Merger<ContestEntryToken, ContestEntryTokenIdGetter> {
 	const ContestsMerger& contests_;
 
 	std::set<InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>> taken_tokens_;
@@ -51,8 +51,8 @@ class ContestEntryTokensMerger
 			// Update short token
 			if (cet.short_token) {
 				std::string new_short_token = cet.short_token->to_string();
-				while (
-				   not taken_short_tokens_.emplace(new_short_token).second) {
+				while (not taken_short_tokens_.emplace(new_short_token).second)
+				{
 					new_short_token =
 					   generate_random_token(CONTEST_ENTRY_SHORT_TOKEN_LEN);
 				}
@@ -104,10 +104,10 @@ public:
 
 	ContestEntryTokensMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
 	                         const ContestsMerger& contests)
-	   : Merger("contest_entry_tokens",
-	            ids_from_both_jobs.main.contest_entry_tokens,
-	            ids_from_both_jobs.other.contest_entry_tokens),
-	     contests_(contests) {
+	: Merger("contest_entry_tokens",
+	         ids_from_both_jobs.main.contest_entry_tokens,
+	         ids_from_both_jobs.other.contest_entry_tokens)
+	, contests_(contests) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

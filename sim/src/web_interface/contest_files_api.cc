@@ -73,7 +73,8 @@ void Sim::api_contest_files() {
 		bool contest_id_condition_occurred = false;
 
 		for (StringView next_arg = url_args.extract_next_arg();
-		     not next_arg.empty(); next_arg = url_args.extract_next_arg()) {
+		     not next_arg.empty(); next_arg = url_args.extract_next_arg())
+		{
 			auto arg = decode_uri(next_arg);
 			char cond_c = arg[0];
 			StringView arg_id = StringView(arg).substr(1);
@@ -94,7 +95,7 @@ void Sim::api_contest_files() {
 				if (cond_c == '=' and not allow_access) {
 					auto perms_opt = sim::contest_file::get_permissions(
 					   mysql, arg_id,
-					   (session_is_open ? std::optional {session_user_id}
+					   (session_is_open ? std::optional{session_user_id}
 					                    : std::nullopt));
 					if (perms_opt)
 						std::tie(perms, overall_perms) = perms_opt.value();
@@ -119,7 +120,7 @@ void Sim::api_contest_files() {
 
 				auto cperms = sim::contest::get_permissions(
 				   mysql, arg_id,
-				   (session_is_open ? std::optional {session_user_id}
+				   (session_is_open ? std::optional{session_user_id}
 				                    : std::nullopt));
 				if (not cperms)
 					return set_empty_response(); // Do allow to query for
@@ -199,7 +200,7 @@ void Sim::api_contest_file() {
 	{
 		auto perms_opt = sim::contest_file::get_permissions(
 		   mysql, contest_file_id,
-		   (session_is_open ? std::optional {session_user_id} : std::nullopt));
+		   (session_is_open ? std::optional{session_user_id} : std::nullopt));
 		if (not perms_opt)
 			return api_error404();
 
@@ -240,13 +241,14 @@ void Sim::api_contest_file_download(StringView contest_file_id,
 void Sim::api_contest_file_add() {
 	StringView contest_id = url_args.extract_next_arg();
 	if (contest_id.empty() or contest_id[0] != 'c' or
-	    not is_digit(contest_id = contest_id.substr(1))) {
+	    not is_digit(contest_id = contest_id.substr(1)))
+	{
 		return api_error400();
 	}
 
 	auto cperms = sim::contest::get_permissions(
 	   mysql, contest_id,
-	   (session_is_open ? std::optional {session_user_id} : std::nullopt));
+	   (session_is_open ? std::optional{session_user_id} : std::nullopt));
 	if (not cperms)
 		return api_error404(); // TODO: maybe too much information?
 

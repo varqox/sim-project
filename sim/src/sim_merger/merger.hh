@@ -15,7 +15,9 @@ class ProgressBar {
 
 public:
 	ProgressBar(std::string header, size_t iters_num, size_t step)
-	   : header_(std::move(header)), iters_num_(iters_num), step_(step) {
+	: header_(std::move(header))
+	, iters_num_(iters_num)
+	, step_(step) {
 		log();
 	}
 
@@ -96,7 +98,8 @@ protected:
 		std::vector<IdType> main_ids = {};
 		std::vector<IdType> other_ids = {};
 
-		explicit NewRecord(const Record& new_data) : data(new_data) {}
+		explicit NewRecord(const Record& new_data)
+		: data(new_data) {}
 	};
 
 	struct RecordSet {
@@ -121,9 +124,11 @@ protected:
 		RecordSet(IdKind my_kind, std::string my_sql_tbl_name,
 		          StringView my_sql_tbl_prefix, const IdGetter& my_id_getter,
 		          IdsWithTime<IdType> my_ids)
-		   : kind(my_kind), sql_table_name(std::move(my_sql_tbl_name)),
-		     sql_table_prefix(my_sql_tbl_prefix), id_getter(my_id_getter),
-		     ids(std::move(my_ids)) {}
+		: kind(my_kind)
+		, sql_table_name(std::move(my_sql_tbl_name))
+		, sql_table_prefix(my_sql_tbl_prefix)
+		, id_getter(my_id_getter)
+		, ids(std::move(my_ids)) {}
 
 	public:
 		void add_record(Record record, std::chrono::system_clock::time_point
@@ -244,12 +249,12 @@ protected:
 
 	Merger(StringView orig_sql_table_name, IdsWithTime<IdType> main_ids,
 	       IdsWithTime<IdType> other_ids)
-	   : sql_table_name_(orig_sql_table_name.to_string()),
-	     main_ {IdKind::Main,
-	            concat_tostr(main_sim_table_prefix, orig_sql_table_name),
-	            main_sim_table_prefix, id_getter_, std::move(main_ids)},
-	     other_ {IdKind::Other, orig_sql_table_name.to_string(), "", id_getter_,
-	             std::move(other_ids)} {
+	: sql_table_name_(orig_sql_table_name.to_string())
+	, main_{IdKind::Main,
+	        concat_tostr(main_sim_table_prefix, orig_sql_table_name),
+	        main_sim_table_prefix, id_getter_, std::move(main_ids)}
+	, other_{IdKind::Other, orig_sql_table_name.to_string(), "", id_getter_,
+	         std::move(other_ids)} {
 		STACK_UNWINDING_MARK;
 
 		static_assert(is_sorted(tables));

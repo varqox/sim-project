@@ -21,7 +21,8 @@ void MergeUsers::run() {
 			break;
 		} catch (const std::exception& e) {
 			if (has_prefix(e.what(), "Deadlock found when trying to get lock; "
-			                         "try restarting transaction")) {
+			                         "try restarting transaction"))
+			{
 				continue;
 			}
 
@@ -64,8 +65,8 @@ void MergeUsers::run_impl() {
 	{
 		using UT = User::Type;
 		(void)[](UT x) {
-			switch (
-			   x) { // If compiler warns here, update the below static_assert
+			switch (x)
+			{ // If compiler warns here, update the below static_assert
 			case UT::ADMIN:
 			case UT::TEACHER:
 			case UT::NORMAL:
@@ -74,8 +75,8 @@ void MergeUsers::run_impl() {
 			}
 		};
 		static_assert(
-		   is_sorted(std::array {EnumVal(UT::ADMIN), EnumVal(UT::TEACHER),
-		                         EnumVal(UT::NORMAL)}),
+		   is_sorted(std::array{EnumVal(UT::ADMIN), EnumVal(UT::TEACHER),
+		                        EnumVal(UT::NORMAL)}),
 		   "Needed by below SQL statement (comparison between types)");
 		// Transfer donor's user-type to the target user if the donor has higher
 		// permissions
@@ -98,8 +99,8 @@ void MergeUsers::run_impl() {
 	{
 		using CUM = sim::ContestUser::Mode;
 		(void)[](CUM x) {
-			switch (
-			   x) { // If compiler warns here, update the below static_assert
+			switch (x)
+			{ // If compiler warns here, update the below static_assert
 			case CUM::CONTESTANT:
 			case CUM::MODERATOR:
 			case CUM::OWNER:
@@ -108,8 +109,8 @@ void MergeUsers::run_impl() {
 			}
 		};
 		static_assert(
-		   is_sorted(std::array {EnumVal(CUM::CONTESTANT),
-		                         EnumVal(CUM::MODERATOR), EnumVal(CUM::OWNER)}),
+		   is_sorted(std::array{EnumVal(CUM::CONTESTANT),
+		                        EnumVal(CUM::MODERATOR), EnumVal(CUM::OWNER)}),
 		   "Needed by below SQL statement (comparison between modes)");
 		// Transfer donor's contest permissions to the target user if the donor
 		// has higher permissions

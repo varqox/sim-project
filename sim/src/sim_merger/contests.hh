@@ -60,8 +60,8 @@ public:
 	}
 
 	ContestsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
-	   : Merger("contests", ids_from_both_jobs.main.contests,
-	            ids_from_both_jobs.other.contests) {
+	: Merger("contests", ids_from_both_jobs.main.contests,
+	         ids_from_both_jobs.other.contests) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

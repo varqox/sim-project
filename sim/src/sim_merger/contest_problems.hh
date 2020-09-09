@@ -82,10 +82,11 @@ public:
 	                      const ContestRoundsMerger& contest_rounds,
 	                      const ContestsMerger& contests,
 	                      const ProblemsMerger& problems)
-	   : Merger("contest_problems", ids_from_both_jobs.main.contest_problems,
-	            ids_from_both_jobs.other.contest_problems),
-	     contest_rounds_(contest_rounds), contests_(contests),
-	     problems_(problems) {
+	: Merger("contest_problems", ids_from_both_jobs.main.contest_problems,
+	         ids_from_both_jobs.other.contest_problems)
+	, contest_rounds_(contest_rounds)
+	, contests_(contests)
+	, problems_(problems) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

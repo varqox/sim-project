@@ -107,8 +107,8 @@ void Sim::api_jobs() {
 	// Process restrictions
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extract_next_arg();
-	for (uint mask = 0; next_arg.size();
-	     next_arg = url_args.extract_next_arg()) {
+	for (uint mask = 0; next_arg.size(); next_arg = url_args.extract_next_arg())
+	{
 		constexpr uint ID_COND = 1;
 		constexpr uint AUX_ID_COND = 2;
 		constexpr uint USER_ID_COND = 4;
@@ -211,9 +211,9 @@ void Sim::api_jobs() {
 	append_column_names();
 
 	while (res.next()) {
-		EnumVal<JobType> job_type {WONT_THROW(
+		EnumVal<JobType> job_type{WONT_THROW(
 		   str2num<std::underlying_type_t<JobType>>(res[JTYPE]).value())};
-		EnumVal<JobStatus> job_status {WONT_THROW(
+		EnumVal<JobStatus> job_status{WONT_THROW(
 		   str2num<std::underlying_type_t<JobStatus>>(res[JSTATUS]).value())};
 
 		// clang-format off
@@ -272,7 +272,7 @@ void Sim::api_jobs() {
 				}
 				return "unknown";
 			};
-			jobs::AddProblemInfo info {res[JINFO]};
+			jobs::AddProblemInfo info{res[JINFO]};
 			append("\"problem type\":\"", ptype_to_str(info.problem_type), '"');
 
 			if (info.name.size())
@@ -381,7 +381,8 @@ void Sim::api_jobs() {
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
 		    is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
 		              JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
-		              JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
+		              JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION))
+		{
 			append('u'); // TODO: ^ that is very nasty
 		}
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and
@@ -522,7 +523,8 @@ void Sim::api_job_download_uploaded_package(std::optional<uint64_t> file_id,
 	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or
 	    not is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
 	                  JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
-	                  JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
+	                  JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION))
+	{
 		return api_error403(); // TODO: ^ that is very nasty
 	}
 
@@ -540,7 +542,8 @@ void Sim::api_job_download_uploaded_statement(std::optional<uint64_t> file_id,
 	using JT = JobType;
 
 	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) or
-	    job_type != JT::CHANGE_PROBLEM_STATEMENT) {
+	    job_type != JT::CHANGE_PROBLEM_STATEMENT)
+	{
 		return api_error403(); // TODO: ^ that is very nasty
 	}
 

@@ -60,9 +60,9 @@ public:
 	}
 	ProblemTagsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
 	                  const ProblemsMerger& problems)
-	   : Merger("problem_tags", ids_from_both_jobs.main.problem_tags,
-	            ids_from_both_jobs.other.problem_tags),
-	     problems_(problems) {
+	: Merger("problem_tags", ids_from_both_jobs.main.problem_tags,
+	         ids_from_both_jobs.other.problem_tags)
+	, problems_(problems) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

@@ -178,7 +178,8 @@ void Sim::api_submissions() {
 		bool user_condition_occurred = false;
 
 		for (StringView next_arg = url_args.extract_next_arg();
-		     not next_arg.empty(); next_arg = url_args.extract_next_arg()) {
+		     not next_arg.empty(); next_arg = url_args.extract_next_arg())
+		{
 			auto arg = decode_uri(next_arg);
 			char cond_c = arg[0];
 			StringView arg_id = StringView(arg).substr(1);
@@ -201,7 +202,8 @@ void Sim::api_submissions() {
 						if (contest_perms.has_value() and
 						    uint(~contest_perms.value() &
 						         sim::contest::Permissions::
-						            SELECT_FINAL_SUBMISSIONS)) {
+						            SELECT_FINAL_SUBMISSIONS))
+						{
 							allow_access = false;
 						}
 
@@ -273,23 +275,25 @@ void Sim::api_submissions() {
 				problem_perms = sim::problem::get_permissions(
 				   mysql, arg_id,
 				   (session_is_open
-				       ? optional {WONT_THROW(
+				       ? optional{WONT_THROW(
 				            str2num<uintmax_t>(session_user_id).value())}
 				       : std::nullopt),
-				   (session_is_open ? optional {session_user_type}
+				   (session_is_open ? optional{session_user_type}
 				                    : std::nullopt));
 				if (not problem_perms)
 					return set_empty_response();
 
 				if (uint(problem_perms.value() &
 				         sim::problem::Permissions::
-				            VIEW_SOLUTIONS_AND_SUBMISSIONS)) {
+				            VIEW_SOLUTIONS_AND_SUBMISSIONS))
+				{
 					allow_access = true;
 				}
 
 				if (uint(problem_perms.value() &
 				         sim::problem::Permissions::
-				            VIEW_SOLUTIONS_AND_SUBMISSIONS)) {
+				            VIEW_SOLUTIONS_AND_SUBMISSIONS))
+				{
 					may_see_problem_final = true;
 				}
 
@@ -349,12 +353,13 @@ void Sim::api_submissions() {
 						return set_empty_response();
 
 					contest_perms = sim::contest::get_permissions(
-					   (session_is_open ? std::optional {session_user_type}
+					   (session_is_open ? std::optional{session_user_type}
 					                    : std::nullopt),
 					   is_public, cu_mode);
 					if (uint(contest_perms.value() &
 					         sim::contest::Permissions::
-					            VIEW_ALL_CONTEST_SUBMISSIONS)) {
+					            VIEW_ALL_CONTEST_SUBMISSIONS))
+					{
 						allow_access = true;
 					}
 				}
@@ -404,21 +409,21 @@ void Sim::api_submissions() {
 
 	auto curr_date = mysql_date();
 	while (res.next()) {
-		EnumVal<SubmissionType> stype {WONT_THROW(
+		EnumVal<SubmissionType> stype{WONT_THROW(
 		   str2num<std::underlying_type_t<SubmissionType>>(res[STYPE])
 		      .value())};
 		SubmissionPermissions perms = submissions_get_permissions(
 		   (res.is_null(SOWNER) ? std::nullopt
-		                        : optional<uintmax_t> {WONT_THROW(
+		                        : optional<uintmax_t>{WONT_THROW(
 		                             str2num<uintmax_t>(res[SOWNER]).value())}),
 		   stype,
 		   (res.is_null(CUMODE)
 		       ? std::nullopt
-		       : std::optional {sim::ContestUser::Mode(
+		       : std::optional{sim::ContestUser::Mode(
 		            WONT_THROW(str2num<uintmax_t>(res[CUMODE]).value()))}),
 		   (res.is_null(POWNER)
 		       ? std::nullopt
-		       : optional<uintmax_t> {
+		       : optional<uintmax_t>{
 		            WONT_THROW(str2num<uintmax_t>(res[POWNER]).value())}));
 
 		if (perms == PERM::NONE)
@@ -502,7 +507,8 @@ void Sim::api_submissions() {
 			}
 
 			if (subtype_to_show != FINAL and
-			    subtype_to_show != PROBLEM_FINAL and selecting_finals) {
+			    subtype_to_show != PROBLEM_FINAL and selecting_finals)
+			{
 				if (not select_one) {
 					THROW("Cannot show final while selecting finals - this is "
 					      "a bug in the query or the restricting access (URL: ",
@@ -633,7 +639,8 @@ void Sim::api_submissions() {
 		if (uint(perms & PERM::VIEW_RELATED_JOBS))
 			append('j');
 		if (uint(perms & PERM::VIEW) and
-		    (res.is_null(CRENDS) or curr_date < InfDatetime(res[CRENDS]))) {
+		    (res.is_null(CRENDS) or curr_date < InfDatetime(res[CRENDS])))
+		{
 			//  ^ submission to a problem;    ^ Round has not ended
 			// TODO: implement it in some way in the UI
 			append('r'); // Resubmit solution
@@ -736,7 +743,8 @@ void Sim::api_submission_add() {
 			problem_id = next_arg.substr(1);
 		} else if (has_prefix(next_arg, "cp") and
 		           is_digit(next_arg.substr(2)) and
-		           not contest_problem_id.has_value()) {
+		           not contest_problem_id.has_value())
+		{
 			contest_problem_id = next_arg.substr(2);
 		} else
 			return api_error400();
@@ -751,10 +759,10 @@ void Sim::api_submission_add() {
 		// Check permissions to the problem
 		auto problem_perms_opt = sim::problem::get_permissions(
 		   mysql, problem_id,
-		   (session_is_open ? optional {WONT_THROW(
+		   (session_is_open ? optional{WONT_THROW(
 		                         str2num<uintmax_t>(session_user_id).value())}
 		                    : std::nullopt),
-		   (session_is_open ? optional {session_user_type} : std::nullopt));
+		   (session_is_open ? optional{session_user_type} : std::nullopt));
 		if (not problem_perms_opt)
 			return api_error404();
 
@@ -789,7 +797,7 @@ void Sim::api_submission_add() {
 			return api_error404();
 
 		auto contest_perms = sim::contest::get_permissions(
-		   (session_is_open ? std::optional {session_user_type} : std::nullopt),
+		   (session_is_open ? std::optional{session_user_type} : std::nullopt),
 		   is_public, umode);
 		if (uint(~contest_perms & sim::contest::Permissions::PARTICIPATE))
 			return api_error403(); // Could not participate
@@ -797,7 +805,8 @@ void Sim::api_submission_add() {
 		auto curr_date = mysql_date();
 		if (uint(~contest_perms & sim::contest::Permissions::ADMIN) and
 		    (curr_date < InfDatetime(cr_begins_str) or
-		     InfDatetime(cr_ends_str) <= curr_date)) {
+		     InfDatetime(cr_ends_str) <= curr_date))
+		{
 			return api_error403(); // Round has not begun jet or already ended
 		}
 
@@ -834,7 +843,8 @@ void Sim::api_submission_add() {
 
 	// Check the solution size
 	if ((code.empty() ? get_file_size(solution_tmp_path) : code.size()) >
-	    SOLUTION_MAX_SIZE) {
+	    SOLUTION_MAX_SIZE)
+	{
 		add_notification(
 		   "error",
 		   "Solution is too big (maximum allowed size: ", SOLUTION_MAX_SIZE,

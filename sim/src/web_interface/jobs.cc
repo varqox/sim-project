@@ -106,10 +106,10 @@ Sim::jobs_granted_permissions_problem(StringView problem_id) {
 	auto problem_perms =
 	   sim::problem::get_permissions(
 	      mysql, problem_id,
-	      (session_is_open ? optional {WONT_THROW(
+	      (session_is_open ? optional{WONT_THROW(
 	                            str2num<uintmax_t>(session_user_id).value())}
 	                       : std::nullopt),
-	      (session_is_open ? optional {session_user_type} : std::nullopt))
+	      (session_is_open ? optional{session_user_type} : std::nullopt))
 	      .value_or(P_PERMS::NONE);
 
 	if (uint(problem_perms & P_PERMS::VIEW_RELATED_JOBS)) {
@@ -148,20 +148,21 @@ Sim::jobs_granted_permissions_submission(StringView submission_id) {
 	if (stmt.next()) {
 		if (is_public.has_value() and // <-- contest exists
 		    uint(sim::contest::get_permissions(
-		            (session_is_open ? std::optional {session_user_type}
+		            (session_is_open ? std::optional{session_user_type}
 		                             : std::nullopt),
 		            is_public.value(), cu_mode) &
-		         sim::contest::Permissions::ADMIN)) {
+		         sim::contest::Permissions::ADMIN))
+		{
 			return PERM::VIEW | PERM::DOWNLOAD_LOG;
 		}
 
 		// The below check has to be done as the last one because it gives the
 		// least permissions
 		auto problem_perms = sim::problem::get_permissions(
-		   (session_is_open ? optional {WONT_THROW(
+		   (session_is_open ? optional{WONT_THROW(
 		                         str2num<uintmax_t>(session_user_id).value())}
 		                    : std::nullopt),
-		   (session_is_open ? optional {session_user_type} : std::nullopt),
+		   (session_is_open ? optional{session_user_type} : std::nullopt),
 		   problem_owner, problem_type);
 		// Give access to the problem's submissions' jobs to the problem's admin
 		if (bool(uint(problem_perms & sim::problem::Permissions::EDIT)))
@@ -188,7 +189,7 @@ void Sim::jobs_handle() {
 		return;
 	}
 
-	InplaceBuff<32> query_suffix {};
+	InplaceBuff<32> query_suffix{};
 	if (next_arg == "my")
 		query_suffix.append("/u", session_user_id);
 	else if (next_arg.size())

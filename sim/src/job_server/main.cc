@@ -86,8 +86,8 @@ private:
 			if (job_category.problem_info.size()) {
 				stdlog("problem_info = {");
 				for (auto&& [prob_id, pinfo] : job_category.problem_info) {
-					stdlog("   ", prob_id, " => {", pinfo.its_best_job.id,
-					       ", ", pinfo.locks_no, "},");
+					stdlog("   ", prob_id, " => {", pinfo.its_best_job.id, ", ",
+					       pinfo.locks_no, "},");
 				}
 				stdlog("}");
 			}
@@ -112,7 +112,8 @@ private:
 
 			if (job_category.locked_problems.size()) {
 				stdlog("locked_problems = {");
-				for (auto&& [prob_id, prob_jobs] : job_category.locked_problems) {
+				for (auto&& [prob_id, prob_jobs] : job_category.locked_problems)
+				{
 					auto tmplog = stdlog("   ", prob_id, " => ");
 					log_problem_jobs(tmplog, prob_jobs);
 					tmplog(',');
@@ -157,7 +158,7 @@ public:
 				                                   uint64_t problem_id,
 				                                   bool locks_problem) {
 					auto it = job_category.problem_info.find(problem_id);
-					Job curr_job {jid, priority, locks_problem};
+					Job curr_job{jid, priority, locks_problem};
 					if (it != job_category.problem_info.end()) {
 						ProblemInfo& pinfo = it->second;
 						Job best_job = pinfo.its_best_job;
@@ -251,15 +252,17 @@ public:
 		auto lock_impl = [&pid](auto& job_category) {
 			auto it = job_category.problem_info.find(pid);
 			if (it == job_category.problem_info.end()) {
-				it = job_category.problem_info.try_emplace(pid, ProblemInfo{Job::least(), 0}).first;
+				it = job_category.problem_info
+				        .try_emplace(pid, ProblemInfo{Job::least(), 0})
+				        .first;
 			}
 
 			auto& pinfo = it->second;
 			if (++pinfo.locks_no == 1) {
 				auto pj = job_category.queue.find(pinfo.its_best_job);
 				if (pj != job_category.queue.end()) {
-					job_category.locked_problems.try_emplace(pid,
-					                                    std::move(pj->second));
+					job_category.locked_problems.try_emplace(
+					   pid, std::move(pj->second));
 					job_category.queue.erase(pj->first);
 				}
 			}
@@ -289,7 +292,7 @@ public:
 				auto pl = job_category.locked_problems.find(pid);
 				if (pl != job_category.locked_problems.end()) {
 					job_category.queue.try_emplace(pinfo.its_best_job,
-					                          std::move(pl->second));
+					                               std::move(pl->second));
 					job_category.locked_problems.erase(pl->first);
 				} else {
 					job_category.problem_info.erase(pid); /* There are no jobs
@@ -317,10 +320,14 @@ public:
 		uint64_t problem_id = 0;
 
 		JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc)
-		   : jobs_queue(&jq), job_category(&jc) {}
+		: jobs_queue(&jq)
+		, job_category(&jc) {}
 
 		JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc, Job j, uint64_t pid)
-		   : jobs_queue(&jq), job_category(&jc), job(j), problem_id(pid) {}
+		: jobs_queue(&jq)
+		, job_category(&jc)
+		, job(j)
+		, problem_id(pid) {}
 
 		JobHolder(const JobHolder&) = delete;
 		JobHolder(JobHolder&&) = default;
@@ -341,9 +348,9 @@ public:
 
 			auto& pinfo = it->second;
 			Job best_job = pinfo.its_best_job;
-			auto& pjobs = (pinfo.locks_no > 0
-			                  ? job_category->locked_problems[problem_id]
-			                  : job_category->queue[best_job]);
+			auto& pjobs =
+			   (pinfo.locks_no > 0 ? job_category->locked_problems[problem_id]
+			                       : job_category->queue[best_job]);
 
 			if (not pjobs.jobs.erase(job)) {
 				THROW("Job erasion did not take place since the erased job was "
@@ -406,9 +413,12 @@ public:
 		Job job =
 		   Job::least(); // If is invalid it will be the last in comparison
 
-		OtherJobHolder(decltype(other_jobs)& o) : oj(&o) {}
+		OtherJobHolder(decltype(other_jobs)& o)
+		: oj(&o) {}
 
-		OtherJobHolder(decltype(other_jobs)& o, Job j) : oj(&o), job(j) {}
+		OtherJobHolder(decltype(other_jobs)& o, Job j)
+		: oj(&o)
+		, job(j) {}
 
 		OtherJobHolder(const OtherJobHolder&) = delete;
 		OtherJobHolder(OtherJobHolder&&) = default;
@@ -504,7 +514,7 @@ public:
 	};
 
 	struct WorkerInfo {
-		NextJob next_job {0, -1, false};
+		NextJob next_job{0, -1, false};
 		std::promise<void> next_job_signalizer;
 		std::future<void> next_job_waiter = next_job_signalizer.get_future();
 		bool is_idle = false;
@@ -524,11 +534,12 @@ private:
 		WorkersPool& wp_;
 
 	public:
-		Worker(WorkersPool& wp) : wp_(wp) {
+		Worker(WorkersPool& wp)
+		: wp_(wp) {
 			STACK_UNWINDING_MARK;
 			auto tid = std::this_thread::get_id();
 			lock_guard<mutex> lock(wp_.mtx_);
-			wp_.workers.emplace(tid, WorkerInfo {});
+			wp_.workers.emplace(tid, WorkerInfo{});
 		}
 
 		~Worker() {
@@ -553,7 +564,7 @@ private:
 			if (wp_.worker_dies_callback_) {
 				EventsQueue::register_event(
 				   shared_function([&callback = wp_.worker_dies_callback_,
-				                         winfo = std::move(wi)]() mutable {
+				                    winfo = std::move(wi)]() mutable {
 					   callback(std::move(winfo));
 				   }));
 			}
@@ -597,9 +608,9 @@ public:
 	WorkersPool(function<void(NextJob)> job_handler,
 	            function<void()> idle_callback,
 	            function<void(WorkerInfo)> dead_callback)
-	   : job_handler_(std::move(job_handler)),
-	     worker_becomes_idle_callback_(std::move(idle_callback)),
-	     worker_dies_callback_(std::move(dead_callback)) {
+	: job_handler_(std::move(job_handler))
+	, worker_becomes_idle_callback_(std::move(idle_callback))
+	, worker_dies_callback_(std::move(dead_callback)) {
 		throw_assert(job_handler_);
 	}
 
@@ -780,7 +791,7 @@ static void sync_and_assign_jobs() {
 		JobsQueue::Job job;
 	};
 
-	array<SItem, 3> selector {{
+	array<SItem, 3> selector{{
 	   // (is ok, best job)
 	   {problem_job.ok(), problem_job},
 	   {other_job.ok(), other_job},
@@ -803,7 +814,8 @@ static void sync_and_assign_jobs() {
 
 		if (idx == 0) { // Problem job
 			if (local_workers.pass_job(best_job.id, problem_job.problem_id,
-			                           best_job.locks_problem)) {
+			                           best_job.locks_problem))
+			{
 				problem_job.was_passed();
 			} else
 				selector[0].ok = false; // No more workers available
@@ -816,7 +828,8 @@ static void sync_and_assign_jobs() {
 
 		} else if (idx == 2) { // Judge job
 			if (judge_workers.pass_job(best_job.id, judge_job.problem_id,
-			                           best_job.locks_problem)) {
+			                           best_job.locks_problem))
+			{
 				judge_job.was_passed();
 			} else
 				selector[2].ok = false; // No more workers available
@@ -1099,7 +1112,8 @@ int main() {
 	// stdlog, like everything, writes to stderr, so redirect stdout and stderr
 	// to the log file
 	if (freopen(JOB_SERVER_LOG, "ae", stdout) == nullptr ||
-	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1) {
+	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
+	{
 		errlog("Failed to open `", JOB_SERVER_LOG, '`', errmsg());
 	}
 

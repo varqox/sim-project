@@ -60,7 +60,8 @@ static void parse_options(int& argc, char** argv) {
 			}
 
 			// Drop tables
-			else if (0 == strcmp(argv[i], "--only-drop-tables")) {
+			else if (0 == strcmp(argv[i], "--only-drop-tables"))
+			{
 				DROP_TABLES = true;
 				ONLY_DROP_TABLES = true;
 			}
@@ -95,11 +96,10 @@ static void create_db_config(FilePath db_config_path) {
 
 	FileDescriptor fd(db_config_path, O_CREAT | O_TRUNC | O_WRONLY, S_0600);
 	write_all_throw(fd, intentional_unsafe_string_view(concat(
-		"user: ", ConfigFile::escape_string(user),
-		"\npassword: ", ConfigFile::escape_string(password),
-		"\ndb: ", ConfigFile::escape_string(database),
-		"\nhost: ", ConfigFile::escape_string(host),
-		'\n')));
+	                       "user: ", ConfigFile::escape_string(user),
+	                       "\npassword: ", ConfigFile::escape_string(password),
+	                       "\ndb: ", ConfigFile::escape_string(database),
+	                       "\nhost: ", ConfigFile::escape_string(host), '\n')));
 }
 
 constexpr std::array<CStringView, 13> tables = {{
@@ -122,13 +122,14 @@ struct TryToCreateTable {
 	bool error = false;
 	MySQL::Connection& conn_;
 
-	explicit TryToCreateTable(MySQL::Connection& conn) : conn_(conn) {}
+	explicit TryToCreateTable(MySQL::Connection& conn)
+	: conn_(conn) {}
 
 	template <class Str, class Func>
 	void operator()(const char* table_name, Str&& query, Func&& f) noexcept {
 		try {
 			static_assert(is_sorted(tables), "Needed for binary search");
-			if (not binary_search(tables, StringView {table_name}))
+			if (not binary_search(tables, StringView{table_name}))
 				THROW("Table `", table_name, "` not found in the table list");
 
 			conn_.update(std::forward<Str>(query));

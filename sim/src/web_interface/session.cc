@@ -73,9 +73,9 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	// There is no better method than looking on the referer
 	bool is_https = has_prefix(request.headers["referer"], "https://");
 	resp.set_cookie("csrf_token", session_csrf_token.to_string(), exp_time, "/",
-	               "", false, is_https);
+	                "", false, is_https);
 	resp.set_cookie("session", session_id.to_string(), exp_time, "/", "", true,
-	               is_https);
+	                is_https);
 	session_is_open = true;
 }
 

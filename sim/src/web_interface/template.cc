@@ -17,7 +17,7 @@ enum StaticFile {
 
 // Technique used to force browsers to always keep up-to-date version of
 // the files below
-template<StaticFile static_file>
+template <StaticFile static_file>
 static StringView get_hash_of() {
 	using namespace std::chrono;
 	static auto str = [] {
@@ -28,7 +28,9 @@ static StringView get_hash_of() {
 			case SCRIPTS_JS: return "static/kit/scripts.js";
 			}
 		}();
-		return to_string(duration_cast<microseconds>(get_modification_time(path).time_since_epoch()).count());
+		return to_string(duration_cast<microseconds>(
+		                    get_modification_time(path).time_since_epoch())
+		                    .count());
 	}();
 	return str;
 }
@@ -98,7 +100,8 @@ void Sim::page_template(StringView title, StringView styles,
 			append("<a href=\"/u\">Users</a>");
 
 		if (uint(submissions_get_overall_permissions() &
-		         SubmissionPermissions::VIEW_ALL)) {
+		         SubmissionPermissions::VIEW_ALL))
+		{
 			append("<a href=\"/s\">Submissions</a>");
 		}
 

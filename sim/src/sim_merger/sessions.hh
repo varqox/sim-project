@@ -84,9 +84,9 @@ public:
 
 	SessionsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
 	               const UsersMerger& users)
-	   : Merger("session", ids_from_both_jobs.main.sessions,
-	            ids_from_both_jobs.other.sessions),
-	     users_(users) {
+	: Merger("session", ids_from_both_jobs.main.sessions,
+	         ids_from_both_jobs.other.sessions)
+	, users_(users) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

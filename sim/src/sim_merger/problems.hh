@@ -146,10 +146,11 @@ public:
 	               const InternalFilesMerger& internal_files,
 	               const UsersMerger& users,
 	               bool reset_new_problems_time_limits)
-	   : Merger("problems", ids_from_both_jobs.main.problems,
-	            ids_from_both_jobs.other.problems),
-	     internal_files_(internal_files), users_(users),
-	     reset_new_problems_time_limits_(reset_new_problems_time_limits) {
+	: Merger("problems", ids_from_both_jobs.main.problems,
+	         ids_from_both_jobs.other.problems)
+	, internal_files_(internal_files)
+	, users_(users)
+	, reset_new_problems_time_limits_(reset_new_problems_time_limits) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

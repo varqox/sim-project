@@ -23,7 +23,7 @@ class Sim final {
 	CStringView client_ip; // TODO: put in request?
 	server::HttpRequest request;
 	server::HttpResponse resp;
-	RequestUriParser url_args {""};
+	RequestUriParser url_args{""};
 	CppSyntaxHighlighter cpp_syntax_highlighter;
 
 	/**
@@ -696,7 +696,8 @@ private:
 	void view_logs();
 
 public:
-	Sim() : mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
+	Sim()
+	: mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
 
 	~Sim() {}
 

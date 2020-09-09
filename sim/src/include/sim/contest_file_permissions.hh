@@ -64,7 +64,7 @@ get_permissions(MySQL::Connection& mysql, T&& contest_file_id,
 
 	auto cperms =
 	   contest::get_permissions(user_type.opt(), is_public, cu_mode.opt());
-	return std::pair {get_permissions(cperms), get_overall_permissions(cperms)};
+	return std::pair{get_permissions(cperms), get_overall_permissions(cperms)};
 }
 
 } // namespace sim::contest_file

@@ -147,7 +147,8 @@ void JudgeOrRejudge::run() {
 		score += initial_score;
 		// If initial tests haven't passed
 		if (initial_status != SubmissionStatus::OK and
-		    status != SubmissionStatus::JUDGE_ERROR) {
+		    status != SubmissionStatus::JUDGE_ERROR)
+		{
 			status = initial_status;
 		}
 
@@ -187,7 +188,8 @@ void JudgeOrRejudge::run() {
 					if (has_one_of_prefixes(
 					       test.comment, "Runtime error (Error: ",
 					       "Runtime error (failed to get syscall",
-					       "Runtime error (forbidden syscall")) {
+					       "Runtime error (forbidden syscall"))
+					{
 						errlog("Submission ", submission_id_, " (problem ",
 						       problem_id, "): ", test.name, " -> ",
 						       test.comment);

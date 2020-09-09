@@ -14,14 +14,16 @@ public:
 
 	InfDatetimeField(InfDatetimeField&&) noexcept = default;
 
-	InfDatetimeField(const InfDatetime& dt) : VarcharField(dt.to_str()) {}
+	InfDatetimeField(const InfDatetime& dt)
+	: VarcharField(dt.to_str()) {}
 
-	InfDatetimeField(InfDatetime&& dt) : VarcharField(dt.to_str()) {}
+	InfDatetimeField(InfDatetime&& dt)
+	: VarcharField(dt.to_str()) {}
 
 	template <class T,
 	          std::enable_if_t<std::is_convertible_v<T, StringView>, int> = 0>
 	InfDatetimeField(T&& str)
-	   : InfDatetimeField(InfDatetime(std::forward<T>(str))) {}
+	: InfDatetimeField(InfDatetime(std::forward<T>(str))) {}
 
 	InfDatetimeField& operator=(const InfDatetimeField&) = default;
 

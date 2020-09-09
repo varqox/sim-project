@@ -144,11 +144,14 @@ public:
 	                  const ContestProblemsMerger& contest_problems,
 	                  const ContestRoundsMerger& contest_rounds,
 	                  const ContestsMerger& contests)
-	   : Merger("submissions", ids_from_both_jobs.main.submissions,
-	            ids_from_both_jobs.other.submissions),
-	     internal_files_(internal_files), users_(users), problems_(problems),
-	     contest_problems_(contest_problems), contest_rounds_(contest_rounds),
-	     contests_(contests) {
+	: Merger("submissions", ids_from_both_jobs.main.submissions,
+	         ids_from_both_jobs.other.submissions)
+	, internal_files_(internal_files)
+	, users_(users)
+	, problems_(problems)
+	, contest_problems_(contest_problems)
+	, contest_rounds_(contest_rounds)
+	, contests_(contests) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

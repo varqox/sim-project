@@ -80,8 +80,8 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 	for (int i = 1; i < argc; ++i) {
 
 		if (argv[i][0] == '-') {
-			if (0 == strcmp(argv[i], "-h") or
-			    0 == strcmp(argv[i], "--help")) { // Help
+			if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help"))
+			{ // Help
 				print_help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 
@@ -90,8 +90,8 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 				stdlog.open("/dev/null");
 
 			} else if (0 == strcmp(argv[i], "-r") or
-			           0 ==
-			              strcmp(argv[i], "--reset-new-problems-time-limits")) {
+			           0 == strcmp(argv[i], "--reset-new-problems-time-limits"))
+			{
 				cmd_options.reset_new_problems_time_limits = true;
 
 			} else { // Unknown
@@ -136,7 +136,8 @@ static int true_main(int argc, char** argv) {
 		other_sim_build.append('/');
 
 	if (path_absolute(main_sim_build, get_cwd().to_string()) ==
-	    path_absolute(other_sim_build, get_cwd().to_string())) {
+	    path_absolute(other_sim_build, get_cwd().to_string()))
+	{
 		errlog.label(false);
 		errlog("sim_build and other_sim_build_backup cannot refer to the same "
 		       "directory");

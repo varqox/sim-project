@@ -24,7 +24,8 @@ class InfDatetime {
 	static constexpr const char INF_STR[] = "@";
 
 public:
-	InfDatetime() : type(Type::INF) {}
+	InfDatetime()
+	: type(Type::INF) {}
 
 	template <class T>
 	explicit InfDatetime(T&& str) {

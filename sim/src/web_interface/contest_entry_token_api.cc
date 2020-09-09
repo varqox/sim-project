@@ -50,10 +50,9 @@ void Sim::api_contest_entry_token() {
 	} else if (next_arg[0] == 'c') {
 		StringView contest_id = next_arg.substr(1);
 		sim::contest::Permissions cperms =
-		   sim::contest::get_permissions(mysql, contest_id,
-		                                 (session_is_open
-		                                     ? std::optional {session_user_id}
-		                                     : std::nullopt))
+		   sim::contest::get_permissions(
+		      mysql, contest_id,
+		      (session_is_open ? std::optional{session_user_id} : std::nullopt))
 		      .value_or(sim::contest::Permissions::NONE);
 		if (uint(~cperms &
 		         sim::contest::Permissions::MANAGE_CONTEST_ENTRY_TOKEN))
@@ -97,7 +96,8 @@ void Sim::api_contest_entry_token() {
 			if (not short_token.has_value() or
 			    not short_token_expiration.has_value() or
 			    short_token_expiration.value() <
-			       intentional_unsafe_string_view(mysql_date())) {
+			       intentional_unsafe_string_view(mysql_date()))
+			{
 				append("null,null]");
 			} else {
 				append(json_stringify(short_token.value()), ",\"",

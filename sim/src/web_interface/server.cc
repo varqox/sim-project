@@ -29,7 +29,7 @@ static void* worker(void*) {
 
 		for (;;) {
 			// accept the connection
-			FileDescriptor client_socket_fd {accept4(
+			FileDescriptor client_socket_fd{accept4(
 			   socket_fd, (sockaddr*)&name, &client_name_len, SOCK_CLOEXEC)};
 			if (client_socket_fd == -1)
 				continue;
@@ -89,7 +89,8 @@ int main() {
 	// stdlog (like everything) writes to stderr, so redirect stdout and stderr
 	// to the log file
 	if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
-	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1) {
+	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
+	{
 		errlog("Failed to open `", SERVER_LOG, '`', errmsg());
 	}
 
@@ -157,7 +158,8 @@ int main() {
 	if (address_str == "*") {
 		name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
 	} else if (address_str.empty() ||
-	           inet_aton(address_str.data(), &name.sin_addr) == 0) {
+	           inet_aton(address_str.data(), &name.sin_addr) == 0)
+	{
 		errlog("sim.config: incorrect IPv4 address");
 		return 8;
 	}
@@ -223,7 +225,8 @@ int main() {
 	pthread_attr_t attr;
 	constexpr size_t THREAD_STACK_SIZE = 4 << 20; // 4 MiB
 	if (pthread_attr_init(&attr) ||
-	    pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE)) {
+	    pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE))
+	{
 		errlog("Failed to set new thread stack size");
 		return 4;
 	}

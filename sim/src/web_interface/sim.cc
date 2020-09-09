@@ -39,7 +39,7 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr,
 		try {
 			STACK_UNWINDING_MARK;
 
-			url_args = RequestUriParser {request.target};
+			url_args = RequestUriParser{request.target};
 			StringView next_arg = url_args.extract_next_arg();
 
 			// Reset state
@@ -185,7 +185,8 @@ void Sim::static_file() {
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
 		struct tm client_mtime;
-		CStringView if_modified_since = request.headers.get("if-modified-since");
+		CStringView if_modified_since =
+		   request.headers.get("if-modified-since");
 		if (!if_modified_since.empty() and
 		    strptime(if_modified_since.data(), "%a, %d %b %Y %H:%M:%S GMT",
 		             &client_mtime) != nullptr and

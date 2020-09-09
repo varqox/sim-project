@@ -35,7 +35,9 @@ private:
 		size_t read_limit_;
 
 	public:
-		LimitedReader(Connection& cn, size_t rl) : conn_(cn), read_limit_(rl) {}
+		LimitedReader(Connection& cn, size_t rl)
+		: conn_(cn)
+		, read_limit_(rl) {}
 
 		size_t limit() const { return read_limit_; }
 
@@ -55,7 +57,10 @@ private:
 
 public:
 	explicit Connection(int client_socket_fd)
-	   : state_(OK), sock_fd_(client_socket_fd), buff_size_(0), pos_(0) {}
+	: state_(OK)
+	, sock_fd_(client_socket_fd)
+	, buff_size_(0)
+	, pos_(0) {}
 
 	~Connection() = default;
 

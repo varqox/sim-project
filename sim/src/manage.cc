@@ -70,18 +70,19 @@ static void help(const char* program_name) {
 		program_name = "manage";
 	}
 
+	// clang-format off
 	stdlog("Usage: ", program_name, " [options] <command> [<command args>]\n"
 	       "Manage is a tool for controlling the Sim instance.\n"
 	       "Commands:\n"
-	       "  help    Display this information\n" // TODO: descriptions of the below
+	       "  help    Display this information\n"
 	       "  restart Kill current Sim instance, start a new one, and\n"
 	       "            indefinitely restart it if it dies\n"
 	       "  start   Same as restart\n"
 	       "  stop    Kill current Sim instance\n"
 	       "Options: \n"
 	       "  -b      Before monitoring Sim instance for restarts make it a\n"
-	       "            background process"
-	);
+	       "            background process");
+	// clang-format on
 }
 
 struct sim_paths {
@@ -136,8 +137,8 @@ static void restart() {
 		}
 	};
 	std::array<Server, 2> servers = {{
-		{-1, paths.sim_server},
-		{-1, paths.job_server},
+	   {-1, paths.sim_server},
+	   {-1, paths.job_server},
 	}};
 
 	if (options::make_background) {
@@ -176,19 +177,15 @@ static void restart() {
 	}
 }
 
-static void start() {
-	restart();
-}
+static void start() { restart(); }
 
 static void stop() {
 	sim_paths paths;
 	// First kill manage so that it won't restart servers
 	kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
 	// Kill servers
-	kill_processes_by_exec({
-		paths.sim_server,
-		paths.job_server
-	}, std::chrono::seconds(4), true);
+	kill_processes_by_exec({paths.sim_server, paths.job_server},
+	                       std::chrono::seconds(4), true);
 }
 
 } // namespace command

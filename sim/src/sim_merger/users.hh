@@ -79,8 +79,8 @@ public:
 	}
 
 	UsersMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
-	   : Merger("users", ids_from_both_jobs.main.users,
-	            ids_from_both_jobs.other.users) {
+	: Merger("users", ids_from_both_jobs.main.users,
+	         ids_from_both_jobs.other.users) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

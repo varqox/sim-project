@@ -46,10 +46,12 @@ struct Word {
 
 	template <uint8_t N>
 	constexpr Word(const char (&s)[N], Style stl)
-	   : str(s), size(N - 1), style(stl) {}
+	: str(s)
+	, size(N - 1)
+	, style(stl) {}
 };
 
-constexpr array<CStringView, 11> begin_style {{
+constexpr array<CStringView, 11> begin_style{{
    "<span style=\"color:#00a000\">",
    "<span style=\"color:#a0a0a0\">",
    "<span style=\"color:#0000ff;font-weight:bold\">",
@@ -65,7 +67,7 @@ constexpr array<CStringView, 11> begin_style {{
 
 constexpr CStringView end_style = "</span>";
 
-constexpr array<Word, 124> words {{
+constexpr array<Word, 124> words{{
    {"", COMMENT}, // Guard - ignored
    {"uint_least16_t", BUILTIN_TYPE},
    {"uint_least32_t", BUILTIN_TYPE},
@@ -230,7 +232,7 @@ template <size_t N, size_t RES_N, size_t RES_END = 0>
 	                 arr,
 	                 extract_keywords_from_append(
 	                    res, {arr[idx].str, arr[idx].size},
-	                    std::make_integer_sequence<size_t, RES_END> {}),
+	                    std::make_integer_sequence<size_t, RES_END>{}),
 	                 idx + 1)
 	            : extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
 }
@@ -274,7 +276,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 	// Make sure we can use int
 	if (input.size() + BEGIN_GUARDS + END_GUARDS >
-	    static_cast<size_t>(std::numeric_limits<int>::max())) {
+	    static_cast<size_t>(std::numeric_limits<int>::max()))
+	{
 		THROW("Input string is too long");
 	}
 
@@ -506,8 +509,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 					dot_as_beginning = dot_appeared = true;
 					++k;
 
-				} else if (!curr_is_digit(
-				              str[k])) { // Disallow numeric literal "0x"
+				} else if (!curr_is_digit(str[k]))
+				{ // Disallow numeric literal "0x"
 					begs[i - dot_as_beginning] = -1;
 					i = k - 1;
 					continue;
@@ -537,8 +540,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 					exponent_appeared = true;
 
 				} else if (str[k - 1] == exp_sign &&
-				           (str[k] == '-' ||
-				            str[k] == '+')) { // Sign after exponent
+				           (str[k] == '-' || str[k] == '+'))
+				{ // Sign after exponent
 					continue;
 
 				} else {
@@ -551,7 +554,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			    // In floating-point hexadecimals exponent has to appear
 			    (exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
 			    // Allow literals like: "111."
-			    (str[k - 1] != '.' && !curr_is_digit(str[k - 1]))) {
+			    (str[k - 1] != '.' && !curr_is_digit(str[k - 1])))
+			{
 			kill_try:
 				// dot_as_beginning does not imply beg[i - 1] in hexadecimals
 				begs[i - (dot_as_beginning && exp_sign == 'e')] = -1;
@@ -609,7 +613,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 	auto is_operator = [](unsigned char c) {
 		// In xxx are marked characters from "!%&()*+,-./:;<=>?[\\]^{|}~";
-		constexpr array<bool, 128> xxx {{
+		constexpr array<bool, 128> xxx{{
 		   //      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
 		   /* 0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		   /* 1 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

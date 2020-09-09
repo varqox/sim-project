@@ -75,7 +75,8 @@ color_class_json(sim::contest::Permissions cperms, InfDatetime full_results,
                  ContestProblem::ScoreRevealingMode score_revealing) {
 
 	if (whether_to_show_full_status(cperms, full_results, curr_mysql_date,
-	                                score_revealing)) {
+	                                score_revealing))
+	{
 		if (full_status.has_value())
 			return concat<32>("\"", css_color_class(full_status.value()), "\"");
 	} else if (initial_status.has_value()) {
@@ -150,8 +151,10 @@ public:
 	   ContentType& resp_content,
 	   sim::contest::OverallPermissions contest_overall_perms,
 	   sim::contest::Permissions contest_perms, std::string curr_date)
-	   : content_(resp_content), contest_overall_perms_(contest_overall_perms),
-	     contest_perms_(contest_perms), curr_date_(std::move(curr_date)) {}
+	: content_(resp_content)
+	, contest_overall_perms_(contest_overall_perms)
+	, contest_perms_(contest_perms)
+	, curr_date_(std::move(curr_date)) {}
 
 	void append_field_names() {
 		// clang-format off
@@ -297,8 +300,8 @@ void Sim::api_contests() {
 	// Process restrictions
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extract_next_arg();
-	for (uint mask = 0; next_arg.size();
-	     next_arg = url_args.extract_next_arg()) {
+	for (uint mask = 0; next_arg.size(); next_arg = url_args.extract_next_arg())
+	{
 		constexpr uint ID_COND = 1;
 		constexpr uint PUBLIC_COND = 2;
 
@@ -321,8 +324,8 @@ void Sim::api_contests() {
 		} else if (not is_digit(arg_id)) {
 			return api_error400();
 
-		} else if (is_one_of(cond, '=', '<', '>') and
-		           ~mask & ID_COND) { // conditional
+		} else if (is_one_of(cond, '=', '<', '>') and ~mask & ID_COND)
+		{ // conditional
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere_append("c.id", arg);
 			mask |= ID_COND;
@@ -409,8 +412,7 @@ void Sim::api_contest() {
 
 	auto contest_opt = sim::contest::get(
 	   mysql, sim::contest::GetIdKind::CONTEST, contest_id,
-	   (session_is_open ? optional {session_user_id} : std::nullopt),
-	   curr_date);
+	   (session_is_open ? optional{session_user_id} : std::nullopt), curr_date);
 	if (not contest_opt)
 		return api_error404();
 
@@ -455,9 +457,9 @@ void Sim::api_contest() {
 	   mysql, sim::contest_problem::IterateIdKind::CONTEST, contest_id,
 	   contest_perms,
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   (session_is_open ? optional{session_user_type} : std::nullopt),
 	   curr_date,
 	   [&](const ContestProblem& contest_problem,
 	       const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -477,8 +479,7 @@ void Sim::api_contest_round(StringView contest_round_id) {
 
 	auto contest_opt = sim::contest::get(
 	   mysql, sim::contest::GetIdKind::CONTEST_ROUND, contest_round_id,
-	   (session_is_open ? optional {session_user_id} : std::nullopt),
-	   curr_date);
+	   (session_is_open ? optional{session_user_id} : std::nullopt), curr_date);
 	if (not contest_opt)
 		return api_error404();
 
@@ -534,9 +535,9 @@ void Sim::api_contest_round(StringView contest_round_id) {
 	   mysql, sim::contest_problem::IterateIdKind::CONTEST_ROUND,
 	   contest_round_id, contest_perms,
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   (session_is_open ? optional{session_user_type} : std::nullopt),
 	   curr_date,
 	   [&](const ContestProblem& contest_problem,
 	       const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -556,8 +557,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 
 	auto contest_opt = sim::contest::get(
 	   mysql, sim::contest::GetIdKind::CONTEST_PROBLEM, contest_problem_id,
-	   (session_is_open ? optional {session_user_id} : std::nullopt),
-	   curr_date);
+	   (session_is_open ? optional{session_user_id} : std::nullopt), curr_date);
 	if (not contest_opt)
 		return api_error404();
 
@@ -571,9 +571,9 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 	   mysql, sim::contest_problem::IterateIdKind::CONTEST_PROBLEM,
 	   contest_problem_id, contest_perms,
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   (session_is_open ? optional{session_user_type} : std::nullopt),
 	   curr_date,
 	   [&](const ContestProblem& contest_problem,
 	       const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -636,7 +636,8 @@ void Sim::api_contest_create(sim::contest::OverallPermissions overall_perms) {
 	using PERM = sim::contest::OverallPermissions;
 
 	if (uint(~overall_perms & PERM::ADD_PRIVATE) and
-	    uint(~overall_perms & PERM::ADD_PUBLIC)) {
+	    uint(~overall_perms & PERM::ADD_PUBLIC))
+	{
 		return api_error403();
 	}
 
@@ -682,7 +683,8 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	using PERM = sim::contest::OverallPermissions;
 
 	if (uint(~overall_perms & PERM::ADD_PRIVATE) and
-	    uint(~overall_perms & PERM::ADD_PUBLIC)) {
+	    uint(~overall_perms & PERM::ADD_PUBLIC))
+	{
 		return api_error403();
 	}
 
@@ -714,8 +716,7 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 
 	auto source_contest_opt = sim::contest::get(
 	   mysql, sim::contest::GetIdKind::CONTEST, source_contest_id,
-	   (session_is_open ? optional {session_user_id} : std::nullopt),
-	   curr_date);
+	   (session_is_open ? optional{session_user_id} : std::nullopt), curr_date);
 	if (not source_contest_opt) {
 		return api_error404(
 		   "There is no contest with this id that you can clone");
@@ -744,9 +745,9 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	   mysql, sim::contest_problem::IterateIdKind::CONTEST, source_contest_id,
 	   source_contest_perms,
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   (session_is_open ? optional{session_user_type} : std::nullopt),
 	   curr_date,
 	   [&](const ContestProblem& cp,
 	       const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -846,7 +847,8 @@ void Sim::api_contest_edit(StringView contest_id,
 
 	bool will_be_public = request.form_data.exist("public");
 	if (will_be_public and not is_public and
-	    uint(~perms & sim::contest::Permissions::MAKE_PUBLIC)) {
+	    uint(~perms & sim::contest::Permissions::MAKE_PUBLIC))
+	{
 		add_notification("error",
 		                 "You have no permissions to make this contest public");
 	}
@@ -968,8 +970,7 @@ void Sim::api_contest_round_clone(StringView contest_id,
 
 	auto source_contest_opt = sim::contest::get(
 	   mysql, sim::contest::GetIdKind::CONTEST_ROUND, source_contest_round_id,
-	   (session_is_open ? optional {session_user_id} : std::nullopt),
-	   curr_date);
+	   (session_is_open ? optional{session_user_id} : std::nullopt), curr_date);
 	if (not source_contest_opt) {
 		return api_error404(
 		   "There is no contest round with this id that you can clone");
@@ -1008,9 +1009,9 @@ void Sim::api_contest_round_clone(StringView contest_id,
 	   mysql, sim::contest_problem::IterateIdKind::CONTEST_ROUND,
 	   source_contest_round_id, source_contest_perms,
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   (session_is_open ? optional{session_user_type} : std::nullopt),
 	   curr_date,
 	   [&](const ContestProblem& cp,
 	       const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -1142,7 +1143,8 @@ void Sim::api_contest_problem_add(uintmax_t contest_id,
 	form_validate(name, "name", "Problem's name",
 	              decltype(ContestProblem::name)::max_len);
 	form_validate(problem_id, "problem_id", "Problem ID",
-	              (bool (*)(const StringView&))is_digit, "Problem ID: invalid value");
+	              (bool (*)(const StringView&))is_digit,
+	              "Problem ID: invalid value");
 	// Validate score_revealing
 	auto score_revealing_str = request.form_data.get("score_revealing");
 	decltype(ContestProblem::score_revealing) score_revealing;
@@ -1187,9 +1189,9 @@ void Sim::api_contest_problem_add(uintmax_t contest_id,
 
 	auto problem_perms = sim::problem::get_permissions(
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   (session_is_open ? optional{session_user_type} : std::nullopt),
 	   problem_owner, problem_type);
 	if (uint(~problem_perms & sim::problem::Permissions::VIEW))
 		return api_error403("You have no permissions to use this problem");
@@ -1365,7 +1367,8 @@ struct SubmissionOwner {
 	InplaceBuff<32> name; // static size is set manually to save memory
 
 	template <class... Args>
-	SubmissionOwner(uint64_t sowner, Args&&... args) : id(sowner) {
+	SubmissionOwner(uint64_t sowner, Args&&... args)
+	: id(sowner) {
 		name.append(std::forward<Args>(args)...);
 	}
 

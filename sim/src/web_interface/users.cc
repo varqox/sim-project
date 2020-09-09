@@ -20,7 +20,8 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 	switch (session_user_type) {
 	case User::Type::ADMIN:
 		if (session_user_id ==
-		    intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID))) {
+		    intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID)))
+		{
 			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN |
 			       PERM::ADD_TEACHER | PERM::ADD_NORMAL;
 		} else {
@@ -133,7 +134,8 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 	       intentional_unsafe_string_view(
 	          sha3_512(intentional_unsafe_string_view(
 	             concat(salt, request.form_data.get(password_field_name))))),
-	       passwd_hash)) {
+	       passwd_hash))
+	{
 		return false;
 	}
 
@@ -174,7 +176,8 @@ void Sim::login() {
 			    slow_equal(
 			       intentional_unsafe_string_view(sha3_512(
 			          intentional_unsafe_string_view(concat(salt, password)))),
-			       passwd_hash)) {
+			       passwd_hash))
+			{
 				// Delete old session
 				if (session_is_open)
 					session_destroy();
@@ -183,7 +186,7 @@ void Sim::login() {
 				session_create_and_open(uid, not remember);
 
 				// If there is a redirection string, redirect to it
-				InplaceBuff<4096> location {url_args.extract_query()};
+				InplaceBuff<4096> location{url_args.extract_query()};
 				return redirect(location.size == 0 ? "/"
 				                                   : location.to_string());
 			}
@@ -255,7 +258,8 @@ void Sim::sign_up() {
 
 		if (form_validate(pass1, "password1", "Password") &&
 		    form_validate(pass2, "password2", "Password (repeat)") &&
-		    pass1 != pass2) {
+		    pass1 != pass2)
+		{
 			add_notification("error", "Passwords do not match");
 		}
 

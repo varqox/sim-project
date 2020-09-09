@@ -16,7 +16,8 @@ void MergeProblems::run() {
 			break;
 		} catch (const std::exception& e) {
 			if (has_prefix(e.what(), "Deadlock found when trying to get lock; "
-			                         "try restarting transaction")) {
+			                         "try restarting transaction"))
+			{
 				continue;
 			}
 

@@ -73,14 +73,16 @@ void AddOrReuploadProblemBase::build_package() {
 
 	// Check problem's name's length
 	if (WONT_THROW(cr.simfile.name.value()).size() >
-	    decltype(Problem::name)::max_len) {
+	    decltype(Problem::name)::max_len)
+	{
 		return set_failure("Problem's name is too long (max allowed length: ",
 		                   decltype(Problem::name)::max_len, ')');
 	}
 
 	// Check problem's label's length
 	if (WONT_THROW(cr.simfile.label.value()).size() >
-	    decltype(Problem::label)::max_len) {
+	    decltype(Problem::label)::max_len)
+	{
 		return set_failure("Problem's label is too long (max allowed length: ",
 		                   decltype(Problem::label)::max_len, ')');
 	}

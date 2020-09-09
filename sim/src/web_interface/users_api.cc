@@ -49,8 +49,8 @@ void Sim::api_users() {
 	// Process restrictions
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extract_next_arg();
-	for (uint mask = 0; next_arg.size();
-	     next_arg = url_args.extract_next_arg()) {
+	for (uint mask = 0; next_arg.size(); next_arg = url_args.extract_next_arg())
+	{
 		constexpr uint ID_COND = 1;
 		constexpr uint UTYPE_COND = 2;
 
@@ -108,7 +108,7 @@ void Sim::api_users() {
 		       json_stringify(res[FNAME]), ',', json_stringify(res[LNAME]), ',',
 		       json_stringify(res[EMAIL]), ',');
 
-		EnumVal<User::Type> utype {WONT_THROW(
+		EnumVal<User::Type> utype{WONT_THROW(
 		   str2num<std::underlying_type_t<User::Type>>(res[UTYPE]).value())};
 		switch (utype) {
 		case User::Type::ADMIN: append("\"Admin\","); break;
@@ -157,7 +157,8 @@ void Sim::api_user() {
 		return api_user_add();
 
 	} else if (not is_digit(next_arg) or
-	           request.method != server::HttpRequest::POST) {
+	           request.method != server::HttpRequest::POST)
+	{
 		return api_error400();
 	}
 
@@ -344,7 +345,8 @@ void Sim::api_user_change_password() {
 	using PERM = UserPermissions;
 
 	if (uint(~users_perms & PERM::CHANGE_PASS) and
-	    uint(~users_perms & PERM::ADMIN_CHANGE_PASS)) {
+	    uint(~users_perms & PERM::ADMIN_CHANGE_PASS))
+	{
 		return api_error403();
 	}
 
@@ -355,7 +357,8 @@ void Sim::api_user_change_password() {
 		return api_error400("Passwords do not match");
 
 	if (uint(~users_perms & PERM::ADMIN_CHANGE_PASS) and
-	    not check_submitted_password("old_pass")) {
+	    not check_submitted_password("old_pass"))
+	{
 		return api_error403("Invalid old password");
 	}
 

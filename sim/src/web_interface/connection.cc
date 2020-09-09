@@ -590,7 +590,8 @@ HttpRequest Connection::get_request() {
 	req.http_version = request_line.substr(beg, end - beg);
 	if (req.http_version.compare(0, 7, "HTTP/1.") != 0 ||
 	    (req.http_version.compare(7, string::npos, "0") != 0 &&
-	     req.http_version.compare(7, string::npos, "1") != 0)) {
+	     req.http_version.compare(7, string::npos, "1") != 0))
+	{
 		error400();
 		return req;
 	}
@@ -769,7 +770,8 @@ void Connection::send_response(const HttpResponse& res) {
 		off64_t pos = 0;
 		ssize_t read_len;
 		while (pos < fsize && state_ == OK &&
-		       (read_len = read(fd, buff, buff_length)) != -1) {
+		       (read_len = read(fd, buff, buff_length)) != -1)
+		{
 			send(buff, read_len);
 			pos += read_len;
 		}

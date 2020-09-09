@@ -12,7 +12,8 @@ protected:
 	const uint64_t job_id_;
 	InplaceBuff<1 << 14> job_log_holder_;
 
-	JobHandler(uint64_t job_id) : job_id_(job_id) {}
+	JobHandler(uint64_t job_id)
+	: job_id_(job_id) {}
 
 	JobHandler(const JobHandler&) = delete;
 	JobHandler(JobHandler&&) = delete;

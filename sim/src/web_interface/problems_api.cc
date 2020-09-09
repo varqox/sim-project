@@ -59,7 +59,7 @@ void Sim::api_problems() {
 	};
 
 	auto overall_perms = sim::problem::get_overall_permissions(
-	   session_is_open ? optional {session_user_type} : std::nullopt);
+	   session_is_open ? optional{session_user_type} : std::nullopt);
 
 	// Choose problems to select
 	if (not uint(overall_perms & OPERMS::VIEW_ALL)) {
@@ -89,8 +89,8 @@ void Sim::api_problems() {
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	bool select_specified_problem = false;
 	StringView next_arg = url_args.extract_next_arg();
-	for (uint mask = 0; next_arg.size();
-	     next_arg = url_args.extract_next_arg()) {
+	for (uint mask = 0; next_arg.size(); next_arg = url_args.extract_next_arg())
+	{
 		constexpr uint ID_COND = 1;
 		constexpr uint PTYPE_COND = 2;
 		constexpr uint USER_ID_COND = 4;
@@ -120,8 +120,8 @@ void Sim::api_problems() {
 		} else if (not is_digit(arg_id)) {
 			return api_error400();
 
-		} else if (is_one_of(cond, '<', '>') and
-		           ~mask & ID_COND) { // Conditional
+		} else if (is_one_of(cond, '<', '>') and ~mask & ID_COND)
+		{ // Conditional
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere.append(" AND p.id", arg);
 			mask |= ID_COND;
@@ -136,7 +136,8 @@ void Sim::api_problems() {
 			// Prevent bypassing unset VIEW_OWNER permission
 			if (not session_is_open or
 			    (arg_id != session_user_id and
-			     not uint(overall_perms & OPERMS::SELECT_BY_OWNER))) {
+			     not uint(overall_perms & OPERMS::SELECT_BY_OWNER)))
+			{
 				return api_error403("You have no permissions to select others' "
 				                    "problems by their user id");
 			}
@@ -184,13 +185,13 @@ void Sim::api_problems() {
 	stmt.res_bind_all(tag);
 
 	while (res.next()) {
-		EnumVal<Problem::Type> problem_type {WONT_THROW(
+		EnumVal<Problem::Type> problem_type{WONT_THROW(
 		   str2num<std::underlying_type_t<Problem::Type>>(res[PTYPE]).value())};
 		auto problem_perms = sim::problem::get_permissions(
-		   (session_is_open ? optional {WONT_THROW(
+		   (session_is_open ? optional{WONT_THROW(
 		                         str2num<uintmax_t>(session_user_id).value())}
 		                    : std::nullopt),
-		   (session_is_open ? optional {session_user_type} : std::nullopt),
+		   (session_is_open ? optional{session_user_type} : std::nullopt),
 		   (res.is_null(OWNER)
 		       ? std::nullopt
 		       : decltype(Problem::owner)(WONT_THROW(
@@ -327,7 +328,7 @@ void Sim::api_problem() {
 	STACK_UNWINDING_MARK;
 
 	auto overall_perms = sim::problem::get_overall_permissions(
-	   session_is_open ? optional {session_user_type} : std::nullopt);
+	   session_is_open ? optional{session_user_type} : std::nullopt);
 
 	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg == "add")
@@ -352,9 +353,9 @@ void Sim::api_problem() {
 
 	auto problem_perms = sim::problem::get_permissions(
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   (session_is_open ? optional{session_user_type} : std::nullopt),
 	   problem_owner, problem_type);
 
 	next_arg = url_args.extract_next_arg();
@@ -441,15 +442,15 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	if (notifications.size)
 		return api_error400(notifications);
 
-	jobs::AddProblemInfo ap_info {name.to_string(),
-	                              label.to_string(),
-	                              mem_limit,
-	                              gtl,
-	                              reset_time_limits,
-	                              ignore_simfile,
-	                              seek_for_new_tests,
-	                              reset_scoring,
-	                              ptype};
+	jobs::AddProblemInfo ap_info{name.to_string(),
+	                             label.to_string(),
+	                             mem_limit,
+	                             gtl,
+	                             reset_time_limits,
+	                             ignore_simfile,
+	                             seek_for_new_tests,
+	                             reset_scoring,
+	                             ptype};
 
 	auto transaction = mysql.start_transaction();
 	mysql.update("INSERT INTO internal_files VALUES()");
@@ -626,9 +627,9 @@ void Sim::api_problem_merge_into_another(sim::problem::Permissions perms) {
 	auto tp_perms_opt = sim::problem::get_permissions(
 	   mysql, target_problem_id,
 	   (session_is_open
-	       ? optional {WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
+	       ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
 	       : std::nullopt),
-	   (session_is_open ? optional {session_user_type} : std::nullopt));
+	   (session_is_open ? optional{session_user_type} : std::nullopt));
 	if (not tp_perms_opt)
 		return api_error400("Target problem does not exist");
 
@@ -838,10 +839,11 @@ void Sim::api_problem_attaching_contest_problems(
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extract_next_arg();
 	for (bool id_condition_occurred = false; next_arg.size();
-	     next_arg = url_args.extract_next_arg()) {
+	     next_arg = url_args.extract_next_arg())
+	{
 		auto arg = decode_uri(next_arg);
 		char cond = arg[0];
-		StringView arg_id = StringView {arg}.substr(1);
+		StringView arg_id = StringView{arg}.substr(1);
 
 		if (not is_digit(arg_id))
 			return api_error400();

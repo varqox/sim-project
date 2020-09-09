@@ -56,8 +56,8 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 	for (int i = 1; i < argc; ++i) {
 
 		if (argv[i][0] == '-') {
-			if (0 == strcmp(argv[i], "-h") or
-			    0 == strcmp(argv[i], "--help")) { // Help
+			if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help"))
+			{ // Help
 				print_help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 

@@ -27,7 +27,7 @@ public:
 		return entries_[std::move(key)];
 	}
 
-	template<class Key>
+	template <class Key>
 	std::string& operator[](Key&& key) {
 		StringView strkey = std::forward<Key>(key);
 		auto it = entries_.find(strkey);

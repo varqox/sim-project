@@ -180,7 +180,8 @@ void Sim::api_contest_users() {
 		bool contest_id_condition_occurred = false;
 
 		for (StringView next_arg = url_args.extract_next_arg();
-		     not next_arg.empty(); next_arg = url_args.extract_next_arg()) {
+		     not next_arg.empty(); next_arg = url_args.extract_next_arg())
+		{
 			auto arg = decode_uri(next_arg);
 			char cond_c = arg[0];
 			StringView arg_id = StringView(arg).substr(1);
@@ -352,7 +353,8 @@ void Sim::api_contest_user_add(StringView contest_id) {
 	}
 
 	StringView user_id;
-	form_validate(user_id, "user_id", "User ID", (bool(*)(const StringView&))is_digit,
+	form_validate(user_id, "user_id", "User ID",
+	              (bool (*)(const StringView&))is_digit,
 	              "User ID: invalid value");
 
 	if (notifications.size)

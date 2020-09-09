@@ -43,13 +43,13 @@ inline void append_dumped(std::string& buff, StringView str) {
 
 template <class Rep, class Period>
 inline void append_dumped(std::string& buff,
-                         const std::chrono::duration<Rep, Period>& dur) {
+                          const std::chrono::duration<Rep, Period>& dur) {
 	append_dumped(buff, dur.count());
 }
 
 template <class Rep, class Period>
 inline void extract_dumped(std::chrono::duration<Rep, Period>& dur,
-                          StringView& dumped_str) {
+                           StringView& dumped_str) {
 	Rep rep;
 	extract_dumped(rep, dumped_str);
 	dur = decltype(dur)(rep);
@@ -119,9 +119,15 @@ struct AddProblemInfo {
 	               std::optional<uint64_t> ml,
 	               std::optional<std::chrono::nanoseconds> gtl, bool rtl,
 	               bool is, bool sfnt, bool rs, sim::Problem::Type pt)
-	   : name(n), label(l), memory_limit(ml), global_time_limit(gtl),
-	     reset_time_limits(rtl), ignore_simfile(is), seek_for_new_tests(sfnt),
-	     reset_scoring(rs), problem_type(pt) {}
+	: name(n)
+	, label(l)
+	, memory_limit(ml)
+	, global_time_limit(gtl)
+	, reset_time_limits(rtl)
+	, ignore_simfile(is)
+	, seek_for_new_tests(sfnt)
+	, reset_scoring(rs)
+	, problem_type(pt) {}
 
 	AddProblemInfo(StringView str) {
 		name = extract_dumped_string(str);
@@ -137,8 +143,8 @@ struct AddProblemInfo {
 
 		problem_type = EnumVal<sim::Problem::Type>(
 		   extract_dumped_int<std::underlying_type_t<sim::Problem::Type>>(str));
-		stage =
-		   EnumVal<Stage>(extract_dumped_int<std::underlying_type_t<Stage>>(str));
+		stage = EnumVal<Stage>(
+		   extract_dumped_int<std::underlying_type_t<Stage>>(str));
 	}
 
 	std::string dump() const {
@@ -166,7 +172,8 @@ struct MergeProblemsInfo {
 	MergeProblemsInfo() = default;
 
 	MergeProblemsInfo(uint64_t tpid, bool rts) noexcept
-	   : target_problem_id(tpid), rejudge_transferred_submissions(rts) {}
+	: target_problem_id(tpid)
+	, rejudge_transferred_submissions(rts) {}
 
 	MergeProblemsInfo(StringView str) {
 		extract_dumped(target_problem_id, str);
@@ -191,7 +198,7 @@ struct ChangeProblemStatementInfo {
 	ChangeProblemStatementInfo() = default;
 
 	ChangeProblemStatementInfo(StringView nsp)
-	   : new_statement_path(nsp.to_string()) {}
+	: new_statement_path(nsp.to_string()) {}
 
 	std::string dump() { return new_statement_path; }
 };
@@ -201,7 +208,8 @@ struct MergeUsersInfo {
 
 	MergeUsersInfo() = default;
 
-	MergeUsersInfo(uint64_t target_uid) noexcept : target_user_id(target_uid) {}
+	MergeUsersInfo(uint64_t target_uid) noexcept
+	: target_user_id(target_uid) {}
 
 	MergeUsersInfo(StringView str) { extract_dumped(target_user_id, str); }
 

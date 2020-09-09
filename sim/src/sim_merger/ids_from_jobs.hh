@@ -181,7 +181,7 @@ struct IdsFromJobs {
 };
 
 struct IdsFromMainAndOtherJobs {
-	IdsFromJobs main {
+	IdsFromJobs main{
 	   intentional_unsafe_string_view(concat(main_sim_table_prefix, "jobs"))};
-	IdsFromJobs other {"jobs"};
+	IdsFromJobs other{"jobs"};
 };

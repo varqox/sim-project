@@ -59,9 +59,10 @@ public:
 
 	ContestUsersMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
 	                   const UsersMerger& users, const ContestsMerger& contests)
-	   : Merger("contest_users", ids_from_both_jobs.main.contest_users,
-	            ids_from_both_jobs.other.contest_users),
-	     users_(users), contests_(contests) {
+	: Merger("contest_users", ids_from_both_jobs.main.contest_users,
+	         ids_from_both_jobs.other.contest_users)
+	, users_(users)
+	, contests_(contests) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

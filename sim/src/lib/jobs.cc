@@ -16,7 +16,7 @@ void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
 	                          JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION);
 
 	if (adding or reupload) {
-		jobs::AddProblemInfo info {job_info};
+		jobs::AddProblemInfo info{job_info};
 		info.stage = jobs::AddProblemInfo::FIRST;
 
 		auto transaction = mysql.start_transaction();

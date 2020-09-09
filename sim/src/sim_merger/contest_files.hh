@@ -91,9 +91,11 @@ public:
 	ContestFilesMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
 	                   const InternalFilesMerger& internal_files,
 	                   const ContestsMerger& contests, const UsersMerger& users)
-	   : Merger("contest_files", ids_from_both_jobs.main.contest_files,
-	            ids_from_both_jobs.other.contest_files),
-	     internal_files_(internal_files), contests_(contests), users_(users) {
+	: Merger("contest_files", ids_from_both_jobs.main.contest_files,
+	         ids_from_both_jobs.other.contest_files)
+	, internal_files_(internal_files)
+	, contests_(contests)
+	, users_(users) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}
