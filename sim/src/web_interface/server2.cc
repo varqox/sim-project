@@ -1,5 +1,5 @@
-#include "connection.h"
-#include "sim.h"
+#include "connection.hh"
+#include "sim.hh"
 
 #include <arpa/inet.h>
 #include <set>
@@ -117,12 +117,12 @@ public:
 private:
 	// Parses @p str header to construct @p name and value on it; returns false
 	// on success, true on error
-	static bool parseHeader(StringView str, StringView& name,
+	static bool parse_header(StringView str, StringView& name,
 	                        StringView& value);
 
 	// Constructs headers, returns false on success, true otherwise (and may add
 	// proper response to TODO: where?)
-	bool constructHeaders(StringView& data);
+	bool construct_headers(StringView& data);
 };
 
 namespace {
@@ -192,7 +192,7 @@ public:
 #define DEBUG_HEADERS(...)
 #endif
 
-bool Connection::parseHeader(StringView str, StringView& name,
+bool Connection::parse_header(StringView str, StringView& name,
                              StringView& value) {
 	name = str.substr(0, str.find(':'));
 	if (name.find(' ') != StringView::npos || name.size() == 0 ||
@@ -200,16 +200,16 @@ bool Connection::parseHeader(StringView str, StringView& name,
 		return true; // Invalid header
 	}
 
-	str.removePrefix(name.size() + 1);
-	str.removeLeading(is_space);
-	str.removeTrailing(is_space);
+	str.remove_prefix(name.size() + 1);
+	str.remove_leading(is_space);
+	str.remove_trailing(is_space);
 	value = str;
 	return false;
 }
 
-bool Connection::constructHeaders(StringView& data) {
+bool Connection::construct_headers(StringView& data) {
 	DEBUG_HEADERS("Connection ", fd_, " -> \033[1;33mParsing:\033[m ",
-	              ConfigFile::escapeString(data, true));
+	              ConfigFile::escape_string(data, true));
 
 	if (data.empty())
 		return false;
@@ -221,7 +221,7 @@ bool Connection::constructHeaders(StringView& data) {
 			return false; // Failure
 
 		header = data.substr(0, x);
-		data.removePrefix(x + 2);
+		data.remove_prefix(x + 2);
 		return true; // Success
 	};
 
@@ -229,7 +229,7 @@ bool Connection::constructHeaders(StringView& data) {
 	if (buff_.size()) {
 		if (buff_.back() == '\r' && data.front() == '\n') {
 			header = StringView(buff_.data(), buff_.size() - 1);
-			data.removePrefix(1);
+			data.remove_prefix(1);
 		} else {
 			size_t x = data.find("\r\n");
 			if (x == StringView::npos) {
@@ -240,7 +240,7 @@ bool Connection::constructHeaders(StringView& data) {
 
 			buff_.append(data.data(), x);
 			header = buff_;
-			data.removePrefix(x + 2);
+			data.remove_prefix(x + 2);
 		}
 
 	} else if (!pick_next_header()) { // No header is ready yet
@@ -277,18 +277,18 @@ bool Connection::constructHeaders(StringView& data) {
 				return true;
 			}
 
-			header.removePrefix(pos);
+			header.remove_prefix(pos);
 
 			// Target
-			header.removeLeading(is_space);
+			header.remove_leading(is_space);
 			for (pos = 0; pos < header.size() && !is_space(header[pos]);
 			     ++pos) {
 			}
 			req_.target = header.substr(0, pos);
-			header.removePrefix(pos);
+			header.remove_prefix(pos);
 
 			// HTTP version
-			header.removeLeading(is_space);
+			header.remove_leading(is_space);
 			if (header != "HTTP/1.0" && header != "HTTP/1.1") {
 				// TODO: error 400
 				return true;
@@ -331,7 +331,7 @@ bool Connection::constructHeaders(StringView& data) {
 		}
 
 		StringView name, value;
-		if (parseHeader(header, name, value)) {
+		if (parse_header(header, name, value)) {
 			// TODO: error 400
 			return true;
 		}
@@ -342,7 +342,7 @@ bool Connection::constructHeaders(StringView& data) {
 				// TODO: error 400
 				return true;
 			}
-			req_.headers.content_length = digitsToU<size_t>(value);
+			req_.headers.content_length = digits_to_u<size_t>(value);
 			if (req_.headers.content_length > MAX_NON_FORM_CONTENT_LENGTH) {
 				// TODO: error 413
 				return true;
@@ -368,13 +368,13 @@ void Connection::parse(const char* str, size_t len) {
 	StringView data(str, len);
 	while (data.size()) {
 		if (making_headers) { // Headers
-			constructHeaders(data);
+			construct_headers(data);
 
 		} else if (req_.method == Request::GET) { // Content (GET)
 			size_t x = std::min(data.size(),
 			                    req_.headers.content_length - buff_.size());
 			buff_.append(data.data(), x);
-			data.removePrefix(x);
+			data.remove_prefix(x);
 
 			// Content is completely read
 			if (req_.headers.content_length == buff_.size()) {
@@ -419,10 +419,10 @@ static void* worker(void*) {
 			stdlog("Connection accepted: ", pthread_self(), " form ", ip);
 
 			conn.assign(client_socket_fd);
-			server::HttpRequest req = conn.getRequest();
+			server::HttpRequest req = conn.get_request();
 
 			if (conn.state() == server::Connection::OK)
-				conn.sendResponse(sim_worker.handle(ip, req));
+				conn.send_response(sim_worker.handle(ip, req));
 
 			stdlog("Closing...");
 			closer.close();
@@ -442,7 +442,7 @@ static void* worker(void*) {
 
 // Reads data from connections
 static void* reader_thread(void*) {
-	// Leave all signals to the master thread
+	// Leave all signals to the main thread
 	pthread_sigmask(SIG_SETMASK, &SignalBlocker::full_mask, nullptr);
 
 	constexpr uint MAX_EVENTS = 64;
@@ -496,7 +496,7 @@ static void* reader_thread(void*) {
 
 // Writes data to connections
 static void* writer_thread(void*) {
-	// Leave all signals to the master thread
+	// Leave all signals to the main thread
 	pthread_sigmask(SIG_SETMASK, &SignalBlocker::full_mask, nullptr);
 	// TODO: exceptions
 
@@ -505,7 +505,7 @@ static void* writer_thread(void*) {
 /*
 // Manages workers
 static void* workers_manager_thread(void*) {
-    // Leave all signals to the master thread
+    // Leave all signals to the main thread
     pthread_sigmask(SIG_SETMASK, &SignalBlocker::full_mask, nullptr);
 
     // TODO: exceptions
@@ -513,7 +513,7 @@ static void* workers_manager_thread(void*) {
 }*/
 
 // Manages workers, accepts connections
-static void master_process_cycle() {
+static void main_process_cycle() {
 	// epoll(7)
 	epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (epoll_fd == -1) {
@@ -572,13 +572,13 @@ static void master_process_cycle() {
 }
 
 // Loads server configuration
-static void loadServerConfig(const CStringView config_path,
+static void load_server_config(const CStringView config_path,
                              sockaddr_in& sock_name) {
 	ConfigFile config;
 	try {
-		config.addVars("address", "workers", "connections");
+		config.add_vars("address", "workers", "connections");
 
-		config.loadConfigFromFile(config_path);
+		config.load_config_from_file(config_path);
 	} catch (const std::exception& e) {
 		errlog("Failed to load ", config_path, ": ", e.what());
 		exit(5);
@@ -586,19 +586,19 @@ static void loadServerConfig(const CStringView config_path,
 
 	const char* vars[] = {"address", "workers", "connections"};
 	for (auto var : vars)
-		if (!config[var].isSet()) {
+		if (!config[var].is_set()) {
 			errlog(config_path, ": variable '", var, "' is not defined");
 			exit(6);
 		}
 
-	string address = config["address"].asString();
-	workers = config["workers"].asInt();
+	string address = config["address"].as_string();
+	workers = config["workers"].as_int();
 	if (workers < 1) {
 		errlog(config_path, ": Number of workers cannot be lower than 1");
 		exit(6);
 	}
 
-	connections = config["connections"].asInt();
+	connections = config["connections"].as_int();
 	if (connections < 1) {
 		errlog(config_path, ": Number of connections cannot be lower than 1");
 		exit(6);
@@ -642,7 +642,7 @@ int main() {
 	// Init server
 	// Change directory to process executable directory
 	try {
-		chdirToExecDir();
+		chdir_to_exec_dir();
 	} catch (const std::exception& e) {
 		errlog("Failed to change working directory: ", e.what());
 	}
@@ -674,7 +674,7 @@ int main() {
 
 	// Load config
 	sockaddr_in name;
-	loadServerConfig("sim.conf", name);
+	load_server_config("sim.conf", name);
 
 	socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
 	if (socket_fd < 0) {
@@ -704,7 +704,7 @@ int main() {
 	}
 
 	try {
-		master_process_cycle();
+		main_process_cycle();
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);

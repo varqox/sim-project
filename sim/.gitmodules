@@ -1,6 +1,3 @@
-[submodule "src/simlib"]
-	path = src/lib/simlib
+[submodule "subprojects/simlib"]
+	path = subprojects/simlib
 	url = https://github.com/varqox/simlib
-[submodule "src/lib/sqlite"]
-	path = src/lib/sqlite
-	url = https://github.com/azadkuh/sqlite-amalgamation

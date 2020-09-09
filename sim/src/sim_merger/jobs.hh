@@ -1,8 +1,8 @@
 #pragma once
 
 #include "internal_files.hh"
-#include "sim/constants.h"
-#include "sim/jobs.h"
+#include "sim/constants.hh"
+#include "sim/jobs.hh"
 #include "submissions.hh"
 #include "users.hh"
 

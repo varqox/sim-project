@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <sim/problem_permissions.hh>
 

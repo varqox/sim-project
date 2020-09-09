@@ -1,16 +1,37 @@
-#include "sim.h"
+#include "sim.hh"
+
+#include <chrono>
+#include <simlib/file_info.hh>
 
 using sim::User;
 
-#ifndef STYLES_CSS_HASH
-#define STYLES_CSS_HASH ""
-#endif
-#ifndef JQUERY_JS_HASH
-#define JQUERY_JS_HASH ""
-#endif
-#ifndef SCRIPTS_JS_HASH
-#define SCRIPTS_JS_HASH ""
-#endif
+namespace {
+
+enum StaticFile {
+	STYLES_CSS,
+	JQUERY_JS,
+	SCRIPTS_JS,
+};
+
+} // namespace
+
+// Technique used to force browsers to always keep up-to-date version of
+// the files below
+template<StaticFile static_file>
+static StringView get_hash_of() {
+	using namespace std::chrono;
+	static auto str = [] {
+		auto path = [] {
+			switch (static_file) {
+			case STYLES_CSS: return "static/kit/styles.css";
+			case JQUERY_JS: return "static/kit/jquery.js";
+			case SCRIPTS_JS: return "static/kit/scripts.js";
+			}
+		}();
+		return to_string(duration_cast<microseconds>(get_modification_time(path).time_since_epoch()).count());
+	}();
+	return str;
+}
 
 void Sim::page_template(StringView title, StringView styles,
                         StringView scripts) {
@@ -41,9 +62,12 @@ void Sim::page_template(StringView title, StringView styles,
 	            "<meta charset=\"utf-8\">"
 	            "<title>", html_escape(title), "</title>"
 	            "<link rel=\"stylesheet\" type=\"text/css\" "
-	                  "href=\"/kit/styles.css?" STYLES_CSS_HASH "\">"
-	            "<script src=\"/kit/jquery.js?" JQUERY_JS_HASH "\"></script>"
-	            "<script src=\"/kit/scripts.js?" SCRIPTS_JS_HASH "\"></script>"
+	                  "href=\"/kit/styles.css?",
+	                      get_hash_of<STYLES_CSS>(), "\">"
+	            "<script src=\"/kit/jquery.js?",
+	                get_hash_of<JQUERY_JS>(), "\"></script>"
+	            "<script src=\"/kit/scripts.js?",
+	                get_hash_of<SCRIPTS_JS>(), "\"></script>"
 	            "<link rel=\"shortcut icon\" type=\"image/png\" "
 	                  "href=\"/kit/img/favicon.png\"/>");
 	// clang-format on

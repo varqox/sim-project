@@ -1,6 +1,6 @@
-#include "judge_base.h"
+#include "judge_base.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <simlib/enum_val.hh>
 
 namespace job_handlers {
@@ -54,7 +54,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 	auto append_normal_columns = [&](const JudgeReport::Test& test) {
 		STACK_UNWINDING_MARK;
 
-		auto asTdString = [](JudgeReport::Test::Status s) {
+		auto as_td_string = [](JudgeReport::Test::Status s) {
 			switch (s) {
 			case JudgeReport::Test::OK:
 				return "<td class=\"status green\">OK</td>";
@@ -76,7 +76,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 		};
 
 		report.append("<td>", html_escape(test.name), "</td>",
-		              asTdString(test.status), "<td>");
+		              as_td_string(test.status), "<td>");
 
 		if (test.status == JudgeReport::Test::SKIPPED)
 			report.append('?');

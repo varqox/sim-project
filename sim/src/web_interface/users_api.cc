@@ -1,11 +1,11 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <cstdint>
 #include <limits>
-#include <sim/constants.h>
-#include <sim/jobs.h>
+#include <sim/constants.hh>
+#include <sim/jobs.hh>
 #include <sim/user.hh>
-#include <sim/utilities.h>
+#include <sim/utilities.hh>
 #include <simlib/random.hh>
 #include <simlib/sha.hh>
 #include <type_traits>
@@ -196,7 +196,7 @@ void Sim::api_user_add() {
 	StringView username, utype_str, fname, lname, email;
 
 	form_validate_not_blank(
-	   username, "username", "Username", isUsername,
+	   username, "username", "Username", is_username,
 	   "Username can only consist of characters [a-zA-Z0-9_-]",
 	   decltype(User::username)::max_len);
 
@@ -273,7 +273,7 @@ void Sim::api_user_edit() {
 	StringView username, new_utype_str, fname, lname, email;
 	// Validate fields
 	form_validate_not_blank(
-	   username, "username", "Username", isUsername,
+	   username, "username", "Username", is_username,
 	   "Username can only consist of characters [a-zA-Z0-9_-]",
 	   decltype(User::username)::max_len);
 

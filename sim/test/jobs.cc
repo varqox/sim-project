@@ -1,64 +1,64 @@
 #include <gtest/gtest.h>
-#include <sim/jobs.h>
+#include <sim/jobs.hh>
 
 using namespace jobs;
 using std::string;
 
-TEST(jobs, appendDumpedInt) {
+TEST(jobs, append_dumped_int) {
 	string buff;
 
-	appendDumped(buff, (uint32_t)0x1ad35af6);
+	append_dumped(buff, (uint32_t)0x1ad35af6);
 	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6");
 
-	appendDumped(buff, (uint8_t)0x92);
+	append_dumped(buff, (uint8_t)0x92);
 	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6\x92");
 
-	appendDumped(buff, (uint16_t)0xb68a);
+	append_dumped(buff, (uint16_t)0xb68a);
 	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6\x92\xb6\x8a");
 
-	appendDumped(buff, (uint64_t)0x1040aab9c4aa3973);
+	append_dumped(buff, (uint64_t)0x1040aab9c4aa3973);
 	ASSERT_EQ(buff,
 	          "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 }
 
-TEST(jobs, appendDumpedString) {
+TEST(jobs, append_dumped_string) {
 	string buff;
 
-	appendDumped(buff, "te2i0j192jeo");
+	append_dumped(buff, "te2i0j192jeo");
 	ASSERT_EQ(buff, StringView("\0\0\0\x0cte2i0j192jeo", 16));
 
-	appendDumped(buff, "");
+	append_dumped(buff, "");
 	ASSERT_EQ(buff, StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0", 20));
 
-	appendDumped(buff, "12213");
+	append_dumped(buff, "12213");
 	ASSERT_EQ(buff, StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
 	                           "12213",
 	                           29));
 
-	appendDumped(buff, "qdsp\x03l\xffr3");
+	append_dumped(buff, "qdsp\x03l\xffr3");
 	ASSERT_EQ(buff, StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
 	                           "12213\0\0\0\x09qdsp\x03l\xffr3",
 	                           42));
 }
 
-TEST(jobs, extractDumpedInt1) {
+TEST(jobs, extract_dumped_int1) {
 	StringView buff(
 	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	ASSERT_EQ(extractDumpedInt<uint32_t>(buff), 0x1ad35af6);
+	ASSERT_EQ(extract_dumped_int<uint32_t>(buff), 0x1ad35af6);
 	ASSERT_EQ(buff, "\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	ASSERT_EQ(extractDumpedInt<uint8_t>(buff), 0x92);
+	ASSERT_EQ(extract_dumped_int<uint8_t>(buff), 0x92);
 	ASSERT_EQ(buff, "\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	ASSERT_EQ(extractDumpedInt<uint16_t>(buff), 0xb68a);
+	ASSERT_EQ(extract_dumped_int<uint16_t>(buff), 0xb68a);
 	ASSERT_EQ(buff, "\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	ASSERT_EQ(extractDumpedInt<uint64_t>(buff), 0x1040aab9c4aa3973);
+	ASSERT_EQ(extract_dumped_int<uint64_t>(buff), 0x1040aab9c4aa3973);
 	ASSERT_EQ(buff, "");
 }
 
-TEST(jobs, extractDumpedInt2) {
+TEST(jobs, extract_dumped_int2) {
 	StringView buff(
 	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
@@ -67,41 +67,41 @@ TEST(jobs, extractDumpedInt2) {
 	uint16_t c;
 	uint64_t d;
 
-	extractDumped(a, buff);
+	extract_dumped(a, buff);
 	ASSERT_EQ(a, 0x1ad35af6);
 	ASSERT_EQ(buff, "\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	extractDumped(b, buff);
+	extract_dumped(b, buff);
 	ASSERT_EQ(b, 0x92);
 	ASSERT_EQ(buff, "\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	extractDumped(c, buff);
+	extract_dumped(c, buff);
 	ASSERT_EQ(c, 0xb68a);
 	ASSERT_EQ(buff, "\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
-	extractDumped(d, buff);
+	extract_dumped(d, buff);
 	ASSERT_EQ(d, 0x1040aab9c4aa3973);
 	ASSERT_EQ(buff, "");
 }
 
-TEST(jobs, extractDumpedString) {
+TEST(jobs, extract_dumped_string) {
 	StringView buff("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
 	                "12213\0\0\0\x09qdsp\x03l\xffr3",
 	                42);
 
-	ASSERT_EQ(extractDumpedString(buff), "te2i0j192jeo");
+	ASSERT_EQ(extract_dumped_string(buff), "te2i0j192jeo");
 	ASSERT_EQ(buff, StringView("\0\0\0\0\0\0\0\x05"
 	                           "12213\0\0\0\x09qdsp\x03l\xffr3",
 	                           26));
 
-	ASSERT_EQ(extractDumpedString(buff), "");
+	ASSERT_EQ(extract_dumped_string(buff), "");
 	ASSERT_EQ(buff, StringView("\0\0\0\x05"
 	                           "12213\0\0\0\x09qdsp\x03l\xffr3",
 	                           22));
 
-	ASSERT_EQ(extractDumpedString(buff), "12213");
+	ASSERT_EQ(extract_dumped_string(buff), "12213");
 	ASSERT_EQ(buff, StringView("\0\0\0\x09qdsp\x03l\xffr3", 13));
 
-	ASSERT_EQ(extractDumpedString(buff), "qdsp\x03l\xffr3");
+	ASSERT_EQ(extract_dumped_string(buff), "qdsp\x03l\xffr3");
 	ASSERT_EQ(buff, "");
 }

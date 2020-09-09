@@ -1,8 +1,8 @@
-#include "delete_user.h"
+#include "delete_user.hh"
 
-#include "../main.h"
+#include "../main.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/user.hh>
 
 using sim::User;

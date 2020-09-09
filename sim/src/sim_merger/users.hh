@@ -2,8 +2,8 @@
 
 #include "merger.hh"
 
-#include <sim/constants.h>
-#include <sim/submission.h>
+#include <sim/constants.hh>
+#include <sim/submission.hh>
 #include <sim/user.hh>
 
 // Merges users by username

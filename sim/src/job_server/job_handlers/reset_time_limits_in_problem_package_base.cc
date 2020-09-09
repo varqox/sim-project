@@ -1,5 +1,5 @@
-#include "reset_time_limits_in_problem_package_base.h"
-#include "../main.h"
+#include "reset_time_limits_in_problem_package_base.hh"
+#include "../main.hh"
 
 #include <simlib/sim/problem_package.hh>
 

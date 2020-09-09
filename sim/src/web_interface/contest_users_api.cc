@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <sim/contest_user.hh>
 #include <type_traits>
@@ -352,7 +352,7 @@ void Sim::api_contest_user_add(StringView contest_id) {
 	}
 
 	StringView user_id;
-	form_validate(user_id, "user_id", "User ID", (bool (*)(StringView))is_digit,
+	form_validate(user_id, "user_id", "User ID", (bool(*)(const StringView&))is_digit,
 	              "User ID: invalid value");
 
 	if (notifications.size)

@@ -3,7 +3,7 @@
 #include "internal_files.hh"
 #include "users.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/problem.hh>
 #include <simlib/concat.hh>
 #include <simlib/libzip.hh>
@@ -18,13 +18,13 @@ package_fingerprint(FilePath zip_file_path) {
 		entries_list.emplace_back(zip.get_name(i));
 	sort(entries_list.begin(), entries_list.end());
 	// Read statement file contents
-	auto master_dir = sim::zip_package_master_dir(zip);
+	auto main_dir = sim::zip_package_main_dir(zip);
 	auto simfile_contents =
-	   zip.extract_to_str(zip.get_index(concat(master_dir, "Simfile")));
+	   zip.extract_to_str(zip.get_index(concat(main_dir, "Simfile")));
 	sim::Simfile sf(simfile_contents);
 	sf.load_statement();
 	auto statement_contents = zip.extract_to_str(
-	   zip.get_index(concat(master_dir, WONT_THROW(sf.statement.value()))));
+	   zip.get_index(concat(main_dir, WONT_THROW(sf.statement.value()))));
 
 	return {entries_list, statement_contents};
 }

@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <simlib/path.hh>
 #include <simlib/random.hh>
@@ -53,7 +53,7 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr,
 				// If no session is open, load value from cookie to pass
 				// verification
 				if (not session_open())
-					session_csrf_token = request.getCookie("csrf_token");
+					session_csrf_token = request.get_cookie("csrf_token");
 
 				if (request.form_data.get("csrf_token") != session_csrf_token) {
 					error403();
@@ -178,18 +178,19 @@ void Sim::static_file() {
 	struct stat attr;
 	if (stat(file_path.c_str(), &attr) != -1) {
 		// Extract time of last modification
-		auto it = request.headers.find("if-modified-since");
 		resp.headers["last-modified"] =
 		   date("%a, %d %b %Y %H:%M:%S GMT", attr.st_mtime);
-		resp.setCache(true, 100 * 24 * 60 * 60, false); // 100 days
+		resp.set_cache(true, 100 * 24 * 60 * 60, false); // 100 days
 
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
 		struct tm client_mtime;
-		if (it &&
-		    strptime(it->second.c_str(), "%a, %d %b %Y %H:%M:%S GMT",
-		             &client_mtime) != nullptr &&
-		    timegm(&client_mtime) >= attr.st_mtime) {
+		CStringView if_modified_since = request.headers.get("if-modified-since");
+		if (!if_modified_since.empty() and
+		    strptime(if_modified_since.data(), "%a, %d %b %Y %H:%M:%S GMT",
+		             &client_mtime) != nullptr and
+		    timegm(&client_mtime) >= attr.st_mtime)
+		{
 			resp.status_code = "304 Not Modified";
 			return;
 		}

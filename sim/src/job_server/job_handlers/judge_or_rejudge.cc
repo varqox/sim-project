@@ -1,7 +1,7 @@
-#include "judge_or_rejudge.h"
-#include "../main.h"
+#include "judge_or_rejudge.hh"
+#include "../main.hh"
 
-#include <sim/submission.h>
+#include <sim/submission.hh>
 
 namespace job_handlers {
 

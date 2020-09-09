@@ -1,8 +1,8 @@
-#include "sim.h"
+#include "sim.hh"
 
 #include <cstdint>
-#include <sim/constants.h>
-#include <sim/jobs.h>
+#include <sim/constants.hh>
+#include <sim/jobs.hh>
 #include <sim/problem.hh>
 #include <sim/problem_permissions.hh>
 #include <simlib/config_file.hh>
@@ -515,7 +515,7 @@ void Sim::api_statement_impl(uint64_t problem_file_id, StringView problem_label,
 	// TODO: maybe add some cache system for the statements?
 	ZipFile zip(internal_file_path(problem_file_id), ZIP_RDONLY);
 	resp.content = zip.extract_to_str(
-	   zip.get_index(concat(sim::zip_package_master_dir(zip), statement)));
+	   zip.get_index(concat(sim::zip_package_main_dir(zip), statement)));
 }
 
 void Sim::api_problem_statement(StringView problem_label, StringView simfile,
@@ -555,7 +555,7 @@ void Sim::api_problem_rejudge_all_submissions(sim::problem::Permissions perms) {
 	   .bind_and_execute(session_user_id, EnumVal(JobStatus::PENDING),
 	                     priority(JobType::REJUDGE_SUBMISSION),
 	                     EnumVal(JobType::REJUDGE_SUBMISSION), mysql_date(),
-	                     jobs::dumpString(problems_pid), problems_pid);
+	                     jobs::dump_string(problems_pid), problems_pid);
 
 	jobs::notify_job_server();
 }

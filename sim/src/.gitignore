@@ -1,8 +1,8 @@
 # Others
-killinstc
-setup-installation
 backup
 job-server
-sim-server
+manage
+setup-installation
 sim-merger
+sim-server
 sim-upgrader

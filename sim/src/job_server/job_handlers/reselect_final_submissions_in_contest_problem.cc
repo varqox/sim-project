@@ -1,7 +1,7 @@
-#include "reselect_final_submissions_in_contest_problem.h"
-#include "../main.h"
+#include "reselect_final_submissions_in_contest_problem.hh"
+#include "../main.hh"
 
-#include <sim/submission.h>
+#include <sim/submission.hh>
 
 namespace job_handlers {
 

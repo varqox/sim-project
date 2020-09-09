@@ -1,7 +1,7 @@
-#include "sim.h"
+#include "sim.hh"
 
-#include <sim/constants.h>
-#include <sim/jobs.h>
+#include <sim/constants.hh>
+#include <sim/jobs.hh>
 #include <sim/random.hh>
 #include <simlib/call_in_destructor.hh>
 #include <simlib/file_info.hh>

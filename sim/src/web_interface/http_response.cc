@@ -1,4 +1,4 @@
-#include "http_response.h"
+#include "http_response.hh"
 
 #include <ctime>
 #include <simlib/debug.hh>
@@ -7,7 +7,7 @@ using std::string;
 
 namespace server {
 
-void HttpResponse::setCookie(const string& name, const string& val,
+void HttpResponse::set_cookie(const string& name, const string& val,
                              time_t expire, const string& path,
                              const string& domain, bool http_only,
                              bool secure) {

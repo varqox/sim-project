@@ -1,25 +1,22 @@
-#include "http_request.h"
+#include "http_request.hh"
 
 #include <simlib/debug.hh>
-#include <unistd.h>
+#include <simlib/file_manip.hh>
 
 using std::string;
 
 namespace server {
 
 HttpRequest::Form::~Form() {
-	files.for_each([](auto&& p) { unlink(p.second.c_str()); });
+	for (auto&& [name, tmp_file_path] : files) {
+		unlink(tmp_file_path);
+	}
 }
 
-StringView HttpRequest::getCookie(StringView name) const noexcept {
+StringView HttpRequest::get_cookie(StringView name) const noexcept {
 	STACK_UNWINDING_MARK;
 
-	auto it = headers.find("cookie");
-	if (not it)
-		return "";
-
-	StringView cookie = it->second;
-
+	CStringView cookie = headers.get("cookie");
 	for (size_t beg = 0; beg < cookie.size();) {
 		if (cookie[beg] == ' ' && beg + 1 < cookie.size())
 			++beg;
@@ -37,7 +34,7 @@ StringView HttpRequest::getCookie(StringView name) const noexcept {
 			++beg;
 	}
 
-	return "";
+	return ""; // Not found
 }
 
 } // namespace server

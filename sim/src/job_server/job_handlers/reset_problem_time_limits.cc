@@ -1,7 +1,7 @@
-#include "reset_problem_time_limits.h"
-#include "../main.h"
+#include "reset_problem_time_limits.hh"
+#include "../main.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <simlib/sim/problem_package.hh>
 
 namespace job_handlers {
@@ -33,7 +33,7 @@ void ResetProblemTimeLimits::run() {
 	// Save Simfile to new package file
 
 	ZipFile src_zip(pkg_path, ZIP_RDONLY);
-	auto simfile_path = concat(sim::zip_package_master_dir(src_zip), "Simfile");
+	auto simfile_path = concat(sim::zip_package_main_dir(src_zip), "Simfile");
 
 	FileRemover new_pkg_remover(new_pkg_path);
 	ZipFile dest_zip(new_pkg_path, ZIP_CREATE | ZIP_TRUNCATE);

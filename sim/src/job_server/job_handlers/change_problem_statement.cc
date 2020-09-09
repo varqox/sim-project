@@ -1,7 +1,7 @@
-#include "change_problem_statement.h"
-#include "../main.h"
+#include "change_problem_statement.hh"
+#include "../main.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <simlib/path.hh>
 #include <simlib/sim/problem_package.hh>
 
@@ -46,11 +46,11 @@ void ChangeProblemStatement::run() {
 	}
 
 	ZipFile src_zip(pkg_path, ZIP_RDONLY);
-	auto master_dir = sim::zip_package_master_dir(src_zip);
+	auto main_dir = sim::zip_package_main_dir(src_zip);
 	auto old_statement_path =
-	   concat(master_dir, WONT_THROW(simfile.statement.value()));
-	auto new_statement_path = concat(master_dir, info_.new_statement_path);
-	auto simfile_path = concat(master_dir, "Simfile");
+	   concat(main_dir, WONT_THROW(simfile.statement.value()));
+	auto new_statement_path = concat(main_dir, info_.new_statement_path);
+	auto simfile_path = concat(main_dir, "Simfile");
 	if (new_statement_path == simfile_path) {
 		return set_failure(
 		   "Invalid new statement path - it would overwrite Simfile");

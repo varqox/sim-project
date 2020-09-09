@@ -1,11 +1,11 @@
 #include "merge_users.hh"
-#include "../main.h"
+#include "../main.hh"
 #include "sim/contest_user.hh"
 
 #include <bits/stdint-uintn.h>
 #include <deque>
-#include <sim/constants.h>
-#include <sim/submission.h>
+#include <sim/constants.hh>
+#include <sim/submission.hh>
 #include <simlib/utilities.hh>
 
 using sim::User;

@@ -1,4 +1,4 @@
-#include "sim.h"
+#include "sim.hh"
 
 void Sim::contests_handle() {
 	STACK_UNWINDING_MARK;

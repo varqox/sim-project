@@ -1,7 +1,7 @@
-#include "delete_internal_file.h"
-#include "../main.h"
+#include "delete_internal_file.hh"
+#include "../main.hh"
 
-#include <sim/constants.h>
+#include <sim/constants.hh>
 
 namespace job_handlers {
 

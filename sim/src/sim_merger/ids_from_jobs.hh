@@ -5,10 +5,11 @@
 #include <chrono>
 #include <map>
 #include <sim/blob_field.hh>
-#include <sim/constants.h>
+#include <sim/constants.hh>
 #include <sim/contest_user.hh>
 #include <sim/datetime_field.hh>
-#include <sim/jobs.h>
+#include <sim/jobs.hh>
+#include <simlib/ranges.hh>
 #include <simlib/time.hh>
 
 // For each id, we keep the first date that it appeared with

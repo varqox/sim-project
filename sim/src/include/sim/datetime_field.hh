@@ -18,7 +18,7 @@ public:
 	constexpr DatetimeField(T&& str)
 	   : VarcharField([&]() -> decltype(auto) {
 		     throw_assert(
-		        isDatetime(intentionalUnsafeCStringView(concat(str))));
+		        is_datetime(intentional_unsafe_c_string_view(concat(str))));
 		     return std::forward<T>(str);
 	     }()) {}
 
@@ -29,7 +29,7 @@ public:
 	template <class T,
 	          std::enable_if_t<std::is_convertible_v<T, StringView>, int> = 0>
 	DatetimeField& operator=(T&& str) {
-		throw_assert(isDatetime(intentionalUnsafeCStringView(concat(str))));
+		throw_assert(is_datetime(intentional_unsafe_c_string_view(concat(str))));
 		VarcharField::operator=(std::forward<T>(str));
 		return *this;
 	}
