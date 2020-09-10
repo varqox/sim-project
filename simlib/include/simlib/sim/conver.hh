@@ -94,7 +94,7 @@ public:
 	enum class Status { COMPLETE, NEED_MODEL_SOLUTION_JUDGE_REPORT };
 
 	struct ConstructionResult {
-		Status status;
+		Status status{};
 		Simfile simfile;
 		std::string pkg_main_dir;
 	};
