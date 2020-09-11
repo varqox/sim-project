@@ -31,6 +31,9 @@ def format_sources(sources):
 def simlib_sources(srcdir):
     return list(filter_subdirs(srcdir, [
         'include/simlib/',
+        'include/simlib/concurrent/',
+        'include/simlib/http/',
+        'include/simlib/sim/',
         'src/',
         'src/http/',
         'src/sim/',

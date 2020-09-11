@@ -470,29 +470,35 @@ public:
 
 	void load_compiled_checker(FilePath compiled_checker) {
 		STACK_UNWINDING_MARK;
-		thread_fork_safe_copy(compiled_checker,
-		         concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), S_0755);
+		thread_fork_safe_copy(
+		   compiled_checker, concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME),
+		   S_0755);
 	}
 
 	void load_compiled_solution(FilePath compiled_solution) {
 		STACK_UNWINDING_MARK;
-		thread_fork_safe_copy(compiled_solution,
-		         concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755);
+		thread_fork_safe_copy(
+		   compiled_solution,
+		   concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755);
 	}
 
-	void save_compiled_checker(FilePath destination, int(*copy_fn)(FilePath, FilePath, mode_t) = copy) const {
+	void save_compiled_checker(FilePath destination,
+	                           int (*copy_fn)(FilePath, FilePath,
+	                                          mode_t) = copy) const {
 		STACK_UNWINDING_MARK;
 		if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME),
-		         destination, S_0755))
+		            destination, S_0755))
 		{
 			THROW("copy()", errmsg());
 		}
 	}
 
-	void save_compiled_solution(FilePath destination, int(*copy_fn)(FilePath, FilePath, mode_t) = copy) const {
+	void save_compiled_solution(FilePath destination,
+	                            int (*copy_fn)(FilePath, FilePath,
+	                                           mode_t) = copy) const {
 		STACK_UNWINDING_MARK;
 		if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME),
-		         destination, S_0755))
+		            destination, S_0755))
 		{
 			THROW("copy()", errmsg());
 		}
