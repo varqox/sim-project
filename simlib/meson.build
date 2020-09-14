@@ -166,6 +166,7 @@ tests = [
     ['test/file_manip.cc', [], {}],
     ['test/file_path.cc', [], {}],
     ['test/http/response.cc', [], {}],
+    ['test/http/url_dispatcher.cc', [], {}],
     ['test/humanize.cc', [], {}],
     ['test/inotify.cc', [], {}],
     ['test/inplace_array.cc', [], {}],

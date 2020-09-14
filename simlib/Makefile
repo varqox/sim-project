@@ -88,6 +88,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/file_manip.cc \
 	$(PREFIX)test/file_path.cc \
 	$(PREFIX)test/http/response.cc \
+	$(PREFIX)test/http/url_dispatcher.cc \
 	$(PREFIX)test/humanize.cc \
 	$(PREFIX)test/inotify.cc \
 	$(PREFIX)test/inplace_array.cc \
