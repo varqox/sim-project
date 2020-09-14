@@ -178,3 +178,18 @@ public:
 
 // Sadly it won't preserve prvalue-ness, a prvalue will become an xvalue
 #define WONT_THROW(...) (ThrowingIsBug().evaluate(__VA_ARGS__))
+
+// E.g. use:
+// static DebugLogger<true> debuglog;
+// debuglog("sth: ", sth);
+template <bool enable>
+struct DebugLogger {
+	static constexpr bool enabled = enable;
+
+	template <class... Args>
+	void operator()(Args&&... args) const {
+		if constexpr (enabled) {
+			stdlog(args...);
+		}
+	}
+};
