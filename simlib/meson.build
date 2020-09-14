@@ -196,6 +196,7 @@ tests = [
     ['test/string_traits.cc', [], {}],
     ['test/string_transform.cc', [], {}],
     ['test/string_view.cc', [], {}],
+    ['test/strongly_typed_function.cc', [], {}],
     ['test/temporary_directory.cc', [gmock_dep], {}],
     ['test/temporary_file.cc', [gmock_dep], {}],
     ['test/time.cc', [], {}],

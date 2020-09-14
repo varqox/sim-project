@@ -118,6 +118,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/string_traits.cc \
 	$(PREFIX)test/string_transform.cc \
 	$(PREFIX)test/string_view.cc \
+	$(PREFIX)test/strongly_typed_function.cc \
 	$(PREFIX)test/temporary_directory.cc \
 	$(PREFIX)test/temporary_file.cc \
 	$(PREFIX)test/time.cc \
