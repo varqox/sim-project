@@ -6,18 +6,19 @@
 \usepackage[polish]{babel}
 \renewcommand{\arraystretch}{1.25}
 
-\usepackage{tabularx}
-\usepackage{fancyhdr}
 \usepackage[lastpage,user]{zref}
-\usepackage{enumitem}
-\usepackage{graphicx}
-\usepackage{float}
-\usepackage{calc}
-\usepackage{scalerel}
-\usepackage{fancyvrb}
-\usepackage{longtable}
 \usepackage{booktabs}
+\usepackage{calc}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{fancyvrb}
+\usepackage{float}
+\usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{scalerel}
+\usepackage{tabularx}
+\usepackage{xparse}
 \hypersetup{colorlinks=true, urlcolor=blue}
 
 \let\oldverbatim\verbatim
@@ -69,22 +70,48 @@ Input description.
 Output description.
 
 \section{Przykłady}
+
+\ExplSyntaxOn
+\NewDocumentCommand{\readcell}{m}
+{
+    \sip_statement_readcell:n { #1 } % #1 is the file to read
+    \vspace{-\baselineskip} % remove empty line that results from the trailing \newline
+}
+% some variables
+\tl_new:N \l__sip_statement_cell_content_tl
+\ior_new:N \g_sip_statement_import_stream
+% proper implementation
+\cs_new_protected:Npn \sip_statement_readcell:n #1
+{
+    % clear the variable containing the cel contents
+    \tl_clear:N \l__sip_statement_cell_content_tl
+    % start reading the file
+    \ior_open:Nn \g_sip_statement_import_stream { #1 }
+    % at each line ...
+    \ior_map_inline:Nn \g_sip_statement_import_stream
+    {
+        % add the line and a trailing \newline
+        \tl_put_right:Nn \l__sip_statement_cell_content_tl { ##1 \newline }
+    }
+    \tl_use:N \l__sip_statement_cell_content_tl % deliver the result
+}
+\ExplSyntaxOff
+\NewDocumentCommand{\testFiles}{mm}{
+    \readcell{#1} & \readcell{#2} \\ \hline
+}
+\NewDocumentCommand{\standardTestFiles}{m}{
+    \testFiles{in/#1.in}{out/#1.out}
+}
+
 \begin{tabularx}{\textwidth}{*{2}{|>{\ttfamily}X}|}
-	\hline
-		\multicolumn{1}{|c|}{\textbf{Wejście}}
-	&
-		\multicolumn{1}{c|}{\textbf{Wyjście}}
-	\\ \hline
-		a\newline
-		b
-	&
-		out a b
-	\\ \hline
-		c\newline
-		d
-	&
-		out c d
-	\\ \hline
+    \hline
+        \multicolumn{1}{|c|}{\textbf{Wejście}} & \multicolumn{1}{c|}{\textbf{Wyjście}}
+    \\ \hline
+    %%% The lines below are equivalent, choose any:
+    % \readcell{in/0.in} & \readcell{out/0.out} \\ \hline
+    % \testFiles{in/0.in}{out/0.out}
+    % \standardTestFiles{0}
+    \standardTestFiles{0}
 \end{tabularx}
 
 \section{Ocenianie}
