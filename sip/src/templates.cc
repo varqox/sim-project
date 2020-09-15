@@ -1,27 +1,25 @@
 #include "templates.hh"
+#include "simlib/debug.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/string_traits.hh"
+#include "simlib/string_view.hh"
+#include "sip_error.hh"
 
-#include <climits>
-#include <pwd.h>
-#include <simlib/debug.hh>
-#include <simlib/file_contents.hh>
-#include <simlib/file_descriptor.hh>
-#include <simlib/string_traits.hh>
+#include <cstdlib>
 #include <sys/types.h>
 #include <unistd.h>
 
 static auto user_templates_dir() {
-	std::array<char, 1 << 16> buff{};
-	struct passwd store {};
-	struct passwd* pw = nullptr;
-	if (getpwuid_r(getuid(), &store, buff.data(), buff.size(), &pw)) {
-		THROW("getpwuid_r()", errmsg());
+	static constexpr StringView templates_home_subdir =
+	   "/.config/sip/templates/";
+	static auto home = getenv("HOME");
+	if (not home) {
+		log_warning("failed to get variable HOME from the environment, not "
+		            "searching for templates in ~",
+		            templates_home_subdir);
 	}
-
-	if (not pw) {
-		THROW("getpwuid_r() says you have no passwd record");
-	}
-
-	return concat<PATH_MAX>(pw->pw_dir, "/.config/sip/templates/");
+	return concat(home, templates_home_subdir);
 }
 
 using std::optional;
@@ -45,9 +43,9 @@ static string get_template(StringView template_name,
                            unsigned char* default_template,
                            unsigned default_template_len) {
 	static auto templates_dir = user_templates_dir();
-	FileDescriptor fd(intentional_unsafe_cstring_view(
-	                     concat<PATH_MAX>(templates_dir, template_name)),
-	                  O_RDONLY);
+	FileDescriptor fd(
+	   intentional_unsafe_cstring_view(concat(templates_dir, template_name)),
+	   O_RDONLY);
 	if (fd.is_open()) {
 		return get_file_contents(fd);
 	}
