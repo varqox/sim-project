@@ -115,36 +115,20 @@ Output description.
 \end{tabularx}
 
 \section{Ocenianie}
+\newcounter{subtask}\NewDocumentCommand{\subtask}{mm}{
+    \stepcounter{subtask}
+    \thesubtask & #1 & #2 \\ \hline
+}
 \begin{center}
     \begin{tabularx}{0.8\textwidth}{|c|X|c|}
         \hline
-            \multicolumn{1}{|c|}{\textbf{Podzadanie}}
-        &
-            \multicolumn{1}{c|}{\textbf{Ograniczenia}}
-        &
-            \multicolumn{1}{c|}{\textbf{Punkty}}
+            \multicolumn{1}{|c|}{\textbf{Podzadanie}} & \multicolumn{1}{c|}{\textbf{Ograniczenia}} & \multicolumn{1}{c|}{\textbf{Punkty}}
         \\ \hline
-            1
-        &
-            $n \leq 10$
-        &
-            40
-        \\ \hline
-            2
-        &
-            $n \leq 1000$
-        &
-            30
-        \\ \hline
-            3
-        &
-            brak dodatkowych ograniczeń
-        &
-            30
-        \\ \hline
+        \subtask{$n \leq 10$}{40}
+        \subtask{$n \leq 1000$}{30}
+        \subtask{brak dodatkowych ograniczeń}{30}
     \end{tabularx}
 \end{center}
 
 \end{sloppypar}
-
 \end{document}
