@@ -556,21 +556,18 @@ void SipPackage::remove_generated_test_files() {
 	prepare_tests_files();
 
 	stdlog("Removing generated test files...").flush_no_nl();
-	// Remove generated .in files
+	// Remove generated .in and .out files
 	for (auto const& test : sipfile.gen_tests) {
 		auto it = tests_files->tests.find(test.name);
-		if (it != tests_files->tests.end() and it->second.in.has_value()) {
-			(void)remove(it->second.in.value().to_string());
+		if (it != tests_files->tests.end()) {
+			if (it->second.in.has_value()) {
+				(void)remove(it->second.in.value().to_string());
+			}
+			if (it->second.out.has_value()) {
+				(void)remove(it->second.out.value().to_string());
+			}
 		}
 	}
-
-	// Remove generated .out files
-	for (auto const& [_, test] : tests_files->tests) {
-		if (test.in.has_value() and test.out.has_value()) {
-			(void)remove(test.out.value().to_string());
-		}
-	}
-
 	stdlog(" done.");
 }
 

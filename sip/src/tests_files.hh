@@ -17,7 +17,7 @@ struct TestsFiles {
 	};
 
 	sim::PackageContents pc;
-	std::map<StringView, Test> tests;
+	std::map<StringView, Test> tests; // test name => test
 
 	TestsFiles();
 };
