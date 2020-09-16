@@ -24,7 +24,8 @@ test: test-sip test-simlib
 test-simlib: subprojects/simlib/test
 
 .PHONY: test-sip
-test-sip:
+test-sip: sip
+	test/run_sip_tests.py ./sip
 
 .PHONY: install
 install: $(filter-out install, $(MAKECMDGOALS))

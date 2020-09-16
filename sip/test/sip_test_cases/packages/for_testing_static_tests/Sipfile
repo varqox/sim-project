@@ -1,0 +1,12 @@
+default_time_limit: 5
+static: [
+	# Here provide tests that are "hard-coded"
+	# Syntax: <test-range>
+	0a-c
+]
+base_seed: 12291097628870534282
+gen: [
+	# Here provide rules to generate tests
+	# Syntax: <test-range> <generator> [generator arguments]
+	1-2 gen 1 1e6
+]

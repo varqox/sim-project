@@ -101,3 +101,6 @@ base_targets = [sip]
 alias_target('base', base_targets)
 run_target('format', command : [find_program('format.py'), meson.current_source_dir()])
 run_target('tidy', command : [find_program('tidy')], depends : base_targets)
+
+#################################### Tests ####################################
+test('sip_tests', find_program('test/run_sip_tests.py'), args : [sip.full_path()], priority : -10)
