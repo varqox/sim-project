@@ -573,9 +573,7 @@ void SipPackage::clean() {
 void SipPackage::remove_generated_test_files() {
 	STACK_UNWINDING_MARK;
 
-	sipfile.load_gen_tests();
 	prepare_tests_files();
-
 	stdlog("Removing generated test files...").flush_no_nl();
 	// Remove generated .in and .out files
 	for (auto const& test : sipfile.get_gen_tests()) {
@@ -599,10 +597,7 @@ void SipPackage::remove_test_files_not_specified_in_sipfile() {
 		throw SipError("No Sipfile was found");
 	}
 
-	sipfile.load_static_tests();
-	sipfile.load_gen_tests();
 	prepare_tests_files();
-
 	stdlog("Removing test files that are not specified as generated or"
 	       " static...")
 	   .flush_no_nl();
