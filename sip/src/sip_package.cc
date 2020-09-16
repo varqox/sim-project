@@ -248,6 +248,23 @@ SipPackage::SipPackage() {
 	}
 }
 
+void SipPackage::warn_about_tests_not_specified_as_static_or_generated() {
+	prepare_tests_files();
+	for (auto const& [test_name, test] : tests_files->tests) {
+		assert(test.in.has_value() or test.out.has_value());
+		StringView test_file = test.in ? *test.in : test.out.value();
+		if (sipfile.get_static_tests().find(test_name) ==
+		       sipfile.get_static_tests().end() and
+		    sipfile.get_gen_tests().find(test_name) ==
+		       sipfile.get_gen_tests().end())
+		{
+			log_warning(
+			   "test `", test_name, "` (file: ", test_file,
+			   ") is neither specified as static nor as generated in Sipfile");
+		}
+	}
+}
+
 void SipPackage::generate_test_input_files() {
 	STACK_UNWINDING_MARK;
 
@@ -299,19 +316,6 @@ void SipPackage::generate_test_input_files() {
 		} else {
 			generate_test_input_file(test, intentional_unsafe_cstring_view(
 			                                  concat(it->second.in.value())));
-		}
-	}
-
-	// Warn about files that are not specified as static or generated
-	for (auto const& [test_name, test] : tests_files->tests) {
-		if (test.in.has_value() and
-		    sipfile.get_static_tests().find(test_name) ==
-		       sipfile.get_static_tests().end() and
-		    sipfile.get_gen_tests().find(test_name) ==
-		       sipfile.get_gen_tests().end())
-		{
-			log_warning("test `", test_name, "` (file: ", test.in.value(),
-			            ") is neither specified as static nor as generated");
 		}
 	}
 
@@ -531,7 +535,7 @@ static bool is_elf_file(FilePath path) noexcept {
 
 static void remove_elf_files_and_empty_dirs() {
 	InplaceBuff<PATH_MAX> path("./");
-	// Returns whether there are remaining dir entries or not
+	// Returns whether there are remaining dir entries left or not
 	auto process_dir = [&path](auto& self) -> bool {
 		bool is_curr_dir_empty = true;
 		for_each_dir_component(path, [&](dirent* file) {
@@ -568,6 +572,8 @@ void SipPackage::clean() {
 
 	remove_elf_files_and_empty_dirs();
 	stdlog(" done.");
+
+	warn_about_tests_not_specified_as_static_or_generated();
 }
 
 void SipPackage::remove_generated_test_files() {

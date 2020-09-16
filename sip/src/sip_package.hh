@@ -62,6 +62,8 @@ public:
 	// exists)
 	SipPackage();
 
+	void warn_about_tests_not_specified_as_static_or_generated();
+
 	// Generates .in files that have recipe provided in Sipfile
 	void generate_test_input_files();
 
@@ -82,7 +84,7 @@ public:
 	void compile_checker();
 
 	// Removes compiled files, latex logs
-	static void clean();
+	void clean();
 
 	// Removes test files that may be generated
 	void remove_generated_test_files();

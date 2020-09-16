@@ -34,7 +34,9 @@ void checker(ArgvParser args) {
 
 void clean() {
 	STACK_UNWINDING_MARK;
-	SipPackage::clean();
+
+	SipPackage sp;
+	sp.clean();
 }
 
 void devclean() {
@@ -47,8 +49,9 @@ void devclean() {
 		// need to retain this directory
 	}
 
-	SipPackage{}.remove_generated_test_files();
-	SipPackage::clean();
+	SipPackage sp;
+	sp.remove_generated_test_files();
+	sp.clean();
 
 	if (recreate_tests_dir) {
 		(void)mkdir("tests/");
@@ -70,6 +73,7 @@ void genin() {
 
 	SipPackage sp;
 	sp.generate_test_input_files();
+	sp.warn_about_tests_not_specified_as_static_or_generated();
 }
 
 void genout() {
@@ -81,6 +85,7 @@ void genout() {
 	if (access("Simfile", F_OK) == 0) {
 		sp.save_limits();
 	}
+	sp.warn_about_tests_not_specified_as_static_or_generated();
 }
 
 void gen() {
@@ -97,6 +102,7 @@ void gen() {
 	if (access("Simfile", F_OK) == 0) {
 		sp.save_limits();
 	}
+	sp.warn_about_tests_not_specified_as_static_or_generated();
 }
 
 void regenin() {
@@ -105,6 +111,7 @@ void regenin() {
 	SipPackage sp;
 	sp.remove_test_files_not_specified_in_sipfile();
 	sp.generate_test_input_files();
+	sp.warn_about_tests_not_specified_as_static_or_generated();
 }
 
 void regen() {
@@ -122,6 +129,7 @@ void regen() {
 	if (access("Simfile", F_OK) == 0) {
 		sp.save_limits();
 	}
+	sp.warn_about_tests_not_specified_as_static_or_generated();
 }
 
 void reseed() {
