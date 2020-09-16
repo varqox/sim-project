@@ -10,9 +10,15 @@ class MemberComparator {
 
 public:
 	MemberComparator() = default;
+	MemberComparator(const MemberComparator&) = default;
+	MemberComparator(MemberComparator&&) noexcept = default;
+	MemberComparator& operator=(const MemberComparator&) = default;
+	MemberComparator& operator=(MemberComparator&&) noexcept = default;
+	~MemberComparator() = default;
 
-	template <class... Args>
-	explicit MemberComparator(Args&&... args)
+	template <class... Args,
+	          std::enable_if_t<std::is_constructible_v<Comp, Args...>, int> = 0>
+	explicit MemberComparator(std::in_place_t /*unused*/, Args&&... args)
 	: compare(std::forward<Args>(args)...) {}
 
 	bool operator()(const Class& a, const Class& b) const {
@@ -40,9 +46,19 @@ public:
 	struct is_transparent;
 
 	TransparentMemberComparator() = default;
+	TransparentMemberComparator(const TransparentMemberComparator&) = default;
+	TransparentMemberComparator(TransparentMemberComparator&&) noexcept =
+	   default;
+	TransparentMemberComparator&
+	operator=(const TransparentMemberComparator&) = default;
+	TransparentMemberComparator&
+	operator=(TransparentMemberComparator&&) noexcept = default;
+	~TransparentMemberComparator() = default;
 
-	template <class... Args>
-	explicit TransparentMemberComparator(Args&&... args)
+	template <class... Args,
+	          std::enable_if_t<std::is_constructible_v<Comp, Args...>, int> = 0>
+	explicit TransparentMemberComparator(std::in_place_t /*unused*/,
+	                                     Args&&... args)
 	: compare(std::forward<Args>(args)...) {}
 
 	template <class A, class B>
