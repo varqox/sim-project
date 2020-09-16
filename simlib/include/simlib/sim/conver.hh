@@ -122,15 +122,15 @@ public:
 	/**
 	 * @brief Finishes constructing the Simfile partially constructed by the
 	 *   construct_simfile() method
-	 * @details Sets the time limits based on the main solution's judge report
+	 * @details Sets the time limits based on the main solution's judge report.
+	 *   Leaves the current time limit for tests that do not occur neither in
+	 *   @p jrep1 nor @p jrep2.
 	 *
 	 * @param sf Simfile to update (returned by construct_simfile())
 	 * @param jrep1 Initial judge report of the main solution, based on the
-	 *   @p sf. Passing @p jrep1 that is not based on the @p sf is
-	 *   undefined-behavior.
+	 *   @p sf.
 	 * @param jrep2 Final judge report of the main solution, based on the
-	 *   @p sf. Passing @p jrep2 that is not based on the @p sf is
-	 *   undefined-behavior.
+	 *   @p sf.
 	 * @param opts options that parameterize calculating time limits
 	 */
 	static void

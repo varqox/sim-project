@@ -705,7 +705,11 @@ void Conver::reset_time_limits_using_jugde_reports(
 	// Assign time limits to the tests
 	for (auto&& tg : sf.tgroups) {
 		for (auto&& t : tg.tests) {
-			t.time_limit = WONT_THROW(tls.at(t.name));
+			auto it = tls.find(t.name);
+			if (it != tls.end()) {
+				// Reset time limit only on tests from judge reports
+				t.time_limit = it->second;
+			}
 		}
 	}
 
