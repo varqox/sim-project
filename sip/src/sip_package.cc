@@ -193,19 +193,16 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test,
 	    res.runtime <= res.time_limit)
 	{
 		// OK
-
 	} else if (res.runtime >= res.time_limit or es.runtime >= res.time_limit) {
 		// TLE
 		res.status = sim::JudgeReport::Test::TLE;
 		res.comment = "Time limit exceeded";
-
 	} else if (es.message == "Memory limit exceeded" or
 	           res.memory_consumed > res.memory_limit)
 	{
 		// MLE
 		res.status = sim::JudgeReport::Test::MLE;
 		res.comment = "Memory limit exceeded";
-
 	} else {
 		// RTE
 		res.status = sim::JudgeReport::Test::RTE;
@@ -260,12 +257,10 @@ void SipPackage::generate_test_input_files() {
 		throw SipError("No Sipfile was found");
 	}
 
-	sipfile.load_static_tests();
-	sipfile.load_gen_tests();
-
 	// Check for tests that are both static and generated
-	for (StringView test : sipfile.static_tests) {
-		if (sipfile.gen_tests.find(test) != sipfile.gen_tests.end()) {
+	for (StringView test : sipfile.get_static_tests()) {
+		if (sipfile.get_gen_tests().find(test) != sipfile.get_gen_tests().end())
+		{
 			log_warning("test `", test,
 			            "` is specified as static and as generated - treating "
 			            "it as generated");
@@ -275,7 +270,7 @@ void SipPackage::generate_test_input_files() {
 	prepare_tests_files();
 
 	// Ensure that static tests have their .in files
-	for (StringView test : sipfile.static_tests) {
+	for (StringView test : sipfile.get_static_tests()) {
 		auto it = tests_files->tests.find(test);
 		if (it == tests_files->tests.end() or not it->second.in.has_value()) {
 			throw SipError("static test `", test,
@@ -292,10 +287,10 @@ void SipPackage::generate_test_input_files() {
 	}
 
 	// Generate .in files
-	if (not sipfile.gen_tests.empty()) {
+	if (not sipfile.get_gen_tests().empty()) {
 		sipfile.load_base_seed();
 	}
-	for (auto const& test : sipfile.gen_tests) {
+	for (auto const& test : sipfile.get_gen_tests()) {
 		auto it = tests_files->tests.find(test.name);
 		if (it == tests_files->tests.end() or not it->second.in.has_value()) {
 			generate_test_input_file(test,
@@ -310,9 +305,10 @@ void SipPackage::generate_test_input_files() {
 	// Warn about files that are not specified as static or generated
 	for (auto const& [test_name, test] : tests_files->tests) {
 		if (test.in.has_value() and
-		    sipfile.static_tests.find(test_name) ==
-		       sipfile.static_tests.end() and
-		    sipfile.gen_tests.find(test_name) == sipfile.gen_tests.end())
+		    sipfile.get_static_tests().find(test_name) ==
+		       sipfile.get_static_tests().end() and
+		    sipfile.get_gen_tests().find(test_name) ==
+		       sipfile.get_gen_tests().end())
 		{
 			log_warning("test `", test_name, "` (file: ", test.in.value(),
 			            ") is neither specified as static nor as generated");
@@ -368,8 +364,8 @@ void SipPackage::generate_test_output_files() {
 
 	simfile.load_interactive();
 	if (simfile.interactive) {
-		throw SipError("Generating output files is not possible for interactive"
-		               " problems");
+		throw SipError("Generating output files is not possible for an "
+		               "interactive problem");
 	}
 
 	stdlog("\033[1;36mGenerating output files...\033[m");
@@ -389,11 +385,33 @@ void SipPackage::generate_test_output_files() {
 	// We need to remove invalid entries from limits as Conver will give
 	// warnings about them
 	remove_tests_with_no_input_file_from_limits_in_simfile();
-
-	// Touch .out files and give warnings
-	for (auto const& [_, test] : tests_files->tests) {
+	// Warn about orphaned .out files
+	for (auto const& [test_name, test] : tests_files->tests) {
 		if (not test.in.has_value()) {
 			log_warning("orphaned test out file: ", test.out.value());
+		}
+	}
+
+	std::set<StringView> tests_excluded_from_generating_output; // (test name)
+	for (auto const& test_name : sipfile.get_static_tests()) {
+		auto it = tests_files->tests.find(test_name);
+		if (it == tests_files->tests.end()) {
+			log_warning("static test ", test_name, " has no files");
+			continue;
+		}
+		auto& test = it->second;
+		if (test.in.has_value() and !test.out.has_value()) {
+			continue; // In this case test's output needs to be generated
+		}
+		tests_excluded_from_generating_output.emplace(test_name);
+	}
+
+	// Create (or truncate) .out files to generate, as rebuild_full_simfile()
+	// needs both .in and .out files to exist to register the test
+	for (auto const& [test_name, test] : tests_files->tests) {
+		if (not test.in.has_value() or
+		    tests_excluded_from_generating_output.count(test_name))
+		{
 			continue;
 		}
 
@@ -423,14 +441,17 @@ void SipPackage::generate_test_output_files() {
 			logger.begin(true); // Assumption: initial tests come as first
 		}
 
-		auto& rep = (p.gid != "0" ? jrep2 : jrep1);
-		rep.groups.emplace_back();
+		auto& judge_report = (p.gid != "0" ? jrep2 : jrep1);
+		judge_report.groups.emplace_back();
 		for (auto const& test : group.tests) {
-			rep.groups.back().tests.emplace_back(
+			if (tests_excluded_from_generating_output.count(test.name)) {
+				continue; // Also note that time limit for these tests will be
+				          // default time limit
+			}
+			judge_report.groups.back().tests.emplace_back(
 			   generate_test_output_file(test, logger));
 		}
 	}
-
 	logger.end();
 
 	// Adjust time limits
@@ -557,7 +578,7 @@ void SipPackage::remove_generated_test_files() {
 
 	stdlog("Removing generated test files...").flush_no_nl();
 	// Remove generated .in and .out files
-	for (auto const& test : sipfile.gen_tests) {
+	for (auto const& test : sipfile.get_gen_tests()) {
 		auto it = tests_files->tests.find(test.name);
 		if (it != tests_files->tests.end()) {
 			if (it->second.in.has_value()) {
@@ -587,10 +608,10 @@ void SipPackage::remove_test_files_not_specified_in_sipfile() {
 	   .flush_no_nl();
 
 	for (auto const& [test_name, test] : tests_files->tests) {
-		bool is_static =
-		   sipfile.static_tests.find(test_name) != sipfile.static_tests.end();
-		bool is_generated =
-		   sipfile.gen_tests.find(test_name) != sipfile.gen_tests.end();
+		auto const& static_tests = sipfile.get_static_tests();
+		auto const& gen_tests = sipfile.get_gen_tests();
+		bool is_static = static_tests.find(test_name) != static_tests.end();
+		bool is_generated = gen_tests.find(test_name) != gen_tests.end();
 		if (is_static or is_generated) {
 			continue;
 		}

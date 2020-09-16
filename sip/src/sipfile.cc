@@ -183,7 +183,7 @@ void Sipfile::load_static_tests() {
 	auto static_tests_var = config.get_var("static");
 	CHECK_IF_ARR(static_tests_var, "static");
 
-	static_tests.clear();
+	static_tests.emplace(); // Set if std::nullopt, clear otherwise
 	for (StringView entry : static_tests_var.as_array()) {
 		entry.extract_leading(is_space<char>);
 		StringView test_range = entry.extract_leading(not_fn(is_space<char>));
@@ -194,7 +194,7 @@ void Sipfile::load_static_tests() {
 		}
 
 		for_each_test_in_range(test_range, [&](StringView test) {
-			auto [_, inserted] = static_tests.emplace(test);
+			auto [_, inserted] = static_tests->emplace(test);
 			if (not inserted) {
 				log_warning("Sipfile (static): test `", test,
 				            "` is specified"
@@ -256,7 +256,7 @@ void Sipfile::load_gen_tests() {
 	pkg_contents.load_from_directory(".");
 	pkg_contents.remove_with_prefix("utils/cache/");
 
-	gen_tests.clear();
+	gen_tests.emplace(); // Set if std::nullopt, clear otherwise
 	for (StringView entry : gen_tests_var.as_array()) {
 		// Test range
 		entry.extract_leading(is_space<char>);
@@ -288,7 +288,7 @@ void Sipfile::load_gen_tests() {
 
 		for_each_test_in_range(test_range, [&](StringView test) {
 			auto [_, inserted] =
-			   gen_tests.emplace(test, generator, generator_args);
+			   gen_tests->emplace(test, generator, generator_args);
 			if (not inserted) {
 				throw SipError("Sipfile (gen): test `", test,
 				               "` is specified in more than one test range");

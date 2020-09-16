@@ -25,8 +25,22 @@ public:
 		, generator_args(ga) {}
 	};
 
-	std::set<InplaceBuff<16>, std::less<>> static_tests;
-	std::set<GenTest, TRANSPARENT_MEMBER_COMPARATOR(GenTest, name)> gen_tests;
+private:
+	std::optional<std::set<InplaceBuff<16>, std::less<>>>
+	   static_tests; // (test_name)
+	std::optional<
+	   std::set<GenTest, TRANSPARENT_MEMBER_COMPARATOR(GenTest, name)>>
+	   gen_tests;
+
+public:
+	auto& get_static_tests() {
+		return static_tests ? *static_tests
+		                    : (load_static_tests(), *static_tests);
+	}
+
+	auto& get_gen_tests() {
+		return gen_tests ? *gen_tests : (load_gen_tests(), *gen_tests);
+	}
 
 private:
 	ConfigFile config;
