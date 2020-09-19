@@ -1,11 +1,20 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesClass{sim-statement}[2020/09/20 Sim problem statement]
 \def\@baseclass{article}
+% Language can be either en or pl
+\newif\ifmyclass@en
+\DeclareOption{en}{\myclass@entrue}
+\DeclareOption{pl}{\myclass@enfalse}
+\ExecuteOptions{en}
 \DeclareOption*{\PassOptionsToClass{\CurrentOption}{\@baseclass}}
 \ProcessOptions\relax
 \LoadClass{\@baseclass}
 
-\RequirePackage[polish]{babel}
+\ifmyclass@en
+    \RequirePackage[english]{babel}
+\else
+    \RequirePackage[polish]{babel}
+\fi
 \RequirePackage[a4paper, total={480pt, 720pt}]{geometry}
 \RequirePackage[lastpage,user]{zref}
 \RequirePackage[T1]{fontenc}
@@ -67,7 +76,7 @@
     \section*
     {\huge\@problemName\hfill\small{\strut}
         \ifx \@memoryLimit \@empty \else
-            \small{Dostępna pamięć: \@memoryLimit}
+            \small{\ifmyclass@en Available memory\else Dostępna pamięć\fi: \@memoryLimit}
         \fi
         \newline
         \rule{480pt}{0.5pt}
@@ -88,15 +97,12 @@
     \end{sloppypar}
 }
 
-\NewDocumentCommand{\sectionInput}{}
-{
-    \section{Wejście}
-}
+\def\InputWord{\ifmyclass@en Input\else Wejście\fi}
+\def\OutputWord{\ifmyclass@en Output\else Wyjście\fi}
 
-\NewDocumentCommand{\sectionOutput}{}
-{
-    \section{Wyjście}
-}
+\NewDocumentCommand{\sectionInput}{}{\section{\InputWord}}
+
+\NewDocumentCommand{\sectionOutput}{}{\section{\OutputWord}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Sample tests %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -136,10 +142,10 @@
 
 \newenvironment{samples}
 {
-    \section{Przykłady}
+    \section{\ifmyclass@en Examples\else Przykłady\fi}
     \tabularx{\textwidth}{*{2}{|>{\ttfamily}X}|}
     \hline
-        \multicolumn{1}{|c|}{\textbf{Wejście}} & \multicolumn{1}{c|}{\textbf{Wyjście}}
+        \multicolumn{1}{|c|}{\textbf{\InputWord}} & \multicolumn{1}{c|}{\textbf{\OutputWord}}
     \\ \hline
 }
 {
@@ -152,16 +158,18 @@
     \stepcounter{subtask}
     \thesubtask & #1 & #2 \\ \hline
 }
-\def\noRestrictions{brak dodatkowych ograniczeń}
+\def\noRestrictions{\ifmyclass@en no additional constraints\else brak dodatkowych ograniczeń\fi}
 
 \newenvironment{grading}
 {
-    \section{Ocenianie}
+    \section{\ifmyclass@en Grading\else Ocenianie\fi}
     \setcounter{subtask}{0}
     \center
         \tabularx{0.8\textwidth}{|c|X|c|}
             \hline
-                \multicolumn{1}{|c|}{\textbf{Podzadanie}} & \multicolumn{1}{c|}{\textbf{Ograniczenia}} & \multicolumn{1}{c|}{\textbf{Punkty}}
+                \multicolumn{1}{|c|}{\textbf{\ifmyclass@en Subtask\else Podzadanie\fi}} &
+                \multicolumn{1}{c|}{\textbf{\ifmyclass@en Constraints\else Ograniczenia\fi}} &
+                \multicolumn{1}{c|}{\textbf{\ifmyclass@en Points\else Punkty\fi}}
             \\ \hline
 }
 {
