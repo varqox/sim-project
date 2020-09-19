@@ -72,6 +72,11 @@ $(eval $(call add_generated_target, templates/interactive_checker.cc.dump.c, \
 	templates/interactive_checker.cc Makefile \
 ))
 
+$(eval $(call add_generated_target, templates/sim_statement.cls.dump.c, \
+	xxd -i $$< | sed 's@\w*sim_statement_cls@sim_statement_cls@g' > $$@, \
+	templates/sim-statement.cls Makefile \
+))
+
 $(eval $(call add_generated_target, templates/statement.tex.dump.c, \
 	xxd -i $$< | sed 's@\w*statement_tex@statement_tex@g' > $$@, \
 	templates/statement.tex Makefile \
@@ -97,6 +102,7 @@ SIP_SRCS := \
 	templates/checker.cc.dump.c \
 	templates/gen.cc.dump.c \
 	templates/interactive_checker.cc.dump.c \
+	templates/sim_statement.cls.dump.c \
 	templates/statement.tex.dump.c \
 
 $(eval $(call add_executable, sip, $(SIP_FLAGS), $(SIP_SRCS)))

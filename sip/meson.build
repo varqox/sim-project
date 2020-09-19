@@ -76,6 +76,10 @@ sip = executable('sip',
             extra_args : 'interactive_checker_cc'
         ),
         dump_file_as_c_array.process(
+            'templates/sim-statement.cls',
+            extra_args : 'sim_statement_cls'
+        ),
+        dump_file_as_c_array.process(
             'templates/statement.tex',
             extra_args : 'statement_tex'
         ),

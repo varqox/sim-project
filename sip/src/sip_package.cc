@@ -729,32 +729,39 @@ void SipPackage::save_limits() {
 void SipPackage::save_template(StringView template_name) {
 	STACK_UNWINDING_MARK;
 
+	auto save_from_template = [&](CStringView path, StringView description,
+	                              const string& content) {
+		if (path_exists(path)) {
+			assert(!description.empty());
+			throw SipError("File ", path,
+			               " already exists. To replace it with the default ",
+			               description,
+			               " template, remove the file and try again.");
+		}
+		put_file_contents(path, content);
+	};
+
 	if (template_name == "statement") {
 		simfile.load_name();
 		simfile.load_global_memory_limit_only();
 		(void)mkdir("doc");
-		put_file_contents(
-		   "doc/statement.tex",
-		   intentional_unsafe_string_view(templates::statement_tex(
-		      simfile.name.value(), simfile.global_mem_limit)));
+		save_from_template("doc/sim-statement.cls", "sim statement class",
+		                   templates::sim_statement_cls());
+		save_from_template("doc/statement.tex", "statement",
+		                   templates::statement_tex(simfile.name.value(),
+		                                            simfile.global_mem_limit));
 	} else if (template_name == "checker") {
 		simfile.load_interactive();
 		(void)mkdir("check");
-		put_file_contents("check/checker.cc",
-		                  intentional_unsafe_string_view(
-		                     simfile.interactive
-		                        ? templates::interactive_checker_cc()
-		                        : templates::checker_cc()));
+		save_from_template(
+		   "check/checker.cc",
+		   simfile.interactive ? "interactive checker" : "checker",
+		   simfile.interactive ? templates::interactive_checker_cc()
+		                       : templates::checker_cc());
 	} else if (template_name == "gen") {
 		(void)mkdir("utils");
-		constexpr CStringView gen_path = "utils/gen.cc";
-		if (path_exists(gen_path)) {
-			throw SipError("File ", gen_path,
-			               " exists, to replace it with a default generator "
-			               "template, remove the file and try again");
-		}
-		put_file_contents(gen_path,
-		                  intentional_unsafe_string_view(templates::gen_cc()));
+		save_from_template("utils/gen.cc", "test generator",
+		                   templates::gen_cc());
 	} else {
 		throw SipError("Unrecognized template name: ", template_name);
 	}
@@ -764,6 +771,9 @@ static void compile_tex_file(StringView file) {
 	STACK_UNWINDING_MARK;
 
 	stdlog("\033[1mCompiling ", file, "\033[m");
+	// Make pdflatex look for classes and other files in the file's directory
+	setenv("TEXINPUTS", concat_tostr(".:", path_dirpath(file), ':').data(),
+	       true);
 	// It is necessary (essential) to run latex two times
 	for (int iter = 0; iter < 2; ++iter) {
 		auto es = Spawner::run(

@@ -32,6 +32,9 @@ extern unsigned checker_cc_len;
 extern unsigned char interactive_checker_cc[];
 extern unsigned interactive_checker_cc_len;
 
+extern unsigned char sim_statement_cls[];
+extern unsigned sim_statement_cls_len;
+
 extern unsigned char statement_tex[];
 extern unsigned statement_tex_len;
 
@@ -80,23 +83,28 @@ static string replace(StringView text, Subst&&... substitutions) {
 namespace templates {
 
 string checker_cc() {
-	return get_template("checker.cc", ::checker_cc, checker_cc_len);
+	return get_template("checker.cc", ::checker_cc, ::checker_cc_len);
 }
 
 string interactive_checker_cc() {
 	return get_template("interactive_checker.cc", ::interactive_checker_cc,
-	                    interactive_checker_cc_len);
+	                    ::interactive_checker_cc_len);
+}
+
+string sim_statement_cls() {
+	return get_template("sim-statement.cls", ::sim_statement_cls,
+	                    ::sim_statement_cls_len);
 }
 
 string statement_tex(StringView problem_name, optional<uint64_t> memory_limit) {
 	string full_template_str =
-	   get_template("statement.tex", ::statement_tex, statement_tex_len);
+	   get_template("statement.tex", ::statement_tex, ::statement_tex_len);
 	return replace(full_template_str, std::pair("<<<name>>>", problem_name),
 	               std::pair("<<<mem>>>",
 	                         (memory_limit ? concat(*memory_limit >> 20, " MiB")
 	                                       : concat())));
 }
 
-string gen_cc() { return get_template("gen.cc", ::gen_cc, gen_cc_len); }
+string gen_cc() { return get_template("gen.cc", ::gen_cc, ::gen_cc_len); }
 
 } // namespace templates
