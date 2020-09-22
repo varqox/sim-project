@@ -19,6 +19,7 @@
 \RequirePackage[lastpage,user]{zref}
 \RequirePackage[T1]{fontenc}
 \RequirePackage[utf8]{inputenc}
+\RequirePackage{amsmath}
 \RequirePackage{array}
 \RequirePackage{booktabs}
 \RequirePackage{calc}
@@ -29,6 +30,7 @@
 \RequirePackage{graphicx}
 \RequirePackage{hyperref}
 \RequirePackage{longtable}
+\RequirePackage{mathtools}
 \RequirePackage{scalerel}
 \RequirePackage{tabularx}
 \RequirePackage{xparse}
