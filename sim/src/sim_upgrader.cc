@@ -23,10 +23,12 @@ struct CmdOptions {
 static int perform_upgrade() {
 	STACK_UNWINDING_MARK;
 
-	(void)remove(concat_tostr(sim_build, "sim-server"));
-	(void)remove(concat_tostr(sim_build, "job-server"));
-	(void)remove(concat_tostr(sim_build, "backup"));
-	(void)remove(concat_tostr(sim_build, "sim-merger"));
+	conn.update(
+	   "UPDATE submissions SET initial_report=REGEXP_REPLACE(initial_report, "
+	   "'^<h2>.*?</h2>', '')");
+	conn.update(
+	   "UPDATE submissions SET final_report=REGEXP_REPLACE(final_report, "
+	   "'^<h2>.*?</h2>', '')");
 
 	stdlog("\033[1;32mSim upgrading is complete\033[m");
 	return 0;

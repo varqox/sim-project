@@ -2737,16 +2737,23 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				elem.append($('<div>', {
 					class: 'results',
 					html: function() {
-						var res = [s.initial_report, s.final_report];
+						var res = [];
+						if (s.initial_report != '') {
+							res.push($('<h2>', {text: 'Initial judgment protocol'}),
+								s.initial_report);
+						}
+						if (s.final_report != '') {
+							res.push($('<h2>', {text: 'Full judgment protocol'}),
+								s.final_report);
+						}
 						if (s.final_report === null) {
 							var message_to_show;
-							if (utcdt_or_tm_to_Date(s.full_results) === Infinity)
-								message_to_show = $('<p>', {text: 'Final testing report will not be available.'});
-							else
-								message_to_show = $('<p>', {text: 'Final testing report will be visible since: '}).append(normalize_datetime($('<span>', {datetime: s.full_results})));
-
-							res.push($('<h2>', {text: 'Final testing report'}),
-								message_to_show);
+							if (utcdt_or_tm_to_Date(s.full_results) === Infinity) {
+								message_to_show = $('<p>', {text: 'Full judgment protocol (of all tests) will not be available.'});
+							} else {
+								message_to_show = $('<p>', {text: 'Full judgment protocol (of all tests) will be visible since: '}).append(normalize_datetime($('<span>', {datetime: s.full_results})));
+							}
+							res.push(message_to_show);
 						}
 						return res;
 					}()

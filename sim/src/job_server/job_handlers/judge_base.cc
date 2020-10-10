@@ -37,9 +37,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 	}
 
 	// clang-format off
-	report.append("<h2>", (final ? "Final" : "Initial"),
-	                  " testing report</h2>"
-	              "<table class=\"table\">"
+	report.append("<table class=\"table\">"
 	                  "<thead>"
 	                      "<tr>"
 	                          "<th class=\"test\">Test</th>"
