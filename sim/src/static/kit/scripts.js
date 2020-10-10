@@ -2556,7 +2556,7 @@ function add_problem_submission(as_modal, problem, no_modal_elem /*= undefined*/
 	add_submission_impl(as_modal, '/p/' + problem.id + '/submit',
 		'/api/submission/add/p' + problem.id,
 		a_view_button('/p/' + problem.id, problem.name, undefined, view_problem.bind(null, true, problem.id)),
-		(problem.actions.indexOf('i') !== -1), (problem.actions.indexOf('i') !== -1),
+		(problem.actions.indexOf('i') !== -1), false,
 		no_modal_elem);
 }
 function add_contest_submission(as_modal, contest, round, problem, no_modal_elem /*= undefined*/) {
