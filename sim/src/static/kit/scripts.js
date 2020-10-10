@@ -656,12 +656,18 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 	add_csrf_token_to(form);
 	append_loader(loader_parent);
 
+	// Transform data before sending
+	var form_copy = form.clone();
+	form_copy.find('[trim_before_send="true"]').each(function() {
+		$(this).val($(this).val().trim());
+	});
+	// Prepare and send form
 	$.ajax({
 		url: url,
 		type: 'POST',
 		processData: false,
 		contentType: false,
-		data: new FormData(form[0]),
+		data: new FormData(form_copy[0]),
 		success: function(resp) {
 			if (typeof success_msg_or_handler === "function") {
 				success_msg_or_handler.call(form, resp, loader_parent);
@@ -1766,6 +1772,7 @@ function add_user(as_modal) {
 				name: 'username',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Type',
 				$('<select>', {
@@ -1788,18 +1795,21 @@ function add_user(as_modal) {
 				name: 'first_name',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Last name', {
 				type: 'text',
 				name: 'last_name',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Email', {
 				type: 'email',
 				name: 'email',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Password', {
 				type: 'password',
@@ -1914,6 +1924,7 @@ function edit_user(as_modal, user_id) {
 				value: user.username,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Type',
 				$('<select>', {
@@ -1951,6 +1962,7 @@ function edit_user(as_modal, user_id) {
 				value: user.first_name,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Last name', {
 				type: 'text',
@@ -1958,6 +1970,7 @@ function edit_user(as_modal, user_id) {
 				value: user.last_name,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Email', {
 				type: 'email',
@@ -1965,6 +1978,7 @@ function edit_user(as_modal, user_id) {
 				value: user.email,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add('<div>', {
 				html: $('<input>', {
@@ -2031,7 +2045,8 @@ function merge_user(as_modal, user_id) {
 			Form.field_group('Target user ID', {
 				type: 'text',
 				name: 'target_user',
-				size: 6
+				size: 6,
+				trim_before_send: true,
 			}));
 	}, '/u/' + user_id + '/merge');
 }
@@ -2989,12 +3004,14 @@ function add_problem(as_modal) {
 				name: 'mem_limit',
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				placeholder: 'Take from Simfile',
 			})).add(Form.field_group('Global time limit [s] (for each test)', {
 				type: 'text',
 				name: 'global_time_limit',
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				placeholder: 'No global time limit',
 			})).add(Form.field_group('Reset time limits using model solution', {
 				type: 'checkbox',
@@ -3072,12 +3089,14 @@ function append_reupload_problem(elem, as_modal, problem) {
 			value: problem.memory_limit,
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			placeholder: 'Take from Simfile',
 		})).add(Form.field_group('Global time limit [s] (for each test)', {
 			type: 'text',
 			name: 'global_time_limit',
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			placeholder: 'No global time limit',
 		})).add(Form.field_group('Reset time limits using model solution', {
 			type: 'checkbox',
@@ -3455,7 +3474,8 @@ function merge_problem(as_modal, problem_id) {
 			Form.field_group('Target problem ID', {
 				type: 'text',
 				name: 'target_problem',
-				size: 6
+				size: 6,
+				trim_before_send: true,
 			}).add(Form.field_group('Rejudge transferred submissions', {
 				type: 'checkbox',
 				name: 'rejudge_transferred_submissions'
@@ -3846,6 +3866,7 @@ function append_create_contest(elem, as_modal) {
 			name: 'name',
 			size: 24,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			required: true
 		}).add(logged_user_is_admin() ? Form.field_group('Make public', {
 			type: 'checkbox',
@@ -3879,13 +3900,14 @@ function append_clone_contest(elem, as_modal) {
 			name: 'name',
 			size: 24,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 		}).add(source_contest_input
 		).add(Form.field_group("Contest to clone (ID or URL)",
 			$('<input>', {
 				type: 'text',
 				required: true
 			}).on('input', function () {
-				var val = $(this).val();
+				var val = $(this).val().trim();
 				if (!isNaN(val)) {
 					source_contest_input.val(val);
 				} else {
@@ -3937,6 +3959,7 @@ function append_create_contest_round(elem, as_modal, contest_id) {
 			name: 'name',
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			required: true
 		}).add(Form.field_group('Begin time',
 			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
@@ -3975,6 +3998,7 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 			name: 'name',
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			placeholder: "The same as name of the cloned round"
 		}).add(source_contest_round_input
 		).add(Form.field_group("Contest round to clone (ID or URL)",
@@ -3982,7 +4006,7 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 				type: 'text',
 				required: true
 			}).on('input', function () {
-				var val = $(this).val();
+				var val = $(this).val().trim();
 				if (!isNaN(val)) {
 					source_contest_round_input.val(val);
 				} else {
@@ -4040,12 +4064,14 @@ function add_contest_problem(as_modal, contest_round_id) {
 				name: 'name',
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				placeholder: 'The same as in Problems',
 			}).add(Form.field_group('Problem ID', {
 				type: 'text',
 				name: 'problem_id',
 				size: 6,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).append(a_view_button('/p', 'Search problems', '', problem_chooser))
 			).add(Form.field_group('Final submission to select',
@@ -4128,6 +4154,7 @@ function edit_contest(as_modal, contest_id) {
 				value: data.name,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Public', {
 				type: 'checkbox',
@@ -4170,6 +4197,7 @@ function edit_contest_round(as_modal, contest_round_id) {
 				value: round.name,
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Begin time',
 				dt_chooser_input('begins', true, true, utcdt_or_tm_to_Date(round.begins), 'The Big Bang', 'Never')
@@ -4205,6 +4233,7 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 				value: problem.name,
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Score revealing',
 				$('<select>', {
@@ -5182,6 +5211,7 @@ function add_contest_user(as_modal, contest_id) {
 				name: 'user_id',
 				size: 6,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).append(a_view_button('/u', 'Search users', '', user_chooser))
 			.add(Form.field_group('Mode', $('<select>', {
@@ -5449,8 +5479,9 @@ function add_contest_file(as_modal, contest_id) {
 				type: 'text',
 				name: 'name',
 				size: 24,
-				placeholder: 'The same as name of the uploaded file'
-				// maxlength: 'TODO...'
+				// maxlength: 'TODO...',
+				trim_before_send: true,
+				placeholder: 'The same as name of the uploaded file',
 			}).add(Form.field_group('File', {
 				type: 'file',
 				name: 'file',
@@ -5492,8 +5523,9 @@ function edit_contest_file(as_modal, contest_file_id) {
 				name: 'name',
 				value: file.name,
 				size: 24,
-				placeholder: 'The same as name of uploaded file'
-				// maxlength: 'TODO...'
+				// maxlength: 'TODO...',
+				trim_before_send: true,
+				placeholder: 'The same as name of uploaded file',
 			}).add(Form.field_group('File', {
 				type: 'file',
 				name: 'file'
