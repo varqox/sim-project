@@ -4080,7 +4080,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 					required: true,
 					html: $('<option>', {
 						value: 'LC',
-						text: 'The last that compiles'
+						text: 'Latest compiling'
 					}).add('<option>', {
 						value: 'WHS',
 						text: 'The one with the highest score',
@@ -4259,7 +4259,7 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 					required: true,
 					html: $('<option>', {
 						value: 'LC',
-						text: 'The last that compiles',
+						text: 'Latest compiling',
 						selected: (problem.final_selecting_method === 'LC')
 					}).add('<option>', {
 						value: 'WHS',
@@ -4567,7 +4567,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								$('<tr>', {html: [
 									$('<td>', {text: 'Final submission'}),
 									$('<td>', {text: problem.final_selecting_method === 'LC' ?
-										'The last compiling' : 'One with the highest score'})
+										'Latest compiling' : 'One with the highest score'})
 								]}),
 								(problem.score_revealing !== 'none' ? $('<tr>', {html: [
 									$('<td>', {text: 'Score revealing'}),
