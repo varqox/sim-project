@@ -183,7 +183,7 @@ constexpr bool operator<=(timeval a, timeval b) noexcept {
 
 constexpr bool operator>=(timeval a, timeval b) noexcept { return b <= a; }
 
-template <size_t N = to_string(std::numeric_limits<uintmax_t>::max()).size() +
+template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
                      11> // +11
                          // for terminating null and decimal point and the
                          // fraction part
@@ -215,7 +215,7 @@ timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
 	return res;
 }
 
-template <size_t N = to_string(std::numeric_limits<uintmax_t>::max()).size() +
+template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
                      8> // +8
                         // for terminating null and decimal point and the
                         // fraction part
@@ -272,7 +272,7 @@ constexpr bool is_power_of_10(T x) noexcept {
  * @return floating-point @p dur in seconds as string
  */
 template <class Rep, class Period,
-          size_t N = to_string(std::numeric_limits<Rep>::max()).size() +
+          size_t N = decltype(to_string(std::declval<Rep>()))::max_size() +
                      3> // +3 for sign, terminating null and decimal point
 constexpr StaticCStringBuff<N>
 to_string(const std::chrono::duration<Rep, Period>& dur,

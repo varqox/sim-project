@@ -61,6 +61,8 @@ public:
 
 	[[nodiscard]] constexpr size_t size() const noexcept { return len_; }
 
+	[[nodiscard]] constexpr static size_t max_size() noexcept { return N; }
+
 	constexpr char* data() noexcept { return str_.data(); }
 
 	[[nodiscard]] constexpr const char* data() const noexcept {

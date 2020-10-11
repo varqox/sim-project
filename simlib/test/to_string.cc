@@ -53,6 +53,16 @@ TEST(DISABLED_StaticCStringBuff, size) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(StaticCStringBuff, max_size) {
+	static_assert(StaticCStringBuff<0>::max_size() == 0);
+	static_assert(StaticCStringBuff<1>::max_size() == 1);
+	static_assert(StaticCStringBuff<2>::max_size() == 2);
+	static_assert(StaticCStringBuff<42>::max_size() == 42);
+	static_assert(StaticCStringBuff<128>::max_size() == 128);
+	static_assert(StaticCStringBuff<142>::max_size() == 142);
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_StaticCStringBuff, data) {
 	// TODO: implement it
 }
