@@ -213,14 +213,31 @@ public:
 // E.g. use:
 // static DebugLogger<true> debuglog;
 // debuglog("sth: ", sth);
-template <bool enable>
+template <bool enable, bool be_verbose = false, bool use_colors = true>
 struct DebugLogger {
-	static constexpr bool enabled = enable;
+	static constexpr bool is_enabled = enable;
+	static constexpr bool is_verbose = be_verbose;
+	static constexpr bool is_colored = use_colors;
 
 	template <class... Args>
 	void operator()(Args&&... args) const {
-		if constexpr (enabled) {
-			stdlog(args...);
+		if constexpr (is_enabled) {
+			if constexpr (use_colors) {
+				stdlog("\033[33m", args..., "\033[m");
+			} else {
+				stdlog(args...);
+			}
+		}
+	}
+
+	template <class... Args>
+	void verbose(Args&&... args) const {
+		if constexpr (is_enabled and is_verbose) {
+			if constexpr (use_colors) {
+				stdlog("\033[2m", args..., "\033[m");
+			} else {
+				stdlog(args...);
+			}
 		}
 	}
 };

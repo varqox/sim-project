@@ -311,7 +311,7 @@ public:
 	}
 
 	void debug_dump() const {
-		if constexpr (decltype(debuglog)::enabled) {
+		if constexpr (decltype(debuglog)::is_enabled) {
 			for (auto& [slashes, prefix_map] : handlers_) {
 				debuglog("> slashes: ", slashes);
 				for (auto& [prefix, suffix_map] : prefix_map) {
