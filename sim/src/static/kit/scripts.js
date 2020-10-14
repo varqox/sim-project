@@ -657,9 +657,11 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 	append_loader(loader_parent);
 
 	// Transform data before sending
-	var form_copy = form.clone();
-	form_copy.find('[trim_before_send="true"]').each(function() {
-		$(this).val($(this).val().trim());
+	var form_data = new FormData(form[0]);
+	form.find('[trim_before_send="true"]').each(function() {
+		if (this.name != null) {
+			form_data.set(this.name, form_data.get(this.name).trim());
+		}
 	});
 	// Prepare and send form
 	$.ajax({
@@ -667,7 +669,7 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 		type: 'POST',
 		processData: false,
 		contentType: false,
-		data: new FormData(form_copy[0]),
+		data: form_data,
 		success: function(resp) {
 			if (typeof success_msg_or_handler === "function") {
 				success_msg_or_handler.call(form, resp, loader_parent);
