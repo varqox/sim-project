@@ -220,23 +220,31 @@ struct DebugLogger {
 	static constexpr bool is_colored = use_colors;
 
 	template <class... Args>
-	void operator()(Args&&... args) const {
+	void operator()(Args&&... args) const noexcept {
 		if constexpr (is_enabled) {
-			if constexpr (use_colors) {
-				stdlog("\033[33m", args..., "\033[m");
-			} else {
-				stdlog(args...);
+			try {
+				if constexpr (use_colors) {
+					stdlog("\033[33m", args..., "\033[m");
+				} else {
+					stdlog(args...);
+				}
+			} catch (...) {
+				// Ignore errors
 			}
 		}
 	}
 
 	template <class... Args>
-	void verbose(Args&&... args) const {
+	void verbose(Args&&... args) const noexcept {
 		if constexpr (is_enabled and is_verbose) {
-			if constexpr (use_colors) {
-				stdlog("\033[2m", args..., "\033[m");
-			} else {
-				stdlog(args...);
+			try {
+				if constexpr (use_colors) {
+					stdlog("\033[2m", args..., "\033[m");
+				} else {
+					stdlog(args...);
+				}
+			} catch (...) {
+				// Ignore errors
 			}
 		}
 	}
