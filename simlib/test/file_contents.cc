@@ -7,6 +7,10 @@ TEST(DISABLED_file_contents, read_all) { // TODO:
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(DISABLED_file_contents, pread_all) { // TODO:
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_file_contents, write_all) { // TODO:
 }
 

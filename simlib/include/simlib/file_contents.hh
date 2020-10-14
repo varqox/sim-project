@@ -4,6 +4,8 @@
 #include "simlib/file_path.hh"
 #include "simlib/file_perms.hh"
 
+#include <sys/types.h>
+
 /**
  * @brief Read @p count bytes to @p buff from @p fd
  * @details Uses read(2), but reads until it is unable to read
@@ -17,6 +19,25 @@
  * @errors The same as for read(2) except EINTR
  */
 [[nodiscard]] size_t read_all(int fd, void* buff, size_t count) noexcept;
+
+/**
+ * @brief Read up to @p count bytes to @p buff from @p fd starting at @p pos
+ *   without moving the file offset
+ * @details Uses pread(), but reads until it is unable to read
+ *
+ * @param fd file descriptor
+ * @param pos file offset -- where to start reading
+ * @param buff where to place read bytes
+ * @param count number of bytes to read
+ *
+ * @return number of bytes read, if error occurs then errno is > 0; note that
+ *   a successful call may read less bytes than @p count e.g. because an EOF was
+ *   encountered
+ *
+ * @errors The same as for pread() except EINTR
+ */
+[[nodiscard]] size_t pread_all(int fd, off64_t pos, void* buff,
+                               size_t count) noexcept;
 
 /**
  * @brief Write @p count bytes to @p fd from @p buff

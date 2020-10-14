@@ -1,6 +1,7 @@
 #include "simlib/file_contents.hh"
 #include "simlib/file_descriptor.hh"
 
+#include <sys/types.h>
 #include <unistd.h>
 
 using std::array;
@@ -25,6 +26,28 @@ size_t read_all(int fd, void* buf, size_t count) noexcept {
 
 	errno = 0; // No error
 	return count;
+}
+
+size_t pread_all(int fd, off64_t pos, void* buff, size_t count) noexcept {
+	auto* dest = static_cast<uint8_t*>(buff);
+	size_t bytes_read = 0;
+	while (bytes_read < count) {
+		ssize_t k =
+		   pread(fd, dest + bytes_read, count - bytes_read, pos + bytes_read);
+		if (k < 0) {
+			if (errno == EINTR) {
+				continue;
+			}
+			return pos; // Error
+		}
+		if (k == 0) {
+			break; // No more bytes to read
+		}
+		bytes_read += k;
+	}
+
+	errno = 0;
+	return bytes_read;
 }
 
 size_t write_all(int fd, const void* buf, size_t count) noexcept {
