@@ -18,6 +18,7 @@ if get_option('warning_level') > '0'
         '-Wdocumentation',
         '-Wgnu',
         '-Wunused-lambda-capture',
+        '-Wno-c++20-designator',
     ]
     foreach warning : warnings
         if cc.has_argument(warning)
