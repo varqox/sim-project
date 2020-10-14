@@ -183,10 +183,11 @@ constexpr bool operator<=(timeval a, timeval b) noexcept {
 
 constexpr bool operator>=(timeval a, timeval b) noexcept { return b <= a; }
 
-template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-                     11> // +11
-                         // for terminating null and decimal point and the
-                         // fraction part
+template <
+   size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
+              11> // +11
+                  // for terminating null and decimal point and the
+                  // fraction part
 constexpr StaticCStringBuff<N>
 timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
 	auto res = to_string<uint64_t, N>(x.tv_sec);
@@ -215,10 +216,11 @@ timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
 	return res;
 }
 
-template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-                     8> // +8
-                        // for terminating null and decimal point and the
-                        // fraction part
+template <
+   size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
+              8> // +8
+                 // for terminating null and decimal point and the
+                 // fraction part
 constexpr StaticCStringBuff<N>
 timeval_to_string(timeval x, uint prec, bool trim_zeros = true) noexcept {
 	auto res = to_string<uint64_t, N>(x.tv_sec);
