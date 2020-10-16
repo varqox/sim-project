@@ -8,6 +8,7 @@
 #include "simlib/random.hh"
 #include "simlib/repeating.hh"
 #include "simlib/string_transform.hh"
+#include "simlib/syscalls.hh"
 #include "simlib/temporary_file.hh"
 
 #include <cstddef>
@@ -18,8 +19,6 @@
 #include <new>
 #include <sys/eventfd.h>
 #include <sys/stat.h>
-#include <sys/syscall.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
 
@@ -346,7 +345,7 @@ void thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd,
 	}
 	// Parent process
 	siginfo_t si;
-	if (syscall(SYS_waitid, P_PID, child, &si, WEXITED, nullptr) == -1) {
+	if (syscalls::waitid(P_PID, child, &si, WEXITED, nullptr) == -1) {
 		THROW("waitid()", errmsg());
 	}
 	if (si.si_code != CLD_EXITED or (si.si_status | 1) != 1) {

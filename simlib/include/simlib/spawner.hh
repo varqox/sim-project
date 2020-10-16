@@ -13,7 +13,6 @@
 #include <pthread.h>
 #include <sys/resource.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
 #include <utility>

@@ -4,13 +4,13 @@
 #include "simlib/file_descriptor.hh"
 #include "simlib/overloaded.hh"
 #include "simlib/string_transform.hh"
+#include "simlib/syscalls.hh"
 #include "simlib/time.hh"
 
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <ctime>
-#include <sys/syscall.h>
 #include <unistd.h>
 #include <utility>
 #include <variant>
@@ -88,7 +88,7 @@ timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
 Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
                       clockid_t clock_id, int timeout_signal, int timer_signal)
 : clock_id_(clock_id)
-, creator_thread_id_(syscall(SYS_gettid))
+, creator_thread_id_(syscalls::gettid())
 , state_([&]() -> decltype(state_) {
 	STACK_UNWINDING_MARK;
 	assert(time_limit >= decltype(time_limit)::zero());
@@ -138,7 +138,7 @@ Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
 	sigevent sev{};
 	memset(&sev, 0, sizeof(sev));
 	sev.sigev_notify = SIGEV_THREAD_ID;
-	sev._sigev_un._tid = syscall(SYS_gettid); // sigev_notify_thread_id
+	sev._sigev_un._tid = syscalls::gettid(); // sigev_notify_thread_id
 	sev.sigev_signo = timer_signal;
 	sev.sigev_value.sival_ptr = &state.signal_handler_context;
 	if (timer_create(clock_id, &sev, &state.timer_id)) {
@@ -180,7 +180,7 @@ bool Spawner::Timer::timeout_signal_was_sent() const noexcept {
 	// sufficient. Atomic is of no help here, as the other thread might see see
 	// value of the atomic that was there before creation of the atomic
 	// itself...
-	assert(creator_thread_id_ == syscall(SYS_gettid) and
+	assert(creator_thread_id_ == syscalls::gettid() and
 	       "This can only be used by the same thread that constructed "
 	       "this object");
 	return std::visit(
@@ -235,7 +235,7 @@ Spawner::run(FilePath exec, const vector<string>& exec_args,
 	// Wait for child to be ready
 	siginfo_t si;
 	rusage ru{};
-	if (syscall(SYS_waitid, P_PID, cpid, &si, WSTOPPED | WEXITED, &ru) == -1) {
+	if (syscalls::waitid(P_PID, cpid, &si, WSTOPPED | WEXITED, &ru) == -1) {
 		THROW("waitid()", errmsg());
 	}
 
@@ -248,7 +248,7 @@ Spawner::run(FilePath exec, const vector<string>& exec_args,
 	// Useful when exception is thrown
 	CallInDtor kill_and_wait_child_guard([&] {
 		kill(-cpid, SIGKILL);
-		waitid(P_PID, cpid, &si, WEXITED);
+		syscalls::waitid(P_PID, cpid, &si, WEXITED, nullptr);
 	});
 
 	do_in_parent_after_fork(cpid);
@@ -265,14 +265,14 @@ Spawner::run(FilePath exec, const vector<string>& exec_args,
 	kill(cpid, SIGCONT); // There is only one process now, so '-' is not needed
 
 	// Wait for death of the child
-	waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
+	syscalls::waitid(P_PID, cpid, &si, WEXITED | WNOWAIT, nullptr);
 
 	// Get runtime and cpu runtime
 	auto runtime = timer.deactivate_and_get_runtime();
 	auto cpu_runtime = cpu_timer.deactivate_and_get_runtime();
 
 	kill_and_wait_child_guard.cancel();
-	syscall(SYS_waitid, P_PID, cpid, &si, WEXITED, &ru);
+	syscalls::waitid(P_PID, cpid, &si, WEXITED, &ru);
 
 	if (si.si_code != CLD_EXITED or si.si_status != 0) {
 		return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru, 0,

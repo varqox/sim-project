@@ -5,13 +5,13 @@
 #include "simlib/humanize.hh"
 #include "simlib/process.hh"
 #include "simlib/string_transform.hh"
+#include "simlib/syscalls.hh"
 #include "simlib/time.hh"
 
 #include <climits>
 #include <linux/version.h>
 #include <stdexcept>
 #include <sys/ptrace.h>
-#include <sys/syscall.h>
 #include <sys/uio.h>
 
 #if 0
@@ -504,8 +504,8 @@ Sandbox::Sandbox() {
 				// Advance to the syscall exit
 				(void)ptrace(PTRACE_SYSCALL, sandbox_.tracee_pid_, 0, 0);
 				siginfo_t si;
-				waitid(P_PID, sandbox_.tracee_pid_, &si,
-				       WSTOPPED | WEXITED | WNOWAIT);
+				syscalls::waitid(P_PID, sandbox_.tracee_pid_, &si,
+				                 WSTOPPED | WEXITED | WNOWAIT, nullptr);
 				if (si.si_status != (SIGTRAP | 0x80))
 				{ // Something other e.g. a signal (ignore)
 					return false; // Allow the signal to get to the tracee
@@ -1112,7 +1112,9 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 	// Wait for tracee to be ready
 	siginfo_t si;
 	rusage ru{};
-	if (waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED) == -1) {
+	if (syscalls::waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED,
+	                     nullptr) == -1)
+	{
 		THROW("waitid()", errmsg());
 	}
 
@@ -1130,7 +1132,7 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 	// Useful when exception is thrown
 	CallInDtor kill_and_wait_tracee_guard([&] {
 		kill(-tracee_pid_, SIGKILL);
-		waitid(P_PID, tracee_pid_, &si, WEXITED);
+		syscalls::waitid(P_PID, tracee_pid_, &si, WEXITED, nullptr);
 	});
 
 	STACK_UNWINDING_MARK;
@@ -1168,7 +1170,8 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
 		// Wait tracee_pid_ so that the CPU runtime will be accurate
 		if (not is_waited) {
-			waitid(P_PID, tracee_pid_, &si, WEXITED | WNOWAIT);
+			syscalls::waitid(P_PID, tracee_pid_, &si, WEXITED | WNOWAIT,
+			                 nullptr);
 		}
 
 		// Get runtime
@@ -1183,7 +1186,7 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 		}
 
 		kill_and_wait_tracee_guard.cancel(); // Tracee has died
-		syscall(SYS_waitid, P_PID, tracee_pid_, &si, WEXITED, &ru);
+		syscalls::waitid(P_PID, tracee_pid_, &si, WEXITED, &ru);
 	};
 
 	static_assert(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0),
@@ -1197,7 +1200,8 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 			// The last arg is the signal number to deliver
 			(void)ptrace(PTRACE_CONT, tracee_pid_, 0, 0);
 			// Waiting for events
-			waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED | WNOWAIT);
+			syscalls::waitid(P_PID, tracee_pid_, &si,
+			                 WSTOPPED | WEXITED | WNOWAIT, nullptr);
 
 			DEBUG_SANDBOX_VERBOSE_LOG(
 			   "waitid(): code: ", si.si_code, " status: ", si.si_status,

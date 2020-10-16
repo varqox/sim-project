@@ -4,11 +4,11 @@
 #include "simlib/file_descriptor.hh"
 #include "simlib/logger.hh"
 
-#include <sys/syscall.h>
+#include <sys/random.h>
 
 void fill_randomly(void* dest, size_t bytes) {
 	while (bytes > 0) {
-		ssize_t len = syscall(SYS_getrandom, dest, bytes, 0);
+		ssize_t len = getrandom(dest, bytes, 0);
 		if (len >= 0) {
 			bytes -= len;
 		} else if (errno != EINTR) {
