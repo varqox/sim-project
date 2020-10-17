@@ -150,7 +150,7 @@ protected:
 		(void)write_all(fd, str.data(), str.size());
 
 		auto err = errmsg(errnum);
-		(void)write_all(fd, err.data(), err.size);
+		(void)write_all(fd, err.data(), err.size());
 
 		_exit(-1);
 	};

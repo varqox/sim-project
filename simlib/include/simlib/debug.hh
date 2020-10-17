@@ -4,8 +4,11 @@
 #include "simlib/concat_tostr.hh"
 #include "simlib/inplace_array.hh"
 #include "simlib/logger.hh"
+#include "simlib/string_view.hh"
 
+#include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
@@ -51,14 +54,42 @@ inline const char* what_of(const std::exception& e) { return e.what(); }
 
 } // namespace simlib_debug
 
-inline InplaceBuff<4096> errmsg(int errnum) noexcept {
-	static_assert(
-	   to_string(std::numeric_limits<decltype(errnum)>::max()).size() + 1 <
-	      90, // +1 for minus a sign
-	   "Needed to fit error message in the returned buffer");
-	std::array<char, 4000> buff{};
-	return concat<4096>(" - ", errnum, ": ",
-	                    strerror_r(errnum, buff.data(), buff.size()));
+inline auto errmsg(int errnum) noexcept {
+	constexpr StringView s1 = " - ";
+	auto errnum_str = to_string(errnum);
+	constexpr StringView s2 = ": ";
+	constexpr auto bytes_for_error_description =
+	   64; // At the time of writing, longest error description is 50 bytes in
+	       // size (including null terminator)
+	StaticCStringBuff<s1.size() + decltype(errnum_str)::max_size() + s2.size() +
+	                  bytes_for_error_description>
+	   res;
+	size_t pos = 0;
+	// Prefix
+	for (auto s : {s1, StringView{errnum_str}, s2}) {
+		for (auto c : s) {
+			res[pos++] = c;
+		}
+	}
+	// Error description
+	const char* errstr =
+	   strerror_r(errnum, res.data() + pos, decltype(res)::max_size() - pos);
+	if (errstr == res.data() + pos) {
+		while (pos < decltype(res)::max_size() and res[pos] != '\0') {
+			++pos;
+		}
+	} else {
+		if (errstr == nullptr) {
+			errstr = "Unknown error";
+		}
+		while (pos < decltype(res)::max_size() and *errstr != '\0') {
+			res[pos++] = *(errstr++);
+		}
+	}
+	// Null terminator
+	res[pos] = '\0';
+	res.len_ = pos;
+	return res;
 }
 
 inline auto errmsg() noexcept { return errmsg(errno); }
