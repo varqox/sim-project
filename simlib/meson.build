@@ -161,6 +161,7 @@ tests = [
     ['test/directory.cc', [], {}],
     ['test/enum_val.cc', [], {}],
     ['test/event_queue.cc', [], {}],
+    ['test/fd_pread_buff.cc', [], {}],
     ['test/file_contents.cc', [], {}],
     ['test/file_descriptor.cc', [], {}],
     ['test/file_info.cc', [], {}],
