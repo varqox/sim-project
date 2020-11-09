@@ -108,10 +108,9 @@ void for_each_dir_component(DirType&& dir, Func&& func,
 		                              std::forward<ErrFunc>(readdir_failed));
 
 	} else {
-		dirent* file = nullptr;
 		for (;;) {
 			errno = 0;
-			file = readdir(dir);
+			dirent* file = readdir(dir);
 			if (file == nullptr) {
 				if (errno == 0) {
 					return; // No more entries
