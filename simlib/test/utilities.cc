@@ -97,7 +97,7 @@ TEST(utilities, filter_return_type) {
 	static_assert(std::is_same_v<set<int>&, decltype(filter(s, true_pred))>);
 	// xvalue
 	static_assert(
-	   std::is_same_v<set<int>, decltype(filter(set<int>{}, true_pred))>);
+		std::is_same_v<set<int>, decltype(filter(set<int>{}, true_pred))>);
 	// Check move only type
 	struct Foo {
 		Foo() = default;

@@ -32,25 +32,25 @@
  *   does not return.
  */
 template <class Main, class Cleanup, class... Signals>
-auto handle_signals_while_running(Main&& main_func,
-                                  Cleanup&& cleanup_before_getting_killed,
-                                  Signals... signals);
+auto handle_signals_while_running(
+	Main&& main_func, Cleanup&& cleanup_before_getting_killed,
+	Signals... signals);
 
 class HandleSignalsWhileRunning {
 	inline static FileDescriptor signal_eventfd{};
 
 	static uint64_t pack_signum(int signum) noexcept {
-		static_assert(sizeof(int) == 4,
-		              "Needed for the below hack to work properly");
+		static_assert(
+			sizeof(int) == 4, "Needed for the below hack to work properly");
 		uint32_t usignum = signum;
 		return (static_cast<uint64_t>(1) << 32 | usignum);
 	};
 
 	static int unpack_signum(uint64_t packed_signum) noexcept {
-		static_assert(sizeof(int) == 4,
-		              "Needed for the below hack to work properly");
-		return static_cast<uint32_t>(packed_signum &
-		                             ((static_cast<uint64_t>(1) << 32) - 1));
+		static_assert(
+			sizeof(int) == 4, "Needed for the below hack to work properly");
+		return static_cast<uint32_t>(
+			packed_signum & ((static_cast<uint64_t>(1) << 32) - 1));
 	};
 
 	static void signal_handler(int signum) noexcept {
@@ -62,27 +62,27 @@ class HandleSignalsWhileRunning {
 
 public:
 	template <class Main, class Cleanup, class... Signals>
-	friend auto
-	handle_signals_while_running(Main&& main_func,
-	                             Cleanup&& cleanup_before_getting_killed,
-	                             Signals... signals) {
-		static_assert(std::is_invocable_v<Main>,
-		              "main_func has to take no arguments");
+	friend auto handle_signals_while_running(
+		Main&& main_func, Cleanup&& cleanup_before_getting_killed,
+		Signals... signals) {
 		static_assert(
-		   std::is_invocable_v<Cleanup, int>,
-		   "cleanup_before_getting_killed has to take one argument -- "
-		   "killing signal number");
+			std::is_invocable_v<Main>, "main_func has to take no arguments");
 		static_assert(
-		   (std::is_same_v<Signals, int> and ...),
-		   "signals parameters have to be from of SIGINT, SIGTERM, etc.");
+			std::is_invocable_v<Cleanup, int>,
+			"cleanup_before_getting_killed has to take one argument -- "
+			"killing signal number");
+		static_assert(
+			(std::is_same_v<Signals, int> and ...),
+			"signals parameters have to be from of SIGINT, SIGTERM, etc.");
 
-		assert(not HandleSignalsWhileRunning::signal_eventfd.is_open() and
-		       "This function is already running, using this function "
-		       "simultaneously is impossible");
+		assert(
+			not HandleSignalsWhileRunning::signal_eventfd.is_open() and
+			"This function is already running, using this function "
+			"simultaneously is impossible");
 
 		// Prepare signal eventfd
 		HandleSignalsWhileRunning::signal_eventfd =
-		   eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+			eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 		if (not HandleSignalsWhileRunning::signal_eventfd.is_open()) {
 			THROW("eventfd()", errmsg());
 		}
@@ -99,7 +99,7 @@ public:
 		// main is complete and wait for its confirmation that no signal
 		// happened or handle the signal)
 		FileDescriptor main_func_ended_eventfd{
-		   eventfd(0, O_CLOEXEC | EFD_NONBLOCK)};
+			eventfd(0, O_CLOEXEC | EFD_NONBLOCK)};
 		if (not main_func_ended_eventfd.is_open()) {
 			THROW("eventfd()", errmsg());
 		}
@@ -119,8 +119,8 @@ public:
 			constexpr int signal_efd_idx = 0;
 			constexpr int main_func_ended_efd_idx = 1;
 			std::array<pollfd, 2> pfds{{
-			   {HandleSignalsWhileRunning::signal_eventfd, POLLIN, 0},
-			   {main_func_ended_eventfd, POLLIN, 0},
+				{HandleSignalsWhileRunning::signal_eventfd, POLLIN, 0},
+				{main_func_ended_eventfd, POLLIN, 0},
 			}};
 			for (int rc = 0;;) {
 				rc = poll(pfds.data(), 2, -1);
@@ -140,12 +140,12 @@ public:
 
 			if (pfds[signal_efd_idx].revents & POLLIN) {
 				uint64_t packed_signum = 0;
-				auto read_bytes =
-				   read(HandleSignalsWhileRunning::signal_eventfd,
-				        &packed_signum, sizeof(packed_signum));
+				auto read_bytes = read(
+					HandleSignalsWhileRunning::signal_eventfd, &packed_signum,
+					sizeof(packed_signum));
 				assert(read_bytes == sizeof(packed_signum));
 				int signum =
-				   HandleSignalsWhileRunning::unpack_signum(packed_signum);
+					HandleSignalsWhileRunning::unpack_signum(packed_signum);
 
 				try {
 					cleanup_before_getting_killed(signum);
@@ -166,9 +166,10 @@ public:
 				}
 			}
 
-			assert((pfds[main_func_ended_efd_idx].revents & POLLIN) and
-			       "There should be no other cases than the two handled here: "
-			       "signal or main_func ended");
+			assert(
+				(pfds[main_func_ended_efd_idx].revents & POLLIN) and
+				"There should be no other cases than the two handled here: "
+				"signal or main_func ended");
 			// Signal did not happen before the main has ended, so we are done
 		});
 
@@ -177,7 +178,7 @@ public:
 			// abnormally)
 			uint64_t one = 1;
 			auto written_bytes =
-			   write(main_func_ended_eventfd, &one, sizeof(one));
+				write(main_func_ended_eventfd, &one, sizeof(one));
 			assert(written_bytes == 8);
 			// Wait till the signal-handling thread kills the whole process or
 			// confirms that it is safe to proceed

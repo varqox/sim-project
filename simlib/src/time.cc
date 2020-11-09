@@ -20,17 +20,17 @@ static string date_impl(CStringView format, time_t curr_time, F func) {
 		time(&curr_time);
 	}
 
-	string buff(format.size() + 1 +
-	               std::count(format.begin(), format.end(), '%') * 25,
-	            '0');
+	string buff(
+		format.size() + 1 + std::count(format.begin(), format.end(), '%') * 25,
+		'0');
 
 	tm ptm{};
 	if (not func(&curr_time, &ptm)) {
 		THROW("Failed to convert time");
 	}
 
-	size_t rc = strftime(const_cast<char*>(buff.data()), buff.size(),
-	                     format.c_str(), &ptm);
+	size_t rc = strftime(
+		const_cast<char*>(buff.data()), buff.size(), format.c_str(), &ptm);
 
 	buff.resize(rc);
 	return buff;
@@ -46,8 +46,9 @@ string localdate(CStringView format, time_t curr_time) {
 
 bool is_datetime(const CStringView& str) noexcept {
 	struct tm t {};
-	return (str.size() == 19 &&
-	        strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
+	return (
+		str.size() == 19 &&
+		strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
 }
 
 time_t str_to_time_t(CStringView str, CStringView format) noexcept {

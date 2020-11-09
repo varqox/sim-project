@@ -36,9 +36,10 @@ public:
 
 		ExitStat() = default;
 
-		ExitStat(std::chrono::nanoseconds rt, std::chrono::nanoseconds cpu_time,
-		         int sic, int sis, const struct rusage& rus, uint64_t vp,
-		         std::string msg = {})
+		ExitStat(
+			std::chrono::nanoseconds rt, std::chrono::nanoseconds cpu_time,
+			int sic, int sis, const struct rusage& rus, uint64_t vp,
+			std::string msg = {})
 		: runtime(rt)
 		, cpu_runtime(cpu_time)
 		, si{sic, sis}
@@ -61,9 +62,9 @@ public:
 		std::optional<std::chrono::nanoseconds> real_time_limit;
 		std::optional<uint64_t> memory_limit; // in bytes
 		std::optional<std::chrono::nanoseconds>
-		   cpu_time_limit; // if not set and real time limit is set, then CPU
-		                   // time limit will be set to round(real time limit in
-		                   // seconds) + 1 seconds
+			cpu_time_limit; // if not set and real time limit is set, then CPU
+							// time limit will be set to round(real time limit
+							// in seconds) + 1 seconds
 		CStringView working_dir; // directory at which program will be run
 
 		constexpr Options()
@@ -76,11 +77,11 @@ public:
 		, working_dir(wd) {}
 
 		constexpr Options(
-		   int ifd, int ofd, int efd,
-		   std::optional<std::chrono::nanoseconds> rtl = std::nullopt,
-		   std::optional<uint64_t> ml = std::nullopt,
-		   std::optional<std::chrono::nanoseconds> ctl = std::nullopt,
-		   CStringView wd = CStringView("."))
+			int ifd, int ofd, int efd,
+			std::optional<std::chrono::nanoseconds> rtl = std::nullopt,
+			std::optional<uint64_t> ml = std::nullopt,
+			std::optional<std::chrono::nanoseconds> ctl = std::nullopt,
+			CStringView wd = CStringView("."))
 		: new_stdin_fd(ifd)
 		, new_stdout_fd(ofd)
 		, new_stderr_fd(efd)
@@ -130,10 +131,10 @@ public:
 	 *   information if any syscall fails
 	 */
 	static ExitStat run(
-	   FilePath exec, const std::vector<std::string>& exec_args,
-	   const Options& opts = Options(),
-	   const std::function<void(pid_t)>& do_in_parent_after_fork =
-	      [](pid_t /*unused*/) {});
+		FilePath exec, const std::vector<std::string>& exec_args,
+		const Options& opts = Options(),
+		const std::function<void(pid_t)>& do_in_parent_after_fork =
+			[](pid_t /*unused*/) {});
 
 protected:
 	// Sends @p str through @p fd and _exits with -1
@@ -144,8 +145,8 @@ protected:
 
 	// Sends @p str followed by error message of @p errnum through @p fd and
 	// _exits with -1
-	static void send_error_message_and_exit(int fd, int errnum,
-	                                        CStringView str) noexcept {
+	static void
+	send_error_message_and_exit(int fd, int errnum, CStringView str) noexcept {
 		(void)write_all(fd, str.data(), str.size());
 
 		auto err = errmsg(errnum);
@@ -185,10 +186,10 @@ protected:
 	 * @param do_before_exec function that is to be called before executing
 	 *   @p exec
 	 */
-	static void run_child(FilePath exec,
-	                      const std::vector<std::string>& exec_args,
-	                      const Options& opts, int fd,
-	                      const std::function<void()>& do_before_exec) noexcept;
+	static void run_child(
+		FilePath exec, const std::vector<std::string>& exec_args,
+		const Options& opts, int fd,
+		const std::function<void()>& do_before_exec) noexcept;
 
 	class Timer {
 		struct SignalHandlerContext {
@@ -224,9 +225,10 @@ protected:
 		 * @param timer_signal signal for which a timeout handler will be
 		 *installed
 		 **/
-		Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
-		      clockid_t clock_id, int timeout_signal = SIGKILL,
-		      int timer_signal = SIGRTMIN);
+		Timer(
+			pid_t watched_pid, std::chrono::nanoseconds time_limit,
+			clockid_t clock_id, int timeout_signal = SIGKILL,
+			int timer_signal = SIGRTMIN);
 
 		Timer(const Timer&) = delete;
 		Timer(Timer&&) = delete;

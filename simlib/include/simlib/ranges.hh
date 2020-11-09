@@ -17,12 +17,12 @@ struct reverse_view_impl {
 };
 
 template <class T>
-reverse_view_impl(int, T &&) -> reverse_view_impl<T&&>;
+reverse_view_impl(int, T&&) -> reverse_view_impl<T&&>;
 
 } // namespace detail
 
 // This way it will work without with temporaries calling any constructor: e.g.
-#define reverse_view(...)                                                      \
+#define reverse_view(...) \
 	detail::reverse_view_impl { 0, __VA_ARGS__ }
 
 namespace detail {
@@ -32,8 +32,8 @@ struct enumerate_view_iter {
 	size_t idx;
 	Iter iter;
 
-	friend bool operator!=(const enumerate_view_iter& a,
-	                       const enumerate_view_iter& b) {
+	friend bool
+	operator!=(const enumerate_view_iter& a, const enumerate_view_iter& b) {
 		return (a.iter != b.iter);
 	}
 
@@ -45,8 +45,9 @@ struct enumerate_view_iter {
 	using IterTraits = std::iterator_traits<Iter>;
 
 	std::conditional_t<
-	   std::is_const_v<std::remove_reference_t<typename IterTraits::reference>>,
-	   const enumerate_view_iter&, enumerate_view_iter&>
+		std::is_const_v<
+			std::remove_reference_t<typename IterTraits::reference>>,
+		const enumerate_view_iter&, enumerate_view_iter&>
 	operator*() {
 		return *this;
 	}
@@ -107,16 +108,16 @@ struct enumerate_view_struct {
 
 	constexpr auto begin() {
 		return enumerate_view_iter<decltype(std::begin(range)), T>{
-		   0, std::begin(range)};
+			0, std::begin(range)};
 	}
 	constexpr auto end() {
 		return enumerate_view_iter<decltype(std::begin(range)), T>{
-		   0, std::end(range)};
+			0, std::end(range)};
 	}
 };
 
 template <class T>
-enumerate_view_struct(int, T &&) -> enumerate_view_struct<T&&>;
+enumerate_view_struct(int, T&&) -> enumerate_view_struct<T&&>;
 
 } // namespace detail
 
@@ -131,5 +132,5 @@ enumerate_view_struct(int, T &&) -> enumerate_view_struct<T&&>;
 ///     std::cout << i << ": " << x << std::endl;
 /// }
 /// ```
-#define enumerate_view(...)                                                    \
+#define enumerate_view(...) \
 	detail::enumerate_view_struct { 0, __VA_ARGS__ }

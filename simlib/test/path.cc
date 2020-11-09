@@ -172,7 +172,7 @@ TEST(path, path_dirpath) {
 TEST(path, deepest_ancestor_dir_with_subpath_absolute_path) {
 	TemporaryDirectory tmp_dir("/tmp/path.test.XXXXXX");
 	StringView tmp_dir_pathname =
-	   StringView(tmp_dir.path()).without_trailing('/').remove_prefix(5);
+		StringView(tmp_dir.path()).without_trailing('/').remove_prefix(5);
 	assert(has_prefix(tmp_dir_pathname, "path.test."));
 	assert(tmp_dir_pathname.size() == 16);
 
@@ -187,82 +187,91 @@ TEST(path, deepest_ancestor_dir_with_subpath_absolute_path) {
 	ASSERT_EQ(create_file(tmp_dir.path() + "file"), 0);
 
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "d/file"),
-	   tmp_dir.path() + "a/b/c/d/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "d/file"),
+		tmp_dir.path() + "a/b/c/d/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "e/file"),
-	   tmp_dir.path() + "a/b/e/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "e/file"),
+		tmp_dir.path() + "a/b/e/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "f/file"),
-	   tmp_dir.path() + "a/f/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "f/file"),
+		tmp_dir.path() + "a/f/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "g/file"),
-	   tmp_dir.path() + "g/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "g/file"),
+		tmp_dir.path() + "g/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "file"),
-	   tmp_dir.path() + "file");
-	EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", ""),
-	          tmp_dir.path() + "a/b/c/");
-	EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "/"),
-	          tmp_dir.path() + "a/b/c/");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "file"),
+		tmp_dir.path() + "file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "/f/file"),
-	   tmp_dir.path() + "a/f/file");
-	EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/",
-	                                            "xxxxxxxxx"),
-	          std::nullopt);
-	EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/",
-	                                            tmp_dir_pathname),
-	          concat_tostr("/tmp/", tmp_dir_pathname));
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", ""),
+		tmp_dir.path() + "a/b/c/");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "tmp"),
-	   "/tmp");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "/"),
+		tmp_dir.path() + "a/b/c/");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "tmp/"),
-	   "/tmp/");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "/f/file"),
+		tmp_dir.path() + "a/f/file");
+	EXPECT_EQ(
+		deepest_ancestor_dir_with_subpath(
+			tmp_dir.path() + "a/b/c/", "xxxxxxxxx"),
+		std::nullopt);
+	EXPECT_EQ(
+		deepest_ancestor_dir_with_subpath(
+			tmp_dir.path() + "a/b/c/", tmp_dir_pathname),
+		concat_tostr("/tmp/", tmp_dir_pathname));
+	EXPECT_EQ(
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "tmp"),
+		"/tmp");
+	EXPECT_EQ(
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "tmp/"),
+		"/tmp/");
 
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "d/file"),
-	   std::nullopt);
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "d/file"),
+		std::nullopt);
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "e/file"),
-	   tmp_dir.path() + "a/b/e/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "e/file"),
+		tmp_dir.path() + "a/b/e/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "f/file"),
-	   tmp_dir.path() + "a/f/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "f/file"),
+		tmp_dir.path() + "a/f/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "g/file"),
-	   tmp_dir.path() + "g/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "g/file"),
+		tmp_dir.path() + "g/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "file"),
-	   tmp_dir.path() + "file");
-	EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", ""),
-	          tmp_dir.path() + "a/b/");
-	EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "/"),
-	          tmp_dir.path() + "a/b/");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "file"),
+		tmp_dir.path() + "file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "/f/file"),
-	   tmp_dir.path() + "a/f/file");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", ""),
+		tmp_dir.path() + "a/b/");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "xxxxxxxxx"),
-	   std::nullopt);
-	EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c",
-	                                            tmp_dir_pathname),
-	          concat_tostr("/tmp/", tmp_dir_pathname));
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "/"),
+		tmp_dir.path() + "a/b/");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "tmp"),
-	   "/tmp");
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "/f/file"),
+		tmp_dir.path() + "a/f/file");
 	EXPECT_EQ(
-	   deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "tmp/"),
-	   "/tmp/");
+		deepest_ancestor_dir_with_subpath(
+			tmp_dir.path() + "a/b/c", "xxxxxxxxx"),
+		std::nullopt);
+	EXPECT_EQ(
+		deepest_ancestor_dir_with_subpath(
+			tmp_dir.path() + "a/b/c", tmp_dir_pathname),
+		concat_tostr("/tmp/", tmp_dir_pathname));
+	EXPECT_EQ(
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "tmp"),
+		"/tmp");
+	EXPECT_EQ(
+		deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "tmp/"),
+		"/tmp/");
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(path_DeathTest, deepest_ancestor_dir_with_subpath_relative_path) {
 	auto test_impl = [] {
 		TemporaryDirectory tmp_dir("/tmp/path.test.XXXXXX");
-		ASSERT_EQ(chdir(tmp_dir.path().data()),
-		          0); // That is why it is a death test
+		ASSERT_EQ(
+			chdir(tmp_dir.path().data()),
+			0); // That is why it is a death test
 		ASSERT_EQ(mkdir_r("a/b/c/d/"), 0);
 		ASSERT_EQ(create_file("a/b/c/d/file"), 0);
 		ASSERT_EQ(mkdir_r("a/b/e/"), 0);
@@ -273,46 +282,48 @@ TEST(path_DeathTest, deepest_ancestor_dir_with_subpath_relative_path) {
 		ASSERT_EQ(create_file("g/file"), 0);
 		ASSERT_EQ(create_file("file"), 0);
 
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "d/file"),
-		          "a/b/c/d/file");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "e/file"),
-		          "a/b/e/file");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "f/file"),
-		          "a/f/file");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "g/file"),
-		          "g/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c/", "d/file"),
+			"a/b/c/d/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c/", "e/file"),
+			"a/b/e/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c/", "f/file"), "a/f/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c/", "g/file"), "g/file");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "file"), "file");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "g/"), "g/");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "g"), "g");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "/g/file"),
-		          "g/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c/", "/g/file"), "g/file");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", ""), "a/b/c/");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "/"), "a/b/c/");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c/", "x"),
-		          std::nullopt);
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c/", "x"), std::nullopt);
 
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "d/file"),
-		          std::nullopt);
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "e/file"),
-		          "a/b/e/file");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "f/file"),
-		          "a/f/file");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "g/file"),
-		          "g/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c", "d/file"), std::nullopt);
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c", "e/file"), "a/b/e/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c", "f/file"), "a/f/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c", "g/file"), "g/file");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "file"), "file");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "g/"), "g/");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "g"), "g");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "/g/file"),
-		          "g/file");
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c", "/g/file"), "g/file");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", ""), "a/b/");
 		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "/"), "a/b/");
-		EXPECT_EQ(deepest_ancestor_dir_with_subpath("a/b/c", "x"),
-		          std::nullopt);
+		EXPECT_EQ(
+			deepest_ancestor_dir_with_subpath("a/b/c", "x"), std::nullopt);
 	};
 	EXPECT_EXIT(
-	   {
-		   test_impl();
-		   exit(0);
-	   },
-	   ::testing::ExitedWithCode(0), "");
+		{
+			test_impl();
+			exit(0);
+		},
+		::testing::ExitedWithCode(0), "");
 }

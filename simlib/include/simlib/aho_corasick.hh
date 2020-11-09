@@ -11,14 +11,14 @@ public:
 
 	struct Node {
 		uint patt_id = 0; // pattern id which ends in this node or zero if such
-		                  // does not exist
+						  // does not exist
 		uint fail = 0; // fail edge
 		uint next_pattern = 0; // id of the longest pattern which is prefix of
-		                       // one ending in this node or zero if such
-		                       // does not exist
+							   // one ending in this node or zero if such
+							   // does not exist
 		std::vector<std::pair<char, uint>> sons; // sons (sorted array - for
-		                                         // small alphabets it's the
-		                                         // most efficient option)
+												 // small alphabets it's the
+												 // most efficient option)
 
 		// Returns id of son @p c or 0 if such does not exist
 		uint operator[](char c) const noexcept;

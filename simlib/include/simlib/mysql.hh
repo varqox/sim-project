@@ -88,7 +88,7 @@ public:
 	template <class U = T>
 	// NOLINTNEXTLINE(google-explicit-constructor)
 	operator std::enable_if_t<is_enum_val<U>, std::optional<EnumValType<T>>>()
-	   const {
+		const {
 		return has_no_value_ ? std::optional<T>() : value_;
 	}
 
@@ -150,7 +150,7 @@ public:
 
 	Result(Result&& r) noexcept
 	: connection_referencing_objects_no_(
-	     std::exchange(r.connection_referencing_objects_no_, nullptr))
+		  std::exchange(r.connection_referencing_objects_no_, nullptr))
 	, res_(std::exchange(r.res_, nullptr))
 	, row_(r.row_)
 	, lengths_(r.lengths_) {
@@ -169,7 +169,7 @@ public:
 		}
 
 		connection_referencing_objects_no_ =
-		   std::exchange(r.connection_referencing_objects_no_, nullptr);
+			std::exchange(r.connection_referencing_objects_no_, nullptr);
 		res_ = std::exchange(r.res_, nullptr);
 		row_ = r.row_;
 		lengths_ = r.lengths_;
@@ -195,7 +195,7 @@ public:
 
 	bool next() noexcept {
 		return (row_ = mysql_fetch_row(res_)) and
-		       (lengths_ = mysql_fetch_lengths(res_));
+			(lengths_ = mysql_fetch_lengths(res_));
 	}
 
 	unsigned fields_num() noexcept { return mysql_num_fields(res_); }
@@ -211,8 +211,9 @@ public:
 		STACK_UNWINDING_MARK;
 		DEBUG_MYSQL(throw_assert(idx < fields_num());)
 		if (is_null(idx)) {
-			THROW("Encountered NULL at column ", idx,
-			      " that did not expect nullable data");
+			THROW(
+				"Encountered NULL at column ", idx,
+				" that did not expect nullable data");
 		}
 
 		return {row_[idx], lengths_[idx]};
@@ -283,7 +284,7 @@ public:
 
 	Statement(Statement&& s) noexcept
 	: connection_referencing_objects_no_(
-	     std::exchange(s.connection_referencing_objects_no_, nullptr))
+		  std::exchange(s.connection_referencing_objects_no_, nullptr))
 	, stmt_(std::exchange(s.stmt_, nullptr))
 	, binds_size_(std::exchange(s.binds_size_, 0))
 	, binds_(std::move(s.binds_))
@@ -302,7 +303,7 @@ public:
 		}
 
 		connection_referencing_objects_no_ =
-		   std::exchange(s.connection_referencing_objects_no_, nullptr);
+			std::exchange(s.connection_referencing_objects_no_, nullptr);
 		stmt_ = std::exchange(s.stmt_, nullptr);
 		binds_size_ = std::exchange(s.binds_size_, 0);
 		binds_ = std::move(s.binds_);
@@ -331,7 +332,7 @@ public:
 private:
 	template <class T>
 	static constexpr auto mysql_type =
-	   []() -> decltype(MYSQL_BIND::buffer_type) {
+		[]() -> decltype(MYSQL_BIND::buffer_type) {
 		// NOLINTNEXTLINE(google-runtime-int)
 		if constexpr (meta::is_one_of<T, signed char, unsigned char>) {
 			return MYSQL_TYPE_TINY;
@@ -354,8 +355,8 @@ private:
 			} else if constexpr (sizeof(long) == sizeof(long long)) {
 				return MYSQL_TYPE_LONGLONG;
 			} else {
-				static_assert(always_false<T>,
-				              "There is no equivalent for type long");
+				static_assert(
+					always_false<T>, "There is no equivalent for type long");
 			}
 		} else {
 			static_assert(always_false<T>, "Invalid type T");
@@ -374,7 +375,7 @@ public:
 	}
 
 	void bind(unsigned idx, char* str, size_t& length, size_t max_size)
-	   NO_DEBUG_MYSQL(noexcept) {
+		NO_DEBUG_MYSQL(noexcept) {
 		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
 		clear_bind(idx);
 		binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
@@ -419,8 +420,8 @@ public:
 		bind(idx, saved_str.data());
 	}
 
-	template <class T,
-	          std::enable_if_t<not std::is_lvalue_reference_v<T>, int> = 0>
+	template <
+		class T, std::enable_if_t<not std::is_lvalue_reference_v<T>, int> = 0>
 	void bind(unsigned idx, T&&) = delete; // Temporaries are NOT safe
 
 	void bind(unsigned idx, std::nullptr_t) NO_DEBUG_MYSQL(noexcept) {
@@ -482,16 +483,18 @@ public:
 
 			if constexpr (std::is_same_v<TypeNoRefNoCV, bool>) {
 				return static_cast<unsigned char>(arg);
-			} else if constexpr (std::is_pointer_v<Type> and
-			                     std::is_same_v<TypeNoRef, const char*>)
+			} else if constexpr (
+				std::is_pointer_v<Type> and
+				std::is_same_v<TypeNoRef, const char*>)
 			{
 				return InplaceBuff<inplace_buff_size>(arg);
-			} else if constexpr (std::is_array_v<TypeNoRef> and
-			                     std::is_same_v<ArrayType, const char>)
+			} else if constexpr (
+				std::is_array_v<TypeNoRef> and
+				std::is_same_v<ArrayType, const char>)
 			{
 				return InplaceBuff<inplace_buff_size>(arg);
-			} else if constexpr (std::is_base_of_v<StringBase<const char>,
-			                                       TypeNoRefNoCV>) {
+			} else if constexpr (std::is_base_of_v<
+									 StringBase<const char>, TypeNoRefNoCV>) {
 				return InplaceBuff<inplace_buff_size>(arg);
 			} else if constexpr (std::is_same_v<TypeNoRef, const std::string>) {
 				return InplaceBuff<inplace_buff_size>(arg);
@@ -506,8 +509,8 @@ public:
 
 		[this](auto&&... impl_args) {
 			bind_all(impl_args...); // std::forward is intentionally omitted to
-			                        // make bind_all() think that all arguments
-			                        // are references
+									// make bind_all() think that all arguments
+									// are references
 			execute();
 		}(transform_arg(std::forward<Args>(args))...);
 		(void)transform_arg; // Disable GCC warning
@@ -524,7 +527,7 @@ public:
 	}
 
 	void res_bind(unsigned idx, InplaceBuffBase& buff)
-	   NO_DEBUG_MYSQL(noexcept) {
+		NO_DEBUG_MYSQL(noexcept) {
 		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
 		clear_res_bind(idx);
 		res_binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
@@ -543,7 +546,7 @@ public:
 	/// Binds optional value @p x - std::nullopt corresponds to NULL
 	template <class T>
 	void res_bind(unsigned idx, MySQL::Optional<T>& x)
-	   NO_DEBUG_MYSQL(noexcept) {
+		NO_DEBUG_MYSQL(noexcept) {
 		res_bind(idx, x.value_);
 		res_binds_[idx].is_null = &x.has_no_value_;
 	}
@@ -584,9 +587,10 @@ public:
 			for (unsigned idx = 0; idx < res_binds_size_; ++idx) {
 				auto is_null = res_binds_[idx].is_null;
 				if (is_null and *is_null and
-				    is_null == &res_binds_[idx].is_null_value) {
-					THROW("Encountered NULL at column ", idx,
-					      " that did not expect nullable data");
+					is_null == &res_binds_[idx].is_null_value) {
+					THROW(
+						"Encountered NULL at column ", idx,
+						" that did not expect nullable data");
 				}
 			}
 
@@ -707,7 +711,7 @@ private:
 		return next_connection_id++;
 	}
 
-	            size_t connection_id = get_next_connection_id();)
+				size_t connection_id = get_next_connection_id();)
 
 	void reconnect() {
 		InplaceBuff<32> host(conn_->host);
@@ -731,9 +735,8 @@ private:
 	}
 
 	template <class Func2, class Func3, class Func, class... Args>
-	auto call_and_try_reconnecting_on_error_impl(Func2&& resetter,
-	                                             Func3&& error_msg, Func&& func,
-	                                             Args&&... args) {
+	auto call_and_try_reconnecting_on_error_impl(
+		Func2&& resetter, Func3&& error_msg, Func&& func, Args&&... args) {
 		STACK_UNWINDING_MARK;
 		// std::forward is omitted as we may use arguments second time
 		auto rc = func(args...);
@@ -741,8 +744,9 @@ private:
 			return rc;
 		}
 
-		if (not is_one_of(static_cast<int>(mysql_errno(conn_)),
-		                  CR_SERVER_GONE_ERROR, CR_SERVER_LOST))
+		if (not is_one_of(
+				static_cast<int>(mysql_errno(conn_)), CR_SERVER_GONE_ERROR,
+				CR_SERVER_LOST))
 		{
 			THROW(error_msg());
 		}
@@ -767,8 +771,8 @@ private:
 	auto call_and_try_reconnecting_on_error(Func&& func, Args&&... args) {
 		STACK_UNWINDING_MARK;
 		return call_and_try_reconnecting_on_error_impl(
-		   [] {}, [&] { return mysql_error(conn_); }, std::forward<Func>(func),
-		   std::forward<Args>(args)...);
+			[] {}, [&] { return mysql_error(conn_); }, std::forward<Func>(func),
+			std::forward<Args>(args)...);
 	}
 
 public:
@@ -788,7 +792,7 @@ public:
 	Connection(Connection&& c) noexcept
 	: conn_(std::exchange(c.conn_, nullptr))
 	, referencing_objects_no_(c.referencing_objects_no_)
-	     DEBUG_MYSQL(, connection_id(c.connection_id)) {}
+		  DEBUG_MYSQL(, connection_id(c.connection_id)) {}
 
 	Connection& operator=(const Connection&) = delete;
 
@@ -824,8 +828,8 @@ public:
 		my_bool x = true;
 		(void)mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
 
-		if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr,
-		                           0)) {
+		if (not mysql_real_connect(
+				conn_, host, user, passwd, db, 0, nullptr, 0)) {
 			THROW(mysql_error(conn_));
 		}
 
@@ -841,54 +845,61 @@ public:
 	}
 
 	bool disconnected() noexcept {
-		return (mysql_ping(conn_) != 0 and
-		        mysql_errno(conn_) == CR_SERVER_GONE_ERROR);
+		return (
+			mysql_ping(conn_) != 0 and
+			mysql_errno(conn_) == CR_SERVER_GONE_ERROR);
 	}
 
-	template <class... Args,
-	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+	template <
+		class... Args,
+		std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	Result query(Args&&... sql) {
 		STACK_UNWINDING_MARK;
 		auto sql_str = concat(std::forward<Args>(sql)...);
-		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ",
-		                   sql_str);)
-		call_and_try_reconnecting_on_error(mysql_real_query, *this,
-		                                   sql_str.data(), sql_str.size);
+		DEBUG_MYSQL(
+			errlog(
+				"MySQL (connection ", connection_id, "): query -> ", sql_str);)
+		call_and_try_reconnecting_on_error(
+			mysql_real_query, *this, sql_str.data(), sql_str.size);
 
 		MYSQL_RES* res =
-		   call_and_try_reconnecting_on_error(mysql_store_result, *this);
+			call_and_try_reconnecting_on_error(mysql_store_result, *this);
 		return {res, referencing_objects_no_};
 	}
 
-	template <class... Args,
-	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+	template <
+		class... Args,
+		std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	void update(Args&&... sql) {
 		STACK_UNWINDING_MARK;
 		auto sql_str = concat(std::forward<Args>(sql)...);
-		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): update -> ",
-		                   sql_str);)
-		call_and_try_reconnecting_on_error(mysql_real_query, *this,
-		                                   sql_str.data(), sql_str.size);
+		DEBUG_MYSQL(
+			errlog(
+				"MySQL (connection ", connection_id, "): update -> ", sql_str);)
+		call_and_try_reconnecting_on_error(
+			mysql_real_query, *this, sql_str.data(), sql_str.size);
 	}
 
-	template <class... Args,
-	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+	template <
+		class... Args,
+		std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	Statement prepare(Args&&... sql) {
 		STACK_UNWINDING_MARK;
 		auto sql_str = concat(std::forward<Args>(sql)...);
-		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id,
-		                   "): prepare -> ", sql_str);)
+		DEBUG_MYSQL(errlog(
+						"MySQL (connection ", connection_id, "): prepare -> ",
+						sql_str);)
 		MYSQL_STMT* stmt =
-		   call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+			call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
 		try {
 			call_and_try_reconnecting_on_error_impl(
-			   [&] {
-				   (void)mysql_stmt_close(stmt);
-				   stmt = call_and_try_reconnecting_on_error(mysql_stmt_init,
-				                                             *this);
-			   },
-			   [&] { return mysql_stmt_error(stmt); }, mysql_stmt_prepare, stmt,
-			   sql_str.data(), sql_str.size);
+				[&] {
+					(void)mysql_stmt_close(stmt);
+					stmt = call_and_try_reconnecting_on_error(
+						mysql_stmt_init, *this);
+				},
+				[&] { return mysql_stmt_error(stmt); }, mysql_stmt_prepare,
+				stmt, sql_str.data(), sql_str.size);
 
 		} catch (...) {
 			(void)mysql_stmt_close(stmt);

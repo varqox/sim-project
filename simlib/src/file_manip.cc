@@ -67,7 +67,7 @@ int mkdir_r(string path, mode_t mode) noexcept {
  */
 static int __remove_rat(int dirfd, FilePath path) noexcept {
 	int fd =
-	   openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+		openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 	if (fd == -1) {
 		return unlinkat(dirfd, path, 0);
 	}
@@ -81,30 +81,30 @@ static int __remove_rat(int dirfd, FilePath path) noexcept {
 	int ec = 0;
 	int rc = 0;
 	for_each_dir_component(
-	   dir,
-	   [&](dirent* file) -> repeating {
+		dir,
+		[&](dirent* file) -> repeating {
 #ifdef _DIRENT_HAVE_D_TYPE
-		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
-			   if (__remove_rat(fd, file->d_name)) {
-				   ec = errno;
-				   rc = -1;
-				   return stop_repeating;
-			   }
+				if (__remove_rat(fd, file->d_name)) {
+					ec = errno;
+					rc = -1;
+					return stop_repeating;
+				}
 #ifdef _DIRENT_HAVE_D_TYPE
-		   } else if (unlinkat(fd, file->d_name, 0)) {
-			   ec = errno;
-			   rc = -1;
-			   return stop_repeating;
-		   }
+			} else if (unlinkat(fd, file->d_name, 0)) {
+				ec = errno;
+				rc = -1;
+				return stop_repeating;
+			}
 #endif
 
-		   return continue_repeating;
-	   },
-	   [&] {
-		   ec = errno;
-		   rc = -1;
-	   });
+			return continue_repeating;
+		},
+		[&] {
+			ec = errno;
+			rc = -1;
+		});
 
 	(void)closedir(dir);
 
@@ -121,8 +121,8 @@ int remove_rat(int dirfd, FilePath path) noexcept {
 }
 
 int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
-	int fd =
-	   openat(dirfd, pathname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	int fd = openat(
+		dirfd, pathname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 	if (fd == -1) {
 		return -1;
 	}
@@ -138,30 +138,30 @@ int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
 	int ec = 0;
 	int rc = 0;
 	for_each_dir_component(
-	   dir,
-	   [&](dirent* file) -> repeating {
+		dir,
+		[&](dirent* file) -> repeating {
 #ifdef _DIRENT_HAVE_D_TYPE
-		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
-			   if (__remove_rat(fd, file->d_name)) {
-				   ec = errno;
-				   rc = -1;
-				   return stop_repeating;
-			   }
+				if (__remove_rat(fd, file->d_name)) {
+					ec = errno;
+					rc = -1;
+					return stop_repeating;
+				}
 #ifdef _DIRENT_HAVE_D_TYPE
-		   } else if (unlinkat(fd, file->d_name, 0)) {
-			   ec = errno;
-			   rc = -1;
-			   return stop_repeating;
-		   }
+			} else if (unlinkat(fd, file->d_name, 0)) {
+				ec = errno;
+				rc = -1;
+				return stop_repeating;
+			}
 #endif
 
-		   return continue_repeating;
-	   },
-	   [&] {
-		   ec = errno;
-		   rc = -1;
-	   });
+			return continue_repeating;
+		},
+		[&] {
+			ec = errno;
+			rc = -1;
+		});
 
 	(void)closedir(dir);
 
@@ -187,7 +187,7 @@ int blast(int infd, int outfd) noexcept {
 	ssize_t len = 0;
 	ssize_t written = 0;
 	while (len = read(infd, buff.data(), buff.size()),
-	       len > 0 || (len == -1 && errno == EINTR))
+		   len > 0 || (len == -1 && errno == EINTR))
 	{
 		ssize_t pos = 0;
 		while (pos < len) {
@@ -207,8 +207,9 @@ int blast(int infd, int outfd) noexcept {
 	return 0;
 }
 
-int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
-                        FilePath dest, mode_t mode) noexcept {
+int copyat_using_rename(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
+	mode_t mode) noexcept {
 	FileDescriptor src_fd{openat(src_dirfd, src, O_RDONLY | O_CLOEXEC)};
 	if (not src_fd.is_open()) {
 		return -1;
@@ -219,9 +220,9 @@ int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
 		InplaceBuff<PATH_MAX> tmp_dest{std::in_place, dest, '.'};
 		tmp_dest.resize(tmp_dest.size + suffix_len + 1); // +1 for trailing '\0'
 		tmp_dest[--tmp_dest.size] = '\0';
-		auto opt_fd =
-		   create_unique_file(dest_dirfd, tmp_dest.data(), tmp_dest.size,
-		                      suffix_len, O_WRONLY | O_CLOEXEC, mode);
+		auto opt_fd = create_unique_file(
+			dest_dirfd, tmp_dest.data(), tmp_dest.size, suffix_len,
+			O_WRONLY | O_CLOEXEC, mode);
 		if (not opt_fd) {
 			return -1; // errno is already set
 		}
@@ -235,8 +236,8 @@ int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
 			return -1;
 		}
 		(void)dest_fd.close(); // Close file descriptor before renaming to avoid
-		                       // racy ETXTBSY if someone will try execute it
-		                       // before we close dest_fd
+							   // racy ETXTBSY if someone will try execute it
+							   // before we close dest_fd
 		if (renameat(dest_dirfd, tmp_dest.to_cstr().data(), dest_dirfd, dest)) {
 			return -1;
 		}
@@ -249,11 +250,12 @@ int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
 	}
 }
 
-int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
-           mode_t mode) noexcept {
+int copyat(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
+	mode_t mode) noexcept {
 	constexpr auto open_flags = O_WRONLY | O_TRUNC | O_CLOEXEC;
 	FileDescriptor out(
-	   openat(dest_dirfd, dest, open_flags | O_CREAT | O_EXCL, mode));
+		openat(dest_dirfd, dest, open_flags | O_CREAT | O_EXCL, mode));
 	bool file_created = true;
 	if (not out.is_open() and errno == EEXIST) {
 		file_created = false;
@@ -289,8 +291,8 @@ int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
 	return 0;
 }
 
-int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
-                        FilePath dest) noexcept {
+int copyat_using_rename(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept {
 	struct stat64 sb {};
 	if (fstatat64(src_dirfd, src, &sb, 0)) {
 		return -1;
@@ -298,8 +300,8 @@ int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
 	return copyat_using_rename(src_dirfd, src, dest_dirfd, dest, sb.st_mode);
 }
 
-int copyat(int src_dirfd, FilePath src, int dest_dirfd,
-           FilePath dest) noexcept {
+int copyat(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept {
 	struct stat64 sb {};
 	if (fstatat64(src_dirfd, src, &sb, 0)) {
 		return -1;
@@ -314,8 +316,8 @@ static uint current_process_threads_num() {
 	return *opt;
 }
 
-void thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd,
-                             FilePath dest, mode_t mode) {
+void thread_fork_safe_copyat(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode) {
 	STACK_UNWINDING_MARK;
 	if (current_process_threads_num() == 1) {
 		if (copyat(src_dirfd, src, dest_dirfd, dest, mode)) {
@@ -376,8 +378,8 @@ void thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd,
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
-                      FilePath dest) noexcept {
+static int __copy_rat(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept {
 	int src_fd = openat(src_dirfd, src, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 	if (src_fd == -1) {
 		if (errno == ENOTDIR) {
@@ -406,33 +408,33 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
 	int ec = 0;
 	int rc = 0;
 	for_each_dir_component(
-	   src_dir,
-	   [&](dirent* file) -> repeating {
+		src_dir,
+		[&](dirent* file) -> repeating {
 #ifdef _DIRENT_HAVE_D_TYPE
-		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
-			   if (__copy_rat(src_fd, file->d_name, dest_fd, file->d_name)) {
-				   ec = errno;
-				   rc = -1;
-				   return stop_repeating;
-			   }
+				if (__copy_rat(src_fd, file->d_name, dest_fd, file->d_name)) {
+					ec = errno;
+					rc = -1;
+					return stop_repeating;
+				}
 
 #ifdef _DIRENT_HAVE_D_TYPE
-		   } else {
-			   if (copyat(src_fd, file->d_name, dest_fd, file->d_name)) {
-				   ec = errno;
-				   rc = -1;
-				   return stop_repeating;
-			   }
-		   }
+			} else {
+				if (copyat(src_fd, file->d_name, dest_fd, file->d_name)) {
+					ec = errno;
+					rc = -1;
+					return stop_repeating;
+				}
+			}
 #endif
 
-		   return continue_repeating;
-	   },
-	   [&] {
-		   ec = errno;
-		   rc = -1;
-	   });
+			return continue_repeating;
+		},
+		[&] {
+			ec = errno;
+			rc = -1;
+		});
 
 	closedir(src_dir);
 	close(dest_fd);
@@ -444,8 +446,8 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
 	return rc;
 }
 
-int copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
-             FilePath dest) noexcept {
+int copy_rat(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept {
 	struct stat64 sb {};
 	if (fstatat64(src_dirfd, src, &sb, 0) == -1) {
 		return -1;

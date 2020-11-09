@@ -14,8 +14,8 @@ int64_t microtime() noexcept;
 std::string date(CStringView format, time_t curr_time = -1);
 
 // Returns UTC date @p tp in format of @p format (format like in strftime(3))
-inline std::string date(CStringView format,
-                        std::chrono::system_clock::time_point tp) {
+inline std::string
+date(CStringView format, std::chrono::system_clock::time_point tp) {
 	return date(format, std::chrono::system_clock::to_time_t(tp));
 }
 
@@ -35,8 +35,8 @@ inline std::string mysql_date(std::chrono::system_clock::time_point tp) {
 std::string localdate(CStringView format, time_t curr_time = -1);
 
 // Returns local date @p tp in format of @p format (format like in strftime(3))
-inline std::string localdate(CStringView format,
-                             std::chrono::system_clock::time_point tp) {
+inline std::string
+localdate(CStringView format, std::chrono::system_clock::time_point tp) {
 	return localdate(format, std::chrono::system_clock::to_time_t(tp));
 }
 
@@ -64,16 +64,16 @@ bool is_datetime(const CStringView& str) noexcept;
  *
  * @errors The same that occur for strptime(3) and timegm(3)
  */
-time_t str_to_time_t(CStringView str, CStringView format = CStringView{
-                                         "%Y-%m-%d %H:%M:%S"}) noexcept;
+time_t str_to_time_t(
+	CStringView str,
+	CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) noexcept;
 
 /**
  * @brief Converts a @p str containing time in format @p format to time_point
  * @errors The same that occur for str_to_time_t() but thrown as exceptions
  */
-inline std::chrono::system_clock::time_point
-str_to_time_point(CStringView str,
-                  CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
+inline std::chrono::system_clock::time_point str_to_time_point(
+	CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
 	time_t t = str_to_time_t(str, format);
 	if (t == -1) {
 		THROW("str_to_time_t()", errmsg());
@@ -120,15 +120,17 @@ constexpr bool operator!=(timespec a, timespec b) noexcept {
 }
 
 constexpr bool operator<(timespec a, timespec b) noexcept {
-	return (a.tv_sec < b.tv_sec or
-	        (a.tv_sec == b.tv_sec and a.tv_nsec < b.tv_nsec));
+	return (
+		a.tv_sec < b.tv_sec or
+		(a.tv_sec == b.tv_sec and a.tv_nsec < b.tv_nsec));
 }
 
 constexpr bool operator>(timespec a, timespec b) noexcept { return b < a; }
 
 constexpr bool operator<=(timespec a, timespec b) noexcept {
-	return (a.tv_sec < b.tv_sec or
-	        (a.tv_sec == b.tv_sec and a.tv_nsec <= b.tv_nsec));
+	return (
+		a.tv_sec < b.tv_sec or
+		(a.tv_sec == b.tv_sec and a.tv_nsec <= b.tv_nsec));
 }
 
 constexpr bool operator>=(timespec a, timespec b) noexcept { return b <= a; }
@@ -170,24 +172,26 @@ constexpr bool operator!=(timeval a, timeval b) noexcept {
 }
 
 constexpr bool operator<(timeval a, timeval b) noexcept {
-	return (a.tv_sec < b.tv_sec or
-	        (a.tv_sec == b.tv_sec and a.tv_usec < b.tv_usec));
+	return (
+		a.tv_sec < b.tv_sec or
+		(a.tv_sec == b.tv_sec and a.tv_usec < b.tv_usec));
 }
 
 constexpr bool operator>(timeval a, timeval b) noexcept { return b < a; }
 
 constexpr bool operator<=(timeval a, timeval b) noexcept {
-	return (a.tv_sec < b.tv_sec or
-	        (a.tv_sec == b.tv_sec and a.tv_usec <= b.tv_usec));
+	return (
+		a.tv_sec < b.tv_sec or
+		(a.tv_sec == b.tv_sec and a.tv_usec <= b.tv_usec));
 }
 
 constexpr bool operator>=(timeval a, timeval b) noexcept { return b <= a; }
 
 template <
-   size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-              11> // +11
-                  // for terminating null and decimal point and the
-                  // fraction part
+	size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
+		11> // +11
+			// for terminating null and decimal point and the
+			// fraction part
 constexpr StaticCStringBuff<N>
 timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
 	auto res = to_string<uint64_t, N>(x.tv_sec);
@@ -217,10 +221,10 @@ timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
 }
 
 template <
-   size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-              8> // +8
-                 // for terminating null and decimal point and the
-                 // fraction part
+	size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
+		8> // +8
+		   // for terminating null and decimal point and the
+		   // fraction part
 constexpr StaticCStringBuff<N>
 timeval_to_string(timeval x, uint prec, bool trim_zeros = true) noexcept {
 	auto res = to_string<uint64_t, N>(x.tv_sec);
@@ -273,16 +277,17 @@ constexpr bool is_power_of_10(T x) noexcept {
  *
  * @return floating-point @p dur in seconds as string
  */
-template <class Rep, class Period,
-          size_t N = decltype(to_string(std::declval<Rep>()))::max_size() +
-                     3> // +3 for sign, terminating null and decimal point
-constexpr StaticCStringBuff<N>
-to_string(const std::chrono::duration<Rep, Period>& dur,
-          bool trim_zeros = true) noexcept {
+template <
+	class Rep, class Period,
+	size_t N = decltype(to_string(std::declval<Rep>()))::max_size() +
+		3> // +3 for sign, terminating null and decimal point
+constexpr StaticCStringBuff<N> to_string(
+	const std::chrono::duration<Rep, Period>& dur,
+	bool trim_zeros = true) noexcept {
 	static_assert(Period::num == 1, "Needed below");
 	static_assert(is_power_of_10(Period::den), "Needed below");
 	auto dec_dur =
-	   std::chrono::duration_cast<std::chrono::duration<intmax_t>>(dur);
+		std::chrono::duration_cast<std::chrono::duration<intmax_t>>(dur);
 	auto res = to_string<Rep, N>(dec_dur.count());
 	res[res.len_++] = '.';
 
@@ -316,12 +321,12 @@ to_string(const std::chrono::duration<Rep, Period>& dur,
 
 constexpr std::chrono::microseconds to_duration(const timeval& tv) noexcept {
 	return std::chrono::seconds(tv.tv_sec) +
-	       std::chrono::microseconds(tv.tv_usec);
+		std::chrono::microseconds(tv.tv_usec);
 }
 
 constexpr std::chrono::nanoseconds to_duration(const timespec& ts) noexcept {
 	return std::chrono::seconds(ts.tv_sec) +
-	       std::chrono::nanoseconds(ts.tv_nsec);
+		std::chrono::nanoseconds(ts.tv_nsec);
 }
 
 // TODO: This works for positive durations - check it for negative
@@ -329,18 +334,18 @@ template <class Rep, class Period>
 timespec to_timespec(const std::chrono::duration<Rep, Period>& dur) noexcept {
 	auto sec_dur = std::chrono::duration_cast<std::chrono::seconds>(dur);
 	auto nsec =
-	   std::chrono::duration_cast<std::chrono::nanoseconds>(dur - sec_dur);
+		std::chrono::duration_cast<std::chrono::nanoseconds>(dur - sec_dur);
 	return {sec_dur.count(), nsec.count()};
 }
 
 constexpr std::chrono::nanoseconds to_nanoseconds(const timespec& ts) noexcept {
 	return std::chrono::seconds(ts.tv_sec) +
-	       std::chrono::nanoseconds(ts.tv_nsec);
+		std::chrono::nanoseconds(ts.tv_nsec);
 }
 
 template <class Rep, class Period>
 constexpr auto
 floor_to_10ms(const std::chrono::duration<Rep, Period>& time) noexcept {
 	return std::chrono::duration_cast<
-	   std::chrono::duration<intmax_t, std::centi>>(time);
+		std::chrono::duration<intmax_t, std::centi>>(time);
 }

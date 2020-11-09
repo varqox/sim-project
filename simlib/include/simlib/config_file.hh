@@ -18,11 +18,12 @@ public:
 		explicit ParseError(const std::string& msg)
 		: runtime_error(msg) {}
 
-		template <class... Args,
-		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+		template <
+			class... Args,
+			std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		ParseError(size_t line, size_t pos, Args&&... msg)
-		: runtime_error(concat_tostr("line ", line, ':', pos, ": ",
-		                             std::forward<Args>(msg)...)) {}
+		: runtime_error(concat_tostr(
+			  "line ", line, ':', pos, ": ", std::forward<Args>(msg)...)) {}
 
 		ParseError(const ParseError& pe) = default;
 		ParseError(ParseError&&) noexcept = default;
@@ -43,7 +44,7 @@ public:
 	class Variable {
 	public:
 		static constexpr uint8_t SET = 1; // set if variable appears in the
-		                                  // config
+										  // config
 		static constexpr uint8_t ARRAY = 2; // set if variable is an array
 
 		struct ValueSpan {
@@ -72,8 +73,9 @@ public:
 
 		// Returns value as bool or false on error
 		[[nodiscard]] bool as_bool() const noexcept {
-			return (str_ == "1" || lower_equal(str_, "on") ||
-			        lower_equal(str_, "true"));
+			return (
+				str_ == "1" || lower_equal(str_, "on") ||
+				lower_equal(str_, "true"));
 		}
 
 		template <class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>

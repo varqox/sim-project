@@ -17,8 +17,8 @@ public:
 	/// The last six characters of template must be "XXXXXX" and these are
 	/// replaced with a string that makes the filename unique.
 	explicit OpenedTemporaryFile(std::string templ) {
-		throw_assert(has_suffix(templ, "XXXXXX") &&
-		             "this is needed by mkstemp");
+		throw_assert(
+			has_suffix(templ, "XXXXXX") && "this is needed by mkstemp");
 		fd_ = mkstemp(templ.data());
 		if (not fd_.is_open()) {
 			THROW("mkstemp() failed", errmsg());

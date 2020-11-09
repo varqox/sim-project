@@ -8,7 +8,8 @@ class Defer {
 
 public:
 	// NOLINTNEXTLINE(google-explicit-constructor)
-	Defer(Func func) try : func_(std::move(func))
+	Defer(Func func) try
+	: func_(std::move(func))
 	{
 	} catch (...) {
 		func();

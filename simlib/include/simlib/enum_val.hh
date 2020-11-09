@@ -5,8 +5,8 @@
 template <class Enum>
 class EnumVal {
 public:
-	static_assert(std::is_enum<Enum>::value,
-	              "EnumVal is designed only for enums");
+	static_assert(
+		std::is_enum<Enum>::value, "EnumVal is designed only for enums");
 	using ValType = std::underlying_type_t<Enum>;
 
 private:

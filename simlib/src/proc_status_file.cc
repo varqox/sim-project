@@ -6,9 +6,9 @@ FileDescriptor open_proc_status(pid_t tid) noexcept {
 	constexpr StringView prefix = "/proc/";
 	auto tid_str = to_string(tid);
 	constexpr StringView suffix = "/status";
-	StaticCStringBuff<prefix.size() + decltype(tid_str)::max_size() +
-	                  suffix.size()>
-	   path;
+	StaticCStringBuff<
+		prefix.size() + decltype(tid_str)::max_size() + suffix.size()>
+		path;
 	size_t pos = 0;
 	for (auto s : {prefix, StringView{tid_str}, suffix}) {
 		for (auto c : s) {
@@ -21,8 +21,8 @@ FileDescriptor open_proc_status(pid_t tid) noexcept {
 	return FileDescriptor{open(path.data(), O_RDONLY | O_CLOEXEC)};
 }
 
-InplaceBuff<24> field_from_proc_status(int proc_status_fd,
-                                       StringView field_name) {
+InplaceBuff<24>
+field_from_proc_status(int proc_status_fd, StringView field_name) {
 	InplaceBuff<24> res;
 	FdPreadBuff fbuff(proc_status_fd);
 	auto get_char_or_eof = [&] {

@@ -13,8 +13,8 @@ public:
 	explicit FileDescriptor(int fd = -1) noexcept
 	: fd_(fd) {}
 
-	explicit FileDescriptor(FilePath filename, int flags,
-	                        mode_t mode = S_0644) noexcept
+	explicit FileDescriptor(
+		FilePath filename, int flags, mode_t mode = S_0644) noexcept
 	: fd_(::open(filename, flags, mode)) {}
 
 	FileDescriptor(const FileDescriptor&) = delete;

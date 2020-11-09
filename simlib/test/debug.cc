@@ -18,21 +18,23 @@ TEST(debug, throw_assert) {
 		ADD_FAILURE();
 	} catch (const std::runtime_error& e) {
 		constexpr auto line = __LINE__;
-		EXPECT_EQ(e.what(),
-		          concat(__FILE__, ':', line - 3, ": ", __PRETTY_FUNCTION__,
-		                 ": Assertion `var % 3 != 0` failed."));
+		EXPECT_EQ(
+			e.what(),
+			concat(
+				__FILE__, ':', line - 3, ": ", __PRETTY_FUNCTION__,
+				": Assertion `var % 3 != 0` failed."));
 	} catch (...) {
 		ADD_FAILURE();
 	}
 }
 
 template <class LoggingFunc>
-static std::string intercept_logger(Logger& logger,
-                                    LoggingFunc&& logging_func) {
+static std::string
+intercept_logger(Logger& logger, LoggingFunc&& logging_func) {
 	FileDescriptor fd{open_unlinked_tmp_file()};
 	throw_assert(fd.is_open());
-	std::unique_ptr<FILE, decltype(&fclose)> stream = {fdopen(fd, "r+"),
-	                                                   fclose};
+	std::unique_ptr<FILE, decltype(&fclose)> stream = {
+		fdopen(fd, "r+"), fclose};
 	throw_assert(stream);
 	(void)fd.release(); // Now stream owns it
 
@@ -66,9 +68,11 @@ TEST(debug, THROW_MACRO) {
 		ADD_FAILURE();
 	} catch (const std::runtime_error& e) {
 		constexpr auto line = __LINE__;
-		EXPECT_EQ(e.what(),
-		          concat("a ", 1, -42, "c", '.', false, "; (thrown at ",
-		                 __FILE__, ':', line - 3, ')'));
+		EXPECT_EQ(
+			e.what(),
+			concat(
+				"a ", 1, -42, "c", '.', false, "; (thrown at ", __FILE__, ':',
+				line - 3, ')'));
 	} catch (...) {
 		ADD_FAILURE();
 	}
@@ -77,8 +81,8 @@ TEST(debug, THROW_MACRO) {
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, errmsg) {
 	EXPECT_EQ(concat(" - ", EPERM, ": Operation not permitted"), errmsg(EPERM));
-	EXPECT_EQ(concat(" - ", ENOENT, ": No such file or directory"),
-	          errmsg(ENOENT));
+	EXPECT_EQ(
+		concat(" - ", ENOENT, ": No such file or directory"), errmsg(ENOENT));
 
 	errno = EPERM;
 	EXPECT_EQ(concat(" - ", EPERM, ": Operation not permitted"), errmsg());
@@ -121,14 +125,15 @@ static void test_errlog_catch_and_stack_unwinding_mark_normal() {
 		EXPECT_EQ(string(foo_thrown_msg), e.what());
 		constexpr auto logging_line = __LINE__ + 1;
 		auto logged_catch = intercept_logger(errlog, [&] { ERRLOG_CATCH(e); });
-		EXPECT_EQ(concat_tostr(__FILE__, ':', logging_line,
-		                       ": Caught exception -> abc"
-		                       "\nStack unwinding marks:"
-		                       "\n[0] void foo(bool) at ",
-		                       __FILE__, ':', foo_mark_line, "\n[1] ",
-		                       __PRETTY_FUNCTION__, " at ", __FILE__, ':',
-		                       mark_line, "\n"),
-		          logged_catch);
+		EXPECT_EQ(
+			concat_tostr(
+				__FILE__, ':', logging_line,
+				": Caught exception -> abc"
+				"\nStack unwinding marks:"
+				"\n[0] void foo(bool) at ",
+				__FILE__, ':', foo_mark_line, "\n[1] ", __PRETTY_FUNCTION__,
+				" at ", __FILE__, ':', mark_line, "\n"),
+			logged_catch);
 	} catch (...) {
 		ADD_FAILURE();
 	}
@@ -148,14 +153,15 @@ static void test_errlog_catch_and_stack_unwinding_mark_normal_no_args() {
 		EXPECT_EQ(string(foo_thrown_msg), e.what());
 		constexpr auto logging_line = __LINE__ + 1;
 		auto logged_catch = intercept_logger(errlog, [&] { ERRLOG_CATCH(); });
-		EXPECT_EQ(concat_tostr(__FILE__, ':', logging_line,
-		                       ": Caught exception"
-		                       "\nStack unwinding marks:"
-		                       "\n[0] void foo(bool) at ",
-		                       __FILE__, ':', foo_mark_line, "\n[1] ",
-		                       __PRETTY_FUNCTION__, " at ", __FILE__, ':',
-		                       mark_line, "\n"),
-		          logged_catch);
+		EXPECT_EQ(
+			concat_tostr(
+				__FILE__, ':', logging_line,
+				": Caught exception"
+				"\nStack unwinding marks:"
+				"\n[0] void foo(bool) at ",
+				__FILE__, ':', foo_mark_line, "\n[1] ", __PRETTY_FUNCTION__,
+				" at ", __FILE__, ':', mark_line, "\n"),
+			logged_catch);
 	} catch (...) {
 		ADD_FAILURE();
 	}
@@ -173,11 +179,13 @@ static void test_errlog_catch_and_stack_unwinding_mark_ignoring_older_marks() {
 		} catch (...) {
 			constexpr auto logging_line = __LINE__ + 1;
 			auto logged_catch =
-			   intercept_logger(errlog, [&] { ERRLOG_CATCH(); });
-			EXPECT_EQ(concat_tostr(__FILE__, ':', logging_line,
-			                       ": Caught exception\n"
-			                       "Stack unwinding marks:\n"),
-			          logged_catch);
+				intercept_logger(errlog, [&] { ERRLOG_CATCH(); });
+			EXPECT_EQ(
+				concat_tostr(
+					__FILE__, ':', logging_line,
+					": Caught exception\n"
+					"Stack unwinding marks:\n"),
+				logged_catch);
 		}
 	}
 }
@@ -214,14 +222,15 @@ static void test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level() {
 		EXPECT_EQ(string(foo_thrown_msg), e.what());
 		constexpr auto logging_line = __LINE__ + 1;
 		auto logged_catch = intercept_logger(errlog, [&] { ERRLOG_CATCH(e); });
-		EXPECT_EQ(concat_tostr(__FILE__, ':', logging_line,
-		                       ": Caught exception -> abc"
-		                       "\nStack unwinding marks:"
-		                       "\n[0] void foo(bool) at ",
-		                       __FILE__, ':', foo_mark_line, "\n[1] ",
-		                       __PRETTY_FUNCTION__, " at ", __FILE__, ':',
-		                       mark_line, "\n"),
-		          logged_catch);
+		EXPECT_EQ(
+			concat_tostr(
+				__FILE__, ':', logging_line,
+				": Caught exception -> abc"
+				"\nStack unwinding marks:"
+				"\n[0] void foo(bool) at ",
+				__FILE__, ':', foo_mark_line, "\n[1] ", __PRETTY_FUNCTION__,
+				" at ", __FILE__, ':', mark_line, "\n"),
+			logged_catch);
 	}
 }
 
@@ -243,14 +252,14 @@ TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
 	EXPECT_EXIT(
-	   {
-		   errlog.label(false);
-		   std::vector<int> abc;
-		   errlog("BUG");
-		   (void)WONT_THROW(abc.at(42));
-	   },
-	   ::testing::KilledBySignal(SIGABRT),
-	   "^BUG\nBUG: this was expected to not throw\n$");
+		{
+			errlog.label(false);
+			std::vector<int> abc;
+			errlog("BUG");
+			(void)WONT_THROW(abc.at(42));
+		},
+		::testing::KilledBySignal(SIGABRT),
+		"^BUG\nBUG: this was expected to not throw\n$");
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -335,7 +344,7 @@ constexpr std::false_type double_construct_with_WONT_THROW_impl(...);
 
 template <class T>
 constexpr bool double_construct_with_WONT_THROW =
-   decltype(double_construct_with_WONT_THROW_impl<T>(0))::value;
+	decltype(double_construct_with_WONT_THROW_impl<T>(0))::value;
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
@@ -374,8 +383,9 @@ TEST(debug, WONT_THROW_MACRO_rvalue) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(debug_DeathTest,
-     WONT_THROW_MACRO_throw_in_the_same_statement_after_WONT_THROW_MACRO) {
+TEST(
+	debug_DeathTest,
+	WONT_THROW_MACRO_throw_in_the_same_statement_after_WONT_THROW_MACRO) {
 	try {
 		// NOLINTNEXTLINE(hicpp-exception-baseclass)
 		auto factory = [] { return [] { throw 42; }; };

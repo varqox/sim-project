@@ -48,8 +48,9 @@ TEST(concat_common, stringify) {
 	EXPECT_EQ(wrap(stringify("abcdefghij")), "abcdefghij");
 	char str[] = "abcdefghij";
 	EXPECT_EQ(wrap(stringify(str)), "abcdefghij");
-	EXPECT_EQ(wrap(stringify(string("abcd\0efghij", 10))),
-	          string("abcd\0efghij", 10));
+	EXPECT_EQ(
+		wrap(stringify(string("abcd\0efghij", 10))),
+		string("abcd\0efghij", 10));
 	EXPECT_EQ(wrap(stringify("abcd\0efghij")), "abcd");
 	char str_with_null[] = "abcd\0efghij";
 	EXPECT_EQ(wrap(stringify(str_with_null)), "abcd");

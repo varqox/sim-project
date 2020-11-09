@@ -9,7 +9,7 @@ void FileModificationMonitor::init_watching() {
 	}
 
 	constexpr size_t intfy_buff_len =
-	   (sizeof(inotify_event) + PATH_MAX + 1) * 16;
+		(sizeof(inotify_event) + PATH_MAX + 1) * 16;
 	intfy_buff_ = std::make_unique<char[]>(intfy_buff_len);
 	eq_.add_file_handler(intfy_fd_, FileEvent::READABLE, [&] {
 		ssize_t read_len = read(intfy_fd_, intfy_buff_.get(), intfy_buff_len);
@@ -21,18 +21,20 @@ void FileModificationMonitor::init_watching() {
 		char* ptr = intfy_buff_.get();
 		while (ptr < intfy_buff_.get() + read_len) {
 			simlib_inotify_event event;
-			std::memcpy(&event.wd, ptr + offsetof(inotify_event, wd),
-			            sizeof(event.wd));
-			std::memcpy(&event.mask, ptr + offsetof(inotify_event, mask),
-			            sizeof(event.mask));
-			std::memcpy(&event.cookie, ptr + offsetof(inotify_event, cookie),
-			            sizeof(event.cookie));
+			std::memcpy(
+				&event.wd, ptr + offsetof(inotify_event, wd), sizeof(event.wd));
+			std::memcpy(
+				&event.mask, ptr + offsetof(inotify_event, mask),
+				sizeof(event.mask));
+			std::memcpy(
+				&event.cookie, ptr + offsetof(inotify_event, cookie),
+				sizeof(event.cookie));
 			// event.file_name
 			decltype(inotify_event::len) len = 0;
 			std::memcpy(&len, ptr + offsetof(inotify_event, len), sizeof(len));
 			if (len > 0) {
 				event.file_name =
-				   CStringView(ptr + offsetof(inotify_event, name));
+					CStringView(ptr + offsetof(inotify_event, name));
 			}
 			ptr += sizeof(inotify_event) + len;
 
@@ -74,7 +76,7 @@ void FileModificationMonitor::process_event(const simlib_inotify_event& event) {
 		// File inside watched directory
 		const char* missing_slash = &"/"[has_suffix(finfo->path, "/")];
 		run_modification_handler(
-		   finfo, concat_tostr(finfo->path, missing_slash, *event.file_name));
+			finfo, concat_tostr(finfo->path, missing_slash, *event.file_name));
 	} else {
 		// Watched file or directory
 		run_modification_handler(finfo, finfo->path);
@@ -98,7 +100,7 @@ void FileModificationMonitor::schedule_processing_unwatched_files() {
 }
 
 void FileModificationMonitor::process_unwatched_files(
-   bool run_modification_handler_on_success) {
+	bool run_modification_handler_on_success) {
 	filter(unwatched_files_, [&](const FileInfo* finfo) {
 		int wd = inotify_add_watch(intfy_fd_, finfo->path.data(), all_events);
 		if (wd == -1) {
@@ -118,8 +120,8 @@ void FileModificationMonitor::process_unwatched_files(
 }
 
 template <class String>
-void FileModificationMonitor::run_modification_handler(const FileInfo* finfo,
-                                                       String&& file_path) {
+void FileModificationMonitor::run_modification_handler(
+	const FileInfo* finfo, String&& file_path) {
 	if (finfo->stillness_threshold == nanoseconds(0)) {
 		event_handler_(file_path);
 		return;
@@ -128,7 +130,7 @@ void FileModificationMonitor::run_modification_handler(const FileInfo* finfo,
 	// Defer handling but remove previous deferred handling if it exists
 	std::string file_path_to_use;
 	if (auto node = deferred_modification_handlers_.extract(file_path);
-	    node.empty())
+		node.empty())
 	{
 		file_path_to_use = std::forward<String>(file_path);
 	} else {
@@ -138,7 +140,7 @@ void FileModificationMonitor::run_modification_handler(const FileInfo* finfo,
 
 	// Schedule handling
 	auto [it, inserted] = deferred_modification_handlers_.try_emplace(
-	   std::move(file_path_to_use), 0);
+		std::move(file_path_to_use), 0);
 	assert(inserted);
 	it->second = eq_.add_time_handler(finfo->stillness_threshold, [&, it = it] {
 		event_handler_(it->first);

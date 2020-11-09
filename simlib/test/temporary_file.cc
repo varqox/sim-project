@@ -19,8 +19,8 @@ TEST(temporary_file, TemporaryFile) {
 	{
 		TemporaryFile tmp_file("/tmp/filesystem-test.XXXXXX");
 		EXPECT_EQ(tmp_file.is_open(), true);
-		EXPECT_THAT(tmp_file.path(),
-		            MatchesRegex("/tmp/filesystem-test\\..{6}"));
+		EXPECT_THAT(
+			tmp_file.path(), MatchesRegex("/tmp/filesystem-test\\..{6}"));
 		path = tmp_file.path();
 		EXPECT_TRUE(is_regular_file(path));
 
@@ -46,16 +46,16 @@ TEST(temporary_file, TemporaryFile) {
 TEST(create_unique_file, typical) {
 	string path1 = "/tmp/create_unique_file_test.XXXX";
 	string path2 = path1;
-	auto opt = create_unique_file(-1, path1.data(), path1.size(), 4,
-	                              O_RDONLY | O_CLOEXEC, S_0644);
+	auto opt = create_unique_file(
+		-1, path1.data(), path1.size(), 4, O_RDONLY | O_CLOEXEC, S_0644);
 	Defer cleaner1 = [&] { (void)remove(path1); };
 	EXPECT_TRUE(opt.has_value());
 	EXPECT_TRUE(path_exists(path1));
 	EXPECT_TRUE(has_prefix(path1, "/tmp/create_unique_file_test."));
 	EXPECT_EQ(get_file_permissions(path1), S_0644);
 
-	opt = create_unique_file(-1, path2.data(), path2.size(), 4,
-	                         O_WRONLY | O_CLOEXEC, S_0600);
+	opt = create_unique_file(
+		-1, path2.data(), path2.size(), 4, O_WRONLY | O_CLOEXEC, S_0600);
 	Defer cleaner2 = [&] { (void)remove(path2); };
 	EXPECT_TRUE(opt.has_value());
 	EXPECT_TRUE(path_exists(path2));
@@ -68,16 +68,16 @@ TEST(create_unique_file, typical) {
 TEST(create_unique_file, fail) {
 	string path = "/tmp/create_unique_file_test.";
 	string path_copy = path;
-	auto opt = create_unique_file(-1, path.data(), path.size(), 0,
-	                              O_RDONLY | O_CLOEXEC, S_0600);
+	auto opt = create_unique_file(
+		-1, path.data(), path.size(), 0, O_RDONLY | O_CLOEXEC, S_0600);
 	Defer cleaner = [&] { (void)remove(path); };
 	EXPECT_TRUE(opt.has_value());
 	EXPECT_TRUE(path_exists(path));
 	EXPECT_EQ(path, path_copy);
 	EXPECT_EQ(get_file_permissions(path), S_0600);
 
-	opt = create_unique_file(-1, path.data(), path.size(), 0,
-	                         O_WRONLY | O_CLOEXEC, S_0600);
+	opt = create_unique_file(
+		-1, path.data(), path.size(), 0, O_WRONLY | O_CLOEXEC, S_0600);
 	int err = errno;
 	EXPECT_FALSE(opt.has_value());
 	EXPECT_EQ(err, EEXIST);

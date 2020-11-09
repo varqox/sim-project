@@ -21,8 +21,8 @@ using std::vector;
 
 namespace sim {
 
-Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
-                                                     bool be_verbose) {
+Conver::ConstructionResult
+Conver::construct_simfile(const Options& opts, bool be_verbose) {
 	STACK_UNWINDING_MARK;
 
 	using std::chrono_literals::operator""ns;
@@ -31,7 +31,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		THROW("If set, memory_limit has to be greater than 0");
 	}
 	if (opts.global_time_limit.has_value() and
-	    opts.global_time_limit.value() <= 0ns)
+		opts.global_time_limit.value() <= 0ns)
 	{
 		THROW("If set, global_time_limit has to be greater than 0");
 	}
@@ -68,13 +68,14 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	StringView main_dir = pc.main_dir(); // Find main directory if exists
 
 	auto exists_in_pkg = [&](StringView file) {
-		return (not file.empty() and pc.exists(intentional_unsafe_string_view(
-		                                concat(main_dir, file))));
+		return (
+			not file.empty() and
+			pc.exists(intentional_unsafe_string_view(concat(main_dir, file))));
 	};
 
 	// "utils/" directory is ignored by Conver
 	pc.remove_with_prefix(
-	   intentional_unsafe_string_view(concat(main_dir, "utils/")));
+		intentional_unsafe_string_view(concat(main_dir, "utils/")));
 
 	// Load the Simfile from the package
 	Simfile sf;
@@ -83,12 +84,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			sf = Simfile([&] {
 				if (package_path_.back() == '/') {
 					return get_file_contents(
-					   concat(package_path_, main_dir, "Simfile"));
+						concat(package_path_, main_dir, "Simfile"));
 				}
 
 				ZipFile zip(package_path_, ZIP_RDONLY);
 				return zip.extract_to_str(
-				   zip.get_index(concat(main_dir, "Simfile")));
+					zip.get_index(concat(main_dir, "Simfile")));
 			}());
 		} catch (const ConfigFile::ParseError& e) {
 			THROW(concat_tostr("(Simfile) ", e.what(), '\n', e.diagnostics()));
@@ -98,11 +99,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Name
 	if (opts.name) {
 		sf.name = opts.name.value();
-		report_.append("Problem's name (specified in options): ",
-		               sf.name.value());
+		report_.append(
+			"Problem's name (specified in options): ", sf.name.value());
 	} else {
 		report_.append("Problem's name is not specified in options - loading it"
-		               " from Simfile");
+					   " from Simfile");
 		sf.load_name();
 		report_.append("  name loaded from Simfile: ", sf.name.value());
 	}
@@ -110,19 +111,20 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Label
 	if (opts.label) {
 		sf.label = opts.label.value();
-		report_.append("Problem's label (specified in options): ",
-		               sf.label.value());
+		report_.append(
+			"Problem's label (specified in options): ", sf.label.value());
 	} else {
 		report_.append("Problem's label is not specified in options - loading"
-		               " it from Simfile");
+					   " it from Simfile");
 		try {
 			sf.load_label();
 			report_.append("  label loaded from Simfile: ", sf.label.value());
 
 		} catch (const std::exception& e) {
-			report_.append("  ", e.what(),
-			               " -> generating label from the"
-			               " problem's name");
+			report_.append(
+				"  ", e.what(),
+				" -> generating label from the"
+				" problem's name");
 
 			sf.label = shorten_name(sf.name.value());
 			report_.append("  label generated from name: ", sf.label.value());
@@ -144,15 +146,15 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		sf.load_checker();
 		if (not sf.checker.has_value()) {
 			report_.append("Missing checker in the package's Simfile -"
-			               " searching for one");
+						   " searching for one");
 		} else if (not exists_in_pkg(sf.checker.value())) {
 			report_.append("Invalid checker specified in the package's Simfile"
-			               " - searching for one");
+						   " - searching for one");
 			sf.checker = std::nullopt;
 		}
 	} catch (...) {
 		report_.append("Invalid checker specified in the package's Simfile -"
-		               " searching for one");
+					   " searching for one");
 	}
 
 	// Interactive
@@ -169,10 +171,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		}
 		if (!x.empty()) {
 			// Choose the one with the shortest path to be the checker
-			std::swap(x.front(), *std::min_element(
-			                        x.begin(), x.end(), [](auto&& a, auto&& b) {
-				                        return a.size() < b.size();
-			                        }));
+			std::swap(
+				x.front(),
+				*std::min_element(x.begin(), x.end(), [](auto&& a, auto&& b) {
+					return a.size() < b.size();
+				}));
 
 			sf.checker = x.front().substr(main_dir.size()).to_string();
 			report_.append("Chosen checker: ", sf.checker.value());
@@ -180,18 +183,18 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		} else if (sf.interactive) {
 			report_.append("No checker was found");
 			THROW("No checker was found, but interactive problems require "
-			      "checker");
+				  "checker");
 		} else {
 			report_.append(
-			   "No checker was found - the default checker will be used");
+				"No checker was found - the default checker will be used");
 		}
 	}
 
 	// Exclude check/ and checker/ directories from future searches
 	pc.remove_with_prefix(
-	   intentional_unsafe_string_view(concat(main_dir, "check/")));
+		intentional_unsafe_string_view(concat(main_dir, "check/")));
 	pc.remove_with_prefix(
-	   intentional_unsafe_string_view(concat(main_dir, "checker/")));
+		intentional_unsafe_string_view(concat(main_dir, "checker/")));
 
 	// Statement
 	try {
@@ -204,13 +207,14 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	};
 
 	if (sf.statement and exists_in_pkg(sf.statement.value()) and
-	    is_statement(sf.statement.value()))
+		is_statement(sf.statement.value()))
 	{
 		// OK
 	} else {
 		report_.append(
-		   (sf.statement ? "Invalid" : "Missing"),
-		   " statement specified in the package's Simfile - searching for one");
+			(sf.statement ? "Invalid" : "Missing"),
+			" statement specified in the package's Simfile - searching for "
+			"one");
 
 		// Scan doc/ directory
 		auto x = collect_files(concat(main_dir, "doc/"), is_statement);
@@ -222,21 +226,23 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		if (x.empty()) {
 			if (opts.require_statement) {
 				THROW("No statement was found (recognized extensions: pdf, md, "
-				      "txt)");
+					  "txt)");
 			}
 			report_.append("\033[1;35mwarning\033[m: no statement was "
-			               "found (recognized extensions: pdf, md, txt)");
+						   "found (recognized extensions: pdf, md, txt)");
 
 		} else {
 			// Prefer PDF to other formats, then the shorter paths
 			// The ones with shorter paths are preferred
 			std::swap(
-			   x.front(),
-			   *std::min_element(x.begin(), x.end(), [](auto&& a, auto&& b) {
-				   return (
-				      pair<bool, size_t>(not has_suffix(a, ".pdf"), a.size()) <
-				      pair<bool, size_t>(not has_suffix(b, ".pdf"), b.size()));
-			   }));
+				x.front(),
+				*std::min_element(x.begin(), x.end(), [](auto&& a, auto&& b) {
+					return (
+						pair<bool, size_t>(
+							not has_suffix(a, ".pdf"), a.size()) <
+						pair<bool, size_t>(
+							not has_suffix(b, ".pdf"), b.size()));
+				}));
 
 			sf.statement = x.front().substr(main_dir.size()).to_string();
 			report_.append("Chosen statement: ", sf.statement.value());
@@ -251,16 +257,17 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	{
 		vector<std::string> solutions;
 		std::set<StringView> solutions_set; // Used to detect and eliminate
-		                                    // solutions duplication
+											// solutions duplication
 		for (auto&& sol : sf.solutions) {
 			if (exists_in_pkg(sol) and
-			    solutions_set.find(sol) == solutions_set.end()) {
+				solutions_set.find(sol) == solutions_set.end()) {
 				solutions.emplace_back(sol);
 				solutions_set.emplace(sol);
 			} else {
-				report_.append("\033[1;35mwarning\033[m: ignoring invalid"
-				               " solution: `",
-				               sol, '`');
+				report_.append(
+					"\033[1;35mwarning\033[m: ignoring invalid"
+					" solution: `",
+					sol, '`');
 			}
 		}
 
@@ -271,10 +278,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			}
 
 			// Choose the one with the shortest path to be the main solution
-			std::swap(x.front(), *std::min_element(
-			                        x.begin(), x.end(), [](auto&& a, auto&& b) {
-				                        return a.size() < b.size();
-			                        }));
+			std::swap(
+				x.front(),
+				*std::min_element(x.begin(), x.end(), [](auto&& a, auto&& b) {
+					return a.size() < b.size();
+				}));
 		}
 
 		// Merge solutions
@@ -307,19 +315,20 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			TestProperties test;
 			try {
 				std::tie(test_name, test.time_limit, test.memory_limit) =
-				   Simfile::parse_limits_item(str);
+					Simfile::parse_limits_item(str);
 			} catch (const std::exception& e) {
-				report_.append("\033[1;35mwarning\033[m: \"limits\": ignoring"
-				               " unparsable item -> ",
-				               e.what());
+				report_.append(
+					"\033[1;35mwarning\033[m: \"limits\": ignoring"
+					" unparsable item -> ",
+					e.what());
 				continue;
 			}
 
 			if (Simfile::TestNameComparator::split(test_name).gid.empty()) {
-				report_.append("\033[1;35mwarning\033[m: \"limits\": ignoring"
-				               " test `",
-				               test_name,
-				               "` because it has no group id in its name");
+				report_.append(
+					"\033[1;35mwarning\033[m: \"limits\": ignoring"
+					" test `",
+					test_name, "` because it has no group id in its name");
 				continue;
 			}
 
@@ -334,18 +343,18 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		path.remove_prefix(main_dir.size());
 
 		if (not(has_suffix(path, ".in") or
-		        (has_suffix(path, ".out") and not sf.interactive)))
+				(has_suffix(path, ".out") and not sf.interactive)))
 		{
 			return;
 		}
 
 		StringView test_name =
-		   path.substr(0, path.rfind('.')).extract_trailing([](char c) {
-			   return c != '/';
-		   });
+			path.substr(0, path.rfind('.')).extract_trailing([](char c) {
+				return c != '/';
+			});
 
 		auto it = opts.seek_for_new_tests ? tests.try_emplace(test_name).first
-		                                  : tests.find(test_name);
+										  : tests.find(test_name);
 		if (it == tests.end()) {
 			return; // There is no such test
 		}
@@ -355,9 +364,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		if (has_suffix(path, ".in")) { // Input file
 			if (test.in.has_value()) {
 				report_.append(
-				   "\033[1;35mwarning\033[m: input file for test `", test_name,
-				   "` was found in more than one location: `", test.in.value(),
-				   "` and `", path, "`, choosing the latter");
+					"\033[1;35mwarning\033[m: input file for test `", test_name,
+					"` was found in more than one location: `", test.in.value(),
+					"` and `", path, "`, choosing the latter");
 			}
 			test.in = path;
 		} else { // Output file
@@ -365,9 +374,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			assert(not sf.interactive);
 			if (test.out.has_value()) {
 				report_.append(
-				   "\033[1;35mwarning\033[m: output file for test `", test_name,
-				   "` was found in more than one location: `", test.out.value(),
-				   "` and `", path, "`, choosing the latter");
+					"\033[1;35mwarning\033[m: output file for test `",
+					test_name, "` was found in more than one location: `",
+					test.out.value(), "` and `", path,
+					"`, choosing the latter");
 			}
 			test.out = path;
 		}
@@ -376,18 +386,19 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Load test files (this one may overwrite the files form previous step)
 	auto const& tests_files = sf.config["tests_files"];
 	if (not opts.ignore_simfile and tests_files.is_set() and
-	    tests_files.is_array()) {
+		tests_files.is_array()) {
 		for (auto const& str : tests_files.as_array()) {
 			StringView test_name;
 			std::optional<StringView> input;
 			std::optional<StringView> output;
 			try {
 				std::tie(test_name, input, output) =
-				   Simfile::parse_test_files_item(str);
+					Simfile::parse_test_files_item(str);
 			} catch (const std::exception& e) {
-				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
-				               " ignoring unparsable item -> ",
-				               e.what());
+				report_.append(
+					"\033[1;35mwarning\033[m: \"tests_files\":"
+					" ignoring unparsable item -> ",
+					e.what());
 				continue;
 			}
 
@@ -396,9 +407,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			}
 
 			if (input.value().empty()) {
-				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
-				               " missing test input file for test `",
-				               test_name, "` - ignoring");
+				report_.append(
+					"\033[1;35mwarning\033[m: \"tests_files\":"
+					" missing test input file for test `",
+					test_name, "` - ignoring");
 
 				throw_assert(output.value().empty());
 				continue; // Nothing more to do
@@ -406,9 +418,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 			auto path = concat(main_dir, input.value());
 			if (not pc.exists(path)) {
-				report_.append("\033[1;35mwarning\033[m: \"tests_files\": test"
-				               " input file: `",
-				               input.value(), "` not found - ignoring file");
+				report_.append(
+					"\033[1;35mwarning\033[m: \"tests_files\": test"
+					" input file: `",
+					input.value(), "` not found - ignoring file");
 				input = std::nullopt;
 			}
 
@@ -416,24 +429,26 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			if (sf.interactive) {
 				if (not output.value().empty()) {
 					report_.append(
-					   "\033[1;35mwarning\033[m: \"tests_files\":"
-					   " test output file: `",
-					   input.value(),
-					   "` specified,"
-					   " but the problem is interactive - ignoring file");
+						"\033[1;35mwarning\033[m: \"tests_files\":"
+						" test output file: `",
+						input.value(),
+						"` specified,"
+						" but the problem is interactive - ignoring file");
 				}
 				output = std::nullopt;
 
 			} else if (output.value().empty()) {
-				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
-				               " missing test output file for test `",
-				               test_name, "` - ignoring");
+				report_.append(
+					"\033[1;35mwarning\033[m: \"tests_files\":"
+					" missing test output file for test `",
+					test_name, "` - ignoring");
 				output = std::nullopt;
 
 			} else if (not pc.exists(path)) {
-				report_.append("\033[1;35mwarning\033[m: \"tests_files\": test"
-				               " output file: `",
-				               output.value(), "` not found - ignoring file");
+				report_.append(
+					"\033[1;35mwarning\033[m: \"tests_files\": test"
+					" output file: `",
+					output.value(), "` not found - ignoring file");
 				output = std::nullopt;
 			}
 
@@ -444,10 +459,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			auto it = tests.find(test_name);
 			if (it == tests.end()) {
 				report_.append(
-				   "\033[1;35mwarning\033[m: \"tests_files\": ignoring files "
-				   "for test `",
-				   test_name,
-				   "` because no such test is specified in \"limits\"");
+					"\033[1;35mwarning\033[m: \"tests_files\": ignoring files "
+					"for test `",
+					test_name,
+					"` because no such test is specified in \"limits\"");
 				continue;
 			}
 
@@ -467,17 +482,17 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		auto const& [test_name, test] = p;
 		// Warn if the test was loaded from "limits"
 		if (not test.in.has_value() and test.time_limit.has_value()) {
-			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
-			               test_name,
-			               "` because it has no corresponding input file");
+			report_.append(
+				"\033[1;35mwarning\033[m: limits: ignoring test `", test_name,
+				"` because it has no corresponding input file");
 		}
 		// Warn if the test was loaded from "limits"
 		if (not sf.interactive and not test.out.has_value() and
-		    test.time_limit.has_value())
+			test.time_limit.has_value())
 		{
-			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
-			               test_name,
-			               "` because it has no corresponding output file");
+			report_.append(
+				"\033[1;35mwarning\033[m: limits: ignoring test `", test_name,
+				"` because it has no corresponding output file");
 		}
 
 		return test.in.has_value() and (sf.interactive or test.out.has_value());
@@ -486,17 +501,17 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	if (not opts.memory_limit.has_value()) {
 		if (opts.ignore_simfile) {
 			THROW("Missing memory limit - global memory limit not specified in"
-			      " options and simfile is ignored");
+				  " options and simfile is ignored");
 		}
 
 		report_.append("Global memory limit not specified in options - loading"
-		               " it from Simfile");
+					   " it from Simfile");
 
 		sf.load_global_memory_limit_only();
 		if (not sf.global_mem_limit.has_value()) {
 			report_.append("Memory limit is not specified in the Simfile");
 			report_.append(
-			   "\033[1;35mwarning\033[m: no global memory limit is set");
+				"\033[1;35mwarning\033[m: no global memory limit is set");
 		}
 	}
 
@@ -508,12 +523,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			test.memory_limit = sf.global_mem_limit;
 		}
 	} else { // Give tests without specified memory limit the global memory
-		     // limit
+			 // limit
 		for (auto& [test_name, test] : tests) {
 			if (not test.memory_limit.has_value()) {
 				if (not sf.global_mem_limit.has_value()) {
-					THROW("Memory limit is not specified for test `", test_name,
-					      "` and no global memory limit is set");
+					THROW(
+						"Memory limit is not specified for test `", test_name,
+						"` and no global memory limit is set");
 				}
 				test.memory_limit = sf.global_mem_limit;
 			}
@@ -524,11 +540,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		std::optional<int64_t> score;
 		// test name => test props
 		std::multimap<StringView, TestProperties, Simfile::TestNameComparator>
-		   tests;
+			tests;
 	};
 
 	std::map<StringView, TestsGroup, StrNumCompare>
-	   tests_groups; // group name => test group
+		tests_groups; // group name => test group
 	// Fill tests_groups
 	for (auto const& [test_name, test] : tests) {
 		auto sr = Simfile::TestNameComparator::split(test_name);
@@ -548,7 +564,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Load scoring
 	auto const& scoring = sf.config["scoring"];
 	if (not opts.ignore_simfile and not opts.reset_scoring and
-	    scoring.is_set() and scoring.is_array())
+		scoring.is_set() and scoring.is_array())
 	{
 		for (auto const& str : scoring.as_array()) {
 			StringView gid;
@@ -556,9 +572,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			try {
 				std::tie(gid, score) = Simfile::parse_scoring_item(str);
 			} catch (const std::exception& e) {
-				report_.append("\033[1;35mwarning\033[m: \"scoring\": ignoring"
-				               " unparsable item -> ",
-				               e.what());
+				report_.append(
+					"\033[1;35mwarning\033[m: \"scoring\": ignoring"
+					" unparsable item -> ",
+					e.what());
 				continue;
 			}
 
@@ -566,9 +583,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			if (it != tests_groups.end()) {
 				it->second.score = score;
 			} else {
-				report_.append("\033[1;35mwarning\033[m: \"scoring\": ignoring"
-				               " score of the group with id `",
-				               gid, "` because no test belongs to it");
+				report_.append(
+					"\033[1;35mwarning\033[m: \"scoring\": ignoring"
+					" score of the group with id `",
+					gid, "` because no test belongs to it");
 			}
 		}
 	}
@@ -590,21 +608,23 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		TestsGroup& first_group = tests_groups.begin()->second;
 		StringView first_gid = tests_groups.begin()->first;
 		if (first_gid.without_leading('0').empty() and
-		    not first_group.score.has_value())
+			not first_group.score.has_value())
 		{
 			first_group.score = 0;
 			--unscored_tests;
-			report_.append("Auto-scoring: score of the group with id `",
-			               first_gid, "` set to 0");
+			report_.append(
+				"Auto-scoring: score of the group with id `", first_gid,
+				"` set to 0");
 		}
 
 		// Distribute scoring
 		for (auto& [gid, group] : tests_groups) {
 			if (not group.score.has_value()) {
 				max_score -=
-				   (group.score = max_score / unscored_tests--).value();
-				report_.append("Auto-scoring: score of the group with id `",
-				               gid, "` set to ", group.score.value());
+					(group.score = max_score / unscored_tests--).value();
+				report_.append(
+					"Auto-scoring: score of the group with id `", gid,
+					"` set to ", group.score.value());
 			}
 		}
 	}
@@ -620,9 +640,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			run_main_solution |= not test.time_limit.has_value();
 
 			Simfile::Test t(
-			   test_name.to_string(),
-			   test.time_limit.value_or(std::chrono::nanoseconds(0)),
-			   test.memory_limit.value());
+				test_name.to_string(),
+				test.time_limit.value_or(std::chrono::nanoseconds(0)),
+				test.memory_limit.value());
 			t.in = test.in.value().to_string();
 			if (sf.interactive) {
 				t.out = std::nullopt;
@@ -654,22 +674,23 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	// The main solution's judge report is needed => set the time limits for it
 	auto sol_time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(
-	   time_limit_to_solution_runtime(
-	      opts.max_time_limit, opts.rtl_opts.solution_runtime_coefficient,
-	      opts.rtl_opts.min_time_limit));
+		time_limit_to_solution_runtime(
+			opts.max_time_limit, opts.rtl_opts.solution_runtime_coefficient,
+			opts.rtl_opts.min_time_limit));
 	for (auto&& g : sf.tgroups) {
 		for (auto&& t : g.tests) {
 			t.time_limit = sol_time_limit;
 		}
 	}
 
-	return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf),
-	        main_dir.to_string()};
+	return {
+		Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf),
+		main_dir.to_string()};
 }
 
 void Conver::reset_time_limits_using_jugde_reports(
-   Simfile& sf, const JudgeReport& jrep1, const JudgeReport& jrep2,
-   const ResetTimeLimitsOptions& opts) {
+	Simfile& sf, const JudgeReport& jrep1, const JudgeReport& jrep2,
+	const ResetTimeLimitsOptions& opts) {
 	STACK_UNWINDING_MARK;
 
 	using std::chrono::nanoseconds;
@@ -689,15 +710,17 @@ void Conver::reset_time_limits_using_jugde_reports(
 		for (auto&& g : rep.groups) {
 			for (auto&& t : g.tests) {
 				// Only allow OK and WA to pass through
-				if (not is_one_of(t.status, JudgeReport::Test::OK,
-				                  JudgeReport::Test::WA)) {
-					THROW("Error on test `", t.name,
-					      "`: ", JudgeReport::Test::description(t.status));
+				if (not is_one_of(
+						t.status, JudgeReport::Test::OK, JudgeReport::Test::WA))
+				{
+					THROW(
+						"Error on test `", t.name,
+						"`: ", JudgeReport::Test::description(t.status));
 				}
 
 				tls[t.name] = floor_to_10ms(solution_runtime_to_time_limit(
-				   t.runtime, opts.solution_runtime_coefficient,
-				   opts.min_time_limit));
+					t.runtime, opts.solution_runtime_coefficient,
+					opts.min_time_limit));
 			}
 		}
 	}

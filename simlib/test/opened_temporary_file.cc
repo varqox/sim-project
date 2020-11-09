@@ -16,8 +16,8 @@ TEST(opened_temporary_file, OpenedTemporaryFile) {
 	{
 		OpenedTemporaryFile tmp_file("/tmp/filesystem-test.XXXXXX");
 		EXPECT_EQ(tmp_file.is_open(), true);
-		EXPECT_THAT(tmp_file.path(),
-		            MatchesRegex("/tmp/filesystem-test\\..{6}"));
+		EXPECT_THAT(
+			tmp_file.path(), MatchesRegex("/tmp/filesystem-test\\..{6}"));
 		path = tmp_file.path();
 		EXPECT_TRUE(is_regular_file(path));
 		EXPECT_TRUE(file_descriptor_exists(tmp_file));
@@ -31,8 +31,8 @@ TEST(opened_temporary_file, OpenedTemporaryFile) {
 		other = std::move(tmp_file);
 		EXPECT_EQ(other.path(), path);
 		EXPECT_TRUE(is_regular_file(path));
-		EXPECT_FALSE(
-		   file_descriptor_exists(tmp_file)); // NOLINT(bugprone-use-after-move)
+		EXPECT_FALSE(file_descriptor_exists(
+			tmp_file)); // NOLINT(bugprone-use-after-move)
 		EXPECT_TRUE(file_descriptor_exists(other));
 		EXPECT_EQ(fd, other);
 		EXPECT_EQ(get_file_size(path), 1);

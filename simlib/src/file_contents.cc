@@ -33,7 +33,7 @@ size_t pread_all(int fd, off64_t pos, void* buff, size_t count) noexcept {
 	size_t bytes_read = 0;
 	while (bytes_read < count) {
 		ssize_t k =
-		   pread(fd, dest + bytes_read, count - bytes_read, pos + bytes_read);
+			pread(fd, dest + bytes_read, count - bytes_read, pos + bytes_read);
 		if (k < 0) {
 			if (errno == EINTR) {
 				continue;
@@ -123,7 +123,7 @@ string get_file_contents(int fd, off64_t beg, off64_t end) {
 	string res;
 	while (bytes_left > 0) {
 		ssize_t len =
-		   read(fd, buff.data(), std::min<off64_t>(buff.size(), bytes_left));
+			read(fd, buff.data(), std::min<off64_t>(buff.size(), bytes_left));
 		// Interrupted by signal
 		if (len < 0 && errno == EINTR) {
 			continue;
@@ -176,8 +176,8 @@ string get_file_contents(FilePath file, off64_t beg, off64_t end) {
 	return get_file_contents(fd, beg, end);
 }
 
-void put_file_contents(FilePath file, const char* data, size_t len,
-                       mode_t mode) {
+void put_file_contents(
+	FilePath file, const char* data, size_t len, mode_t mode) {
 	FileDescriptor fd{file, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode};
 	if (fd == -1) {
 		THROW("open() failed", errmsg());

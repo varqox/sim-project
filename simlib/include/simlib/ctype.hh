@@ -16,8 +16,9 @@ constexpr int safe_char(T c) {
 	} else {
 		int x = c;
 		using uchar_limits = std::numeric_limits<unsigned char>;
-		assert(x == EOF or
-		       (uchar_limits::min() <= x and x <= uchar_limits::max()));
+		assert(
+			x == EOF or
+			(uchar_limits::min() <= x and x <= uchar_limits::max()));
 		return x;
 	}
 }
@@ -81,7 +82,7 @@ constexpr bool is_print(T c) noexcept {
 template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 constexpr bool is_punct(T c) noexcept {
 	return ('\x21' <= c and c <= '\x2f') or ('\x3a' <= c and c <= '\x40') or
-	       ('\x5b' <= c and c <= '\x60') or ('\x7b' <= c and c <= '\x7e');
+		('\x5b' <= c and c <= '\x60') or ('\x7b' <= c and c <= '\x7e');
 }
 
 template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>

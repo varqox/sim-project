@@ -16,8 +16,8 @@ public:
 
 	/// The last six characters of template must be "XXXXXX" and these are
 	/// replaced with a string that makes the filename unique.
-	explicit TemporaryFile(std::string templ,
-	                       mode_t mode = S_IRUSR | S_IWUSR /* -rw------- */);
+	explicit TemporaryFile(
+		std::string templ, mode_t mode = S_IRUSR | S_IWUSR /* -rw------- */);
 
 	TemporaryFile(const TemporaryFile&) = delete;
 	TemporaryFile& operator=(const TemporaryFile&) = delete;
@@ -69,6 +69,6 @@ public:
  *       [@p buff_len - @p suffix_len, @p buff_len) is undefined in this case.
  *   - any other error returned by openat(2)
  */
-std::optional<FileDescriptor>
-create_unique_file(int dirfd, char* path_buff, size_t buff_len,
-                   size_t suffix_len, int open_flags, mode_t mode) noexcept;
+std::optional<FileDescriptor> create_unique_file(
+	int dirfd, char* path_buff, size_t buff_len, size_t suffix_len,
+	int open_flags, mode_t mode) noexcept;

@@ -28,16 +28,15 @@
 
 #define E(...) eprintf(__VA_ARGS__)
 
-#define throw_assert(expr)                                                     \
-	((expr) ? (void)0                                                          \
-	        : throw std::runtime_error(concat_tostr(                           \
-	             __FILE__ ":" STRINGIZE(__LINE__) ": ", __PRETTY_FUNCTION__,   \
-	             ": Assertion `" #expr "` failed.")))
+#define throw_assert(expr)                             \
+	((expr) ? (void)0                                  \
+			: throw std::runtime_error(concat_tostr(__FILE__ ":" STRINGIZE(__LINE__) ": ", __PRETTY_FUNCTION__, \
+				  ": Assertion `" #expr "` failed.")))
 
 // Very useful - includes exception origin
-#define THROW(...)                                                             \
-	throw std::runtime_error(concat_tostr(                                     \
-	   __VA_ARGS__, " (thrown at " __FILE__ ":" STRINGIZE(__LINE__) ")"))
+#define THROW(...)                         \
+	throw std::runtime_error(concat_tostr( \
+		__VA_ARGS__, " (thrown at " __FILE__ ":" STRINGIZE(__LINE__) ")"))
 
 namespace simlib_debug {
 
@@ -59,11 +58,12 @@ inline auto errmsg(int errnum) noexcept {
 	auto errnum_str = to_string(errnum);
 	constexpr StringView s2 = ": ";
 	constexpr auto bytes_for_error_description =
-	   64; // At the time of writing, longest error description is 50 bytes in
-	       // size (including null terminator)
-	StaticCStringBuff<s1.size() + decltype(errnum_str)::max_size() + s2.size() +
-	                  bytes_for_error_description>
-	   res;
+		64; // At the time of writing, longest error description is 50 bytes in
+			// size (including null terminator)
+	StaticCStringBuff<
+		s1.size() + decltype(errnum_str)::max_size() + s2.size() +
+		bytes_for_error_description>
+		res;
 	size_t pos = 0;
 	// Prefix
 	for (auto s : {s1, StringView{errnum_str}, s2}) {
@@ -73,7 +73,7 @@ inline auto errmsg(int errnum) noexcept {
 	}
 	// Error description
 	const char* errstr =
-	   strerror_r(errnum, res.data() + pos, decltype(res)::max_size() - pos);
+		strerror_r(errnum, res.data() + pos, decltype(res)::max_size() - pos);
 	if (errstr == res.data() + pos) {
 		while (pos < decltype(res)::max_size() and res[pos] != '\0') {
 			++pos;
@@ -111,16 +111,17 @@ public:
 		InplaceBuff<512> description;
 		uintmax_t stamp = event_stamp++;
 
-		template <class... Args,
-		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+		template <
+			class... Args,
+			std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		explicit StackMark(Args&&... args)
 		: description(std::in_place, std::forward<Args>(args)...) {}
 	};
 
 	static inline thread_local InplaceArray<StackMark, 128> marks_collected;
 
-	StackGuard(const char* file, size_t line,
-	           const char* pretty_function) noexcept
+	StackGuard(
+		const char* file, size_t line, const char* pretty_function) noexcept
 	: file_(file)
 	, line_(line)
 	, pretty_func_(pretty_function) {}
@@ -132,11 +133,11 @@ public:
 
 	~StackGuard() {
 		if (std::uncaught_exceptions() == 1 and uncaught_counter_ == 0 and
-		    not inside_catch_)
+			not inside_catch_)
 		{
 			// Remove stack marks that are from earlier exceptions
 			if (marks_collected.size() > 0 and
-			    marks_collected.back().stamp < creation_stamp_)
+				marks_collected.back().stamp < creation_stamp_)
 			{
 				marks_collected.clear();
 			}
@@ -145,8 +146,8 @@ public:
 				StackMark a;
 				StackMark b;
 				assert(a.stamp + 1 == b.stamp);
-				marks_collected.emplace_back(pretty_func_, " at ", file_, ':',
-				                             line_);
+				marks_collected.emplace_back(
+					pretty_func_, " at ", file_, ':', line_);
 			} catch (...) {
 				// Nothing we can do here
 			}
@@ -157,29 +158,28 @@ public:
 } // namespace stack_unwinding
 
 #define STACK_UNWINDING_MARK_CONCATENATE_DETAIL(x, y) x##y
-#define STACK_UNWINDING_MARK_CONCAT(x, y)                                      \
+#define STACK_UNWINDING_MARK_CONCAT(x, y) \
 	STACK_UNWINDING_MARK_CONCATENATE_DETAIL(x, y)
 
-#define STACK_UNWINDING_MARK                                                   \
-	::stack_unwinding::StackGuard STACK_UNWINDING_MARK_CONCAT(                 \
-	   stack_unwind_mark_no_, __COUNTER__)(__FILE__, __LINE__,                 \
-	                                       __PRETTY_FUNCTION__)
+#define STACK_UNWINDING_MARK                                   \
+	::stack_unwinding::StackGuard STACK_UNWINDING_MARK_CONCAT( \
+		stack_unwind_mark_no_,                                 \
+		__COUNTER__)(__FILE__, __LINE__, __PRETTY_FUNCTION__)
 
-#define ERRLOG_CATCH(...)                                                      \
-	do {                                                                       \
-		auto tmplog =                                                          \
-		   errlog(__FILE__ ":" STRINGIZE(__LINE__) ": Caught exception",       \
-		          ::simlib_debug::is_va_empty(__VA_ARGS__) ? "" : " -> ",      \
-		          ::simlib_debug::what_of(__VA_ARGS__),                        \
-		          "\nStack unwinding marks:\n");                               \
-                                                                               \
-		size_t i = 0;                                                          \
-		for (auto const& mark :                                                \
-		     ::stack_unwinding::StackGuard::marks_collected)                   \
-			tmplog('[', i++, "] ", mark.description, "\n");                    \
-                                                                               \
-		tmplog.flush_no_nl();                                                  \
-		::stack_unwinding::StackGuard::marks_collected.clear();                \
+#define ERRLOG_CATCH(...)                                           \
+	do {                                                            \
+		auto tmplog = errlog(__FILE__ ":" STRINGIZE(__LINE__) ": Caught exception",                         \
+			::simlib_debug::is_va_empty(__VA_ARGS__) ? "" : " -> ", \
+			::simlib_debug::what_of(__VA_ARGS__),                   \
+			"\nStack unwinding marks:\n");                          \
+                                                                    \
+		size_t i = 0;                                               \
+		for (auto const& mark :                                     \
+			 ::stack_unwinding::StackGuard::marks_collected)        \
+			tmplog('[', i++, "] ", mark.description, "\n");         \
+                                                                    \
+		tmplog.flush_no_nl();                                       \
+		::stack_unwinding::StackGuard::marks_collected.clear();     \
 	} while (false)
 
 class ThrowingIsBug {

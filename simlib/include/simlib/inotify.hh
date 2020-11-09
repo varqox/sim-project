@@ -44,8 +44,9 @@ public:
 class SimpleWatchingLog : public WatchingLog {
 public:
 	void could_not_watch(const std::string& path, int errnum) override {
-		stdlog("warning: could not watch ", path, ": inotify_add_watch()",
-		       errmsg(errnum));
+		stdlog(
+			"warning: could not watch ", path, ": inotify_add_watch()",
+			errmsg(errnum));
 	}
 
 	void read_failed(int errnum) override {
@@ -77,13 +78,12 @@ class FileModificationMonitor {
 	std::map<int, const FileInfo*> watched_files_; // wd => FileInfo
 	bool processing_unwatched_files_is_scheduled_ = false;
 
-	static constexpr auto events_requiring_handler =
-	   IN_MODIFY | // modification
-	   IN_CREATE | IN_MOVED_TO; // file creation
+	static constexpr auto events_requiring_handler = IN_MODIFY | // modification
+		IN_CREATE | IN_MOVED_TO; // file creation
 
-	static constexpr auto all_events =
-	   events_requiring_handler | IN_MOVE_SELF | // deletion
-	   IN_EXCL_UNLINK; // do not monitor unlinked files
+	static constexpr auto all_events = events_requiring_handler |
+		IN_MOVE_SELF | // deletion
+		IN_EXCL_UNLINK; // do not monitor unlinked files
 
 	struct simlib_inotify_event {
 		decltype(inotify_event::wd) wd{};
@@ -96,9 +96,9 @@ class FileModificationMonitor {
 	FileDescriptor intfy_fd_;
 	std::unique_ptr<char[]> intfy_buff_;
 	std::map<std::string, EventQueue::handler_id_t>
-	   deferred_modification_handlers_;
+		deferred_modification_handlers_;
 	std::unique_ptr<WatchingLog> watching_log_ =
-	   std::make_unique<SilentWatchingLog>();
+		std::make_unique<SilentWatchingLog>();
 	std::function<void(const std::string&)> event_handler_;
 	nanoseconds add_missing_files_retry_period_ = milliseconds(50);
 
@@ -112,13 +112,13 @@ public:
 	 *   happening (it is useful, as saving file often takes several writes and
 	 *   you would want one event for that)
 	 */
-	void add_path(std::string path,
-	              nanoseconds stillness_threshold = nanoseconds(0)) {
+	void add_path(
+		std::string path, nanoseconds stillness_threshold = nanoseconds(0)) {
 		STACK_UNWINDING_MARK;
 
 		assert(stillness_threshold >= nanoseconds(0));
 		auto [it, inserted] =
-		   added_files_.insert({std::move(path), stillness_threshold});
+			added_files_.insert({std::move(path), stillness_threshold});
 		assert(inserted and "Path added more than once");
 		try {
 			unwatched_files_.emplace(&*it);

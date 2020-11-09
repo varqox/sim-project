@@ -26,7 +26,7 @@ string executable_path(pid_t pid) {
 
 	ssize_t rc = readlink(path.c_str(), buff.data(), buff.size());
 	if ((rc == -1 && errno == ENAMETOOLONG) ||
-	    rc >= static_cast<int>(buff.size())) {
+		rc >= static_cast<int>(buff.size())) {
 		array<char, 65536> buff2{};
 		rc = readlink(path.c_str(), buff2.data(), buff2.size());
 		if (rc == -1 || rc >= static_cast<int>(buff2.size())) {
@@ -42,8 +42,8 @@ string executable_path(pid_t pid) {
 	return string(buff.data(), rc);
 }
 
-vector<pid_t> find_processes_by_executable_path(vector<string> exec_set,
-                                                bool include_me) {
+vector<pid_t>
+find_processes_by_executable_path(vector<string> exec_set, bool include_me) {
 	if (exec_set.empty()) {
 		return {};
 	}
@@ -112,25 +112,27 @@ vector<pid_t> find_processes_by_executable_path(vector<string> exec_set,
 	return res;
 }
 
-void kill_processes_by_exec(vector<string> exec_set,
-                            optional<duration<double>> wait_timeout,
-                            bool kill_after_waiting, int terminate_signal) {
+void kill_processes_by_exec(
+	vector<string> exec_set, optional<duration<double>> wait_timeout,
+	bool kill_after_waiting, int terminate_signal) {
 	STACK_UNWINDING_MARK;
 	// TODO: change every ProcStatFileContents::get() to open file by
 	// FileDescriptor and use ProcStatFileContents::from_proc_stat_contents()
 	// and don't fail if the file does not exists -- it means that the process
 	// is already dead
 	constexpr uint START_TIME_FID =
-	   21; // Number of the field in /proc/[pid]/stat that contains process
-	       // start time
+		21; // Number of the field in /proc/[pid]/stat that contains process
+			// start time
 
 	using Victim = pair<pid_t, string>;
 	vector<Victim> victims;
 	for (pid_t pid : find_processes_by_executable_path(std::move(exec_set))) {
 		try {
-			victims.emplace_back(pid, ProcStatFileContents::get(pid)
-			                             .field(START_TIME_FID)
-			                             .to_string());
+			victims.emplace_back(
+				pid,
+				ProcStatFileContents::get(pid)
+					.field(START_TIME_FID)
+					.to_string());
 		} catch (...) {
 			// Ignore if process already died
 			if (kill(pid, 0) == 0 or errno != ESRCH) {
@@ -159,11 +161,11 @@ void kill_processes_by_exec(vector<string> exec_set,
 
 	auto proc_uptime = get_file_contents("/proc/uptime");
 	auto current_uptime = to_string(
-	   str2num<double>(
-	      StringView(proc_uptime).extract_leading(not_fn(is_space<char>)))
-	         .value() *
-	      ticks_per_second,
-	   0);
+		str2num<double>(
+			StringView(proc_uptime).extract_leading(not_fn(is_space<char>)))
+				.value() *
+			ticks_per_second,
+		0);
 
 	// If one of the processes has just appeared, wait for a clock tick
 	// to distinguish it from a new process that may appear just after killing

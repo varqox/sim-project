@@ -13,8 +13,8 @@ string obtain_checker_output(int fd, size_t max_length) {
 	size_t pos = 0;
 	ssize_t k = 0;
 	do {
-		k = pread(fd, const_cast<char*>(res.data()) + pos, max_length - pos,
-		          pos);
+		k = pread(
+			fd, const_cast<char*>(res.data()) + pos, max_length - pos, pos);
 		if (k > 0) {
 			pos += k;
 		} else if (k == 0) {

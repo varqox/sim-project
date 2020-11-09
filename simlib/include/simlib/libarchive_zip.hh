@@ -46,8 +46,8 @@ void skim_archive(int fd, Func&& setup_archive, UnaryFunc&& entry_callback) {
 			THROW("archive_read_next_header() - ", archive_error_string(in));
 		}
 
-		if constexpr (std::is_convertible_v<decltype(entry_callback(entry)),
-		                                    bool>) {
+		if constexpr (std::is_convertible_v<
+						  decltype(entry_callback(entry)), bool>) {
 			if (not entry_callback(entry)) {
 				break;
 			}
@@ -67,15 +67,16 @@ void skim_archive(int fd, Func&& setup_archive, UnaryFunc&& entry_callback) {
  *   argument - archive_entry*
  */
 template <class Func, class UnaryFunc>
-void skim_archive(FilePath filename, Func&& setup_archive,
-                  UnaryFunc&& entry_callback) {
+void skim_archive(
+	FilePath filename, Func&& setup_archive, UnaryFunc&& entry_callback) {
 	FileDescriptor fd{filename, O_RDONLY | O_CLOEXEC};
 	if (fd == -1) {
 		THROW("Failed to open file `", filename, '`', errmsg());
 	}
 
-	return skim_archive(fd, std::forward<Func>(setup_archive),
-	                    std::forward<UnaryFunc>(entry_callback));
+	return skim_archive(
+		fd, std::forward<Func>(setup_archive),
+		std::forward<UnaryFunc>(entry_callback));
 }
 
 /**
@@ -87,8 +88,9 @@ void skim_archive(FilePath filename, Func&& setup_archive,
  */
 template <class UnaryFunc>
 void skim_zip(int fd, UnaryFunc&& entry_callback) {
-	return skim_archive(fd, archive_read_support_format_zip,
-	                    std::forward<UnaryFunc>(entry_callback));
+	return skim_archive(
+		fd, archive_read_support_format_zip,
+		std::forward<UnaryFunc>(entry_callback));
 }
 
 /**
@@ -100,8 +102,9 @@ void skim_zip(int fd, UnaryFunc&& entry_callback) {
  */
 template <class UnaryFunc>
 void skim_zip(FilePath filename, UnaryFunc&& entry_callback) {
-	return skim_archive(filename, archive_read_support_format_zip,
-	                    std::forward<UnaryFunc>(entry_callback));
+	return skim_archive(
+		filename, archive_read_support_format_zip,
+		std::forward<UnaryFunc>(entry_callback));
 }
 
 /**
@@ -118,14 +121,15 @@ void skim_zip(FilePath filename, UnaryFunc&& entry_callback) {
  * @param dest_dir path to the directory to which files will be extracted
  */
 template <class Func, class UnaryFunc>
-void extract(int archive_fd, int flags, Func&& setup_archives,
-             UnaryFunc&& extract_entry, StringView dest_dir = ".") {
+void extract(
+	int archive_fd, int flags, Func&& setup_archives, UnaryFunc&& extract_entry,
+	StringView dest_dir = ".") {
 	dest_dir.remove_trailing('/');
 	// Do not trust extracted archives
 	flags |= ARCHIVE_EXTRACT_SECURE_SYMLINKS;
 
 	/* Since the path is evaluated safely with abspath() below flags are
-	    disabled as they may cause problems with the @p dest_dir */
+		disabled as they may cause problems with the @p dest_dir */
 	// flags |= ARCHIVE_EXTRACT_SECURE_NODOTDOT;
 	// flags |= ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS;
 
@@ -204,15 +208,17 @@ void extract(int archive_fd, int flags, Func&& setup_archives,
  *   extract the entry
  */
 template <class Func, class UnaryFunc>
-void extract(FilePath filename, int flags, Func&& setup_archives,
-             UnaryFunc&& extract_entry, StringView dest_dir = ".") {
+void extract(
+	FilePath filename, int flags, Func&& setup_archives,
+	UnaryFunc&& extract_entry, StringView dest_dir = ".") {
 	FileDescriptor fd{filename, O_RDONLY | O_CLOEXEC};
 	if (fd == -1) {
 		THROW("Failed to open file `", filename, '`', errmsg());
 	}
 
-	return extract(fd, flags, std::forward<Func>(setup_archives),
-	               std::forward<UnaryFunc>(extract_entry), dest_dir);
+	return extract(
+		fd, flags, std::forward<Func>(setup_archives),
+		std::forward<UnaryFunc>(extract_entry), dest_dir);
 }
 
 /**
@@ -224,8 +230,8 @@ void extract(FilePath filename, int flags, Func&& setup_archives,
  * @param pathname path of the file (the one in archive) to extracted
  */
 template <class Func>
-std::string extract_file(int archive_fd, Func&& setup_archive,
-                         const StringView& pathname) {
+std::string
+extract_file(int archive_fd, Func&& setup_archive, const StringView& pathname) {
 	struct archive* in = archive_read_new();
 	throw_assert(in);
 	Defer in_guard([&] { archive_read_free(in); });
@@ -283,8 +289,8 @@ std::string extract_file(int archive_fd, Func&& setup_archive,
  * @param pathname path of the file (the one in archive) to extracted
  */
 template <class Func>
-std::string extract_file(FilePath archive_file, Func&& setup_archive,
-                         StringView pathname) {
+std::string
+extract_file(FilePath archive_file, Func&& setup_archive, StringView pathname) {
 	FileDescriptor fd{archive_file, O_RDONLY | O_CLOEXEC};
 	if (fd == -1) {
 		THROW("Failed to open file `", archive_file, '`', errmsg());
@@ -294,54 +300,58 @@ std::string extract_file(FilePath archive_file, Func&& setup_archive,
 }
 
 /// Extract @p pathname from the zip archive @p zip_fd
-inline std::string extract_file_from_zip(int zip_fd,
-                                         const StringView& pathname) {
+inline std::string
+extract_file_from_zip(int zip_fd, const StringView& pathname) {
 	return extract_file(zip_fd, archive_read_support_format_zip, pathname);
 }
 
 /// Extract @p pathname from the zip archive @p zip_file
-inline std::string extract_file_from_zip(FilePath zip_file,
-                                         StringView pathname) {
+inline std::string
+extract_file_from_zip(FilePath zip_file, StringView pathname) {
 	return extract_file(zip_file, archive_read_support_format_zip, pathname);
 }
 
 // Extracts zip, for details see extract() documentation
 template <class UnaryFunc>
-inline void extract_zip(int zip_fd, int flags, UnaryFunc&& extract_entry,
-                        StringView dest_dir = ".") {
+inline void extract_zip(
+	int zip_fd, int flags, UnaryFunc&& extract_entry,
+	StringView dest_dir = ".") {
 	return extract(
-	   zip_fd, flags,
-	   [](archive* in, archive* /*unused*/) {
-		   archive_read_support_format_zip(in);
-	   },
-	   std::forward<UnaryFunc>(extract_entry), dest_dir);
+		zip_fd, flags,
+		[](archive* in, archive* /*unused*/) {
+			archive_read_support_format_zip(in);
+		},
+		std::forward<UnaryFunc>(extract_entry), dest_dir);
 }
 
 /// Extracts zip, for details see extract() documentation
-inline void extract_zip(int zip_fd, int flags = ARCHIVE_EXTRACT_TIME,
-                        StringView dest_dir = ".") {
+inline void extract_zip(
+	int zip_fd, int flags = ARCHIVE_EXTRACT_TIME, StringView dest_dir = ".") {
 	return extract_zip(
-	   zip_fd, flags, [](archive_entry* /*unused*/) { return true; }, dest_dir);
+		zip_fd, flags, [](archive_entry* /*unused*/) { return true; },
+		dest_dir);
 }
 
 // Extracts zip, for details see extract() documentation
 template <class UnaryFunc>
-inline void extract_zip(FilePath filename, int flags, UnaryFunc&& extract_entry,
-                        StringView dest_dir = ".") {
+inline void extract_zip(
+	FilePath filename, int flags, UnaryFunc&& extract_entry,
+	StringView dest_dir = ".") {
 	return extract(
-	   filename, flags,
-	   [](archive* in, archive* /*unused*/) {
-		   archive_read_support_format_zip(in);
-	   },
-	   std::forward<UnaryFunc>(extract_entry), dest_dir);
+		filename, flags,
+		[](archive* in, archive* /*unused*/) {
+			archive_read_support_format_zip(in);
+		},
+		std::forward<UnaryFunc>(extract_entry), dest_dir);
 }
 
 /// Extracts zip, for details see extract() documentation
-inline void extract_zip(FilePath filename, int flags = ARCHIVE_EXTRACT_TIME,
-                        StringView dest_dir = ".") {
+inline void extract_zip(
+	FilePath filename, int flags = ARCHIVE_EXTRACT_TIME,
+	StringView dest_dir = ".") {
 	return extract_zip(
-	   filename, flags, [](archive_entry* /*unused*/) { return true; },
-	   dest_dir);
+		filename, flags, [](archive_entry* /*unused*/) { return true; },
+		dest_dir);
 }
 
 /**
@@ -353,16 +363,16 @@ inline void extract_zip(FilePath filename, int flags = ARCHIVE_EXTRACT_TIME,
  *   archive* as the argument, most useful to set the archive format
  */
 template <class Container, class Func>
-void compress(Container&& filenames, FilePath archive_filename,
-              Func&& setup_archive) {
+void compress(
+	Container&& filenames, FilePath archive_filename, Func&& setup_archive) {
 	struct archive* out = archive_write_new();
 	throw_assert(out);
 	Defer out_guard([&] { archive_write_free(out); });
 
 	setup_archive(out);
 
-	FileDescriptor fd(archive_filename,
-	                  O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
+	FileDescriptor fd(
+		archive_filename, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
 	if (fd == -1) {
 		THROW("Failed to open file `", archive_filename, '`', errmsg());
 	}
@@ -421,12 +431,12 @@ void compress(Container&& filenames, FilePath archive_filename,
 
 			archive_entry_set_mode(entry, st.st_mode);
 			archive_entry_set_filetype(entry, AE_IFDIR);
-			archive_entry_set_atime(entry, st.st_atim.tv_sec,
-			                        st.st_atim.tv_nsec);
-			archive_entry_set_ctime(entry, st.st_ctim.tv_sec,
-			                        st.st_ctim.tv_nsec);
-			archive_entry_set_mtime(entry, st.st_mtim.tv_sec,
-			                        st.st_mtim.tv_nsec);
+			archive_entry_set_atime(
+				entry, st.st_atim.tv_sec, st.st_atim.tv_nsec);
+			archive_entry_set_ctime(
+				entry, st.st_ctim.tv_sec, st.st_ctim.tv_nsec);
+			archive_entry_set_mtime(
+				entry, st.st_mtim.tv_sec, st.st_mtim.tv_nsec);
 			archive_entry_set_pathname(entry, pathname.to_cstr().c_str());
 			archive_entry_set_size(entry, st.st_size);
 
@@ -490,11 +500,12 @@ void compress(Container&& filenames, FilePath archive_filename,
 
 /// Specialization of compress()
 template <class T, class Func>
-inline void compress(std::initializer_list<T> filenames,
-                     FilePath archive_filename, Func&& setup_archive) {
+inline void compress(
+	std::initializer_list<T> filenames, FilePath archive_filename,
+	Func&& setup_archive) {
 	return compress<std::initializer_list<T>>(
-	   std::move(filenames), archive_filename,
-	   std::forward<Func>(setup_archive));
+		std::move(filenames), archive_filename,
+		std::forward<Func>(setup_archive));
 }
 
 /**
@@ -505,16 +516,17 @@ inline void compress(std::initializer_list<T> filenames,
  */
 template <class Container>
 void compress_into_zip(Container&& filenames, FilePath zip_archive_filename) {
-	return compress(std::forward<Container>(filenames), zip_archive_filename,
-	                archive_write_set_format_zip);
+	return compress(
+		std::forward<Container>(filenames), zip_archive_filename,
+		archive_write_set_format_zip);
 }
 
 /// Specialization of compress_into_zip()
 template <class T>
-inline void compress_into_zip(std::initializer_list<T> filenames,
-                              FilePath zip_archive_filename) {
-	return compress_into_zip<std::initializer_list<T>>(std::move(filenames),
-	                                                   zip_archive_filename);
+inline void compress_into_zip(
+	std::initializer_list<T> filenames, FilePath zip_archive_filename) {
+	return compress_into_zip<std::initializer_list<T>>(
+		std::move(filenames), zip_archive_filename);
 }
 
 #endif // __has_include(<archive.h>) and __has_include(<archive_entry.h>)
@@ -522,11 +534,11 @@ inline void compress_into_zip(std::initializer_list<T> filenames,
 /// Places file @p filename (with a replaced path to @p new_filename) into zip
 /// file @p zip_filename. If @p new_filename is empty, then @p filename is
 /// used. This function may be used to add directories to the archive as well.
-void update_add_file_to_zip(FilePath filename, StringView new_filename,
-                            FilePath zip_filename);
+void update_add_file_to_zip(
+	FilePath filename, StringView new_filename, FilePath zip_filename);
 
 /// Places data @p data (within a file @p new_filename) into zip
 /// file @p zip_filename. If new_filename ends with '/' data is ignored and
 /// only directory @p new_filename is created.
-void update_add_data_to_zip(StringView data, const StringView& new_filename,
-                            FilePath zip_filename);
+void update_add_data_to_zip(
+	StringView data, const StringView& new_filename, FilePath zip_filename);

@@ -64,8 +64,8 @@ TEST(file_manip, remove_dir_contents) {
 
 	EXPECT_EQ(remove_dir_contents(tmp_dir.path()), 0);
 
-	for_each_dir_component(tmp_dir.path(),
-	                       [](dirent* f) { ADD_FAILURE() << f->d_name; });
+	for_each_dir_component(
+		tmp_dir.path(), [](dirent* f) { ADD_FAILURE() << f->d_name; });
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -77,15 +77,15 @@ TEST(file_manip, create_subdirectories) {
 
 	EXPECT_EQ(create_subdirectories(file_path), 0);
 	EXPECT_TRUE(path_exists(dir_path));
-	for_each_dir_component(dir_path,
-	                       [](dirent* f) { ADD_FAILURE() << f->d_name; });
+	for_each_dir_component(
+		dir_path, [](dirent* f) { ADD_FAILURE() << f->d_name; });
 	EXPECT_FALSE(path_exists(file_path));
 
 	EXPECT_EQ(remove_dir_contents(tmp_dir.path()), 0);
 	EXPECT_EQ(create_subdirectories(dir_path), 0);
 	EXPECT_TRUE(path_exists(dir_path));
-	for_each_dir_component(dir_path,
-	                       [](dirent* f) { ADD_FAILURE() << f->d_name; });
+	for_each_dir_component(
+		dir_path, [](dirent* f) { ADD_FAILURE() << f->d_name; });
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -152,7 +152,7 @@ void copy_test(void (*copy_fn)(FilePath, FilePath, mode_t)) {
 		for_each_dir_component(tmp_dir.path(), [&](dirent* f) {
 			++k;
 			if (allowed_files.count(concat_tostr(tmp_dir.path(), f->d_name)) ==
-			    0) {
+				0) {
 				ADD_FAILURE() << f->d_name << " (at line: " << line << ')';
 			}
 		});
@@ -239,39 +239,39 @@ TEST(file_manip, copy_r) {
 	};
 
 	vector<FileInfo> orig_files = {
-	   {"a", some_random_data(1023)},
-	   {"b", some_random_data(1024)},
-	   {"c", some_random_data(1025)},
-	   {"dir/a", some_random_data(1023)},
-	   {"dir/aa", some_random_data(100000)},
-	   {"dir/b", some_random_data(1024)},
-	   {"dir/bb", some_random_data(100000)},
-	   {"dir/c", some_random_data(1025)},
-	   {"dir/cc", some_random_data(100000)},
-	   {"dir/dir/a", some_random_data(1023)},
-	   {"dir/dir/aa", some_random_data(100000)},
-	   {"dir/dir/b", some_random_data(1024)},
-	   {"dir/dir/bb", some_random_data(100000)},
-	   {"dir/dir/c", some_random_data(1025)},
-	   {"dir/dir/cc", some_random_data(100000)},
-	   {"dir/dir/xxx/a", some_random_data(1023)},
-	   {"dir/dir/xxx/aa", some_random_data(100000)},
-	   {"dir/dir/xxx/b", some_random_data(1024)},
-	   {"dir/dir/xxx/bb", some_random_data(100000)},
-	   {"dir/dir/xxx/c", some_random_data(1025)},
-	   {"dir/dir/xxx/cc", some_random_data(100000)},
-	   {"dir/dur/a", some_random_data(1023)},
-	   {"dir/dur/aa", some_random_data(100000)},
-	   {"dir/dur/b", some_random_data(1024)},
-	   {"dir/dur/bb", some_random_data(100000)},
-	   {"dir/dur/c", some_random_data(1025)},
-	   {"dir/dur/cc", some_random_data(100000)},
-	   {"dir/dur/xxx/a", some_random_data(1023)},
-	   {"dir/dur/xxx/aa", some_random_data(100000)},
-	   {"dir/dur/xxx/b", some_random_data(1024)},
-	   {"dir/dur/xxx/bb", some_random_data(100000)},
-	   {"dir/dur/xxx/c", some_random_data(1025)},
-	   {"dir/dur/xxx/cc", some_random_data(100000)},
+		{"a", some_random_data(1023)},
+		{"b", some_random_data(1024)},
+		{"c", some_random_data(1025)},
+		{"dir/a", some_random_data(1023)},
+		{"dir/aa", some_random_data(100000)},
+		{"dir/b", some_random_data(1024)},
+		{"dir/bb", some_random_data(100000)},
+		{"dir/c", some_random_data(1025)},
+		{"dir/cc", some_random_data(100000)},
+		{"dir/dir/a", some_random_data(1023)},
+		{"dir/dir/aa", some_random_data(100000)},
+		{"dir/dir/b", some_random_data(1024)},
+		{"dir/dir/bb", some_random_data(100000)},
+		{"dir/dir/c", some_random_data(1025)},
+		{"dir/dir/cc", some_random_data(100000)},
+		{"dir/dir/xxx/a", some_random_data(1023)},
+		{"dir/dir/xxx/aa", some_random_data(100000)},
+		{"dir/dir/xxx/b", some_random_data(1024)},
+		{"dir/dir/xxx/bb", some_random_data(100000)},
+		{"dir/dir/xxx/c", some_random_data(1025)},
+		{"dir/dir/xxx/cc", some_random_data(100000)},
+		{"dir/dur/a", some_random_data(1023)},
+		{"dir/dur/aa", some_random_data(100000)},
+		{"dir/dur/b", some_random_data(1024)},
+		{"dir/dur/bb", some_random_data(100000)},
+		{"dir/dur/c", some_random_data(1025)},
+		{"dir/dur/cc", some_random_data(100000)},
+		{"dir/dur/xxx/a", some_random_data(1023)},
+		{"dir/dur/xxx/aa", some_random_data(100000)},
+		{"dir/dur/xxx/b", some_random_data(1024)},
+		{"dir/dur/xxx/bb", some_random_data(100000)},
+		{"dir/dur/xxx/c", some_random_data(1025)},
+		{"dir/dur/xxx/cc", some_random_data(100000)},
 	};
 
 	throw_assert(is_sorted(orig_files));
@@ -289,20 +289,20 @@ TEST(file_manip, copy_r) {
 		InplaceBuff<PATH_MAX> curr_path;
 		auto process_dir = [&](auto& self) -> void {
 			for_each_dir_component(
-			   concat(prefix, curr_path), [&](dirent* file) {
-				   Defer undoer = [&, old_len = curr_path.size] {
-					   curr_path.size = old_len;
-				   };
-				   curr_path.append(file->d_name);
-				   if (is_directory(concat(prefix, curr_path))) {
-					   curr_path.append('/');
-					   self(self);
-				   } else {
-					   res.push_back(
-					      {curr_path.to_string(),
-					       get_file_contents(concat(prefix, curr_path))});
-				   }
-			   });
+				concat(prefix, curr_path), [&](dirent* file) {
+					Defer undoer = [&, old_len = curr_path.size] {
+						curr_path.size = old_len;
+					};
+					curr_path.append(file->d_name);
+					if (is_directory(concat(prefix, curr_path))) {
+						curr_path.append('/');
+						self(self);
+					} else {
+						res.push_back(
+							{curr_path.to_string(),
+							 get_file_contents(concat(prefix, curr_path))});
+					}
+				});
 		};
 
 		process_dir(process_dir);
@@ -322,24 +322,24 @@ TEST(file_manip, copy_r) {
 	};
 
 	auto check_equality = [&](const vector<FileInfo>& fir,
-	                          const vector<FileInfo>& sec, size_t line) {
+							  const vector<FileInfo>& sec, size_t line) {
 		size_t len = max(fir.size(), sec.size());
 		for (size_t i = 0; i < len; ++i) {
 			if (i < fir.size() and i < sec.size()) {
 				if (not(fir[i] == sec[i])) {
 					ADD_FAILURE_AT(__FILE__, line)
-					   << "Unequal files:\t" << fir[i].path << "\t"
-					   << sec[i].path;
+						<< "Unequal files:\t" << fir[i].path << "\t"
+						<< sec[i].path;
 				}
 
 				continue;
 			}
 			if (i < fir.size()) {
 				ADD_FAILURE_AT(__FILE__, line)
-				   << "Extra file in fir:\t" << fir[i].path;
+					<< "Extra file in fir:\t" << fir[i].path;
 			} else {
 				ADD_FAILURE_AT(__FILE__, line)
-				   << "Extra file in sec:\t" << sec[i].path;
+					<< "Extra file in sec:\t" << sec[i].path;
 			}
 		}
 	};
@@ -349,8 +349,8 @@ TEST(file_manip, copy_r) {
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
 		auto dest_path = concat(dest_dir.path(), "dest/dir");
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path), 0);
-		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
-		               __LINE__);
+		check_equality(
+			dump_files(dest_path), orig_files_slice("dir/"), __LINE__);
 	}
 
 	// Typical one level
@@ -358,8 +358,8 @@ TEST(file_manip, copy_r) {
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
 		auto dest_path = concat(dest_dir.path(), "dest");
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path), 0);
-		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
-		               __LINE__);
+		check_equality(
+			dump_files(dest_path), orig_files_slice("dir/"), __LINE__);
 	}
 
 	// Typical into existing
@@ -367,8 +367,8 @@ TEST(file_manip, copy_r) {
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
 		const auto& dest_path = dest_dir.path();
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path), 0);
-		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
-		               __LINE__);
+		check_equality(
+			dump_files(dest_path), orig_files_slice("dir/"), __LINE__);
 	}
 
 	// Without creating subdirs into existing
@@ -376,8 +376,8 @@ TEST(file_manip, copy_r) {
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
 		const auto& dest_path = dest_dir.path();
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path, false), 0);
-		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
-		               __LINE__);
+		check_equality(
+			dump_files(dest_path), orig_files_slice("dir/"), __LINE__);
 	}
 
 	// Without creating subdirs one level
@@ -385,8 +385,8 @@ TEST(file_manip, copy_r) {
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
 		auto dest_path = concat(dest_dir.path(), "dest/");
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path, false), 0);
-		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
-		               __LINE__);
+		check_equality(
+			dump_files(dest_path), orig_files_slice("dir/"), __LINE__);
 	}
 
 	// Without creating subdirs two levels

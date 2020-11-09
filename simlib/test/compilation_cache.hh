@@ -21,16 +21,17 @@ class CompilationCache {
 	const std::optional<std::chrono::seconds> valid_duration_;
 
 public:
-	CompilationCache(std::string cache_dir,
-	                 std::optional<std::chrono::seconds> valid_duration)
+	CompilationCache(
+		std::string cache_dir,
+		std::optional<std::chrono::seconds> valid_duration)
 	: cache_dir_(std::move(cache_dir))
 	, valid_duration_(valid_duration) {
 		assert(has_suffix(cache_dir_, "/"));
 	}
 
-	[[nodiscard]] bool
-	is_cached(StringView in_cache_path,
-	          std::chrono::system_clock::time_point file_mtime) const {
+	[[nodiscard]] bool is_cached(
+		StringView in_cache_path,
+		std::chrono::system_clock::time_point file_mtime) const {
 		struct stat64 cached_stat {};
 		if (stat64(FilePath(cached_path(in_cache_path)), &cached_stat)) {
 			if (errno == ENOENT) {
@@ -40,20 +41,20 @@ public:
 		}
 
 		auto cached_mtime = std::chrono::system_clock::time_point(
-		   to_duration(cached_stat.st_mtim));
+			to_duration(cached_stat.st_mtim));
 		if (cached_mtime < file_mtime) {
 			return false; // Cached file is older than the source file
 		}
 		if (valid_duration_ and
-		    std::chrono::system_clock::now() - cached_mtime > *valid_duration_)
+			std::chrono::system_clock::now() - cached_mtime > *valid_duration_)
 		{
 			return false; // Cached file has expired
 		}
 		return true;
 	}
 
-	[[nodiscard]] bool is_cached(StringView in_cache_path,
-	                             FilePath file_path) const {
+	[[nodiscard]] bool
+	is_cached(StringView in_cache_path, FilePath file_path) const {
 		return is_cached(in_cache_path, get_modification_time(file_path));
 	}
 
@@ -73,8 +74,8 @@ public:
 	}
 
 	// NOLINTNEXTLINE(readability-make-member-function-const)
-	void cache_compiled_checker(StringView in_cache_path,
-	                            sim::JudgeWorker& jworker) {
+	void cache_compiled_checker(
+		StringView in_cache_path, sim::JudgeWorker& jworker) {
 		auto path = cached_path(in_cache_path);
 		if (create_subdirectories(path) == -1) {
 			THROW("create_subdirectories(", path, ')', errmsg());
@@ -83,8 +84,8 @@ public:
 	}
 
 	// NOLINTNEXTLINE(readability-make-member-function-const)
-	void cache_compiled_solution(StringView in_cache_path,
-	                             sim::JudgeWorker& jworker) {
+	void cache_compiled_solution(
+		StringView in_cache_path, sim::JudgeWorker& jworker) {
 		auto path = cached_path(in_cache_path);
 		if (create_subdirectories(path) == -1) {
 			THROW("create_subdirectories(", path, ')', errmsg());

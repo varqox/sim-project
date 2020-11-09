@@ -30,8 +30,8 @@ constexpr typename T::const_iterator binary_find(const T& x, const C& val) {
 }
 
 template <class T, class C, class Comp>
-constexpr typename T::const_iterator binary_find(const T& x, const C& val,
-                                                 Comp&& comp) {
+constexpr typename T::const_iterator
+binary_find(const T& x, const C& val, Comp&& comp) {
 	auto beg = x.begin();
 	auto end = x.end();
 	while (beg != end) {
@@ -42,8 +42,8 @@ constexpr typename T::const_iterator binary_find(const T& x, const C& val,
 			end = mid;
 		}
 	}
-	return (beg != x.end() && !comp(*beg, val) && !comp(val, *beg) ? beg
-	                                                               : x.end());
+	return (
+		beg != x.end() && !comp(*beg, val) && !comp(val, *beg) ? beg : x.end());
 }
 
 template <class T, typename B, class C>

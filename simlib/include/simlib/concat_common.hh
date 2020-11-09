@@ -30,7 +30,7 @@ constexpr auto data(char* x) noexcept { return x; }
 template <class T>
 constexpr decltype(auto) stringify(T&& x) {
 	if constexpr (std::is_integral_v<
-	                 std::remove_cv_t<std::remove_reference_t<T>>>) {
+					  std::remove_cv_t<std::remove_reference_t<T>>>) {
 		return ::to_string(x);
 	} else {
 		return std::forward<T>(x);
@@ -39,8 +39,10 @@ constexpr decltype(auto) stringify(T&& x) {
 
 namespace detail {
 
-template <class T, class = decltype(string_length(
-                      stringify(std::forward<T>(std::declval<T>()))))>
+template <
+	class T,
+	class =
+		decltype(string_length(stringify(std::forward<T>(std::declval<T>()))))>
 constexpr auto is_string_argument(int) -> std::true_type;
 
 template <class>
@@ -50,4 +52,4 @@ constexpr auto is_string_argument(...) -> std::false_type;
 
 template <class T>
 constexpr inline bool is_string_argument =
-   decltype(detail::is_string_argument<T>(0))::value;
+	decltype(detail::is_string_argument<T>(0))::value;

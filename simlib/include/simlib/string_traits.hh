@@ -3,8 +3,8 @@
 #include "simlib/ctype.hh"
 #include "simlib/string_view.hh"
 
-constexpr bool has_prefix(const StringView& str,
-                          const StringView& prefix) noexcept {
+constexpr bool
+has_prefix(const StringView& str, const StringView& prefix) noexcept {
 	return (str.compare(0, prefix.size(), prefix) == 0);
 }
 
@@ -13,11 +13,11 @@ constexpr bool has_one_of_prefixes(StringView str, T&&... prefixes) noexcept {
 	return (... or has_prefix(str, std::forward<T>(prefixes)));
 }
 
-constexpr bool has_suffix(const StringView& str,
-                          const StringView& suffix) noexcept {
-	return (str.size() >= suffix.size() and
-	        str.compare(str.size() - suffix.size(), suffix.size(), suffix) ==
-	           0);
+constexpr bool
+has_suffix(const StringView& str, const StringView& suffix) noexcept {
+	return (
+		str.size() >= suffix.size() and
+		str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
 }
 
 template <class... T>
@@ -124,6 +124,7 @@ constexpr bool is_real(StringView str) noexcept {
 		return is_digit(str);
 	}
 
-	return (is_digit(str.substring(0, dot_pos)) and
-	        is_digit(str.substring(dot_pos + 1)));
+	return (
+		is_digit(str.substring(0, dot_pos)) and
+		is_digit(str.substring(dot_pos + 1)));
 }

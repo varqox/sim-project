@@ -21,13 +21,13 @@ TEST(directory, for_each_dir_component) {
 	EXPECT_EQ(create_file(concat(tmp_dir.path(), "xyz")), 0);
 
 	std::set<string> files;
-	for_each_dir_component(dir,
-	                       [&](dirent* file) { files.emplace(file->d_name); });
+	for_each_dir_component(
+		dir, [&](dirent* file) { files.emplace(file->d_name); });
 	EXPECT_EQ(files, std::set<string>({"a", "b", "c", "abc", "xyz"}));
 
 	files.clear();
-	for_each_dir_component(tmp_dir.path(),
-	                       [&](dirent* file) { files.emplace(file->d_name); });
+	for_each_dir_component(
+		tmp_dir.path(), [&](dirent* file) { files.emplace(file->d_name); });
 	EXPECT_EQ(files, std::set<string>({"a", "b", "c", "abc", "xyz"}));
 
 	int k = 0;
@@ -40,9 +40,9 @@ TEST(directory, for_each_dir_component) {
 
 	k = 0;
 	for_each_dir_component(
-	   tmp_dir.path(), [&, iters = 2](dirent* /*unused*/) mutable {
-		   ++k;
-		   return --iters > 0 ? continue_repeating : stop_repeating;
-	   });
+		tmp_dir.path(), [&, iters = 2](dirent* /*unused*/) mutable {
+			++k;
+			return --iters > 0 ? continue_repeating : stop_repeating;
+		});
 	EXPECT_EQ(k, 2);
 }

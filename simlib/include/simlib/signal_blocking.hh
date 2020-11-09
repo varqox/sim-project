@@ -45,11 +45,11 @@ private:
 
 template <int (*func)(int, const sigset_t*, sigset_t*)>
 const sigset_t SignalBlockerBase<func>::empty_mask =
-   SignalBlockerBase<func>::empty_mask_val();
+	SignalBlockerBase<func>::empty_mask_val();
 
 template <int (*func)(int, const sigset_t*, sigset_t*)>
 const sigset_t SignalBlockerBase<func>::full_mask =
-   SignalBlockerBase<func>::full_mask_val();
+	SignalBlockerBase<func>::full_mask_val();
 
 using SignalBlocker = SignalBlockerBase<sigprocmask>;
 using ThreadSignalBlocker = SignalBlockerBase<pthread_sigmask>;
@@ -57,7 +57,7 @@ using ThreadSignalBlocker = SignalBlockerBase<pthread_sigmask>;
 // Block all signals when function @p f is called
 template <class F, class... Args>
 auto block_signals(F&& f, Args&&... args)
-   -> decltype(f(std::forward<Args>(args)...)) {
+	-> decltype(f(std::forward<Args>(args)...)) {
 	SignalBlocker sb;
 	return f(std::forward<Args>(args)...);
 }
@@ -67,10 +67,10 @@ auto block_signals(F&& f, Args&&... args)
 // Block all signals when function @p f is called
 template <class F, class... Args>
 auto thread_block_signals(F&& f, Args&&... args)
-   -> decltype(f(std::forward<Args>(args)...)) {
+	-> decltype(f(std::forward<Args>(args)...)) {
 	ThreadSignalBlocker sb;
 	return f(std::forward<Args>(args)...);
 }
 
-#define THREAD_BLOCK_SIGNALS(...)                                              \
+#define THREAD_BLOCK_SIGNALS(...) \
 	thread_block_signals([&] { return __VA_ARGS__; })

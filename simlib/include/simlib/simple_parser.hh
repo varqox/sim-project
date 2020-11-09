@@ -24,10 +24,11 @@ public:
 
 	~SimpleParser() = default;
 
-	[[nodiscard]] bool is_next(const StringView& s,
-	                           char delimiter = '/') const noexcept {
-		DEBUG_PARSER(stdlog('\'', *this, "' -> compared with: '", s, "' -> ",
-		                    compare_to(*this, 0, delimiter, s));)
+	[[nodiscard]] bool
+	is_next(const StringView& s, char delimiter = '/') const noexcept {
+		DEBUG_PARSER(stdlog(
+						 '\'', *this, "' -> compared with: '", s, "' -> ",
+						 compare_to(*this, 0, delimiter, s));)
 		return (compare_to(*this, 0, delimiter, s) == 0);
 	}
 
@@ -48,7 +49,7 @@ public:
 
 		StringView res{substr(0, pos)};
 		remove_prefix(
-		   pos + 1); // Safe because pos + 1 is cut down to size() if needed
+			pos + 1); // Safe because pos + 1 is cut down to size() if needed
 		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res);)
 		return res;
 	}
@@ -80,6 +81,6 @@ public:
 	 */
 	StringView extract_next_non_empty(char delimiter = '/') noexcept {
 		return extract_next_non_empty(
-		   [delimiter](char c) { return (c == delimiter); });
+			[delimiter](char c) { return (c == delimiter); });
 	}
 };

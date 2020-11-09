@@ -18,10 +18,11 @@ inline pid_t gettid() noexcept {
 #endif
 
 #ifdef SYS_waitid
-inline int waitid(int id_type, pid_t id, siginfo_t* info, int options,
-                  struct rusage* usage) noexcept {
+inline int waitid(
+	int id_type, pid_t id, siginfo_t* info, int options,
+	struct rusage* usage) noexcept {
 	return static_cast<int>(
-	   syscall(SYS_waitid, id_type, id, info, options, usage));
+		syscall(SYS_waitid, id_type, id, info, options, usage));
 }
 #endif
 
@@ -38,10 +39,10 @@ inline int pidfd_getfd(int pidfd, int targetfd, unsigned int flags) noexcept {
 #endif
 
 #ifdef SYS_pidfd_send_signal
-inline int pidfd_send_signal(int pidfd, int sig, siginfo_t* info,
-                             unsigned int flags) noexcept {
+inline int pidfd_send_signal(
+	int pidfd, int sig, siginfo_t* info, unsigned int flags) noexcept {
 	return static_cast<int>(
-	   syscall(SYS_pidfd_send_signal, pidfd, sig, info, flags));
+		syscall(SYS_pidfd_send_signal, pidfd, sig, info, flags));
 }
 #endif
 
@@ -66,10 +67,11 @@ inline long clone3(struct clone_args* cl_args) noexcept {
 #endif
 
 #ifdef SYS_execveat
-inline int execveat(int dirfd, const char* pathname, char* const argv[],
-                    char* const envp[], int flags) noexcept {
+inline int execveat(
+	int dirfd, const char* pathname, char* const argv[], char* const envp[],
+	int flags) noexcept {
 	return static_cast<int>(
-	   syscall(SYS_execveat, dirfd, pathname, argv, envp, flags));
+		syscall(SYS_execveat, dirfd, pathname, argv, envp, flags));
 }
 #endif
 

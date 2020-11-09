@@ -50,8 +50,9 @@ public:
 
 	~PackageContents() = default;
 
-	template <class... Args,
-	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+	template <
+		class... Args,
+		std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	void add_entry(Args&&... args) {
 		auto prev_size = buff.size;
 		buff.append(std::forward<Args>(args)...);
@@ -117,8 +118,8 @@ public:
 		return candidate;
 	}
 
-	void load_from_directory(StringView pkg_path,
-	                         bool retain_pkg_path_prefix = false);
+	void load_from_directory(
+		StringView pkg_path, bool retain_pkg_path_prefix = false);
 
 	void load_from_zip(FilePath pkg_path);
 };

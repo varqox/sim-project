@@ -92,8 +92,9 @@ public:
 		explicit Appender(Logger& logger)
 		: logger_(logger) {}
 
-		template <class... Args,
-		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+		template <
+			class... Args,
+			std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		explicit Appender(Logger& logger, Args&&... args)
 		: logger_(logger)
 		, orig_label_(logger.label())
@@ -102,8 +103,9 @@ public:
 		}
 
 		/// Deeply integrated with flush() and flush_no_nl()
-		void flush_impl(const char* format1, const char* format2,
-		                const char* format3) noexcept;
+		void flush_impl(
+			const char* format1, const char* format2,
+			const char* format3) noexcept;
 
 	public:
 		Appender(const Appender&) = delete;
@@ -125,8 +127,9 @@ public:
 			return operator()(std::forward<T>(x));
 		}
 
-		template <class... Args,
-		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+		template <
+			class... Args,
+			std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		Appender& operator()(Args&&... args) {
 			buff_.append(std::forward<Args>(args)...);
 			flushed_ = false;
@@ -152,8 +155,9 @@ public:
 		return Appender(*this, std::forward<T>(x));
 	}
 
-	template <class... Args,
-	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+	template <
+		class... Args,
+		std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	Appender operator()(Args&&... args) noexcept {
 		return Appender(*this, std::forward<Args>(args)...);
 	}
@@ -174,8 +178,9 @@ class DoubleAppender {
 	StrType& str_;
 
 public:
-	template <class... Args,
-	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+	template <
+		class... Args,
+		std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	DoubleAppender(Logger& logger, StrType& str, Args&&... args)
 	: app_(logger(args...))
 	, str_(str) {
@@ -196,8 +201,9 @@ public:
 		return operator()(std::forward<T>(x));
 	}
 
-	template <class... Args,
-	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+	template <
+		class... Args,
+		std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	DoubleAppender& operator()(Args&&... args) {
 		back_insert(str_, args...);
 		app_(std::forward<Args>(args)...);

@@ -71,9 +71,9 @@ TEST(StringBase, constructor_from_temporary_const_string) {
 	EXPECT_FALSE((std::is_constructible_v<StringBase<char>, const string>));
 	EXPECT_FALSE((std::is_constructible_v<StringBase<char>, const string&&>));
 	EXPECT_FALSE(
-	   (std::is_constructible_v<StringBase<const char>, const string>));
+		(std::is_constructible_v<StringBase<const char>, const string>));
 	EXPECT_FALSE(
-	   (std::is_constructible_v<StringBase<const char>, const string&&>));
+		(std::is_constructible_v<StringBase<const char>, const string&&>));
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -163,7 +163,7 @@ TEST(StringBase, move_assignment) {
 TEST(StringBase, assignment_from_nullptr) {
 	EXPECT_FALSE((std::is_assignable_v<StringBase<char>, std::nullptr_t>));
 	EXPECT_FALSE(
-	   (std::is_assignable_v<StringBase<const char>, std::nullptr_t>));
+		(std::is_assignable_v<StringBase<const char>, std::nullptr_t>));
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -324,8 +324,8 @@ TEST(DISABLED_StringBase, find_with_beg_and_end_and_StringBase_and_beg) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(DISABLED_StringBase,
-     find_with_beg_and_end_and_StringBase_and_beg_and_end) {
+TEST(
+	DISABLED_StringBase, find_with_beg_and_end_and_StringBase_and_beg_and_end) {
 	// TODO: implement it
 }
 
@@ -385,8 +385,9 @@ TEST(DISABLED_StringBase, rfind_with_beg_and_end_and_StringBase_and_beg) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(DISABLED_StringBase,
-     rfind_with_beg_and_end_and_StringBase_and_beg_and_end) {
+TEST(
+	DISABLED_StringBase,
+	rfind_with_beg_and_end_and_StringBase_and_beg_and_end) {
 	// TODO: implement it
 }
 
@@ -604,8 +605,9 @@ TEST(DISABLED_string_view, intentional_unsafe_string_view_from_StringView) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(DISABLED_string_view,
-     intentional_unsafe_string_view_from_const_string_ref) {
+TEST(
+	DISABLED_string_view,
+	intentional_unsafe_string_view_from_const_string_ref) {
 	// TODO: implement it
 }
 

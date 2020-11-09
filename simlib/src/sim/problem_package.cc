@@ -6,8 +6,8 @@ using std::string;
 
 namespace sim {
 
-void PackageContents::load_from_directory(StringView pkg_path,
-                                          bool retain_pkg_path_prefix) {
+void PackageContents::load_from_directory(
+	StringView pkg_path, bool retain_pkg_path_prefix) {
 	throw_assert(!pkg_path.empty());
 	pkg_path.remove_trailing('/');
 
@@ -55,7 +55,7 @@ void PackageContents::load_from_zip(FilePath pkg_path) {
 		if (has_prefix(epath, "../") or epath.find("/../") != StringView::npos)
 		{
 			THROW("Found invalid component \"../\" - archive is not safe"
-			      " for the further processing as it may be disambiguating");
+				  " for the further processing as it may be disambiguating");
 		}
 
 		add_entry(epath);
@@ -71,7 +71,7 @@ string zip_package_main_dir(ZipFile& zip) {
 		if (has_prefix(epath, "../") or epath.find("/../") != StringView::npos)
 		{
 			THROW("Found invalid component \"../\" - archive is not safe"
-			      " for the further processing as it may be disambiguating");
+				  " for the further processing as it may be disambiguating");
 		}
 
 		if (res.empty()) { // Init res

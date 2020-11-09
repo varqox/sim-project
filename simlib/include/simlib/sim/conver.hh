@@ -18,8 +18,9 @@ public:
 		explicit ReportBuff(bool log_to_stdlog = false)
 		: log_to_stdlog_(log_to_stdlog) {}
 
-		template <class... Args,
-		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+		template <
+			class... Args,
+			std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		void append(Args&&... args) {
 			if (log_to_stdlog_) {
 				stdlog(args...);
@@ -48,7 +49,7 @@ public:
 	struct ResetTimeLimitsOptions {
 		// Minimum allowed time limit
 		std::chrono::nanoseconds min_time_limit =
-		   std::chrono::milliseconds(300);
+			std::chrono::milliseconds(300);
 
 		// Solution runtime coefficient - the time limit will be set to
 		// solution runtime * solution_runtime_coefficient + adjustment based
@@ -116,8 +117,8 @@ public:
 	 * @errors If any error is encountered then an exception of type
 	 *   std::runtime_error is thrown with a proper message
 	 */
-	ConstructionResult construct_simfile(const Options& opts,
-	                                     bool be_verbose = false);
+	ConstructionResult
+	construct_simfile(const Options& opts, bool be_verbose = false);
 
 	/**
 	 * @brief Finishes constructing the Simfile partially constructed by the
@@ -133,41 +134,40 @@ public:
 	 *   @p sf.
 	 * @param opts options that parameterize calculating time limits
 	 */
-	static void
-	reset_time_limits_using_jugde_reports(Simfile& sf, const JudgeReport& jrep1,
-	                                      const JudgeReport& jrep2,
-	                                      const ResetTimeLimitsOptions& opts);
+	static void reset_time_limits_using_jugde_reports(
+		Simfile& sf, const JudgeReport& jrep1, const JudgeReport& jrep2,
+		const ResetTimeLimitsOptions& opts);
 
 	static constexpr std::chrono::duration<double>
 	solution_runtime_to_time_limit(
-	   std::chrono::duration<double> main_solution_runtime,
-	   double solution_runtime_coefficient,
-	   std::chrono::duration<double> min_time_limit) noexcept {
+		std::chrono::duration<double> main_solution_runtime,
+		double solution_runtime_coefficient,
+		std::chrono::duration<double> min_time_limit) noexcept {
 		double x = main_solution_runtime.count();
 		return solution_runtime_coefficient * main_solution_runtime +
-		       min_time_limit * 2 / (x * x + 2);
+			min_time_limit * 2 / (x * x + 2);
 	}
 
 	static constexpr std::chrono::duration<double>
 	time_limit_to_solution_runtime(
-	   std::chrono::duration<double> time_limit,
-	   double solution_runtime_coefficient,
-	   std::chrono::duration<double> min_time_limit) noexcept {
+		std::chrono::duration<double> time_limit,
+		double solution_runtime_coefficient,
+		std::chrono::duration<double> min_time_limit) noexcept {
 		using DS = std::chrono::duration<double>;
 		// Use Newton method, as it is simpler than solving the equation
 		double x = time_limit.count();
 		for (;;) {
-			double fx = (time_limit - solution_runtime_to_time_limit(
-			                             DS(x), solution_runtime_coefficient,
-			                             min_time_limit))
-			               .count();
+			double fx =
+				(time_limit -
+				 solution_runtime_to_time_limit(
+					 DS(x), solution_runtime_coefficient, min_time_limit))
+					.count();
 			if (-1e-9 < fx and fx < 1e-9) {
 				return DS(x);
 			}
 
-			double dfx =
-			   -solution_runtime_coefficient +
-			   4 * min_time_limit.count() * x / (x * x + 2) / (x * x + 2);
+			double dfx = -solution_runtime_coefficient +
+				4 * min_time_limit.count() * x / (x * x + 2) / (x * x + 2);
 			x = x - fx / dfx;
 		}
 	}

@@ -41,8 +41,8 @@ EventQueue& EventQueue::operator=(EventQueue&& other) noexcept {
 	poll_events_ = std::move(other.poll_events_);
 	poll_events_idx_to_hid_ = std::move(other.poll_events_idx_to_hid_);
 	immediate_pause_.store(
-	   other.immediate_pause_.load(std::memory_order_acquire),
-	   std::memory_order_release);
+		other.immediate_pause_.load(std::memory_order_acquire),
+		std::memory_order_release);
 	immediate_pause_fd_ = std::move(other.immediate_pause_fd_);
 	return *this;
 }
@@ -55,8 +55,8 @@ void EventQueue::pause_immediately() noexcept {
 	(void)write(fd, &x, sizeof(x));
 }
 
-handler_id_t EventQueue::add_time_handler(time_point tp,
-                                          std::function<void()> handler) {
+handler_id_t
+EventQueue::add_time_handler(time_point tp, std::function<void()> handler) {
 	STACK_UNWINDING_MARK;
 	const auto now = std::chrono::system_clock::now();
 	if (tp < now) {
@@ -66,20 +66,20 @@ handler_id_t EventQueue::add_time_handler(time_point tp,
 	return add_time_handler_impl(tp, std::move(handler));
 }
 
-handler_id_t EventQueue::add_time_handler(time_point::duration duration,
-                                          std::function<void()> handler) {
+handler_id_t EventQueue::add_time_handler(
+	time_point::duration duration, std::function<void()> handler) {
 	STACK_UNWINDING_MARK;
 	assert(duration >= decltype(duration)::zero());
-	return add_time_handler_impl(std::chrono::system_clock::now() + duration,
-	                             std::move(handler));
+	return add_time_handler_impl(
+		std::chrono::system_clock::now() + duration, std::move(handler));
 }
 
-void EventQueue::add_repeating_handler(time_point::duration interval,
-                                       std::function<repeating()> handler) {
+void EventQueue::add_repeating_handler(
+	time_point::duration interval, std::function<repeating()> handler) {
 	STACK_UNWINDING_MARK;
 	assert(interval >= decltype(interval)::zero());
 	auto impl = [this, interval,
-	             handler = shared_function(std::move(handler))](auto& self) {
+				 handler = shared_function(std::move(handler))](auto& self) {
 		if (handler() == stop_repeating) {
 			return;
 		}
@@ -91,8 +91,8 @@ void EventQueue::add_repeating_handler(time_point::duration interval,
 	add_time_handler(interval, [impl = std::move(impl)] { impl(impl); });
 }
 
-handler_id_t EventQueue::add_time_handler_impl(time_point tp,
-                                               std::function<void()> handler) {
+handler_id_t EventQueue::add_time_handler_impl(
+	time_point tp, std::function<void()> handler) {
 	const auto handler_id = new_handler_id();
 	handlers_.emplace(handler_id, TimedHandler{tp, std::move(handler)});
 	try {
@@ -122,15 +122,17 @@ poll_events_to_file_events(decltype(pollfd::revents) events) noexcept {
 void EventQueue::remove_handler(handler_id_t handler_id) {
 	STACK_UNWINDING_MARK;
 
-	std::visit(overloaded{[&](TimedHandler& handler) {
-		                      timed_handlers_.erase({handler.time, handler_id});
-	                      },
-	                      [&](FileHandler& handler) {
-		                      poll_events_[handler.poll_event_idx].fd =
-		                         -1; // Deactivate event. It will be removed
-		                             // while processing file events.
-	                      }},
-	           WONT_THROW(handlers_.at(handler_id)));
+	std::visit(
+		overloaded{
+			[&](TimedHandler& handler) {
+				timed_handlers_.erase({handler.time, handler_id});
+			},
+			[&](FileHandler& handler) {
+				poll_events_[handler.poll_event_idx].fd =
+					-1; // Deactivate event. It will be removed
+						// while processing file events.
+			}},
+		WONT_THROW(handlers_.at(handler_id)));
 	handlers_.erase(handler_id);
 }
 
@@ -169,7 +171,7 @@ void EventQueue::run() {
 			const auto it = handlers_.find(handler_id);
 			assert(it != handlers_.end());
 			auto handler =
-			   std::move(std::get<TimedHandler>(it->second).handler);
+				std::move(std::get<TimedHandler>(it->second).handler);
 			handlers_.erase(it);
 
 			handler(); // It is ok if it throws
@@ -177,7 +179,7 @@ void EventQueue::run() {
 				return;
 			}
 		} while ((now = std::chrono::system_clock::now()) <=
-		         start + TIME_QUANTUM);
+				 start + TIME_QUANTUM);
 	};
 
 	auto process_file_events = [&] {
@@ -188,7 +190,7 @@ void EventQueue::run() {
 
 		auto file_handlers_quantum_start = std::chrono::system_clock::now();
 		size_t new_poll_events_size =
-		   0; // Expired events are removed and the array is compressed
+			0; // Expired events are removed and the array is compressed
 
 		// poll_events_ may get new elements as we process event handler, even
 		// get reallocated, we need to be careful about pointers and references
@@ -205,10 +207,10 @@ void EventQueue::run() {
 				// Move entry
 				poll_events_[new_idx] = poll_events_[idx];
 				const auto handler_id =
-				   WONT_THROW(poll_events_idx_to_hid_.at(idx));
+					WONT_THROW(poll_events_idx_to_hid_.at(idx));
 				poll_events_idx_to_hid_[new_idx] = handler_id;
 				WONT_THROW(std::get<FileHandler>(handlers_.at(handler_id))
-				              .poll_event_idx) = new_idx;
+							   .poll_event_idx) = new_idx;
 				// Disable old entry (in case something below throws)
 				poll_events_[idx].fd = -1;
 			}
@@ -220,7 +222,7 @@ void EventQueue::run() {
 			}
 
 			if (std::chrono::system_clock::now() >
-			    file_handlers_quantum_start + TIME_QUANTUM)
+				file_handlers_quantum_start + TIME_QUANTUM)
 			{
 				// Needed to ensure low latency
 				process_timed_handlers();
@@ -240,10 +242,10 @@ void EventQueue::run() {
 			FileEvent events = poll_events_to_file_events(revents);
 			if (events != FileEvent(0)) {
 				auto handler_id =
-				   WONT_THROW(poll_events_idx_to_hid_.at(new_idx));
+					WONT_THROW(poll_events_idx_to_hid_.at(new_idx));
 
 				auto handler_shr_ptr = WONT_THROW(
-				   std::get<FileHandler>(handlers_.at(handler_id)).handler);
+					std::get<FileHandler>(handlers_.at(handler_id)).handler);
 				(*handler_shr_ptr)(events);
 				if (immediate_pause_was_requested()) {
 					return;
@@ -257,9 +259,10 @@ void EventQueue::run() {
 				continue; // Ignore these events
 			}
 
-			THROW("pollfd.revents = ", revents,
-			      " is an invalid event (at the moment of implementing "
-			      "this) and cannot be handled");
+			THROW(
+				"pollfd.revents = ", revents,
+				" is an invalid event (at the moment of implementing "
+				"this) and cannot be handled");
 		}
 
 		poll_events_.resize(new_poll_events_size);
@@ -300,15 +303,15 @@ void EventQueue::run() {
 				ts = to_timespec(timeout);
 			}
 
-			return ppoll(poll_events_.data(), poll_events_.size(), tmo_p,
-			             nullptr);
+			return ppoll(
+				poll_events_.data(), poll_events_.size(), tmo_p, nullptr);
 		}();
 		if (ready_poll_events_num == -1 and errno != EINTR) {
 			THROW("ppoll()", errmsg());
 		}
 
 		process_timed_handlers(); // It is important to first process timed
-		                          // events, to not starve the timed events
+								  // events, to not starve the timed events
 
 		if (ready_poll_events_num > 0) {
 			process_file_events();

@@ -105,8 +105,8 @@ private:
 		}
 	}
 
-	ZipSource(zip_t* zip, const char* fname, zip_uint64_t start,
-	          zip_int64_t len)
+	ZipSource(
+		zip_t* zip, const char* fname, zip_uint64_t start, zip_int64_t len)
 	: zsource_(zip_source_file(zip, fname, start, len)) {
 		STACK_UNWINDING_MARK;
 		struct stat st {};
@@ -134,16 +134,17 @@ private:
 		}
 	}
 
-	ZipSource(zip_t* zip, zip_t* src_zip, zip_uint64_t srcidx,
-	          zip_flags_t flags, zip_uint64_t start, zip_int64_t len)
+	ZipSource(
+		zip_t* zip, zip_t* src_zip, zip_uint64_t srcidx, zip_flags_t flags,
+		zip_uint64_t start, zip_int64_t len)
 	: zsource_(zip_source_zip(zip, src_zip, srcidx, flags, start, len)) {
 		STACK_UNWINDING_MARK;
 		zip_uint8_t opsys = 0;
 		zip_uint32_t attrs = 0;
-		if (zip_file_get_external_attributes(src_zip, srcidx, 0, &opsys,
-		                                     &attrs)) {
-			THROW("zip_file_get_external_attributes() - ",
-			      zip_strerror(src_zip));
+		if (zip_file_get_external_attributes(
+				src_zip, srcidx, 0, &opsys, &attrs)) {
+			THROW(
+				"zip_file_get_external_attributes() - ", zip_strerror(src_zip));
 		}
 
 		opsys_ = opsys;
@@ -329,8 +330,9 @@ public:
 		}
 	}
 
-	void extract_to_file(index_t index, FilePath fpath,
-	                     std::optional<mode_t> permissions = std::nullopt) {
+	void extract_to_file(
+		index_t index, FilePath fpath,
+		std::optional<mode_t> permissions = std::nullopt) {
 		STACK_UNWINDING_MARK;
 		mode_t mode = [&]() -> mode_t {
 			if (permissions) {
@@ -339,10 +341,11 @@ public:
 
 			zip_uint8_t opsys = 0;
 			zip_uint32_t attrs = 0;
-			if (zip_file_get_external_attributes(zip_, index, 0, &opsys,
-			                                     &attrs)) {
-				THROW("zip_file_get_external_attributes() - ",
-				      zip_strerror(zip_));
+			if (zip_file_get_external_attributes(
+					zip_, index, 0, &opsys, &attrs)) {
+				THROW(
+					"zip_file_get_external_attributes() - ",
+					zip_strerror(zip_));
 			}
 
 			if (opsys != ZIP_OPSYS_UNIX) {
@@ -352,8 +355,8 @@ public:
 			return attrs >> 16;
 		}();
 
-		FileDescriptor fd(fpath, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
-		                  mode);
+		FileDescriptor fd(
+			fpath, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode);
 		if (fd == -1) {
 			THROW("open()", errmsg());
 		}
@@ -361,16 +364,16 @@ public:
 		return extract_to_fd(index, fd);
 	}
 
-	index_t dir_add(FilePath name, zip_flags_t flags = 0,
-	                mode_t permissions = S_0755) {
+	index_t
+	dir_add(FilePath name, zip_flags_t flags = 0, mode_t permissions = S_0755) {
 		index_t idx = zip_dir_add(zip_, name, flags);
 		if (idx == -1) {
 			THROW("zip_dir_add() - ", zip_strerror(zip_));
 		}
 
 		if (zip_file_set_external_attributes(
-		       zip_, idx, 0, ZIP_OPSYS_UNIX,
-		       (S_IFDIR | (permissions & ALLPERMS)) << 16))
+				zip_, idx, 0, ZIP_OPSYS_UNIX,
+				(S_IFDIR | (permissions & ALLPERMS)) << 16))
 		{
 			THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
 		}
@@ -389,28 +392,28 @@ public:
 	}
 
 	// By default whole file (len == -1 means reading till the end of file)
-	ZipSource source_file(FilePath fpath, zip_uint64_t start = 0,
-	                      zip_int64_t len = -1) {
+	ZipSource
+	source_file(FilePath fpath, zip_uint64_t start = 0, zip_int64_t len = -1) {
 		return ZipSource(zip_, fpath, start, len);
 	}
 
 	// By default whole file (len == -1 means reading till the end of file)
 	// @p file will be closed only on successful close() (as long as I
 	// understood the documentation correctly)
-	ZipSource source_file(FILE* file, zip_uint64_t start = 0,
-	                      zip_int64_t len = -1) {
+	ZipSource
+	source_file(FILE* file, zip_uint64_t start = 0, zip_int64_t len = -1) {
 		return ZipSource(zip_, file, start, len);
 	}
 
 	// By default whole file (len == -1 means reading till the end of file)
-	ZipSource source_zip(ZipFile& src_zip, index_t src_idx,
-	                     zip_flags_t flags = 0, zip_uint64_t start = 0,
-	                     zip_int64_t len = -1) {
+	ZipSource source_zip(
+		ZipFile& src_zip, index_t src_idx, zip_flags_t flags = 0,
+		zip_uint64_t start = 0, zip_int64_t len = -1) {
 		return ZipSource(zip_, src_zip, src_idx, flags, start, len);
 	}
 
-	void file_set_compression(index_t index, zip_int32_t method,
-	                          zip_uint32_t flags) {
+	void file_set_compression(
+		index_t index, zip_int32_t method, zip_uint32_t flags) {
 		STACK_UNWINDING_MARK;
 		if (zip_set_file_compression(zip_, index, method, flags)) {
 			THROW("zip_set_file_compression() - ", zip_strerror(zip_));
@@ -422,8 +425,9 @@ public:
 	// has some problems if you do not do so (e.g. with source created from zip
 	// archive).
 	// @p compression_level == 0 means default compression level
-	index_t file_add(FilePath name, ZipSource&& source, zip_flags_t flags = 0,
-	                 zip_uint32_t compression_level = 4) {
+	index_t file_add(
+		FilePath name, ZipSource&& source, zip_flags_t flags = 0,
+		zip_uint32_t compression_level = 4) {
 		STACK_UNWINDING_MARK;
 		// Directory has to be added via zip_dir_add()
 		if (has_suffix(name.to_cstr(), "/")) {
@@ -441,8 +445,8 @@ public:
 
 		CallInDtor idx_deleter = [&] { (void)zip_delete(zip_, idx); };
 
-		if (zip_file_set_external_attributes(zip_, idx, 0, source.opsys_,
-		                                     source.external_attributes_))
+		if (zip_file_set_external_attributes(
+				zip_, idx, 0, source.opsys_, source.external_attributes_))
 		{
 			THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
 		}
@@ -457,15 +461,16 @@ public:
 	}
 
 	// @p compression_level == 0 means default compression level
-	void file_replace(index_t index, ZipSource&& source, zip_flags_t flags = 0,
-	                  zip_uint32_t compression_level = 4) {
+	void file_replace(
+		index_t index, ZipSource&& source, zip_flags_t flags = 0,
+		zip_uint32_t compression_level = 4) {
 		STACK_UNWINDING_MARK;
 		if (zip_file_replace(zip_, index, source.zsource_, flags)) {
 			THROW("zip_file_replace() - ", zip_strerror(zip_));
 		}
 
-		if (zip_file_set_external_attributes(zip_, index, 0, source.opsys_,
-		                                     source.external_attributes_))
+		if (zip_file_set_external_attributes(
+				zip_, index, 0, source.opsys_, source.external_attributes_))
 		{
 			THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
 		}

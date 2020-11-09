@@ -43,7 +43,7 @@ struct InotifyTest {
 			handle(path);
 			if (no_more_events and fired_files.empty()) {
 				monitor.event_queue().add_time_handler(
-				   50us, [&] { monitor.pause_immediately(); });
+					50us, [&] { monitor.pause_immediately(); });
 			}
 		});
 	}
@@ -173,12 +173,12 @@ TEST(inotify_FileModificationMonitor, rewatch_after_remove) {
 		ASSERT_EQ(remove(it.file.path()), 0);
 		ASSERT_EQ(remove(it.dir.path()), 0);
 		it.monitor.event_queue().add_time_handler(
-		   get_random(0, 100) * 1us, [&] {
-			   ASSERT_EQ(mkdir(it.dir.path()), 0);
-			   it.fire(it.dir.path());
-			   ASSERT_EQ(create_file(it.file.path()), 0);
-			   it.fire(it.file.path(), true);
-		   });
+			get_random(0, 100) * 1us, [&] {
+				ASSERT_EQ(mkdir(it.dir.path()), 0);
+				it.fire(it.dir.path());
+				ASSERT_EQ(create_file(it.file.path()), 0);
+				it.fire(it.file.path(), true);
+			});
 	});
 
 	it.init_and_watch();

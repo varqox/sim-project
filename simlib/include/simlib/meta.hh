@@ -26,8 +26,8 @@ constexpr typename std::common_type<T, U>::type max(T&& x, U&& y) {
 }
 
 template <class T, class... Args>
-constexpr typename std::common_type<T, Args...>::type max(T&& x,
-                                                          Args&&... args) {
+constexpr typename std::common_type<T, Args...>::type
+max(T&& x, Args&&... args) {
 	return max(std::forward<T>(x), max(std::forward<Args>(args)...));
 }
 
@@ -45,8 +45,8 @@ constexpr typename std::common_type<T, U>::type min(T&& x, U&& y) {
 }
 
 template <class T, class... Args>
-constexpr typename std::common_type<T, Args...>::type min(T&& x,
-                                                          Args&&... args) {
+constexpr typename std::common_type<T, Args...>::type
+min(T&& x, Args&&... args) {
 	return min(std::forward<T>(x), min(std::forward<Args>(args)...));
 }
 
@@ -61,7 +61,7 @@ namespace detail {
 template <size_t beg, size_t count, size_t... indexes>
 struct create_span_impl {
 	using type =
-	   typename create_span_impl<beg + 1, count - 1, indexes..., beg>::type;
+		typename create_span_impl<beg + 1, count - 1, indexes..., beg>::type;
 };
 
 template <size_t beg, size_t... indexes>
@@ -86,7 +86,7 @@ constexpr auto has_method_size(...) -> std::false_type;
 
 template <class T>
 constexpr inline bool has_method_size =
-   decltype(detail::has_method_size<T>(0))::value;
+	decltype(detail::has_method_size<T>(0))::value;
 
 namespace detail {
 
@@ -99,43 +99,43 @@ constexpr auto has_method_data(...) -> std::false_type;
 
 template <class T>
 constexpr inline bool has_method_data =
-   decltype(detail::has_method_data<T>(0))::value;
+	decltype(detail::has_method_data<T>(0))::value;
 
 template <class T, class... Options>
 constexpr inline bool is_one_of = (std::is_same_v<T, Options> or ...);
 
 } // namespace meta
 
-#define DECLARE_ENUM_OPERATOR(enu, oper)                                       \
-	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                           \
-	constexpr enu operator oper(enu a, enu b) {                                \
-		using UT = std::underlying_type<enu>::type;                            \
-		/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                       \
-		return static_cast<enu>(static_cast<UT>(a) oper static_cast<UT>(b));   \
+#define DECLARE_ENUM_OPERATOR(enu, oper)                                     \
+	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                         \
+	constexpr enu operator oper(enu a, enu b) {                              \
+		using UT = std::underlying_type<enu>::type;                          \
+		/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                     \
+		return static_cast<enu>(static_cast<UT>(a) oper static_cast<UT>(b)); \
 	}
 
-#define DECLARE_ENUM_ASSIGN_OPERATOR(enu, oper)                                \
-	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                           \
-	constexpr enu& operator oper(enu& a, enu b) {                              \
-		using UT = std::underlying_type<enu>::type;                            \
-		UT x = static_cast<UT>(a);                                             \
-		return (a = static_cast<enu>(x oper static_cast<UT>(b)));              \
+#define DECLARE_ENUM_ASSIGN_OPERATOR(enu, oper)                   \
+	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */              \
+	constexpr enu& operator oper(enu& a, enu b) {                 \
+		using UT = std::underlying_type<enu>::type;               \
+		UT x = static_cast<UT>(a);                                \
+		return (a = static_cast<enu>(x oper static_cast<UT>(b))); \
 	}
 
-#define DECLARE_ENUM_UNARY_OPERATOR(enu, oper)                                 \
-	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                           \
-	constexpr enu operator oper(enu a) {                                       \
-		using UT = std::underlying_type<enu>::type;                            \
-		/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                       \
-		return static_cast<enu>(oper static_cast<UT>(a));                      \
+#define DECLARE_ENUM_UNARY_OPERATOR(enu, oper)            \
+	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */      \
+	constexpr enu operator oper(enu a) {                  \
+		using UT = std::underlying_type<enu>::type;       \
+		/* NOLINTNEXTLINE(bugprone-macro-parentheses) */  \
+		return static_cast<enu>(oper static_cast<UT>(a)); \
 	}
 
-#define DECLARE_ENUM_COMPARE1(enu, oper)                                       \
-	constexpr bool operator oper(enu a, std::underlying_type<enu>::type b) {   \
-		return static_cast<decltype(b)>(a) oper b;                             \
+#define DECLARE_ENUM_COMPARE1(enu, oper)                                     \
+	constexpr bool operator oper(enu a, std::underlying_type<enu>::type b) { \
+		return static_cast<decltype(b)>(a) oper b;                           \
 	}
 
-#define DECLARE_ENUM_COMPARE2(enu, oper)                                       \
-	constexpr bool operator oper(std::underlying_type<enu>::type a, enu b) {   \
-		return a oper static_cast<decltype(a)>(b);                             \
+#define DECLARE_ENUM_COMPARE2(enu, oper)                                     \
+	constexpr bool operator oper(std::underlying_type<enu>::type a, enu b) { \
+		return a oper static_cast<decltype(a)>(b);                           \
 	}

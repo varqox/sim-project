@@ -9,8 +9,8 @@
 
 #if 0 // Clang does not support std::launder yet
 #if __cplusplus > 201402L
-#warning                                                                       \
-   "Since C++17 std::launder() has to be used to wrap the reinterpret_casts below"
+#warning \
+	"Since C++17 std::launder() has to be used to wrap the reinterpret_casts below"
 #endif
 #endif
 
@@ -233,8 +233,8 @@ public:
 		if (n > max_size_) {
 			size_t new_max_size = std::max(max_size_ << 1, n);
 			auto new_p = std::make_unique<Elem[]>(new_max_size);
-			std::uninitialized_move(iterator(new_p.get()),
-			                        iterator(new_p.get() + size_), begin());
+			std::uninitialized_move(
+				iterator(new_p.get()), iterator(new_p.get() + size_), begin());
 			deallocate();
 			p_ = new_p.release();
 			max_size_ = new_max_size;
@@ -272,7 +272,7 @@ public:
 	T& emplace_back(Args&&... args) {
 		reserve_for(size_ + 1);
 		return *(::new (std::addressof((*this)[size_++]))
-		            T(std::forward<Args>(args)...));
+					 T(std::forward<Args>(args)...));
 	}
 
 	void clear() noexcept { size_ = 0; }

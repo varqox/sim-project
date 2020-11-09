@@ -109,7 +109,7 @@ struct inc_dead {
 TEST(ranges, reverse_view_on_xvalue_lifetime) {
 	int dead = 0;
 	for (auto& x [[maybe_unused]] :
-	     reverse_view(array{inc_dead{&dead}, inc_dead{&dead}}))
+		 reverse_view(array{inc_dead{&dead}, inc_dead{&dead}}))
 	{
 		EXPECT_EQ(dead, 0);
 	}
@@ -120,7 +120,7 @@ TEST(ranges, reverse_view_on_xvalue_lifetime) {
 TEST(ranges, reverse_view_double_on_xvalue_lifetime) {
 	int dead = 0;
 	for (auto& x [[maybe_unused]] :
-	     reverse_view(reverse_view(array{inc_dead{&dead}, inc_dead{&dead}})))
+		 reverse_view(reverse_view(array{inc_dead{&dead}, inc_dead{&dead}})))
 	{
 		EXPECT_EQ(dead, 0);
 	}
@@ -561,7 +561,7 @@ TEST(ranges, enumerate_view_xvalue_lifetime) {
 
 	lt = 0;
 	for (auto&& [i, x] :
-	     enumerate_view(vector{make_shared<lifetime_tester>(&lt)})) {
+		 enumerate_view(vector{make_shared<lifetime_tester>(&lt)})) {
 		static_assert(is_same_v<decltype(i), size_t>);
 		static_assert(is_same_v<decltype(x), shared_ptr<lifetime_tester>>);
 		EXPECT_EQ(lt, 0);

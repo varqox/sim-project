@@ -9,7 +9,8 @@ class CallInDtor {
 
 public:
 	// NOLINTNEXTLINE(google-explicit-constructor)
-	CallInDtor(Func func) try : func_(std::move(func))
+	CallInDtor(Func func) try
+	: func_(std::move(func))
 	{
 	} catch (...) {
 		func();

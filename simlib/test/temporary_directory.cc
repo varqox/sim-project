@@ -22,7 +22,7 @@ TEST(temporary_directory, TemporaryDirectory) {
 	{
 		TemporaryDirectory other("filesystem-test2.XXXXXX");
 		static_assert(
-		   not std::is_convertible_v<const char*, TemporaryDirectory>);
+			not std::is_convertible_v<const char*, TemporaryDirectory>);
 		EXPECT_EQ(is_directory(other.path()), true);
 		EXPECT_THAT(other.path(), MatchesRegex("/.*/filesystem-test2\\..{6}/"));
 		EXPECT_THAT(other.name(), MatchesRegex("filesystem-test2\\..{6}/"));
@@ -33,8 +33,8 @@ TEST(temporary_directory, TemporaryDirectory) {
 		string other_name = other.name();
 		string other_sname = other.sname();
 		tmp_dir = std::move(other);
-		static_assert(not std::is_assignable_v<TemporaryDirectory,
-		                                       const TemporaryDirectory&>);
+		static_assert(not std::is_assignable_v<
+					  TemporaryDirectory, const TemporaryDirectory&>);
 
 		EXPECT_EQ(tmp_dir.exists(), true);
 		EXPECT_EQ(other.exists(), false); // NOLINT(bugprone-use-after-move)

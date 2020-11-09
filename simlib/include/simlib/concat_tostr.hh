@@ -4,8 +4,9 @@
 
 #include <type_traits>
 
-template <class... Args,
-          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+template <
+	class... Args,
+	std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 std::string concat_tostr(Args&&... args) {
 	return [](auto&&... str) {
 		size_t total_length = (0 + ... + string_length(str));
@@ -16,8 +17,9 @@ std::string concat_tostr(Args&&... args) {
 	}(stringify(std::forward<Args>(args))...);
 }
 
-template <class... Args,
-          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+template <
+	class... Args,
+	std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 std::string& back_insert(std::string& str, Args&&... args) {
 	return [&str](auto&&... xx) -> std::string& {
 		size_t total_length = (str.size() + ... + string_length(xx));

@@ -71,34 +71,34 @@ TEST(string_traits, is_digit) {
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_alpha) {
-	EXPECT_EQ(true,
-	          is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+	EXPECT_EQ(
+		true, is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"));
 
 	EXPECT_EQ(false, is_alpha(""));
 	EXPECT_EQ(
-	   false,
-	   is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJK-LMNOPQRSTUVWXYZ"));
+		false,
+		is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJK-LMNOPQRSTUVWXYZ"));
 	EXPECT_EQ(
-	   false,
-	   is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0LMNOPQRSTUVWXYZ"));
+		false,
+		is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0LMNOPQRSTUVWXYZ"));
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_alnum) {
 	EXPECT_EQ(
-	   true,
-	   is_alnum(
-	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+		true,
+		is_alnum(
+			"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
 
 	EXPECT_EQ(false, is_alnum(""));
 	EXPECT_EQ(
-	   false,
-	   is_alnum(
-	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH-IJKLMNOPQRSTUVWXYZ"));
+		false,
+		is_alnum(
+			"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH-IJKLMNOPQRSTUVWXYZ"));
 	EXPECT_EQ(
-	   false,
-	   is_alnum(
-	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG#IJKLMNOPQRSTUVWXYZ"));
+		false,
+		is_alnum(
+			"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG#IJKLMNOPQRSTUVWXYZ"));
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -108,23 +108,23 @@ TEST(string_traits, is_word) {
 	}
 
 	EXPECT_EQ(
-	   true,
-	   is_word(
-	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-_"));
+		true,
+		is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				"-_"));
 
 	EXPECT_EQ(false, is_word(""));
 	EXPECT_EQ(
-	   false,
-	   is_word(
-	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ@KLMNOPQRSTUVWXYZ-_"));
+		false,
+		is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ@"
+				"KLMNOPQRSTUVWXYZ-_"));
 	EXPECT_EQ(
-	   false,
-	   is_word(
-	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ#KLMNOPQRSTUVWXYZ-_"));
+		false,
+		is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ#"
+				"KLMNOPQRSTUVWXYZ-_"));
 	EXPECT_EQ(
-	   false,
-	   is_word(
-	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ`KLMNOPQRSTUVWXYZ-_"));
+		false,
+		is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ`"
+				"KLMNOPQRSTUVWXYZ-_"));
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)

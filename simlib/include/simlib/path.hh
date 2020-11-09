@@ -19,8 +19,8 @@ std::string path_absolute(StringView path, std::string curr_dir = "/");
  */
 template <class T>
 constexpr auto path_filename(T&& path) noexcept {
-	using RetType = std::conditional_t<std::is_convertible_v<T, CStringView>,
-	                                   CStringView, StringView>;
+	using RetType = std::conditional_t<
+		std::is_convertible_v<T, CStringView>, CStringView, StringView>;
 	RetType path_str(std::forward<T>(path));
 	auto pos = path_str.rfind('/');
 	return path_str.substr(pos == path_str.npos ? 0 : pos + 1);
@@ -29,8 +29,8 @@ constexpr auto path_filename(T&& path) noexcept {
 // Returns extension (without dot) e.g. "foo.cc" -> "cc", "bar" -> ""
 template <class T>
 constexpr auto path_extension(T&& path) noexcept {
-	using RetType = std::conditional_t<std::is_convertible_v<T, CStringView>,
-	                                   CStringView, StringView>;
+	using RetType = std::conditional_t<
+		std::is_convertible_v<T, CStringView>, CStringView, StringView>;
 
 	RetType path_str(std::forward<T>(path));
 	size_t start_pos = path_str.rfind('/');

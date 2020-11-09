@@ -44,10 +44,10 @@ private:
 	scmp_filter_ctx x86_64_ctx_;
 
 	std::string
-	   message_to_set_in_exit_stat_; // if non-empty it will be set in ExitStat
+		message_to_set_in_exit_stat_; // if non-empty it will be set in ExitStat
 
 	FileDescriptor
-	   tracee_statm_fd_; // For tracking vm_peak (vm stands for virtual memory)
+		tracee_statm_fd_; // For tracking vm_peak (vm stands for virtual memory)
 	uint64_t tracee_vm_peak_{}; // In pages
 
 	// Needed by the mechanism that allows more syscalls to be used during the
@@ -132,9 +132,9 @@ public:
 	 *   information if any syscall fails
 	 */
 	ExitStat run(
-	   FilePath exec, const std::vector<std::string>& exec_args,
-	   const Options& opts = Options(),
-	   const std::vector<AllowedFile>& allowed_files = {},
-	   const std::function<void(pid_t)>& do_in_parent_after_fork =
-	      [](pid_t /*unused*/) {});
+		FilePath exec, const std::vector<std::string>& exec_args,
+		const Options& opts = Options(),
+		const std::vector<AllowedFile>& allowed_files = {},
+		const std::function<void(pid_t)>& do_in_parent_after_fork =
+			[](pid_t /*unused*/) {});
 };

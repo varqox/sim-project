@@ -88,7 +88,7 @@ public:
 	std::optional<std::string> statement; // Is unset only if not loaded
 	bool interactive = false;
 	std::optional<std::string>
-	   checker; // std::nullopt if default checker should be used
+		checker; // std::nullopt if default checker should be used
 	std::vector<std::string> solutions;
 	std::optional<uint64_t> global_mem_limit; // in bytes
 
@@ -98,14 +98,15 @@ public:
 	struct Test {
 		std::string name, in; // in - path to the test's input file
 		std::optional<std::string>
-		   out; // out - path to the test's output file (set
-		        //   only if the package is not interactive)
+			out; // out - path to the test's output file (set
+				 //   only if the package is not interactive)
 		std::chrono::nanoseconds time_limit;
 		uint64_t memory_limit; // in bytes
 
-		explicit Test(std::string n = "",
-		              std::chrono::nanoseconds tl = std::chrono::nanoseconds(0),
-		              uint64_t ml = 0)
+		explicit Test(
+			std::string n = "",
+			std::chrono::nanoseconds tl = std::chrono::nanoseconds(0),
+			uint64_t ml = 0)
 		: name(std::move(n))
 		, time_limit(tl)
 		, memory_limit(ml) {}
@@ -138,9 +139,9 @@ public:
 	 * @errors May throw from ConfigFile::load_config_from_string()
 	 */
 	explicit Simfile(std::string simfile_contents) {
-		config.add_vars("name", "label", "interactive", "checker", "statement",
-		                "solutions", "memory_limit", "limits", "scoring",
-		                "tests_files");
+		config.add_vars(
+			"name", "label", "interactive", "checker", "statement", "solutions",
+			"memory_limit", "limits", "scoring", "tests_files");
 		config.load_config_from_string(std::move(simfile_contents));
 	}
 
@@ -238,8 +239,8 @@ private:
 	 * @param item - the item to parse
 	 * @return (test name, time limit [usec], memory limit [byte])
 	 */
-	static std::tuple<StringView, std::chrono::nanoseconds,
-	                  std::optional<uint64_t>>
+	static std::tuple<
+		StringView, std::chrono::nanoseconds, std::optional<uint64_t>>
 	parse_limits_item(StringView item);
 	/**
 	 * @brief Parses the item of the variable "scoring"
@@ -370,8 +371,8 @@ public:
 				return x.gid.empty(); // true iff x.gid was equal to 0
 			}
 
-			return (x.gid == y.gid ? x.tid < y.tid
-			                       : StrNumCompare()(x.gid, y.gid));
+			return (
+				x.gid == y.gid ? x.tid < y.tid : StrNumCompare()(x.gid, y.gid));
 		}
 	};
 };

@@ -45,8 +45,9 @@ public:
 
 		StringView res{buff.substr(1, pos - 1)};
 		buff.remove_prefix(pos);
-		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res,
-		                    " \tleft: ", buff);)
+		DEBUG_PARSER(stdlog(
+						 __PRETTY_FUNCTION__, " -> extracted: ", res,
+						 " \tleft: ", buff);)
 		return res;
 	}
 

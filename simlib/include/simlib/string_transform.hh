@@ -51,7 +51,7 @@ InplaceBuff<N> encode_uri(const StringView& str) {
 	constexpr auto is_safe = [] {
 		array<bool, 256> res = {};
 		for (auto [beg, end] :
-		     array{array{'a', 'z'}, array{'A', 'Z'}, array{'0', '9'}}) {
+			 array{array{'a', 'z'}, array{'A', 'Z'}, array{'0', '9'}}) {
 			for (unsigned char i = beg; i <= end; ++i) {
 				res[i] = true;
 			}
@@ -95,10 +95,10 @@ InplaceBuff<N> decode_uri(StringView str) {
 	for (size_t i = 0; i < str.size(); ++i) {
 		char c = 0;
 		if (str[i] == '%' and i + 2 < str.size() and is_xdigit(str[i + 1]) and
-		    is_xdigit(str[i + 2]))
+			is_xdigit(str[i + 2]))
 		{
 			c = static_cast<char>(static_cast<unsigned char>(
-			   (hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2])));
+				(hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2])));
 			i += 2;
 		} else if (str[i] == '+') {
 			c = ' ';
@@ -140,8 +140,9 @@ inline std::string html_escape(T&& str) {
 	return res;
 }
 
-template <size_t N = 512, class... Args,
-          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+template <
+	size_t N = 512, class... Args,
+	std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 constexpr InplaceBuff<N> json_stringify(Args&&... args) {
 	InplaceBuff<N> res;
 	auto safe_append = [&res](auto&& arg) {
@@ -170,10 +171,11 @@ constexpr InplaceBuff<N> json_stringify(Args&&... args) {
 
 // Converts whole @p str to @p T or returns std::nullopt on errors like value
 // represented in @p str is too big or invalid
-template <class T,
-          std::enable_if_t<
-             std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>,
-             int> = 0>
+template <
+	class T,
+	std::enable_if_t<
+		std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> =
+		0>
 constexpr std::optional<T> str2num(StringView str) noexcept {
 	if constexpr (std::is_same_v<T, bool>) {
 		auto opt = str2num<uint8_t>(str);
@@ -201,7 +203,7 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 		}
 
 		std::optional<T> res =
-		   (minus ? '0' - str[0] : str[0] - '0'); // Will not overflow
+			(minus ? '0' - str[0] : str[0] - '0'); // Will not overflow
 		str.remove_prefix(1);
 
 		for (unsigned char c : str) {
@@ -213,8 +215,8 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 				return std::nullopt;
 			}
 
-			if (__builtin_add_overflow(*res, (minus ? '0' - c : c - '0'),
-			                           &*res)) {
+			if (__builtin_add_overflow(
+					*res, (minus ? '0' - c : c - '0'), &*res)) {
 				return std::nullopt;
 			}
 		}
@@ -225,13 +227,15 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 
 // Converts whole @p str to @p T or returns std::nullopt on errors like value
 // represented in @p str is too big or invalid
-template <class T, std::enable_if_t<not std::is_integral_v<std::remove_cv_t<
-                                       std::remove_reference_t<T>>>,
-                                    int> = 0>
+template <
+	class T,
+	std::enable_if_t<
+		not std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>,
+		int> = 0>
 std::optional<T> str2num(StringView str) noexcept {
 #if 0 // TODO: use it when std::from_chars for double becomes implemented in
-      // libstdc++ (also remove always false from the above and include
-      // <cstdlib>)
+	  // libstdc++ (also remove always false from the above and include
+	  // <cstdlib>)
 	std::optional<T> res {std::in_place};
 	auto [ptr, ec] = std::from_chars(str.begin(), str.end(), &*res);
 	if (ptr != str.end() or ec != std::errc())
@@ -308,8 +312,8 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  * @return formatted string
  */
 template <size_t N = 32>
-InplaceBuff<N> padded_string(StringView str, size_t len, Adjustment adj = RIGHT,
-                             char filler = ' ') {
+InplaceBuff<N> padded_string(
+	StringView str, size_t len, Adjustment adj = RIGHT, char filler = ' ') {
 	if (len <= str.size()) {
 		return InplaceBuff<N>(str);
 	}

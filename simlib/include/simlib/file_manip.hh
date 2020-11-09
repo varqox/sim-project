@@ -119,9 +119,9 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat_using_rename(int src_dirfd, FilePath src,
-                                      int dest_dirfd, FilePath dest,
-                                      mode_t mode) noexcept;
+[[nodiscard]] int copyat_using_rename(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
+	mode_t mode) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -136,8 +136,9 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat(int src_dirfd, FilePath src, int dest_dirfd,
-                         FilePath dest, mode_t mode) noexcept;
+[[nodiscard]] int copyat(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
+	mode_t mode) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -150,8 +151,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat_using_rename(int src_dirfd, FilePath src,
-                                      int dest_dirfd, FilePath dest) noexcept;
+[[nodiscard]] int copyat_using_rename(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -164,8 +165,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat(int src_dirfd, FilePath src, int dest_dirfd,
-                         FilePath dest) noexcept;
+[[nodiscard]] int
+copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
 
 /**
  * @brief Copies (overwrites) file from @p src to @p dest
@@ -176,8 +177,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] inline int copy_using_rename(FilePath src, FilePath dest,
-                                           mode_t mode) noexcept {
+[[nodiscard]] inline int
+copy_using_rename(FilePath src, FilePath dest, mode_t mode) noexcept {
 	return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest, mode);
 }
 
@@ -189,8 +190,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] inline int copy_using_rename(FilePath src,
-                                           FilePath dest) noexcept {
+[[nodiscard]] inline int
+copy_using_rename(FilePath src, FilePath dest) noexcept {
 	return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
@@ -205,8 +206,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] inline int copy(FilePath src, FilePath dest,
-                              mode_t mode) noexcept {
+[[nodiscard]] inline int
+copy(FilePath src, FilePath dest, mode_t mode) noexcept {
 	return copyat(AT_FDCWD, src, AT_FDCWD, dest, mode);
 }
 
@@ -236,8 +237,8 @@
  * This function avoids this problem by opening the file X in a child process,
  * thus preventing the race.
  */
-void thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd,
-                             FilePath dest, mode_t mode);
+void thread_fork_safe_copyat(
+	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode);
 
 /**
  * Copy function that protects from a nasty race condition that may result when
@@ -270,8 +271,8 @@ inline void thread_fork_safe_copy(FilePath src, FilePath dest, mode_t mode) {
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-[[nodiscard]] int copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
-                           FilePath dest) noexcept;
+[[nodiscard]] int
+copy_rat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -285,11 +286,11 @@ inline void thread_fork_safe_copy(FilePath src, FilePath dest, mode_t mode) {
  *
  * @errors The same that occur for copy_rat()
  */
-[[nodiscard]] int copy_r(FilePath src, FilePath dest,
-                         bool create_subdirs = true) noexcept;
+[[nodiscard]] int
+copy_r(FilePath src, FilePath dest, bool create_subdirs = true) noexcept;
 
-[[nodiscard]] inline int rename(FilePath source,
-                                FilePath destination) noexcept {
+[[nodiscard]] inline int
+rename(FilePath source, FilePath destination) noexcept {
 	return rename(source.data(), destination.data());
 }
 
@@ -310,8 +311,8 @@ inline void thread_fork_safe_copy(FilePath src, FilePath dest, mode_t mode) {
  *
  * @return Return value of rename(2) or copy_r() or remove_r()
  */
-[[nodiscard]] int move(FilePath oldpath, FilePath newpath,
-                       bool create_subdirs = true) noexcept;
+[[nodiscard]] int
+move(FilePath oldpath, FilePath newpath, bool create_subdirs = true) noexcept;
 
 /**
  * @brief Creates file pathname with access mode @p mode

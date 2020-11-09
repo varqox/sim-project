@@ -33,8 +33,9 @@ template <class Enum>
 static void test_constructor_from_val_type() {
 	using UT = typename EnumVal<Enum>::ValType;
 	EnumVal<Enum> a(static_cast<UT>(Enum::A));
-	static_assert(not std::is_convertible_v<UT, decltype(a)>,
-	              "Implicit conversion is disallowed");
+	static_assert(
+		not std::is_convertible_v<UT, decltype(a)>,
+		"Implicit conversion is disallowed");
 	static_assert(std::is_same_v<typename decltype(a)::ValType, UT>);
 	EXPECT_EQ(a, Enum::A);
 	EXPECT_NE(a, Enum::B);
@@ -94,8 +95,9 @@ template <class Enum>
 static void test_implicit_const_conversion() {
 	const EnumVal a = Enum::A;
 	using UT = typename decltype(a)::ValType;
-	static_assert(not std::is_convertible_v<decltype((a)), UT>,
-	              "implicit conversion is disallowed");
+	static_assert(
+		not std::is_convertible_v<decltype((a)), UT>,
+		"implicit conversion is disallowed");
 	static_assert(std::is_constructible_v<const UT&, decltype((a))>);
 	static_assert(not std::is_constructible_v<UT&&, decltype((a))>);
 	static_assert(not std::is_constructible_v<UT&, decltype((a))>);
@@ -113,8 +115,9 @@ template <class Enum>
 static void test_implicit_conversion() {
 	EnumVal a = Enum::A;
 	using UT = typename decltype(a)::ValType;
-	static_assert(not std::is_convertible_v<decltype((a)), UT>,
-	              "implicit conversion is disallowed");
+	static_assert(
+		not std::is_convertible_v<decltype((a)), UT>,
+		"implicit conversion is disallowed");
 	static_assert(std::is_constructible_v<const UT&, decltype((a))>);
 	static_assert(not std::is_constructible_v<UT&&, decltype((a))>);
 	static_assert(std::is_constructible_v<UT&, decltype((a))>);

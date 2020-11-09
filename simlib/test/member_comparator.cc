@@ -19,60 +19,68 @@ struct Foo {
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(member_comparator, MEMBER_COMPARATOR_order) {
 	vector<Foo> v = {
-	   {4, "d"},
-	   {2, "c"},
-	   {1, "a"},
-	   {3, "b"},
+		{4, "d"},
+		{2, "c"},
+		{1, "a"},
+		{3, "b"},
 	};
 
 	std::sort(v.begin(), v.end(), MEMBER_COMPARATOR(Foo, x){});
-	EXPECT_EQ(v, (decltype(v){
-	                {1, "a"},
-	                {2, "c"},
-	                {3, "b"},
-	                {4, "d"},
-	             }));
+	EXPECT_EQ(
+		v,
+		(decltype(v){
+			{1, "a"},
+			{2, "c"},
+			{3, "b"},
+			{4, "d"},
+		}));
 
 	std::sort(v.begin(), v.end(), MEMBER_COMPARATOR(Foo, str){});
-	EXPECT_EQ(v, (decltype(v){
-	                {1, "a"},
-	                {3, "b"},
-	                {2, "c"},
-	                {4, "d"},
-	             }));
+	EXPECT_EQ(
+		v,
+		(decltype(v){
+			{1, "a"},
+			{3, "b"},
+			{2, "c"},
+			{4, "d"},
+		}));
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_order) {
 	vector<Foo> v = {
-	   {4, "d"},
-	   {2, "c"},
-	   {1, "a"},
-	   {3, "b"},
+		{4, "d"},
+		{2, "c"},
+		{1, "a"},
+		{3, "b"},
 	};
 
 	std::sort(v.begin(), v.end(), TRANSPARENT_MEMBER_COMPARATOR(Foo, x){});
-	EXPECT_EQ(v, (decltype(v){
-	                {1, "a"},
-	                {2, "c"},
-	                {3, "b"},
-	                {4, "d"},
-	             }));
+	EXPECT_EQ(
+		v,
+		(decltype(v){
+			{1, "a"},
+			{2, "c"},
+			{3, "b"},
+			{4, "d"},
+		}));
 
 	std::sort(v.begin(), v.end(), TRANSPARENT_MEMBER_COMPARATOR(Foo, str){});
-	EXPECT_EQ(v, (decltype(v){
-	                {1, "a"},
-	                {3, "b"},
-	                {2, "c"},
-	                {4, "d"},
-	             }));
+	EXPECT_EQ(
+		v,
+		(decltype(v){
+			{1, "a"},
+			{3, "b"},
+			{2, "c"},
+			{4, "d"},
+		}));
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_transparency) {
 	TRANSPARENT_MEMBER_COMPARATOR(Foo, x) cmp{};
 	EXPECT_TRUE(
-	   (std::is_same_v<std::void_t<decltype(cmp)::is_transparent>, void>));
+		(std::is_same_v<std::void_t<decltype(cmp)::is_transparent>, void>));
 
 	EXPECT_EQ(cmp(Foo{0, "abc"}, 0), false);
 	EXPECT_EQ(cmp(Foo{0, "abc"}, 1), true);
