@@ -22,7 +22,7 @@ Field field_name_and_value(StringView line) {
     return res;
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(proc_status_file, open_proc_status_and_field_from_proc_status) {
     FileDescriptor fd = open_proc_status(gettid());
     auto contents = get_file_contents(fd);

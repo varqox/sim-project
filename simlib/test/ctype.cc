@@ -14,98 +14,98 @@ constexpr auto characters_to_test = [] {
     return vals;
 }();
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_digit) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_digit(c), (bool)std::isdigit(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_alpha) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_alpha(c), (bool)std::isalpha(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_alnum) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_alnum(c), (bool)std::isalnum(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_xdigit) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_xdigit(c), (bool)std::isxdigit(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_lower) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_lower(c), (bool)std::islower(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_upper) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_upper(c), (bool)std::isupper(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_cntrl) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_cntrl(c), (bool)std::iscntrl(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_space) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_space(c), (bool)std::isspace(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_blank) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_blank(c), (bool)std::isblank(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_graph) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_graph(c), (bool)std::isgraph(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_print) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_print(c), (bool)std::isprint(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, is_punct) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(is_punct(c), (bool)std::ispunct(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, to_lower) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(to_lower(c), std::tolower(c)) << " c = " << static_cast<int>(c);
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ctype, to_upper) {
     for (auto c : characters_to_test) {
         EXPECT_EQ(to_upper(c), std::toupper(c)) << " c = " << static_cast<int>(c);

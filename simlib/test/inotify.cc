@@ -76,7 +76,7 @@ struct InotifyTest {
     }
 };
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(inotify_FileModificationMonitor, creating_file_in_dir) {
     InotifyTest it;
 
@@ -90,7 +90,7 @@ TEST(inotify_FileModificationMonitor, creating_file_in_dir) {
     it.check();
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(inotify_FileModificationMonitor, creating_dir_in_dir) {
     InotifyTest it;
 
@@ -104,7 +104,7 @@ TEST(inotify_FileModificationMonitor, creating_dir_in_dir) {
     it.check();
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(inotify_FileModificationMonitor, modify_file) {
     InotifyTest it;
 
@@ -123,7 +123,7 @@ TEST(inotify_FileModificationMonitor, modify_file) {
     it.check();
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(inotify_FileModificationMonitor, create_watched_file_or_dir) {
     InotifyTest it;
     it.monitor.set_add_missing_files_retry_period(get_random(0, 100) * 1us);
@@ -142,7 +142,7 @@ TEST(inotify_FileModificationMonitor, create_watched_file_or_dir) {
     it.check();
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(inotify_FileModificationMonitor, remove_is_not_an_event) {
     InotifyTest it;
 
@@ -164,7 +164,7 @@ TEST(inotify_FileModificationMonitor, remove_is_not_an_event) {
     it.check();
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(inotify_FileModificationMonitor, rewatch_after_remove) {
     InotifyTest it;
     it.monitor.set_add_missing_files_retry_period(get_random(0, 100) * 1us);
@@ -184,7 +184,7 @@ TEST(inotify_FileModificationMonitor, rewatch_after_remove) {
     it.check();
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(inotify_FileModificationMonitor, event_in_pause) {
     InotifyTest it;
 

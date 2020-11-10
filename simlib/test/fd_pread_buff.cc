@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <gtest/gtest.h>
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(fd_pread_buff, fd_pread_buff) {
     OpenedTemporaryFile tmp_file{"/tmp/fd_pread_buff.test.XXXXXX"};
     std::string data(1 << 14, 0);

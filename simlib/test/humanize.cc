@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(humanize, humanize_file_size) {
     EXPECT_EQ(humanize_file_size(0), "0 bytes");
     EXPECT_EQ(humanize_file_size(1), "1 byte");

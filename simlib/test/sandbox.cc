@@ -559,7 +559,7 @@ protected:
     }
 };
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Sandbox, run) {
     stdlog.label(false);
 

@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(working_directory, DirectoryChanger) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
     auto old_cwd = get_cwd();
@@ -30,12 +30,12 @@ TEST(working_directory, DirectoryChanger) {
     EXPECT_EQ(old_cwd, get_cwd());
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_working_directory, get_cwd) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_working_directory, chdir_to_executable_dirpath) {
     // TODO: implement it
 }

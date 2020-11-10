@@ -274,7 +274,7 @@ class UrlDispatcher {
         return res;
     }
 
-    static constexpr DebugLogger<false> debuglog;
+    static constexpr DebugLogger<false> debuglog{};
 
     template <class... Elems>
     static strongly_typed_function<Response(Elems...)>

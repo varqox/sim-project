@@ -16,7 +16,7 @@ struct Foo {
     }
 };
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(member_comparator, MEMBER_COMPARATOR_order) {
     vector<Foo> v = {
         {4, "d"},
@@ -46,7 +46,7 @@ TEST(member_comparator, MEMBER_COMPARATOR_order) {
         }));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_order) {
     vector<Foo> v = {
         {4, "d"},
@@ -76,7 +76,7 @@ TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_order) {
         }));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_transparency) {
     TRANSPARENT_MEMBER_COMPARATOR(Foo, x) cmp{};
     EXPECT_TRUE((std::is_same_v<std::void_t<decltype(cmp)::is_transparent>, void>));

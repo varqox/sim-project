@@ -4,7 +4,7 @@
 
 using std::string;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(concat, concat) {
     EXPECT_EQ("", concat(""));
     EXPECT_EQ("", concat("", "", "", ""));

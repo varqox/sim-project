@@ -8,7 +8,7 @@ using std::string;
 // StringView may point to non-null-terminated string
 static_assert(not std::is_convertible_v<FilePath, StringView&>);
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, constructor_from_const_char_ptr) {
     auto test = [](auto&& arg) {
         const string& str(arg);
@@ -22,7 +22,7 @@ TEST(FilePath, constructor_from_const_char_ptr) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, constructor_from_const_cstring_view) {
     auto test = [](auto&& arg) {
         const string& str(arg);
@@ -36,7 +36,7 @@ TEST(FilePath, constructor_from_const_cstring_view) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, constructor_from_string) {
     auto test = [](auto&& arg) {
         string str(arg);
@@ -55,7 +55,7 @@ TEST(FilePath, constructor_from_string) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, constructor_from_inplace_buff) {
     auto test = [](auto&& arg) {
         string str(arg);
@@ -81,7 +81,7 @@ static_assert(not std::is_assignable_v<FilePath, FilePath&&>);
 static_assert(not std::is_assignable_v<FilePath, const FilePath&>);
 static_assert(not std::is_assignable_v<FilePath, const FilePath&&>);
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, assignment_from_const_char_ptr) {
     auto test = [](auto&& arg) {
         string str(arg);
@@ -96,7 +96,7 @@ TEST(FilePath, assignment_from_const_char_ptr) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, assignment_from_const_cstring_view) {
     static_assert(
         not std::is_assignable_v<FilePath, CStringView>, "assigning temporary is evil");
@@ -114,7 +114,7 @@ TEST(FilePath, assignment_from_const_cstring_view) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, assignment_from_string) {
     auto test = [](auto&& arg) {
         static_assert(
@@ -131,7 +131,7 @@ TEST(FilePath, assignment_from_string) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, assignment_from_inplace_buff) {
     auto test = [](auto&& arg) {
         static_assert(
@@ -150,7 +150,7 @@ TEST(FilePath, assignment_from_inplace_buff) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, operator_const_char_ptr) {
     auto test = [](auto&& arg) {
         const string& str(arg);
@@ -163,7 +163,7 @@ TEST(FilePath, operator_const_char_ptr) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, operator_to_cstr) {
     auto test = [](auto&& arg) {
         const string& str(arg);
@@ -176,7 +176,7 @@ TEST(FilePath, operator_to_cstr) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, operator_to_str) {
     auto test = [](auto&& arg) {
         const string& str(arg);
@@ -189,7 +189,7 @@ TEST(FilePath, operator_to_str) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, data) {
     auto test = [](auto&& arg) {
         const FilePath x = arg;
@@ -201,7 +201,7 @@ TEST(FilePath, data) {
     test("e");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(FilePath, size) {
     auto test = [](auto&& arg) {
         const string& str(arg);

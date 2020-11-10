@@ -27,42 +27,21 @@ constexpr bool is_digit(const StringView& str) noexcept {
     if (str.empty()) {
         return false;
     }
-
-    for (auto c : str) {
-        if (not is_digit(c)) {
-            return false;
-        }
-    }
-
-    return true;
+    return std::all_of(str.begin(), str.end(), is_digit<char>);
 }
 
 constexpr bool is_alpha(const StringView& str) noexcept {
     if (str.empty()) {
         return false;
     }
-
-    for (auto c : str) {
-        if (not is_alpha(c)) {
-            return false;
-        }
-    }
-
-    return true;
+    return std::all_of(str.begin(), str.end(), is_alpha<char>);
 }
 
 constexpr bool is_alnum(const StringView& str) noexcept {
     if (str.empty()) {
         return false;
     }
-
-    for (auto c : str) {
-        if (not is_alnum(c)) {
-            return false;
-        }
-    }
-
-    return true;
+    return std::all_of(str.begin(), str.end(), is_alnum<char>);
 }
 
 template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
@@ -74,14 +53,7 @@ constexpr bool is_word(const StringView& str) noexcept {
     if (str.empty()) {
         return false;
     }
-
-    for (auto c : str) {
-        if (not is_word(c)) {
-            return false;
-        }
-    }
-
-    return true;
+    return std::all_of(str.begin(), str.end(), is_word<char>);
 }
 
 /**

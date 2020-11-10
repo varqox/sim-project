@@ -4,7 +4,7 @@
 
 using std::unique_ptr;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_memory, delete_using_free) {
     (void)unique_ptr<char[], delete_using_free>(
         static_cast<char*>(malloc(42))); // NOLINT(cppcoreguidelines-no-malloc)

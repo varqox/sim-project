@@ -4,8 +4,8 @@
 extern "C" {
 #endif
 
-extern unsigned char default_checker_c[];
-extern unsigned default_checker_c_len;
+extern const unsigned char default_checker_c[];
+extern const unsigned default_checker_c_len;
 
 #ifdef __cplusplus
 }

@@ -7,7 +7,7 @@
 using std::string;
 using ::testing::MatchesRegex;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(temporary_directory, TemporaryDirectory) {
     TemporaryDirectory tmp_dir;
     EXPECT_EQ(tmp_dir.path(), "");

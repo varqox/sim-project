@@ -2,12 +2,12 @@
 
 #include <gtest/gtest.h>
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, to_lower) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_transform, hex2dec) {
     EXPECT_EQ(0, hex2dec('0'));
     EXPECT_EQ(1, hex2dec('1'));
@@ -35,13 +35,13 @@ TEST(string_transform, hex2dec) {
     EXPECT_EQ(15, hex2dec('f'));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_transform_DeathTest, hex2dec) {
     ASSERT_DEATH({ hex2dec('{'); }, "Assertion.*failed");
     ASSERT_DEATH({ hex2dec('G'); }, "Assertion.*failed");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_transform, dec2Hex) {
     EXPECT_EQ('0', dec2Hex(0));
     EXPECT_EQ('1', dec2Hex(1));
@@ -61,13 +61,13 @@ TEST(string_transform, dec2Hex) {
     EXPECT_EQ('F', dec2Hex(15));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_transform_DeathTest, dec2Hex) {
     ASSERT_DEATH({ dec2Hex(-1); }, "Assertion.*failed");
     ASSERT_DEATH({ dec2Hex(16); }, "Assertion.*failed");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_transform, dec2hex) {
     EXPECT_EQ('0', dec2hex(0));
     EXPECT_EQ('1', dec2hex(1));
@@ -87,13 +87,13 @@ TEST(string_transform, dec2hex) {
     EXPECT_EQ('f', dec2hex(15));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_transform_DeathTest, dec2hex) {
     ASSERT_DEATH({ dec2hex(-1); }, "Assertion.*failed");
     ASSERT_DEATH({ dec2hex(17); }, "Assertion.*failed");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_transform, to_hex) {
     EXPECT_EQ("4200baddab", to_hex(StringView("\x42\0\xba\xdd\xab", 5)));
     EXPECT_EQ(
@@ -109,52 +109,52 @@ TEST(string_transform, to_hex) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, encode_uri) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, decode_uri) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, append_as_html_escaped_with_with_char) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, append_as_html_escaped_with_with_StringView) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, html_escape) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, json_stringify) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, str2num_integral) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, str2num_floating_point) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_string_transform, str2num_with_bounds) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(string_trasform, padded_string) {
     EXPECT_EQ("  abc", padded_string("abc", 5));
     EXPECT_EQ("abc  ", padded_string("abc", 5, LEFT));

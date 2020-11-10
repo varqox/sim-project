@@ -11,7 +11,7 @@ using std::shared_ptr;
 using std::string;
 using std::vector;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_empty) {
     vector<int> a;
     vector<int> b;
@@ -22,7 +22,7 @@ TEST(ranges, reverse_view_empty) {
     EXPECT_EQ(b, a);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_lvalue) {
     vector a = {1, 2, 3, 4, 5};
     vector<int> b;
@@ -47,7 +47,7 @@ TEST(ranges, reverse_view_lvalue) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_double_lvalue) {
     vector<int> a{1, 2, 3, 4, 5};
     vector<int> b;
@@ -72,7 +72,7 @@ TEST(ranges, reverse_view_double_lvalue) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_simple_xvalue) {
     vector<int> b;
     for (int x : reverse_view(vector{1, 2, 3, 4, 5})) {
@@ -82,7 +82,7 @@ TEST(ranges, reverse_view_simple_xvalue) {
     EXPECT_EQ(b, (vector{5, 4, 3, 2, 1}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_double_xvalue) {
     vector<int> b;
     for (int x : reverse_view(reverse_view(vector{1, 2, 3, 4, 5}))) {
@@ -105,7 +105,7 @@ struct inc_dead {
 
 } // namespace
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_on_xvalue_lifetime) {
     int dead = 0;
     for (auto& x [[maybe_unused]] : reverse_view(array{inc_dead{&dead}, inc_dead{&dead}})) {
@@ -114,7 +114,7 @@ TEST(ranges, reverse_view_on_xvalue_lifetime) {
     EXPECT_EQ(dead, 2);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_double_on_xvalue_lifetime) {
     int dead = 0;
     for (auto& x [[maybe_unused]] :
@@ -125,7 +125,7 @@ TEST(ranges, reverse_view_double_on_xvalue_lifetime) {
     EXPECT_EQ(dead, 2);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_c_array) {
     int arr[] = {1, 2, 3};
     vector<int> res;
@@ -135,7 +135,7 @@ TEST(ranges, reverse_view_c_array) {
     EXPECT_EQ(res, (vector{3, 2, 1}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, reverse_view_and_sort) {
     vector v{4, 2, 5, 3, 1};
     auto rv = reverse_view(v);
@@ -143,7 +143,7 @@ TEST(ranges, reverse_view_and_sort) {
     EXPECT_EQ(v, (vector{5, 4, 3, 2, 1}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_lvalue_noref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -158,7 +158,7 @@ TEST(ranges, enumerate_view_lvalue_noref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_lvalue_ref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -173,7 +173,7 @@ TEST(ranges, enumerate_view_lvalue_ref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_lvalue_cref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -188,7 +188,7 @@ TEST(ranges, enumerate_view_lvalue_cref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_lvalue_uref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -203,7 +203,7 @@ TEST(ranges, enumerate_view_lvalue_uref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_lvalue_noref) {
     const vector<int> v{1};
     auto v0_addr = &v[0];
@@ -218,7 +218,7 @@ TEST(ranges, enumerate_view_const_lvalue_noref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_lvalue_ref) {
     const vector<int> v{1};
     auto v0_addr = &v[0];
@@ -233,7 +233,7 @@ TEST(ranges, enumerate_view_const_lvalue_ref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_lvalue_cref) {
     const vector<int> v{1};
     auto v0_addr = &v[0];
@@ -248,7 +248,7 @@ TEST(ranges, enumerate_view_const_lvalue_cref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_lvalue_uref) {
     const vector<int> v{1};
     auto v0_addr = &v[0];
@@ -263,7 +263,7 @@ TEST(ranges, enumerate_view_const_lvalue_uref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_xvalue_noref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -280,7 +280,7 @@ TEST(ranges, enumerate_view_xvalue_noref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_xvalue_ref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -297,7 +297,7 @@ TEST(ranges, enumerate_view_xvalue_ref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_xvalue_cref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -314,7 +314,7 @@ TEST(ranges, enumerate_view_xvalue_cref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_xvalue_uref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
@@ -331,7 +331,7 @@ TEST(ranges, enumerate_view_xvalue_uref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_lvalue_noref) {
     array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -346,7 +346,7 @@ TEST(ranges, enumerate_view_const_elems_lvalue_noref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_lvalue_ref) {
     array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -361,7 +361,7 @@ TEST(ranges, enumerate_view_const_elems_lvalue_ref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_lvalue_cref) {
     array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -376,7 +376,7 @@ TEST(ranges, enumerate_view_const_elems_lvalue_cref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_lvalue_uref) {
     array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -391,7 +391,7 @@ TEST(ranges, enumerate_view_const_elems_lvalue_uref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_const_lvalue_noref) {
     const array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -406,7 +406,7 @@ TEST(ranges, enumerate_view_const_elems_const_lvalue_noref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_const_lvalue_ref) {
     const array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -421,7 +421,7 @@ TEST(ranges, enumerate_view_const_elems_const_lvalue_ref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_const_lvalue_cref) {
     const array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -436,7 +436,7 @@ TEST(ranges, enumerate_view_const_elems_const_lvalue_cref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_const_lvalue_uref) {
     const array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
@@ -451,7 +451,7 @@ TEST(ranges, enumerate_view_const_elems_const_lvalue_uref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_xvalue_noref) {
     {
         array<const string, 1> a{"abc"};
@@ -472,7 +472,7 @@ TEST(ranges, enumerate_view_const_elems_xvalue_noref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_xvalue_ref) {
     {
         array<const string, 1> a{"abc"};
@@ -493,7 +493,7 @@ TEST(ranges, enumerate_view_const_elems_xvalue_ref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_xvalue_cref) {
     {
         array<const string, 1> a{"abc"};
@@ -514,7 +514,7 @@ TEST(ranges, enumerate_view_const_elems_xvalue_cref) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_const_elems_xvalue_uref) {
     {
         array<const string, 1> a{"abc"};
@@ -548,7 +548,7 @@ struct lifetime_tester {
 };
 } // namespace
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_xvalue_lifetime) {
     int lt = 0;
     for (auto&& x : vector{make_shared<lifetime_tester>(&lt)}) {
@@ -566,7 +566,7 @@ TEST(ranges, enumerate_view_xvalue_lifetime) {
     EXPECT_EQ(lt, 42);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_reverse_lvalue_noref) {
     vector<int> v{8, 4, 7};
     vector<pair<size_t, int>> res;
@@ -579,7 +579,7 @@ TEST(ranges, enumerate_view_reverse_lvalue_noref) {
     EXPECT_EQ(res, (vector<pair<size_t, int>>{{0, 7}, {1, 4}, {2, 8}}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_reverse_lvalue_ref) {
     vector<int> v{8, 4, 7};
     vector<pair<size_t, int>> res;
@@ -592,7 +592,7 @@ TEST(ranges, enumerate_view_reverse_lvalue_ref) {
     EXPECT_EQ(res, (vector<pair<size_t, int>>{{0, 7}, {1, 4}, {2, 8}}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_reverse_lvalue_cref) {
     vector<int> v{8, 4, 7};
     vector<pair<size_t, int>> res;
@@ -605,7 +605,7 @@ TEST(ranges, enumerate_view_reverse_lvalue_cref) {
     EXPECT_EQ(res, (vector<pair<size_t, int>>{{0, 7}, {1, 4}, {2, 8}}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ranges, enumerate_view_reverse_lvalue_uref) {
     vector<int> v{8, 4, 7};
     vector<pair<size_t, int>> res;

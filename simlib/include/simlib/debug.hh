@@ -94,6 +94,7 @@ inline auto errmsg() noexcept { return errmsg(errno); }
 namespace stack_unwinding {
 
 class StackGuard {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static inline thread_local uintmax_t event_stamp;
 
     bool inside_catch_ = static_cast<bool>(std::current_exception());
@@ -113,6 +114,7 @@ public:
         : description(std::in_place, std::forward<Args>(args)...) {}
     };
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static inline thread_local InplaceArray<StackMark, 128> marks_collected;
 
     StackGuard(const char* file, size_t line, const char* pretty_function) noexcept

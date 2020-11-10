@@ -65,7 +65,7 @@ int mkdir_r(string path, mode_t mode) noexcept {
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
  *   fdopendir(3)
  */
-static int __remove_rat(int dirfd, FilePath path) noexcept {
+static int remove_rat_impl(int dirfd, FilePath path) noexcept {
     int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     if (fd == -1) {
         return unlinkat(dirfd, path, 0);
@@ -85,7 +85,7 @@ static int __remove_rat(int dirfd, FilePath path) noexcept {
 #ifdef _DIRENT_HAVE_D_TYPE
             if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
-                if (__remove_rat(fd, file->d_name)) {
+                if (remove_rat_impl(fd, file->d_name)) {
                     ec = errno;
                     rc = -1;
                     return stop_repeating;
@@ -115,7 +115,7 @@ static int __remove_rat(int dirfd, FilePath path) noexcept {
     return unlinkat(dirfd, path, AT_REMOVEDIR);
 }
 
-int remove_rat(int dirfd, FilePath path) noexcept { return __remove_rat(dirfd, path); }
+int remove_rat(int dirfd, FilePath path) noexcept { return remove_rat_impl(dirfd, path); }
 
 int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
     int fd = openat(dirfd, pathname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
@@ -139,7 +139,7 @@ int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
 #ifdef _DIRENT_HAVE_D_TYPE
             if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
-                if (__remove_rat(fd, file->d_name)) {
+                if (remove_rat_impl(fd, file->d_name)) {
                     ec = errno;
                     rc = -1;
                     return stop_repeating;
@@ -367,7 +367,7 @@ void thread_fork_safe_copyat(
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept {
+static int copy_rat_impl(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept {
     int src_fd = openat(src_dirfd, src, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (src_fd == -1) {
         if (errno == ENOTDIR) {
@@ -401,7 +401,7 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest
 #ifdef _DIRENT_HAVE_D_TYPE
             if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
-                if (__copy_rat(src_fd, file->d_name, dest_fd, file->d_name)) {
+                if (copy_rat_impl(src_fd, file->d_name, dest_fd, file->d_name)) {
                     ec = errno;
                     rc = -1;
                     return stop_repeating;
@@ -441,7 +441,7 @@ int copy_rat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcep
     }
 
     if (S_ISDIR(sb.st_mode)) {
-        return __copy_rat(src_dirfd, src, dest_dirfd, dest);
+        return copy_rat_impl(src_dirfd, src, dest_dirfd, dest);
     }
 
     return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode & ACCESSPERMS);

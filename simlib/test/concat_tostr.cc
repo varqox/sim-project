@@ -7,7 +7,7 @@
 
 using std::string;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(concat_tostr, concat_tostr) {
     EXPECT_EQ("", concat_tostr(""));
     EXPECT_EQ("", concat_tostr("", "", "", ""));
@@ -54,7 +54,7 @@ static void test_back_insert_on(int line, T&& expected, Args&&... args) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(concat_tostr, back_insert) {
     test_back_insert_on(__LINE__, "", "");
     test_back_insert_on(__LINE__, "", "", "", "", "");

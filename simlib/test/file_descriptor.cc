@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_descriptor, FileDescriptor) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
     static_assert(not std::is_convertible_v<int, FileDescriptor>);

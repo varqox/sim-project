@@ -159,7 +159,9 @@ public:
 };
 
 // By default both write to stderr
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 inline Logger stdlog(stderr); // Standard (default) log
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 inline Logger errlog(stderr); // Error log
 
 // Logs to string and Logger simultaneously

@@ -21,7 +21,7 @@ static constexpr std::optional<std::tuple<>> is_xyz(StringView str) {
     return std::nullopt;
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(http, UrlParser) {
     using http::UrlParser;
     static constexpr const char url[] = "/{int}/abcxyz/{int}/{string}/{uint}/{custom}";
@@ -71,7 +71,7 @@ TEST(http, UrlParser) {
         UrlParser<url8>::try_parse("/123/x") == std::nullopt); // Every '/' is required
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(http, UrlDispatcher_simple) {
     http::UrlDispatcher ud;
     static constexpr const char url[] = "/foo/{int}/bar/{string}/test";
@@ -97,7 +97,7 @@ static auto canonized_collisions(const http::UrlDispatcher& ud) {
     return collisions;
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(http, UrlDispatcher_overlapping_patterns) {
     http::UrlDispatcher ud;
     static constexpr const char url0[] = "/{int}/{uint}/{uint}/";
@@ -140,7 +140,7 @@ TEST(http, UrlDispatcher_overlapping_patterns) {
     EXPECT_EQ(collisions, (decltype(collisions){{url0, url1}, {url0, url2}, {url1, url2}}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(http, UrlDispatcher_all_potential_collisions) {
     http::UrlDispatcher ud;
     using VC = decltype(ud.all_potential_collisions());

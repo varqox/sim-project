@@ -5,72 +5,72 @@
 
 using std::set;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, back_insert) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, binary_find) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, binary_find_with_comparator) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, binary_find_by) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, binary_find_by_with_comparator) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, binary_search) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, lower_bound) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, upper_bound) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, sort) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, sort_with_comparator) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, is_sorted) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, is_one_of) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_utilities, is_pair) {
     // TODO: implement it
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(utilities, filter) {
     set s = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     filter(s, [](int /*unused*/) { return true; });
@@ -89,7 +89,7 @@ TEST(utilities, filter) {
     EXPECT_EQ(s, (set<int>{}));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(utilities, filter_return_type) {
     set<int> s;
     // lvalue

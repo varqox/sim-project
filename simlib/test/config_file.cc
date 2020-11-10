@@ -9,7 +9,7 @@ using std::pair;
 using std::string;
 using std::vector;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ConfigFile, is_string_literal) {
     // (input, output)
     vector<pair<string, bool>> cases{
@@ -132,7 +132,7 @@ TEST(ConfigFile, is_string_literal) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ConfigFile, escape_to_single_quoted_string) {
     // (input, output)
     vector<pair<string, string>> cases{
@@ -202,7 +202,7 @@ TEST(ConfigFile, escape_to_single_quoted_string) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ConfigFile, escape_to_double_quoted_string) {
     // (input, output)
     vector<pair<string, string>> cases{
@@ -297,7 +297,7 @@ TEST(ConfigFile, escape_to_double_quoted_string) {
         R"===(" '\t\n' \xc5\x9b ")===");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ConfigFile, escape_string) {
     // (input, output)
     vector<pair<string, string>> cases{
@@ -413,7 +413,7 @@ string dump_config(const ConfigFile& cf) {
     return res;
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(ConfigFile, load_config_from_string) {
     // (input, dumped config)
     vector<pair<string, string>> cases{

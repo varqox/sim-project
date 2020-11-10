@@ -7,7 +7,7 @@
 #include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(path, path_absolute) {
     EXPECT_EQ(path_absolute("/foo/bar/"), "/foo/bar/");
     EXPECT_EQ(path_absolute("/foo/bar/////"), "/foo/bar/");
@@ -44,7 +44,7 @@ TEST(path, path_absolute) {
     EXPECT_EQ(path_absolute("gg", "foo/bar"), "foo/bar/gg");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(path, path_filename) {
     EXPECT_EQ(path_filename("/my/path/foo.bar"), "foo.bar");
     EXPECT_EQ(path_filename("/my/path/"), "");
@@ -62,7 +62,7 @@ TEST(path, path_filename) {
     EXPECT_EQ(path_filename("../"), "");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(path, path_extension) {
     EXPECT_EQ(path_extension("/my/path/foo.bar"), "bar");
     EXPECT_EQ(path_extension("/my/path/"), "");
@@ -115,7 +115,7 @@ TEST(path, path_extension) {
     EXPECT_EQ(path_extension("/../.foobar/"), "");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(path, path_dirpath) {
     EXPECT_EQ(path_dirpath("/my/path/foo.bar"), "/my/path/");
     EXPECT_EQ(path_dirpath("/my/path/"), "/my/path/");
@@ -168,7 +168,7 @@ TEST(path, path_dirpath) {
     EXPECT_EQ(path_dirpath("/../.foobar/"), "/../.foobar/");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(path, deepest_ancestor_dir_with_subpath_absolute_path) {
     TemporaryDirectory tmp_dir("/tmp/path.test.XXXXXX");
     StringView tmp_dir_pathname =
@@ -252,7 +252,7 @@ TEST(path, deepest_ancestor_dir_with_subpath_absolute_path) {
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "tmp/"), "/tmp/");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(path_DeathTest, deepest_ancestor_dir_with_subpath_relative_path) {
     auto test_impl = [] {
         TemporaryDirectory tmp_dir("/tmp/path.test.XXXXXX");

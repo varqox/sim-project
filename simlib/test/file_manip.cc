@@ -22,11 +22,11 @@ static string some_random_data(size_t len) {
     return data;
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_file_manip, remove_r) { // TODO:
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, mkdir) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
     EXPECT_EQ(mkdir(concat(tmp_dir.path(), "a")), 0);
@@ -39,7 +39,7 @@ TEST(file_manip, mkdir) {
     EXPECT_FALSE(is_directory(concat(tmp_dir.path(), "x")));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, mkdir_r) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
     EXPECT_EQ(mkdir_r(concat_tostr(tmp_dir.path(), "x/d")), 0);
@@ -47,7 +47,7 @@ TEST(file_manip, mkdir_r) {
     EXPECT_TRUE(is_directory(concat(tmp_dir.path(), "x/d")));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, remove_dir_contents) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 
@@ -67,7 +67,7 @@ TEST(file_manip, remove_dir_contents) {
     for_each_dir_component(tmp_dir.path(), [](dirent* f) { ADD_FAILURE() << f->d_name; });
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, create_subdirectories) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 
@@ -85,7 +85,7 @@ TEST(file_manip, create_subdirectories) {
     for_each_dir_component(dir_path, [](dirent* f) { ADD_FAILURE() << f->d_name; });
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, blast) {
     OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
     OpenedTemporaryFile b("/tmp/filesystem-test.XXXXXX");
@@ -200,24 +200,24 @@ void copy_test(void (*copy_fn)(FilePath, FilePath, mode_t)) {
     check_allowed_files(__LINE__);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, copy) {
     copy_test([](FilePath src, FilePath dest, mode_t mode) {
         EXPECT_EQ(::copy(src, dest, mode), 0);
     });
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, copy_using_rename) {
     copy_test([](FilePath src, FilePath dest, mode_t mode) {
         EXPECT_EQ(::copy_using_rename(src, dest, mode), 0);
     });
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, thread_fork_safe_copy) { copy_test(::thread_fork_safe_copy); }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(file_manip, copy_r) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 
@@ -384,18 +384,18 @@ TEST(file_manip, copy_r) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_file_manip, move) { // TODO:
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_file_manip, create_file) { // TODO:
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_file_manip, FileRemover) { // TODO:
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(DISABLED_file_manip, DirectoryRemover) { // TODO:
 }

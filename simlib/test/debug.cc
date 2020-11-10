@@ -9,7 +9,7 @@
 
 using std::string;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, throw_assert) {
     constexpr int var = 123;
     try {
@@ -51,7 +51,7 @@ static std::string intercept_logger(Logger& logger, LoggingFunc&& logging_func) 
     return get_file_contents(fileno(logger_stream));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, LOG_LINE_MARCO) {
     auto logged_line = intercept_logger(stdlog, [] { LOG_LINE; });
     EXPECT_EQ(concat_tostr(__FILE__, ':', __LINE__ - 1, '\n'), logged_line);
@@ -59,7 +59,7 @@ TEST(debug, LOG_LINE_MARCO) {
     EXPECT_EQ(concat_tostr(__FILE__, ':', __LINE__ - 1, '\n'), logged_line2);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, THROW_MACRO) {
     try {
         THROW("a ", 1, -42, "c", '.', false, ";");
@@ -75,7 +75,7 @@ TEST(debug, THROW_MACRO) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, errmsg) {
     EXPECT_EQ(concat(" - ", EPERM, ": Operation not permitted"), errmsg(EPERM));
     EXPECT_EQ(concat(" - ", ENOENT, ": No such file or directory"), errmsg(ENOENT));
@@ -229,7 +229,7 @@ static void test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level() {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
     STACK_UNWINDING_MARK;
     {
@@ -244,7 +244,7 @@ TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
     test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level();
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
     EXPECT_EXIT(
         {
@@ -256,7 +256,7 @@ TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
         ::testing::KilledBySignal(SIGABRT), "^BUG\nBUG: this was expected to not throw\n$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, WONT_THROW_MACRO_lvalue_reference) {
     {
         int a = 42;
@@ -271,7 +271,7 @@ TEST(debug, WONT_THROW_MACRO_lvalue_reference) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, WONT_THROW_MACRO_rvalue_reference) {
     auto ptr = std::make_unique<int>(162);
     std::unique_ptr<int> ptr2 = WONT_THROW(std::move(ptr));
@@ -279,7 +279,7 @@ TEST(debug, WONT_THROW_MACRO_rvalue_reference) {
     EXPECT_EQ((bool)ptr2, true);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, WONT_THROW_MACRO_xvalue) {
     struct A {
         std::string& str;
@@ -324,7 +324,7 @@ TEST(debug, WONT_THROW_MACRO_xvalue) {
     EXPECT_EQ(str, "+A+C-A-C");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, WONT_THROW_MACRO_prvalue) {
     std::unique_ptr<int> ptr = WONT_THROW(std::make_unique<int>(162));
     EXPECT_EQ((bool)ptr, true);
@@ -340,7 +340,7 @@ template <class T>
 constexpr bool double_construct_with_WONT_THROW =
     decltype(double_construct_with_WONT_THROW_impl<T>(0))::value;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
     struct X {
         explicit X(int /*unused*/) {}
@@ -366,7 +366,7 @@ TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
     static_assert(double_construct_with_WONT_THROW<Y>);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug, WONT_THROW_MACRO_rvalue) {
     int a = 4;
     int b = 7;
@@ -376,7 +376,7 @@ TEST(debug, WONT_THROW_MACRO_rvalue) {
     EXPECT_EQ(c, 11);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(debug_DeathTest, WONT_THROW_MACRO_throw_in_the_same_statement_after_WONT_THROW_MACRO) {
     try {
         // NOLINTNEXTLINE(hicpp-exception-baseclass)

@@ -17,7 +17,7 @@ lines_elems = group_by_n(['0x{:02x}'.format(x) for x in contents], 12)
 dumped_lines = [', '.join(l) for l in lines_elems]
 dumped_contents = ',\n\t'.join(dumped_lines)
 
-print("""unsigned char {0}[] = {{
+print("""const unsigned char {0}[] = {{
 \t{1}
 }};
-unsigned int {0}_len = {2};""".format(c_array_name, dumped_contents, len(contents)))
+const unsigned int {0}_len = {2};""".format(c_array_name, dumped_contents, len(contents)))

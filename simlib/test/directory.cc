@@ -7,7 +7,7 @@
 
 using std::string;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(directory, for_each_dir_component) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
     Directory dir(tmp_dir.path());

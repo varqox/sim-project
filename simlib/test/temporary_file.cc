@@ -13,7 +13,7 @@
 using std::string;
 using ::testing::MatchesRegex;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(temporary_file, TemporaryFile) {
     string path;
     {
@@ -41,7 +41,7 @@ TEST(temporary_file, TemporaryFile) {
     EXPECT_FALSE(path_exists(path));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(create_unique_file, typical) {
     string path1 = "/tmp/create_unique_file_test.XXXX";
     string path2 = path1;
@@ -62,7 +62,7 @@ TEST(create_unique_file, typical) {
     EXPECT_NE(path1, path2);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(create_unique_file, fail) {
     string path = "/tmp/create_unique_file_test.";
     string path_copy = path;

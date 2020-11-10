@@ -14,7 +14,7 @@ static void noexcept_bar(T /*unused*/) noexcept {}
 void uint_foo(uint /*unused*/);
 void uint_noexcept_foo(uint /*unused*/);
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(strongly_typed_function, constructor_checks_arguments) {
     (void)strongly_typed_function<void(int)>(foo);
     (void)strongly_typed_function<void(int)>(noexcept_foo);
@@ -48,7 +48,7 @@ static int ret_int_noexcept() noexcept { return -42; }
 uint ret_uint();
 uint ret_uint_noexcept() noexcept;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(strongly_typed_function, constructor_checks_return_value) {
     (void)strongly_typed_function<int()>(ret_int);
     (void)strongly_typed_function<int()>(ret_int_noexcept);
@@ -71,7 +71,7 @@ TEST(strongly_typed_function, constructor_checks_return_value) {
         not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda_mut)>);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(strongly_typed_function, call) {
     strongly_typed_function<int64_t(int64_t, int32_t)> func(
         [](int64_t x, int32_t y) { return x - y; });

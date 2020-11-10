@@ -10,7 +10,7 @@ using std::array;
 using std::string;
 using std::vector;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, dump) {
     sim::Simfile sf{"name: Simple Package\n"
                     "label: sim\n"
@@ -132,7 +132,7 @@ TEST(Simfile, dump) {
         sf.dump());
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_name) {
     sim::Simfile sf{"name: Problem 1 2 3"};
     // Load two times - make sure that it is safe
@@ -151,7 +151,7 @@ TEST(Simfile, load_name) {
     EXPECT_EQ(sf.name.value(), "");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_label) {
     sim::Simfile sf{"label: Label 1 2 3"};
     // Load two times - make sure that it is safe
@@ -170,7 +170,7 @@ TEST(Simfile, load_label) {
     EXPECT_EQ(sf.label.value(), "");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_interactive) {
     sim::Simfile sf{"interactive: true"};
     // Load two times - make sure that it is safe
@@ -214,7 +214,7 @@ TEST(Simfile, load_interactive) {
     EXPECT_THROW(sf.load_interactive(), std::runtime_error);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_checker) {
     sim::Simfile sf{"checker: path/to/checker"};
     // Load two times - make sure that it is safe
@@ -249,7 +249,7 @@ TEST(Simfile, load_checker) {
     EXPECT_EQ("path/", sf.checker.value());
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_statement) {
     sim::Simfile sf{"statement: path/to/statement"};
     // Load two times - make sure that it is safe
@@ -278,7 +278,7 @@ TEST(Simfile, load_statement) {
     EXPECT_EQ("path/", sf.statement);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_solutions) {
     using VS = vector<string>;
     sim::Simfile sf{"solutions: [sol1, sol/2]"};
@@ -313,7 +313,7 @@ TEST(Simfile, load_solutions) {
     EXPECT_EQ((VS{"path/", "suspicious/path"}), sf.solutions);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_tests) {
     // Memory limit
     sim::Simfile sf{"memory_limit: 123\nlimits: []"};
@@ -505,7 +505,7 @@ TEST(Simfile, load_tests) {
     EXPECT_THROW(sf.load_tests(), std::runtime_error);
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, load_tests_with_files) {
     sim::Simfile sf{"limits: [\n"
                     "  foo0 1 1\n"
@@ -593,7 +593,7 @@ void create_files_at(string dir, const vector<string>& v) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Simfile, validate_files) {
     TemporaryDirectory tmp_dir("/tmp/simlib-test.XXXXXX");
 

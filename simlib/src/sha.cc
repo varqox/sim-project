@@ -2,7 +2,7 @@
 #include "simlib/string_transform.hh"
 
 extern "C" {
-#include <3rdparty/sha3.c>
+#include <3rdparty/sha3.c> // NOLINT(bugprone-suspicious-include)
 }
 
 InplaceBuff<56> sha3_224(StringView str) {

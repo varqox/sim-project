@@ -7,7 +7,7 @@
 
 class AhoCorasick {
 public:
-    typedef unsigned uint;
+    using uint = unsigned int;
 
     struct Node {
         uint patt_id = 0; // pattern id which ends in this node or zero if such

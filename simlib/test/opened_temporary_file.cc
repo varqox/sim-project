@@ -9,7 +9,7 @@
 using std::string;
 using ::testing::MatchesRegex;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(opened_temporary_file, OpenedTemporaryFile) {
     string path;
     int fd = 0;

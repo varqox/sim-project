@@ -36,6 +36,7 @@ auto handle_signals_while_running(
     Main&& main_func, Cleanup&& cleanup_before_getting_killed, Signals... signals);
 
 class HandleSignalsWhileRunning {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline static FileDescriptor signal_eventfd{};
 
     static uint64_t pack_signum(int signum) noexcept {

@@ -10,7 +10,7 @@
 
 inline void eputs(const char* str) noexcept { write(STDERR_FILENO, str, std::strlen(str)); }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, no_signal_occurred) {
     EXPECT_EXIT(
         {
@@ -23,7 +23,7 @@ TEST(handle_signals_while_running_DeathTest, no_signal_occurred) {
         ::testing::ExitedWithCode(0), "^beg,main,end$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, two_signals_one_signaled) {
     for (int signum : {SIGINT, SIGTERM}) {
         EXPECT_EXIT(
@@ -42,7 +42,7 @@ TEST(handle_signals_while_running_DeathTest, two_signals_one_signaled) {
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, signaled_unhandled_signal) {
     EXPECT_EXIT(
         {
@@ -59,7 +59,7 @@ TEST(handle_signals_while_running_DeathTest, signaled_unhandled_signal) {
         ::testing::KilledBySignal(SIGQUIT), "^beg,main$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, try_to_run_two_times_simultaneously) {
     EXPECT_EXIT(
         {
@@ -79,7 +79,7 @@ TEST(handle_signals_while_running_DeathTest, try_to_run_two_times_simultaneously
         "simultaneously is impossible");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, two_times_one_after_another) {
     EXPECT_EXIT(
         {
@@ -95,7 +95,7 @@ TEST(handle_signals_while_running_DeathTest, two_times_one_after_another) {
         ::testing::ExitedWithCode(0), "^beg,main1,mid,main2,end$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, two_times_one_after_another_first_signaled) {
     EXPECT_EXIT(
         {
@@ -115,7 +115,7 @@ TEST(handle_signals_while_running_DeathTest, two_times_one_after_another_first_s
         ::testing::KilledBySignal(SIGTERM), "^beg,main1,sig1$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, two_times_one_after_another_second_signaled) {
     EXPECT_EXIT(
         {
@@ -135,7 +135,7 @@ TEST(handle_signals_while_running_DeathTest, two_times_one_after_another_second_
         ::testing::KilledBySignal(SIGTERM), "^beg,main1,mid,main2,sig2$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, function_throws_exception) {
     EXPECT_EXIT(
         {
@@ -157,7 +157,7 @@ TEST(handle_signals_while_running_DeathTest, function_throws_exception) {
         ::testing::ExitedWithCode(0), "^beg,main,catch,end$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, function_returns_before_signal_gets_handled) {
     EXPECT_EXIT(
         {
@@ -181,7 +181,7 @@ TEST(handle_signals_while_running_DeathTest, function_returns_before_signal_gets
         ::testing::KilledBySignal(SIGUSR1), "^beg,main,sig$");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, signal_with_function_that_does_not_return) {
     auto start_tp = std::chrono::system_clock::now();
     EXPECT_EXIT(

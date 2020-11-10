@@ -350,6 +350,7 @@ bool ConfigFile::is_string_literal(StringView str) noexcept {
         return false;
     }
 
+    // NOLINTNEXTLINE(readability-use-anyofallof): this is faster in debug mode
     for (auto c : str) {
         if (is_one_of(c, '\n', ']', ',', '#')) {
             return false;

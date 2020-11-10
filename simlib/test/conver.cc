@@ -448,7 +448,7 @@ protected:
     }
 };
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(Conver, construct_simfile) {
     stdlog.label(false);
     stdlog.use(stdout);
