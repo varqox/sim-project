@@ -19,54 +19,50 @@
  *   may be extracted.
  */
 class RequestUriParser {
-	StringView buff;
+    StringView buff;
 
 public:
-	constexpr explicit RequestUriParser(StringView str)
-	: buff(str) {}
+    constexpr explicit RequestUriParser(StringView str)
+    : buff(str) {}
 
-	RequestUriParser(const RequestUriParser&) noexcept = default;
-	RequestUriParser(RequestUriParser&&) noexcept = default;
-	RequestUriParser& operator=(const RequestUriParser&) noexcept = default;
-	RequestUriParser& operator=(RequestUriParser&&) noexcept = default;
+    RequestUriParser(const RequestUriParser&) noexcept = default;
+    RequestUriParser(RequestUriParser&&) noexcept = default;
+    RequestUriParser& operator=(const RequestUriParser&) noexcept = default;
+    RequestUriParser& operator=(RequestUriParser&&) noexcept = default;
 
-	~RequestUriParser() = default;
+    ~RequestUriParser() = default;
 
-	/// @brief Extracts next URL argument
-	StringView extract_next_arg() {
-		if (buff.empty() || buff.front() != '/') {
-			return {};
-		}
+    /// @brief Extracts next URL argument
+    StringView extract_next_arg() {
+        if (buff.empty() || buff.front() != '/') {
+            return {};
+        }
 
-		size_t pos = 1;
-		while (pos < buff.size() && buff[pos] != '/' && buff[pos] != '?') {
-			++pos;
-		}
+        size_t pos = 1;
+        while (pos < buff.size() && buff[pos] != '/' && buff[pos] != '?') {
+            ++pos;
+        }
 
-		StringView res{buff.substr(1, pos - 1)};
-		buff.remove_prefix(pos);
-		DEBUG_PARSER(stdlog(
-						 __PRETTY_FUNCTION__, " -> extracted: ", res,
-						 " \tleft: ", buff);)
-		return res;
-	}
+        StringView res{buff.substr(1, pos - 1)};
+        buff.remove_prefix(pos);
+        DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res, " \tleft: ", buff);)
+        return res;
+    }
 
-	/// Extracts URL Query (iff all arguments were extracted before)
-	StringView extract_query() {
-		if (buff.empty() || buff.front() != '?') {
-			return {};
-		}
+    /// Extracts URL Query (iff all arguments were extracted before)
+    StringView extract_query() {
+        if (buff.empty() || buff.front() != '?') {
+            return {};
+        }
 
-		StringView res{buff.substr(1)};
-		buff = "";
-		return res;
-	}
+        StringView res{buff.substr(1)};
+        buff = "";
+        return res;
+    }
 
-	StringView& data() noexcept { return buff; }
+    StringView& data() noexcept { return buff; }
 
-	[[nodiscard]] constexpr const StringView& data() const noexcept {
-		return buff;
-	}
+    [[nodiscard]] constexpr const StringView& data() const noexcept { return buff; }
 
-	[[nodiscard]] constexpr StringView remnant() const noexcept { return buff; }
+    [[nodiscard]] constexpr StringView remnant() const noexcept { return buff; }
 };

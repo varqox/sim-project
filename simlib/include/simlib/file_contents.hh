@@ -36,8 +36,7 @@
  *
  * @errors The same as for pread() except EINTR
  */
-[[nodiscard]] size_t
-pread_all(int fd, off64_t pos, void* buff, size_t count) noexcept;
+[[nodiscard]] size_t pread_all(int fd, off64_t pos, void* buff, size_t count) noexcept;
 
 /**
  * @brief Write @p count bytes to @p fd from @p buff
@@ -64,9 +63,9 @@ pread_all(int fd, off64_t pos, void* buff, size_t count) noexcept;
  * @errors If any error occurs then an exception is thrown
  */
 inline void write_all_throw(int fd, const void* buff, size_t count) {
-	if (write_all(fd, buff, count) != count) {
-		THROW("write()", errmsg());
-	}
+    if (write_all(fd, buff, count) != count) {
+        THROW("write()", errmsg());
+    }
 }
 
 /**
@@ -81,7 +80,7 @@ inline void write_all_throw(int fd, const void* buff, size_t count) {
  * @errors The same as for write(2) except EINTR
  */
 [[nodiscard]] inline size_t write_all(int fd, StringView str) noexcept {
-	return write_all(fd, str.data(), str.size());
+    return write_all(fd, str.data(), str.size());
 }
 
 /**
@@ -94,7 +93,7 @@ inline void write_all_throw(int fd, const void* buff, size_t count) {
  * @errors If any error occurs then an exception is thrown
  */
 inline void write_all_throw(int fd, StringView str) {
-	write_all_throw(fd, str.data(), str.size());
+    write_all_throw(fd, str.data(), str.size());
 }
 
 /**
@@ -161,9 +160,8 @@ std::string get_file_contents(FilePath file, off64_t beg, off64_t end = -1);
  * @errors If any error occurs an exception of type std::runtime_error is
  *   thrown (may happen if open(2) or write(2) fails)
  */
-void put_file_contents(
-	FilePath file, const char* data, size_t len, mode_t mode = S_0644);
+void put_file_contents(FilePath file, const char* data, size_t len, mode_t mode = S_0644);
 
 inline void put_file_contents(FilePath file, StringView data) {
-	return put_file_contents(file, data.data(), data.size());
+    return put_file_contents(file, data.data(), data.size());
 }

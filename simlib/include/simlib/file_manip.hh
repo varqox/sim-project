@@ -10,14 +10,10 @@
 #include <unistd.h>
 
 // The same as unlink(const char*)
-[[nodiscard]] inline int unlink(FilePath pathname) noexcept {
-	return unlink(pathname.data());
-}
+[[nodiscard]] inline int unlink(FilePath pathname) noexcept { return unlink(pathname.data()); }
 
 // The same as remove(const char*)
-[[nodiscard]] inline int remove(FilePath pathname) noexcept {
-	return remove(pathname.data());
-}
+[[nodiscard]] inline int remove(FilePath pathname) noexcept { return remove(pathname.data()); }
 
 /**
  * @brief Removes recursively file/directory @p pathname relative to the
@@ -43,13 +39,11 @@
  * @errors The same that occur for remove_rat()
  */
 [[nodiscard]] inline int remove_r(FilePath pathname) noexcept {
-	return remove_rat(AT_FDCWD, pathname);
+    return remove_rat(AT_FDCWD, pathname);
 }
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-[[nodiscard]] inline int mkdir(FilePath pathname) noexcept {
-	return mkdir(pathname, S_0755);
-}
+[[nodiscard]] inline int mkdir(FilePath pathname) noexcept { return mkdir(pathname, S_0755); }
 
 // Create directories recursively (default mode: 0755/rwxr-xr-x)
 [[nodiscard]] int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
@@ -79,7 +73,7 @@
  * @errors The same that occur for remove_rat()
  */
 [[nodiscard]] inline int remove_dir_contents(FilePath pathname) noexcept {
-	return remove_dir_contents_at(AT_FDCWD, pathname);
+    return remove_dir_contents_at(AT_FDCWD, pathname);
 }
 
 /**
@@ -120,8 +114,7 @@
  * @return 0 on success, -1 on error (errno is set respectively)
  */
 [[nodiscard]] int copyat_using_rename(
-	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
-	mode_t mode) noexcept;
+    int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -136,23 +129,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat(
-	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
-	mode_t mode) noexcept;
-
-/**
- * @brief Copies (overrides) file @p src to @p dest relative to a directory
- *   file descriptor
- *
- * @param src_dirfd directory file descriptor
- * @param src source file (relative to @p src_dirfd)
- * @param dest_dirfd directory file descriptor
- * @param dest destination file (relative to @p dest_dirfd)
- *
- * @return 0 on success, -1 on error (errno is set respectively)
- */
-[[nodiscard]] int copyat_using_rename(
-	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
+[[nodiscard]] int
+copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -166,7 +144,20 @@
  * @return 0 on success, -1 on error (errno is set respectively)
  */
 [[nodiscard]] int
-copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
+copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
+
+/**
+ * @brief Copies (overrides) file @p src to @p dest relative to a directory
+ *   file descriptor
+ *
+ * @param src_dirfd directory file descriptor
+ * @param src source file (relative to @p src_dirfd)
+ * @param dest_dirfd directory file descriptor
+ * @param dest destination file (relative to @p dest_dirfd)
+ *
+ * @return 0 on success, -1 on error (errno is set respectively)
+ */
+[[nodiscard]] int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
 
 /**
  * @brief Copies (overwrites) file from @p src to @p dest
@@ -177,9 +168,8 @@ copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] inline int
-copy_using_rename(FilePath src, FilePath dest, mode_t mode) noexcept {
-	return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest, mode);
+[[nodiscard]] inline int copy_using_rename(FilePath src, FilePath dest, mode_t mode) noexcept {
+    return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest, mode);
 }
 
 /**
@@ -190,9 +180,8 @@ copy_using_rename(FilePath src, FilePath dest, mode_t mode) noexcept {
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] inline int
-copy_using_rename(FilePath src, FilePath dest) noexcept {
-	return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest);
+[[nodiscard]] inline int copy_using_rename(FilePath src, FilePath dest) noexcept {
+    return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
 /**
@@ -206,9 +195,8 @@ copy_using_rename(FilePath src, FilePath dest) noexcept {
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] inline int
-copy(FilePath src, FilePath dest, mode_t mode) noexcept {
-	return copyat(AT_FDCWD, src, AT_FDCWD, dest, mode);
+[[nodiscard]] inline int copy(FilePath src, FilePath dest, mode_t mode) noexcept {
+    return copyat(AT_FDCWD, src, AT_FDCWD, dest, mode);
 }
 
 /**
@@ -221,7 +209,7 @@ copy(FilePath src, FilePath dest, mode_t mode) noexcept {
  * @return 0 on success, -1 on error (errno is set respectively)
  */
 [[nodiscard]] inline int copy(FilePath src, FilePath dest) noexcept {
-	return copyat(AT_FDCWD, src, AT_FDCWD, dest);
+    return copyat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
 /**
@@ -238,7 +226,7 @@ copy(FilePath src, FilePath dest, mode_t mode) noexcept {
  * thus preventing the race.
  */
 void thread_fork_safe_copyat(
-	int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode);
+    int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode);
 
 /**
  * Copy function that protects from a nasty race condition that may result when
@@ -254,7 +242,7 @@ void thread_fork_safe_copyat(
  * thus preventing the race.
  */
 inline void thread_fork_safe_copy(FilePath src, FilePath dest, mode_t mode) {
-	return thread_fork_safe_copyat(AT_FDCWD, src, AT_FDCWD, dest, mode);
+    return thread_fork_safe_copyat(AT_FDCWD, src, AT_FDCWD, dest, mode);
 }
 
 /**
@@ -286,16 +274,14 @@ copy_rat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
  *
  * @errors The same that occur for copy_rat()
  */
-[[nodiscard]] int
-copy_r(FilePath src, FilePath dest, bool create_subdirs = true) noexcept;
+[[nodiscard]] int copy_r(FilePath src, FilePath dest, bool create_subdirs = true) noexcept;
 
-[[nodiscard]] inline int
-rename(FilePath source, FilePath destination) noexcept {
-	return rename(source.data(), destination.data());
+[[nodiscard]] inline int rename(FilePath source, FilePath destination) noexcept {
+    return rename(source.data(), destination.data());
 }
 
 [[nodiscard]] inline int link(FilePath source, FilePath destination) noexcept {
-	return link(source.data(), destination.data());
+    return link(source.data(), destination.data());
 }
 
 /**
@@ -328,57 +314,57 @@ move(FilePath oldpath, FilePath newpath, bool create_subdirs = true) noexcept;
 
 template <int (*func)(FilePath)>
 class RemoverBase {
-	InplaceBuff<PATH_MAX> name;
+    InplaceBuff<PATH_MAX> name;
 
 public:
-	RemoverBase() = default;
+    RemoverBase() = default;
 
-	RemoverBase(const RemoverBase&) = delete;
-	RemoverBase& operator=(const RemoverBase&) = delete;
-	RemoverBase(const RemoverBase&&) = delete;
-	RemoverBase& operator=(const RemoverBase&&) = delete;
+    RemoverBase(const RemoverBase&) = delete;
+    RemoverBase& operator=(const RemoverBase&) = delete;
+    RemoverBase(const RemoverBase&&) = delete;
+    RemoverBase& operator=(const RemoverBase&&) = delete;
 
-	explicit RemoverBase(FilePath str)
-	: RemoverBase(str.data(), str.size()) {}
+    explicit RemoverBase(FilePath str)
+    : RemoverBase(str.data(), str.size()) {}
 
-	/// If @p str is null then @p len is ignored
-	RemoverBase(const char* str, size_t len)
-	: name(len + 1) {
-		if (len != 0) {
-			strncpy(name.data(), str, len + 1);
-		}
-		name.size = len;
-	}
+    /// If @p str is null then @p len is ignored
+    RemoverBase(const char* str, size_t len)
+    : name(len + 1) {
+        if (len != 0) {
+            strncpy(name.data(), str, len + 1);
+        }
+        name.size = len;
+    }
 
-	~RemoverBase() {
-		if (name.size != 0) {
-			(void)func(name);
-		}
-	}
+    ~RemoverBase() {
+        if (name.size != 0) {
+            (void)func(name);
+        }
+    }
 
-	void cancel() noexcept { name.size = 0; }
+    void cancel() noexcept { name.size = 0; }
 
-	void reset(FilePath str) { reset(str.data(), str.size()); }
+    void reset(FilePath str) { reset(str.data(), str.size()); }
 
-	void reset(const char* str, size_t len) {
-		cancel();
-		if (len != 0) {
-			name.lossy_resize(len + 1);
-			strncpy(name.data(), str, len + 1);
-			name.size = len;
-		}
-	}
+    void reset(const char* str, size_t len) {
+        cancel();
+        if (len != 0) {
+            name.lossy_resize(len + 1);
+            strncpy(name.data(), str, len + 1);
+            name.size = len;
+        }
+    }
 
-	[[nodiscard]] int remove_target() noexcept {
-		if (name.size == 0) {
-			return 0;
-		}
+    [[nodiscard]] int remove_target() noexcept {
+        if (name.size == 0) {
+            return 0;
+        }
 
-		int rc = 0;
-		rc = func(name);
-		cancel();
-		return rc;
-	}
+        int rc = 0;
+        rc = func(name);
+        cancel();
+        return rc;
+    }
 };
 
 using FileRemover = RemoverBase<unlink>;

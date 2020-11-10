@@ -7,34 +7,34 @@
 #include <unistd.h>
 
 class DirectoryChanger {
-	FileDescriptor old_cwd;
+    FileDescriptor old_cwd;
 
 public:
-	// Does NOT change current working directory
-	DirectoryChanger() = default;
+    // Does NOT change current working directory
+    DirectoryChanger() = default;
 
-	explicit DirectoryChanger(FilePath new_wd)
-	: old_cwd(".", O_RDONLY | O_CLOEXEC) {
-		if (old_cwd == -1) {
-			THROW("open() failed", errmsg());
-		}
+    explicit DirectoryChanger(FilePath new_wd)
+    : old_cwd(".", O_RDONLY | O_CLOEXEC) {
+        if (old_cwd == -1) {
+            THROW("open() failed", errmsg());
+        }
 
-		if (chdir(new_wd.data()) == -1) {
-			auto err = errno;
-			THROW("chdir() failed", errmsg(err));
-		}
-	}
+        if (chdir(new_wd.data()) == -1) {
+            auto err = errno;
+            THROW("chdir() failed", errmsg(err));
+        }
+    }
 
-	DirectoryChanger(const DirectoryChanger&) = delete;
-	DirectoryChanger(DirectoryChanger&&) noexcept = default;
-	DirectoryChanger& operator=(const DirectoryChanger&) = delete;
-	DirectoryChanger& operator=(DirectoryChanger&&) noexcept = default;
+    DirectoryChanger(const DirectoryChanger&) = delete;
+    DirectoryChanger(DirectoryChanger&&) noexcept = default;
+    DirectoryChanger& operator=(const DirectoryChanger&) = delete;
+    DirectoryChanger& operator=(DirectoryChanger&&) noexcept = default;
 
-	~DirectoryChanger() {
-		if (old_cwd >= 0) {
-			(void)fchdir(old_cwd);
-		}
-	}
+    ~DirectoryChanger() {
+        if (old_cwd >= 0) {
+            (void)fchdir(old_cwd);
+        }
+    }
 };
 
 /**

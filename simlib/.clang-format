@@ -48,7 +48,7 @@ BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
-ColumnLimit:     80
+ColumnLimit:     95
 CommentPragmas:  '^ IWYU pragma:'
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
@@ -115,7 +115,7 @@ StatementMacros:
   - Q_UNUSED
   - QT_REQUIRE_VERSION
 TabWidth:        4
-UseTab:          ForContinuationAndIndentation
+UseTab:          Never
 WhitespaceSensitiveMacros: ['STRINGIZE', 'STRINGIZE2']
 ...
 

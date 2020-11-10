@@ -32,58 +32,58 @@ void read_from_dev_urandom(void* dest, size_t bytes);
 
 class RandomDevice {
 public:
-	using result_type = uint64_t;
+    using result_type = uint64_t;
 
-	constexpr static result_type min() noexcept {
-		return std::numeric_limits<result_type>::min();
-	}
+    constexpr static result_type min() noexcept {
+        return std::numeric_limits<result_type>::min();
+    }
 
-	constexpr static result_type max() noexcept {
-		return std::numeric_limits<result_type>::max();
-	}
+    constexpr static result_type max() noexcept {
+        return std::numeric_limits<result_type>::max();
+    }
 
 private:
-	std::array<result_type, 256 / sizeof(result_type)> buff{};
-	size_t pos = buff.size();
+    std::array<result_type, 256 / sizeof(result_type)> buff{};
+    size_t pos = buff.size();
 
-	void fill_buff() {
-		fill_randomly(buff.data(), buff.size() * sizeof(result_type));
-		pos = 0;
-	}
+    void fill_buff() {
+        fill_randomly(buff.data(), buff.size() * sizeof(result_type));
+        pos = 0;
+    }
 
 public:
-	RandomDevice() { fill_buff(); }
+    RandomDevice() { fill_buff(); }
 
-	RandomDevice(const RandomDevice&) = delete;
-	RandomDevice(RandomDevice&&) noexcept = default;
-	RandomDevice& operator=(const RandomDevice&) = delete;
-	RandomDevice& operator=(RandomDevice&&) noexcept = default;
+    RandomDevice(const RandomDevice&) = delete;
+    RandomDevice(RandomDevice&&) noexcept = default;
+    RandomDevice& operator=(const RandomDevice&) = delete;
+    RandomDevice& operator=(RandomDevice&&) noexcept = default;
 
-	~RandomDevice() = default;
+    ~RandomDevice() = default;
 
-	result_type operator()() {
-		if (pos == buff.size()) {
-			fill_buff();
-		}
-		return buff[pos++];
-	}
+    result_type operator()() {
+        if (pos == buff.size()) {
+            fill_buff();
+        }
+        return buff[pos++];
+    }
 };
 
 inline RandomDevice& get_random_generator() {
-	static thread_local RandomDevice random_generator;
-	return random_generator;
+    static thread_local RandomDevice random_generator;
+    return random_generator;
 }
 
 // Get random from [a, b]
 template <class T>
 constexpr T get_random(T&& a, T&& b) {
-	return std::uniform_int_distribution<T>(
-		std::forward<T>(a), std::forward<T>(b))(get_random_generator());
+    return std::uniform_int_distribution<T>(std::forward<T>(a), std::forward<T>(b))(
+        get_random_generator());
 }
 
 template <class Iter>
 void random_shuffle(Iter begin, Iter end) {
-	for (auto n = end - begin, i = n - 1; i > 0; --i) {
-		std::swap(begin[i], begin[get_random(0, i)]);
-	}
+    for (auto n = end - begin, i = n - 1; i > 0; --i) {
+        std::swap(begin[i], begin[get_random(0, i)]);
+    }
 }

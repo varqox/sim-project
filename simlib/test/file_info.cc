@@ -26,10 +26,10 @@ TEST(DISABLED_file_info, get_file_size) { // TODO:
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_info, get_modification_time) {
-	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
-	auto path = concat(tmp_dir.path(), "abc");
-	EXPECT_EQ(create_file(path), 0);
-	auto mtime = get_modification_time(path);
-	using std::chrono_literals::operator""s;
-	EXPECT_TRUE(std::chrono::system_clock::now() - mtime < 2s);
+    TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
+    auto path = concat(tmp_dir.path(), "abc");
+    EXPECT_EQ(create_file(path), 0);
+    auto mtime = get_modification_time(path);
+    using std::chrono_literals::operator""s;
+    EXPECT_TRUE(std::chrono::system_clock::now() - mtime < 2s);
 }

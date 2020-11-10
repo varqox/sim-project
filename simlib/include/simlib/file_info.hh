@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 [[nodiscard]] inline int access(FilePath pathname, int mode) noexcept {
-	return access(pathname.data(), mode);
+    return access(pathname.data(), mode);
 }
 
 inline bool path_exists(FilePath path) { return (access(path, F_OK) == 0); }
@@ -24,8 +24,8 @@ inline bool path_exists(FilePath path) { return (access(path, F_OK) == 0); }
  *   this function, if stat64(2) fails, errno will have nonzero value
  */
 inline bool is_regular_file(FilePath file) noexcept {
-	struct stat64 st {};
-	return (stat64(file, &st) == 0 && S_ISREG(st.st_mode));
+    struct stat64 st {};
+    return (stat64(file, &st) == 0 && S_ISREG(st.st_mode));
 }
 
 /**
@@ -38,32 +38,31 @@ inline bool is_regular_file(FilePath file) noexcept {
  *   this function, if stat64(2) fails, errno will have nonzero value
  */
 inline bool is_directory(FilePath file) noexcept {
-	struct stat64 st {};
-	return (stat64(file, &st) == 0 && S_ISDIR(st.st_mode));
+    struct stat64 st {};
+    return (stat64(file, &st) == 0 && S_ISDIR(st.st_mode));
 }
 
 inline uint64_t get_file_size(FilePath file) {
-	struct stat64 st {};
-	if (stat64(file, &st)) {
-		THROW("stat()", errmsg());
-	}
+    struct stat64 st {};
+    if (stat64(file, &st)) {
+        THROW("stat()", errmsg());
+    }
 
-	return st.st_size;
+    return st.st_size;
 }
 
 // Returns file modification time (with second precision) as a time_point
 inline std::chrono::system_clock::time_point
 get_modification_time(const struct stat64& st) noexcept {
-	return std::chrono::system_clock::time_point(to_duration(st.st_mtim));
+    return std::chrono::system_clock::time_point(to_duration(st.st_mtim));
 }
 
 // Returns file modification time (with second precision) as a time_point
-inline std::chrono::system_clock::time_point
-get_modification_time(FilePath file) {
-	struct stat64 st {};
-	if (stat64(file, &st)) {
-		THROW("stat()", errmsg());
-	}
+inline std::chrono::system_clock::time_point get_modification_time(FilePath file) {
+    struct stat64 st {};
+    if (stat64(file, &st)) {
+        THROW("stat()", errmsg());
+    }
 
-	return get_modification_time(st);
+    return get_modification_time(st);
 }

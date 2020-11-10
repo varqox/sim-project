@@ -8,39 +8,39 @@
 #include <unistd.h>
 
 class TemporaryFile {
-	std::string path_; // absolute path
+    std::string path_; // absolute path
 
 public:
-	/// Does NOT create a temporary file
-	TemporaryFile() = default;
+    /// Does NOT create a temporary file
+    TemporaryFile() = default;
 
-	/// The last six characters of template must be "XXXXXX" and these are
-	/// replaced with a string that makes the filename unique.
-	explicit TemporaryFile(
-		std::string templ, mode_t mode = S_IRUSR | S_IWUSR /* -rw------- */);
+    /// The last six characters of template must be "XXXXXX" and these are
+    /// replaced with a string that makes the filename unique.
+    explicit TemporaryFile(
+        std::string templ, mode_t mode = S_IRUSR | S_IWUSR /* -rw------- */);
 
-	TemporaryFile(const TemporaryFile&) = delete;
-	TemporaryFile& operator=(const TemporaryFile&) = delete;
-	TemporaryFile(TemporaryFile&&) noexcept = default;
+    TemporaryFile(const TemporaryFile&) = delete;
+    TemporaryFile& operator=(const TemporaryFile&) = delete;
+    TemporaryFile(TemporaryFile&&) noexcept = default;
 
-	TemporaryFile& operator=(TemporaryFile&& tf) noexcept {
-		if (is_open()) {
-			unlink(path_.c_str());
-		}
+    TemporaryFile& operator=(TemporaryFile&& tf) noexcept {
+        if (is_open()) {
+            unlink(path_.c_str());
+        }
 
-		path_ = std::move(tf.path_);
-		return *this;
-	}
+        path_ = std::move(tf.path_);
+        return *this;
+    }
 
-	~TemporaryFile() {
-		if (is_open()) {
-			unlink(path_.c_str());
-		}
-	}
+    ~TemporaryFile() {
+        if (is_open()) {
+            unlink(path_.c_str());
+        }
+    }
 
-	[[nodiscard]] bool is_open() const noexcept { return not path_.empty(); }
+    [[nodiscard]] bool is_open() const noexcept { return not path_.empty(); }
 
-	[[nodiscard]] const std::string& path() const noexcept { return path_; }
+    [[nodiscard]] const std::string& path() const noexcept { return path_; }
 };
 
 /**
@@ -70,5 +70,5 @@ public:
  *   - any other error returned by openat(2)
  */
 std::optional<FileDescriptor> create_unique_file(
-	int dirfd, char* path_buff, size_t buff_len, size_t suffix_len,
-	int open_flags, mode_t mode) noexcept;
+    int dirfd, char* path_buff, size_t buff_len, size_t suffix_len, int open_flags,
+    mode_t mode) noexcept;

@@ -4,5 +4,5 @@
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_unlinked_temporary_file, open_unlinked_tmp_file) {
-	// TODO: implement it
+    // TODO: implement it
 }
