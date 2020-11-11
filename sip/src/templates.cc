@@ -26,24 +26,25 @@ using std::optional;
 using std::string;
 
 extern "C" {
-extern unsigned char checker_cc[];
-extern unsigned checker_cc_len;
+extern const unsigned char checker_cc[];
+extern const unsigned checker_cc_len;
 
-extern unsigned char interactive_checker_cc[];
-extern unsigned interactive_checker_cc_len;
+extern const unsigned char interactive_checker_cc[];
+extern const unsigned interactive_checker_cc_len;
 
-extern unsigned char sim_statement_cls[];
-extern unsigned sim_statement_cls_len;
+extern const unsigned char sim_statement_cls[];
+extern const unsigned sim_statement_cls_len;
 
-extern unsigned char statement_tex[];
-extern unsigned statement_tex_len;
+extern const unsigned char statement_tex[];
+extern const unsigned statement_tex_len;
 
-extern unsigned char gen_cc[];
-extern unsigned gen_cc_len;
+extern const unsigned char gen_cc[];
+extern const unsigned gen_cc_len;
 }
 
 static string get_template(
-    StringView template_name, unsigned char* default_template, unsigned default_template_len) {
+    StringView template_name, const unsigned char* default_template,
+    unsigned default_template_len) {
     static auto templates_dir = user_templates_dir();
     FileDescriptor fd(
         intentional_unsafe_cstring_view(concat(templates_dir, template_name)), O_RDONLY);

@@ -7,7 +7,7 @@
 #include <simlib/signal_handling.hh>
 #include <simlib/working_directory.hh>
 
-bool sip_verbose = false;
+bool sip_verbose = false; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 /**
  * Parses options passed to Sip via arguments
