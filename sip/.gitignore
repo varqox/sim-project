@@ -26,6 +26,7 @@ sip
 sip-static
 
 # Others
+.cache/
 .clangd/
 *build/
 compile_commands.json
