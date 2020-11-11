@@ -5,7 +5,7 @@
 namespace commands {
 
 void version() noexcept {
-	printf("Version: %s\nBuilt on %s at %s\n", COMMIT, __DATE__, __TIME__);
+    printf("Version: %s\nBuilt on %s at %s\n", COMMIT, __DATE__, __TIME__);
 }
 
 } // namespace commands

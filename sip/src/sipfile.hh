@@ -11,104 +11,98 @@
  */
 class Sipfile {
 public:
-	std::chrono::nanoseconds default_time_limit{};
-	uint64_t base_seed{};
+    std::chrono::nanoseconds default_time_limit{};
+    uint64_t base_seed{};
 
-	struct GenTest {
-		InplaceBuff<16> name;
-		InplaceBuff<16> generator;
-		InplaceBuff<32> generator_args;
+    struct GenTest {
+        InplaceBuff<16> name;
+        InplaceBuff<16> generator;
+        InplaceBuff<32> generator_args;
 
-		GenTest(StringView n, StringView g, StringView ga)
-		: name(n)
-		, generator(g)
-		, generator_args(ga) {}
-	};
-
-private:
-	std::optional<std::set<InplaceBuff<16>, std::less<>>>
-	   static_tests; // (test_name)
-	std::optional<
-	   std::set<GenTest, TRANSPARENT_MEMBER_COMPARATOR(GenTest, name)>>
-	   gen_tests;
-
-public:
-	auto& get_static_tests() {
-		return static_tests ? *static_tests
-		                    : (load_static_tests(), *static_tests);
-	}
-
-	auto& get_gen_tests() {
-		return gen_tests ? *gen_tests : (load_gen_tests(), *gen_tests);
-	}
+        GenTest(StringView n, StringView g, StringView ga)
+        : name(n)
+        , generator(g)
+        , generator_args(ga) {}
+    };
 
 private:
-	ConfigFile config;
+    std::optional<std::set<InplaceBuff<16>, std::less<>>> static_tests; // (test_name)
+    std::optional<std::set<GenTest, TRANSPARENT_MEMBER_COMPARATOR(GenTest, name)>> gen_tests;
 
 public:
-	Sipfile() = default;
+    auto& get_static_tests() {
+        return static_tests ? *static_tests : (load_static_tests(), *static_tests);
+    }
 
-	/**
-	 * @brief Loads needed variables from @p sipfile_contents
-	 * @details Uses ConfigFile::loadConfigFromString()
-	 *
-	 * @param sipfile_contents Sipfile file contents
-	 *
-	 * @errors May throw from ConfigFile::loadConfigFromString()
-	 */
-	explicit Sipfile(std::string sipfile_contents) {
-		config.add_vars("default_time_limit", "base_seed", "static", "gen");
-		config.load_config_from_string(std::move(sipfile_contents));
-	}
+    auto& get_gen_tests() { return gen_tests ? *gen_tests : (load_gen_tests(), *gen_tests); }
 
-	Sipfile(const Sipfile&) = default;
-	Sipfile(Sipfile&&) noexcept = default;
-	Sipfile& operator=(const Sipfile&) = default;
-	Sipfile& operator=(Sipfile&&) = default;
+private:
+    ConfigFile config;
 
-	~Sipfile() = default;
+public:
+    Sipfile() = default;
 
-	const ConfigFile& config_file() const { return config; }
+    /**
+     * @brief Loads needed variables from @p sipfile_contents
+     * @details Uses ConfigFile::loadConfigFromString()
+     *
+     * @param sipfile_contents Sipfile file contents
+     *
+     * @errors May throw from ConfigFile::loadConfigFromString()
+     */
+    explicit Sipfile(std::string sipfile_contents) {
+        config.add_vars("default_time_limit", "base_seed", "static", "gen");
+        config.load_config_from_string(std::move(sipfile_contents));
+    }
 
-	/**
-	 * @brief Loads the default time limit
-	 * @details Fields:
-	 *   - default_time_limit
-	 *
-	 * @errors Throws an exception of type std::runtime_error if any
-	 *   validation error occurs
-	 */
-	void load_default_time_limit();
+    Sipfile(const Sipfile&) = default;
+    Sipfile(Sipfile&&) noexcept = default;
+    Sipfile& operator=(const Sipfile&) = default;
+    Sipfile& operator=(Sipfile&&) = default;
 
-	/**
-	 * @brief Loads the base seed
-	 * @details Fields:
-	 *   - base_seed
-	 *
-	 * @param warn whether to warn if the base_seed field is missing
-	 *
-	 * @errors Throws an exception of type std::runtime_error if any
-	 *   validation error occurs
-	 */
-	void load_base_seed(bool warn = true);
+    ~Sipfile() = default;
 
-	/**
-	 * @brief Loads non-generated test rules (variable "static")
-	 * @details Fields:
-	 *   - static_tests
-	 *
-	 * @errors Throws an exception of type std::runtime_error if any
-	 *   validation error occurs
-	 */
-	void load_static_tests();
+    const ConfigFile& config_file() const { return config; }
 
-	/**
-	 * @brief Loads generated test rules (variable "gen")
-	 * @details Fields:
-	 *   - gen_tests
-	 *
-	 * @errors Throws an exception of type std::runtime_error if any
-	 *   validation error occurs
-	 */
-	void load_gen_tests();
+    /**
+     * @brief Loads the default time limit
+     * @details Fields:
+     *   - default_time_limit
+     *
+     * @errors Throws an exception of type std::runtime_error if any
+     *   validation error occurs
+     */
+    void load_default_time_limit();
+
+    /**
+     * @brief Loads the base seed
+     * @details Fields:
+     *   - base_seed
+     *
+     * @param warn whether to warn if the base_seed field is missing
+     *
+     * @errors Throws an exception of type std::runtime_error if any
+     *   validation error occurs
+     */
+    void load_base_seed(bool warn = true);
+
+    /**
+     * @brief Loads non-generated test rules (variable "static")
+     * @details Fields:
+     *   - static_tests
+     *
+     * @errors Throws an exception of type std::runtime_error if any
+     *   validation error occurs
+     */
+    void load_static_tests();
+
+    /**
+     * @brief Loads generated test rules (variable "gen")
+     * @details Fields:
+     *   - gen_tests
+     *
+     * @errors Throws an exception of type std::runtime_error if any
+     *   validation error occurs
+     */
+    void load_gen_tests();
 };
