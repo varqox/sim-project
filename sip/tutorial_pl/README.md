@@ -8,7 +8,7 @@ Proces sprawdzania kodu użytkownika przebiega intuicyjnie. Gdy submitujemy kod,
 
 * Pobranie i zainstalowanie już skompilowanego sipa:
 ```sh
-sh -c 'mkdir -p "$HOME/.local/bin" && curl https://sim.ugo.si/kit/sip -o "$HOME/.local/bin/sip" -z "$HOME/.local/bin/sip" && chmod +x "$HOME/.local/bin/sip"'
+sh -c 'mkdir -p "$HOME/.local/bin" && curl https://sim.13lo.pl/kit/sip -o "$HOME/.local/bin/sip" -z "$HOME/.local/bin/sip" && chmod +x "$HOME/.local/bin/sip"'
 ```
 
 * Własnoręczna kompilacja sipa: Jest opisana w https://github.com/varqox/sip. Dla wygody, przenieś skompilowany program pod nazwą `sip` do folderu `~/.local/bin/` lub `/usr/local/bin/`, dzięki czemu możesz użyć polecenia `sip`.
