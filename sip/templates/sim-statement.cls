@@ -134,7 +134,7 @@
     % start reading the file
     \ior_open:Nn \g_sip_statement_import_stream { #1 }
     % at each line ...
-    \ior_map_inline:Nn \g_sip_statement_import_stream
+    \ior_str_map_inline:Nn \g_sip_statement_import_stream
     {
         % if the line is empty
         \tl_if_eq:nnTF {##1} {\par }
@@ -145,8 +145,8 @@
         {
             % append newlines accumulator to cell_content
             \sip_append_tl:NN \l__sip_statement_cell_content_tl \l__sip_statement_newlines_accumulator_tl
-            % add the current line to cell_content
-            \tl_put_right:Nn \l__sip_statement_cell_content_tl {##1}
+            % add the current line to cell_content (\verb;; prevents stripping leading spaces)
+            \tl_put_right:Nn \l__sip_statement_cell_content_tl {\verb;;##1}
             % set the newlines accumulator to single newline
             \tl_set:Nn \l__sip_statement_newlines_accumulator_tl {\linebreak}
         }
