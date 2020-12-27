@@ -14,13 +14,15 @@ using std::string;
 Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 	using PERM = UserPermissions;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return PERM::NONE;
+	}
 
 	switch (session_user_type) {
 	case User::Type::ADMIN:
 		if (session_user_id ==
-		    intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID))) {
+		    intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID)))
+		{
 			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN |
 			       PERM::ADD_TEACHER | PERM::ADD_NORMAL;
 		} else {
@@ -42,8 +44,9 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS |
 	   PERM::DELETE | PERM::MERGE;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return PERM::NONE;
+	}
 
 	auto viewer = EnumVal(session_user_type).int_val() +
 	              (session_user_id != intentional_unsafe_string_view(
@@ -111,15 +114,17 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id) {
 	stmt.bind_and_execute(user_id);
 	decltype(User::type) utype;
 	stmt.res_bind_all(utype);
-	if (not stmt.next())
+	if (not stmt.next()) {
 		return PERM::NONE;
+	}
 
 	return users_get_permissions(user_id, utype);
 }
 
 bool Sim::check_submitted_password(StringView password_field_name) {
-	if (not session_is_open)
+	if (not session_is_open) {
 		return false;
+	}
 
 	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
 	stmt.bind_and_execute(session_user_id);
@@ -129,15 +134,10 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 	stmt.res_bind_all(salt, passwd_hash);
 	throw_assert(stmt.next());
 
-	if (not slow_equal(
-	       intentional_unsafe_string_view(
-	          sha3_512(intentional_unsafe_string_view(
-	             concat(salt, request.form_data.get(password_field_name))))),
-	       passwd_hash)) {
-		return false;
-	}
-
-	return true;
+	return slow_equal(
+	   intentional_unsafe_string_view(sha3_512(intentional_unsafe_string_view(
+	      concat(salt, request.form_data.get(password_field_name))))),
+	   passwd_hash);
 }
 
 void Sim::login() {
@@ -174,16 +174,18 @@ void Sim::login() {
 			    slow_equal(
 			       intentional_unsafe_string_view(sha3_512(
 			          intentional_unsafe_string_view(concat(salt, password)))),
-			       passwd_hash)) {
+			       passwd_hash))
+			{
 				// Delete old session
-				if (session_is_open)
+				if (session_is_open) {
 					session_destroy();
+				}
 
 				// Create new
 				session_create_and_open(uid, not remember);
 
 				// If there is a redirection string, redirect to it
-				InplaceBuff<4096> location {url_args.extract_query()};
+				InplaceBuff<4096> location{url_args.extract_query()};
 				return redirect(location.size == 0 ? "/"
 				                                   : location.to_string());
 			}
@@ -232,10 +234,12 @@ void Sim::logout() {
 void Sim::sign_up() {
 	STACK_UNWINDING_MARK;
 
-	if (session_is_open)
+	if (session_is_open) {
 		return redirect("/");
+	}
 
-	InplaceBuff<4096> pass1, pass2;
+	InplaceBuff<4096> pass1;
+	InplaceBuff<4096> pass2;
 	decltype(User::username) username;
 	decltype(User::first_name) first_name;
 	decltype(User::last_name) last_name;
@@ -246,16 +250,18 @@ void Sim::sign_up() {
 		form_validate_not_blank(
 		   username, "username", "Username", is_username,
 		   "Username can only consist of characters [a-zA-Z0-9_-]",
-		   username.max_len);
+		   decltype(User::username)::max_len);
 		form_validate_not_blank(first_name, "first_name", "First Name",
-		                        first_name.max_len);
+		                        decltype(User::first_name)::max_len);
 		form_validate_not_blank(last_name, "last_name", "Last Name",
-		                        first_name.max_len);
-		form_validate_not_blank(email, "email", "Email", email.max_len);
+		                        decltype(User::first_name)::max_len);
+		form_validate_not_blank(email, "email", "Email",
+		                        decltype(User::email)::max_len);
 
 		if (form_validate(pass1, "password1", "Password") &&
 		    form_validate(pass2, "password2", "Password (repeat)") &&
-		    pass1 != pass2) {
+		    pass1 != pass2)
+		{
 			add_notification("error", "Passwords do not match");
 		}
 
@@ -264,7 +270,7 @@ void Sim::sign_up() {
 			STACK_UNWINDING_MARK;
 
 			static_assert(decltype(User::salt)::max_len % 2 == 0);
-			array<char, (decltype(User::salt)::max_len >> 1)> salt_bin;
+			array<char, (decltype(User::salt)::max_len >> 1)> salt_bin{};
 			fill_randomly(salt_bin.data(), salt_bin.size());
 			auto salt = to_hex({salt_bin.data(), salt_bin.size()});
 
@@ -351,8 +357,9 @@ void Sim::sign_up() {
 void Sim::users_handle() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_is_open)
+	if (not session_is_open) {
 		return redirect(concat_tostr("/login?", request.target));
+	}
 
 	StringView next_arg = url_args.extract_next_arg();
 	if (is_digit(next_arg)) {

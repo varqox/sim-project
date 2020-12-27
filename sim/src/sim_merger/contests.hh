@@ -12,7 +12,7 @@ class ContestsMerger : public Merger<sim::Contest> {
 
 		sim::Contest c;
 		MySQL::Optional<sim::DatetimeField> earliest_submit_time;
-		unsigned char b_is_public;
+		uint8_t b_is_public = false;
 		auto stmt =
 		   conn.prepare("SELECT c.id, c.name, c.is_public, MIN(s.submit_time) "
 		                "FROM ",
@@ -36,7 +36,7 @@ class ContestsMerger : public Merger<sim::Contest> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const sim::Contest&) { return nullptr; });
+		Merger::merge([&](const sim::Contest& /*unused*/) { return nullptr; });
 	}
 
 public:
@@ -59,9 +59,9 @@ public:
 		transaction.commit();
 	}
 
-	ContestsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
-	   : Merger("contests", ids_from_both_jobs.main.contests,
-	            ids_from_both_jobs.other.contests) {
+	explicit ContestsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
+	: Merger("contests", ids_from_both_jobs.main.contests,
+	         ids_from_both_jobs.other.contests) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

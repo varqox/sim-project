@@ -7,13 +7,13 @@
 #include "users.hh"
 
 struct Job {
-	uintmax_t id;
+	uintmax_t id{};
 	std::optional<uintmax_t> file_id;
 	std::optional<uintmax_t> tmp_file_id;
 	std::optional<uintmax_t> creator;
-	EnumVal<JobType> type;
-	uintmax_t priority;
-	EnumVal<JobStatus> status;
+	EnumVal<JobType> type{};
+	uintmax_t priority{};
+	EnumVal<JobStatus> status{};
 	InplaceBuff<24> added;
 	std::optional<uintmax_t> aux_id;
 	InplaceBuff<128> info;
@@ -144,7 +144,7 @@ class JobsMerger : public Merger<Job> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const Job&) { return nullptr; });
+		Merger::merge([&](const Job& /*unused*/) { return nullptr; });
 	}
 
 public:
@@ -178,11 +178,15 @@ public:
 	           const ProblemsMerger& problems, const ContestsMerger& contests,
 	           const ContestRoundsMerger& contest_rounds,
 	           const ContestProblemsMerger& contest_problems)
-	   : Merger("jobs", ids_from_both_jobs.main.jobs,
-	            ids_from_both_jobs.other.jobs),
-	     internal_files_(internal_files), users_(users),
-	     submissions_(submissions), problems_(problems), contests_(contests),
-	     contest_rounds_(contest_rounds), contest_problems_(contest_problems) {
+	: Merger("jobs", ids_from_both_jobs.main.jobs,
+	         ids_from_both_jobs.other.jobs)
+	, internal_files_(internal_files)
+	, users_(users)
+	, submissions_(submissions)
+	, problems_(problems)
+	, contests_(contests)
+	, contest_rounds_(contest_rounds)
+	, contest_problems_(contest_problems) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

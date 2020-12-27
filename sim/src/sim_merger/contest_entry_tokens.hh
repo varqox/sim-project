@@ -7,7 +7,7 @@
 
 struct ContestEntryToken {
 	InplaceBuff<CONTEST_ENTRY_TOKEN_LEN> token;
-	uintmax_t contest_id;
+	uintmax_t contest_id{};
 	std::optional<InplaceBuff<CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
 	std::optional<InplaceBuff<24>> short_token_expiration;
 };
@@ -20,7 +20,7 @@ struct ContestEntryTokenIdGetter {
 };
 
 class ContestEntryTokensMerger
-   : public Merger<ContestEntryToken, ContestEntryTokenIdGetter> {
+: public Merger<ContestEntryToken, ContestEntryTokenIdGetter> {
 	const ContestsMerger& contests_;
 
 	std::set<InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>> taken_tokens_;
@@ -51,8 +51,8 @@ class ContestEntryTokensMerger
 			// Update short token
 			if (cet.short_token) {
 				std::string new_short_token = cet.short_token->to_string();
-				while (
-				   not taken_short_tokens_.emplace(new_short_token).second) {
+				while (not taken_short_tokens_.emplace(new_short_token).second)
+				{
 					new_short_token =
 					   generate_random_token(CONTEST_ENTRY_SHORT_TOKEN_LEN);
 				}
@@ -67,7 +67,8 @@ class ContestEntryTokensMerger
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const ContestEntryToken&) { return nullptr; });
+		Merger::merge(
+		   [&](const ContestEntryToken& /*unused*/) { return nullptr; });
 	}
 
 	InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>
@@ -75,8 +76,9 @@ class ContestEntryTokensMerger
 	   const InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>& record_id) override {
 		STACK_UNWINDING_MARK;
 		std::string new_id = record_id.to_string();
-		while (not taken_tokens_.emplace(new_id).second)
+		while (not taken_tokens_.emplace(new_id).second) {
 			new_id = generate_random_token(CONTEST_ENTRY_TOKEN_LEN);
+		}
 		return InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>(new_id);
 	}
 
@@ -104,10 +106,10 @@ public:
 
 	ContestEntryTokensMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
 	                         const ContestsMerger& contests)
-	   : Merger("contest_entry_tokens",
-	            ids_from_both_jobs.main.contest_entry_tokens,
-	            ids_from_both_jobs.other.contest_entry_tokens),
-	     contests_(contests) {
+	: Merger("contest_entry_tokens",
+	         ids_from_both_jobs.main.contest_entry_tokens,
+	         ids_from_both_jobs.other.contest_entry_tokens)
+	, contests_(contests) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

@@ -14,8 +14,10 @@ static std::pair<std::vector<std::string>, std::string>
 package_fingerprint(FilePath zip_file_path) {
 	std::vector<std::string> entries_list;
 	ZipFile zip(zip_file_path, ZIP_RDONLY);
-	for (int i = 0; i < zip.entries_no(); ++i)
+	entries_list.reserve(zip.entries_no());
+	for (int i = 0; i < zip.entries_no(); ++i) {
 		entries_list.emplace_back(zip.get_name(i));
+	}
 	sort(entries_list.begin(), entries_list.end());
 	// Read statement file contents
 	auto main_dir = sim::zip_package_main_dir(zip);
@@ -52,8 +54,9 @@ class ProblemsMerger : public Merger<sim::Problem> {
 			prob.file_id =
 			   internal_files_.new_id(prob.file_id, record_set.kind);
 			prob.owner = m_owner.opt();
-			if (prob.owner.has_value())
+			if (prob.owner.has_value()) {
 				prob.owner = users_.new_id(prob.owner.value(), record_set.kind);
+			}
 
 			record_set.add_record(
 			   prob, str_to_time_point(intentional_unsafe_cstring_view(
@@ -63,7 +66,7 @@ class ProblemsMerger : public Merger<sim::Problem> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const sim::Problem&) { return nullptr; });
+		Merger::merge([&](const sim::Problem& /*unused*/) { return nullptr; });
 
 		std::map<size_t, size_t> dsu; // (problem idx, target problem idx)
 		// Returns problem index to which problem of index @p idx will be merged
@@ -100,16 +103,18 @@ class ProblemsMerger : public Merger<sim::Problem> {
 			size_t other_idx = find(it->second);
 			auto const& other = new_table_[other_idx].data;
 			// Newer problem will be the target problem
-			if (other.last_edit <= p.last_edit)
+			if (other.last_edit <= p.last_edit) {
 				merge_into(other_idx, idx);
-			else
+			} else {
 				merge_into(idx, other_idx);
+			}
 		}
 
 		for (auto [src_idx, dest_idx] : dsu) {
 			dest_idx = find(src_idx);
-			if (src_idx == dest_idx)
+			if (src_idx == dest_idx) {
 				continue; // No merging
+			}
 
 			auto const& src = new_table_[src_idx];
 			auto const& dest = new_table_[dest_idx];
@@ -146,10 +151,11 @@ public:
 	               const InternalFilesMerger& internal_files,
 	               const UsersMerger& users,
 	               bool reset_new_problems_time_limits)
-	   : Merger("problems", ids_from_both_jobs.main.problems,
-	            ids_from_both_jobs.other.problems),
-	     internal_files_(internal_files), users_(users),
-	     reset_new_problems_time_limits_(reset_new_problems_time_limits) {
+	: Merger("problems", ids_from_both_jobs.main.problems,
+	         ids_from_both_jobs.other.problems)
+	, internal_files_(internal_files)
+	, users_(users)
+	, reset_new_problems_time_limits_(reset_new_problems_time_limits) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}
@@ -185,7 +191,8 @@ public:
 	}
 
 private:
-	void schedule_reseting_problem_time_limits(uintmax_t problem_new_id) {
+	static void
+	schedule_reseting_problem_time_limits(uintmax_t problem_new_id) {
 		conn
 		   .prepare(
 		      "INSERT jobs (creator, status, priority, type, added, aux_id,"

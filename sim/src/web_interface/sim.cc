@@ -6,12 +6,10 @@
 
 using sim::User;
 using std::string;
-using std::unique_ptr;
-using std::vector;
 
 server::HttpResponse Sim::handle(CStringView client_ip_addr,
                                  server::HttpRequest req) {
-	client_ip = std::move(client_ip_addr);
+	client_ip = client_ip_addr;
 	request = std::move(req);
 	resp = server::HttpResponse(server::HttpResponse::TEXT);
 
@@ -39,7 +37,7 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr,
 		try {
 			STACK_UNWINDING_MARK;
 
-			url_args = RequestUriParser {request.target};
+			url_args = RequestUriParser{request.target};
 			StringView next_arg = url_args.extract_next_arg();
 
 			// Reset state
@@ -52,8 +50,9 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr,
 			if (request.method == server::HttpRequest::POST) {
 				// If no session is open, load value from cookie to pass
 				// verification
-				if (not session_open())
+				if (not session_open()) {
 					session_csrf_token = request.get_cookie("csrf_token");
+				}
 
 				if (request.form_data.get("csrf_token") != session_csrf_token) {
 					error403();
@@ -70,47 +69,48 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr,
 				// work properly
 				session_open();
 
-				if (next_arg == "c")
+				if (next_arg == "c") {
 					contests_handle();
 
-				else if (next_arg == "enter_contest")
+				} else if (next_arg == "enter_contest") {
 					enter_contest();
 
-				else if (next_arg == "s")
+				} else if (next_arg == "s") {
 					submissions_handle();
 
-				else if (next_arg == "u")
+				} else if (next_arg == "u") {
 					users_handle();
 
-				else if (next_arg == "")
+				} else if (next_arg == "") {
 					main_page();
 
-				else if (next_arg == "api")
+				} else if (next_arg == "api") {
 					api_handle();
 
-				else if (next_arg == "p")
+				} else if (next_arg == "p") {
 					problems_handle();
 
-				else if (next_arg == "login")
+				} else if (next_arg == "login") {
 					login();
 
-				else if (next_arg == "jobs")
+				} else if (next_arg == "jobs") {
 					jobs_handle();
 
-				else if (next_arg == "file")
+				} else if (next_arg == "file") {
 					file_handle();
 
-				else if (next_arg == "logout")
+				} else if (next_arg == "logout") {
 					logout();
 
-				else if (next_arg == "signup")
+				} else if (next_arg == "signup") {
 					sign_up();
 
-				else if (next_arg == "logs")
+				} else if (next_arg == "logs") {
 					view_logs();
 
-				else
+				} else {
 					error404();
+				}
 			}
 
 		cleanup:
@@ -120,8 +120,9 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr,
 			session_close();
 
 #ifdef DEBUG
-			if (notifications.size != 0)
+			if (notifications.size != 0) {
 				THROW("There are notifications left: ", notifications);
+			}
 #endif
 
 		} catch (const std::exception& e) {
@@ -175,7 +176,7 @@ void Sim::static_file() {
 	D(stdlog(file_path);)
 
 	// Get file stat
-	struct stat attr;
+	struct stat attr {};
 	if (stat(file_path.c_str(), &attr) != -1) {
 		// Extract time of last modification
 		resp.headers["last-modified"] =
@@ -184,8 +185,9 @@ void Sim::static_file() {
 
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
-		struct tm client_mtime;
-		CStringView if_modified_since = request.headers.get("if-modified-since");
+		struct tm client_mtime {};
+		CStringView if_modified_since =
+		   request.headers.get("if-modified-since");
 		if (!if_modified_since.empty() and
 		    strptime(if_modified_since.data(), "%a, %d %b %Y %H:%M:%S GMT",
 		             &client_mtime) != nullptr and
@@ -204,12 +206,13 @@ void Sim::view_logs() {
 	STACK_UNWINDING_MARK;
 
 	// TODO: convert it to some kind of permissions
-	if (!session_is_open)
+	if (!session_is_open) {
 		return error403();
+	}
 
 	switch (session_user_type) {
 	case User::Type::ADMIN: break;
-	case User::Type::TEACHER: return error403();
+	case User::Type::TEACHER:
 	case User::Type::NORMAL: return error403();
 	}
 

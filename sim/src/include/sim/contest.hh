@@ -24,7 +24,7 @@ get(MySQL::Connection& mysql, GetIdKind id_kind, T&& id,
     std::optional<U> user_id, CStringView curr_date) {
 	STACK_UNWINDING_MARK;
 
-	InplaceBuff<64> fields {"c.id, c.name, c.is_public"};
+	InplaceBuff<64> fields{"c.id, c.name, c.is_public"};
 	bool check_round_begins = false;
 	StringView id_part_sql;
 	switch (id_kind) {
@@ -51,7 +51,7 @@ get(MySQL::Connection& mysql, GetIdKind id_kind, T&& id,
 	}
 
 	Contest contest;
-	uint8_t is_public;
+	uint8_t is_public = false;
 	MySQL::Optional<decltype(User::type)> user_type;
 	MySQL::Optional<decltype(ContestUser::mode)> cu_mode;
 	MySQL::Optional<InfDatetimeField> round_begins;
@@ -77,13 +77,15 @@ get(MySQL::Connection& mysql, GetIdKind id_kind, T&& id,
 		stmt.res_bind_all(contest.id, contest.name, is_public, round_begins);
 	}
 
-	if (not stmt.next())
+	if (not stmt.next()) {
 		return std::nullopt;
+	}
 
 	contest.is_public = is_public;
 	auto contest_perms = get_permissions(user_type, contest.is_public, cu_mode);
 	if (check_round_begins and uint(~contest_perms & Permissions::ADMIN) and
-	    round_begins.value() > curr_date) {
+	    round_begins.value() > curr_date)
+	{
 		return std::nullopt;
 	}
 

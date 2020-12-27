@@ -16,7 +16,8 @@ public:
 
 	explicit HttpResponse(ContentType con_type = TEXT,
 	                      const std::string& stat_code = "200 OK")
-	   : content_type(con_type), status_code(stat_code) {}
+	: content_type(con_type)
+	, status_code(stat_code) {}
 
 	HttpResponse(const HttpResponse&) = default;
 	HttpResponse(HttpResponse&&) noexcept = default;
@@ -26,9 +27,9 @@ public:
 	~HttpResponse() = default;
 
 	void set_cookie(const std::string& name, const std::string& val,
-	               time_t expire = -1, const std::string& path = "",
-	               const std::string& domain = "", bool http_only = false,
-	               bool secure = false);
+	                time_t expire = -1, const std::string& path = "",
+	                const std::string& domain = "", bool http_only = false,
+	                bool secure = false);
 
 	void set_cache(bool to_public, uint max_age, bool must_revalidate) {
 		headers["expires"] =

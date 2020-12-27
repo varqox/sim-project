@@ -12,7 +12,7 @@ void ChangeProblemStatement::run() {
 
 	auto transaction = mysql.start_transaction();
 
-	uint64_t problem_file_id;
+	uint64_t problem_file_id = 0;
 	sim::Simfile simfile;
 	{
 		auto stmt = mysql.prepare("SELECT file_id, simfile FROM problems"
@@ -65,11 +65,12 @@ void ChangeProblemStatement::run() {
 	auto eno = src_zip.entries_no();
 	for (decltype(eno) i = 0; i < eno; ++i) {
 		auto entry_name = src_zip.get_name(i);
-		if (entry_name == simfile_path)
+		if (entry_name == simfile_path) {
 			dest_zip.file_add(simfile_path,
 			                  dest_zip.source_buffer(simfile_str));
-		else if (entry_name != old_statement_path)
+		} else if (entry_name != old_statement_path) {
 			dest_zip.file_add(entry_name, dest_zip.source_zip(src_zip, i));
+		}
 	}
 
 	// Add new statement file entry

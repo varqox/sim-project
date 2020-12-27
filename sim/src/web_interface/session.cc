@@ -9,13 +9,15 @@ using std::string;
 bool Sim::session_open() {
 	STACK_UNWINDING_MARK;
 
-	if (session_is_open)
+	if (session_is_open) {
 		return true;
+	}
 
 	session_id = request.get_cookie("session");
 	// Cookie does not exist (or has no value)
-	if (session_id.size == 0)
+	if (session_id.size == 0) {
 		return false;
+	}
 
 	auto stmt = mysql.prepare("SELECT csrf_token, user_id, data, type,"
 	                          " username, ip, user_agent "
@@ -67,23 +69,25 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 
 	} while (stmt.affected_rows() == 0);
 
-	if (temporary_session)
+	if (temporary_session) {
 		exp_time = -1; // -1 causes set_cookie() to not set Expire= field
+	}
 
 	// There is no better method than looking on the referer
 	bool is_https = has_prefix(request.headers["referer"], "https://");
 	resp.set_cookie("csrf_token", session_csrf_token.to_string(), exp_time, "/",
-	               "", false, is_https);
+	                "", false, is_https);
 	resp.set_cookie("session", session_id.to_string(), exp_time, "/", "", true,
-	               is_https);
+	                is_https);
 	session_is_open = true;
 }
 
 void Sim::session_destroy() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_open())
+	if (not session_open()) {
 		return;
+	}
 
 	try {
 		mysql.prepare("DELETE FROM session WHERE id=?")
@@ -100,8 +104,9 @@ void Sim::session_destroy() {
 void Sim::session_close() {
 	STACK_UNWINDING_MARK;
 
-	if (!session_is_open)
+	if (!session_is_open) {
 		return;
+	}
 
 	session_is_open = false;
 	// TODO: add a marker of a change used to omit unnecessary updates

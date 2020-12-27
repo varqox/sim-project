@@ -12,12 +12,8 @@ protected:
 	const uint64_t job_id_;
 	InplaceBuff<1 << 14> job_log_holder_;
 
-	JobHandler(uint64_t job_id) : job_id_(job_id) {}
-
-	JobHandler(const JobHandler&) = delete;
-	JobHandler(JobHandler&&) = delete;
-	JobHandler& operator=(const JobHandler&) = delete;
-	JobHandler& operator=(JobHandler&&) = delete;
+	explicit JobHandler(uint64_t job_id)
+	: job_id_(job_id) {}
 
 	template <class... Args>
 	auto job_log(Args&&... args) {
@@ -44,13 +40,19 @@ protected:
 	virtual void job_done(StringView new_info);
 
 public:
+	JobHandler(const JobHandler&) = delete;
+	JobHandler(JobHandler&&) = delete;
+	JobHandler& operator=(const JobHandler&) = delete;
+	JobHandler& operator=(JobHandler&&) = delete;
+	virtual ~JobHandler() = default;
+
 	virtual void run() = 0;
 
-	bool failed() const noexcept { return job_failed_; }
+	[[nodiscard]] bool failed() const noexcept { return job_failed_; }
 
-	const auto& get_log() const noexcept { return job_log_holder_; }
-
-	virtual ~JobHandler() = default;
+	[[nodiscard]] const auto& get_log() const noexcept {
+		return job_log_holder_;
+	}
 };
 
 } // namespace job_handlers

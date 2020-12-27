@@ -28,13 +28,13 @@ public:
 
 		~Form();
 
-		explicit operator auto&() noexcept { return other; }
+		explicit operator auto &() noexcept { return other; }
 
 		std::string& operator[](std::string&& key) {
 			return other[std::move(key)];
 		}
 
-		template<class Key>
+		template <class Key>
 		std::string& operator[](Key&& key) {
 			StringView strkey = std::forward<Key>(key);
 			auto it = other.find(strkey);

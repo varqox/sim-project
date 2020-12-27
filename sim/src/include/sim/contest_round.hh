@@ -47,17 +47,19 @@ void iterate(MySQL::Connection& mysql, IterateIdKind id_kind, T&& id,
 	   "FROM contest_rounds cr ",
 	   id_part_sql, (show_all ? "" : " AND begins<=?"));
 
-	if (show_all)
+	if (show_all) {
 		stmt.bind_and_execute(id);
-	else
+	} else {
 		stmt.bind_and_execute(id, curr_date);
+	}
 
 	ContestRound cr;
 	stmt.res_bind_all(cr.id, cr.contest_id, cr.name, cr.item, cr.begins,
 	                  cr.ends, cr.full_results, cr.ranking_exposure);
 
-	while (stmt.next())
+	while (stmt.next()) {
 		contest_round_processor(static_cast<const ContestRound&>(cr));
+	}
 }
 
 } // namespace contest_round

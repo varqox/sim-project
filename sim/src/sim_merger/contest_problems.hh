@@ -49,7 +49,8 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const sim::ContestProblem&) { return nullptr; });
+		Merger::merge(
+		   [&](const sim::ContestProblem& /*unused*/) { return nullptr; });
 	}
 
 public:
@@ -82,10 +83,11 @@ public:
 	                      const ContestRoundsMerger& contest_rounds,
 	                      const ContestsMerger& contests,
 	                      const ProblemsMerger& problems)
-	   : Merger("contest_problems", ids_from_both_jobs.main.contest_problems,
-	            ids_from_both_jobs.other.contest_problems),
-	     contest_rounds_(contest_rounds), contests_(contests),
-	     problems_(problems) {
+	: Merger("contest_problems", ids_from_both_jobs.main.contest_problems,
+	         ids_from_both_jobs.other.contest_problems)
+	, contest_rounds_(contest_rounds)
+	, contests_(contests)
+	, problems_(problems) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

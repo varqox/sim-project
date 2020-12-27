@@ -3,6 +3,7 @@
 #include "http_request.hh"
 #include "http_response.hh"
 
+#include <cstdint>
 #include <simlib/likely.hh>
 
 namespace server {
@@ -20,7 +21,7 @@ public:
 private:
 	State state_;
 	int sock_fd_, buff_size_, pos_;
-	unsigned char buffer_[BUFFER_SIZE];
+	uint8_t buffer_[BUFFER_SIZE]{};
 
 	int peek();
 
@@ -35,13 +36,16 @@ private:
 		size_t read_limit_;
 
 	public:
-		LimitedReader(Connection& cn, size_t rl) : conn_(cn), read_limit_(rl) {}
+		LimitedReader(Connection& cn, size_t rl)
+		: conn_(cn)
+		, read_limit_(rl) {}
 
-		size_t limit() const { return read_limit_; }
+		[[nodiscard]] size_t limit() const { return read_limit_; }
 
 		int get_char() {
-			if (UNLIKELY(read_limit_ == 0))
+			if (UNLIKELY(read_limit_ == 0)) {
 				return -1;
+			}
 
 			--read_limit_;
 			return conn_.get_char();
@@ -55,11 +59,18 @@ private:
 
 public:
 	explicit Connection(int client_socket_fd)
-	   : state_(OK), sock_fd_(client_socket_fd), buff_size_(0), pos_(0) {}
+	: state_(OK)
+	, sock_fd_(client_socket_fd)
+	, buff_size_(0)
+	, pos_(0) {}
 
+	Connection(const Connection&) = delete;
+	Connection(Connection&&) = delete;
+	Connection& operator=(const Connection&) = delete;
+	Connection& operator=(Connection&&) = delete;
 	~Connection() = default;
 
-	State state() const { return state_; }
+	[[nodiscard]] State state() const { return state_; }
 
 	void clear() {
 		state_ = OK;

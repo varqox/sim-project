@@ -656,12 +656,20 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 	add_csrf_token_to(form);
 	append_loader(loader_parent);
 
+	// Transform data before sending
+	var form_data = new FormData(form[0]);
+	form.find('[trim_before_send="true"]').each(function() {
+		if (this.name != null) {
+			form_data.set(this.name, form_data.get(this.name).trim());
+		}
+	});
+	// Prepare and send form
 	$.ajax({
 		url: url,
 		type: 'POST',
 		processData: false,
 		contentType: false,
-		data: new FormData(form[0]),
+		data: form_data,
 		success: function(resp) {
 			if (typeof success_msg_or_handler === "function") {
 				success_msg_or_handler.call(form, resp, loader_parent);
@@ -1766,6 +1774,7 @@ function add_user(as_modal) {
 				name: 'username',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Type',
 				$('<select>', {
@@ -1788,18 +1797,21 @@ function add_user(as_modal) {
 				name: 'first_name',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Last name', {
 				type: 'text',
 				name: 'last_name',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Email', {
 				type: 'email',
 				name: 'email',
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Password', {
 				type: 'password',
@@ -1914,6 +1926,7 @@ function edit_user(as_modal, user_id) {
 				value: user.username,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Type',
 				$('<select>', {
@@ -1951,6 +1964,7 @@ function edit_user(as_modal, user_id) {
 				value: user.first_name,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Last name', {
 				type: 'text',
@@ -1958,6 +1972,7 @@ function edit_user(as_modal, user_id) {
 				value: user.last_name,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add(Form.field_group('Email', {
 				type: 'email',
@@ -1965,6 +1980,7 @@ function edit_user(as_modal, user_id) {
 				value: user.email,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			})).add('<div>', {
 				html: $('<input>', {
@@ -2031,7 +2047,8 @@ function merge_user(as_modal, user_id) {
 			Form.field_group('Target user ID', {
 				type: 'text',
 				name: 'target_user',
-				size: 6
+				size: 6,
+				trim_before_send: true,
 			}));
 	}, '/u/' + user_id + '/merge');
 }
@@ -2541,7 +2558,7 @@ function add_problem_submission(as_modal, problem, no_modal_elem /*= undefined*/
 	add_submission_impl(as_modal, '/p/' + problem.id + '/submit',
 		'/api/submission/add/p' + problem.id,
 		a_view_button('/p/' + problem.id, problem.name, undefined, view_problem.bind(null, true, problem.id)),
-		(problem.actions.indexOf('i') !== -1), (problem.actions.indexOf('i') !== -1),
+		(problem.actions.indexOf('i') !== -1), false,
 		no_modal_elem);
 }
 function add_contest_submission(as_modal, contest, round, problem, no_modal_elem /*= undefined*/) {
@@ -2722,16 +2739,23 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				elem.append($('<div>', {
 					class: 'results',
 					html: function() {
-						var res = [s.initial_report, s.final_report];
+						var res = [];
+						if (s.initial_report != '') {
+							res.push($('<h2>', {text: 'Initial judgment protocol'}),
+								s.initial_report);
+						}
+						if (s.final_report != '') {
+							res.push($('<h2>', {text: 'Full judgment protocol'}),
+								s.final_report);
+						}
 						if (s.final_report === null) {
 							var message_to_show;
-							if (utcdt_or_tm_to_Date(s.full_results) === Infinity)
-								message_to_show = $('<p>', {text: 'Final testing report will not be available.'});
-							else
-								message_to_show = $('<p>', {text: 'Final testing report will be visible since: '}).append(normalize_datetime($('<span>', {datetime: s.full_results})));
-
-							res.push($('<h2>', {text: 'Final testing report'}),
-								message_to_show);
+							if (utcdt_or_tm_to_Date(s.full_results) === Infinity) {
+								message_to_show = $('<p>', {text: 'Full judgment protocol (of all tests) will not be available.'});
+							} else {
+								message_to_show = $('<p>', {text: 'Full judgment protocol (of all tests) will be visible since: '}).append(normalize_datetime($('<span>', {datetime: s.full_results})));
+							}
+							res.push(message_to_show);
 						}
 						return res;
 					}()
@@ -2989,12 +3013,14 @@ function add_problem(as_modal) {
 				name: 'mem_limit',
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				placeholder: 'Take from Simfile',
 			})).add(Form.field_group('Global time limit [s] (for each test)', {
 				type: 'text',
 				name: 'global_time_limit',
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				placeholder: 'No global time limit',
 			})).add(Form.field_group('Reset time limits using model solution', {
 				type: 'checkbox',
@@ -3072,12 +3098,14 @@ function append_reupload_problem(elem, as_modal, problem) {
 			value: problem.memory_limit,
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			placeholder: 'Take from Simfile',
 		})).add(Form.field_group('Global time limit [s] (for each test)', {
 			type: 'text',
 			name: 'global_time_limit',
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			placeholder: 'No global time limit',
 		})).add(Form.field_group('Reset time limits using model solution', {
 			type: 'checkbox',
@@ -3455,7 +3483,8 @@ function merge_problem(as_modal, problem_id) {
 			Form.field_group('Target problem ID', {
 				type: 'text',
 				name: 'target_problem',
-				size: 6
+				size: 6,
+				trim_before_send: true,
 			}).add(Form.field_group('Rejudge transferred submissions', {
 				type: 'checkbox',
 				name: 'rejudge_transferred_submissions'
@@ -3846,6 +3875,7 @@ function append_create_contest(elem, as_modal) {
 			name: 'name',
 			size: 24,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			required: true
 		}).add(logged_user_is_admin() ? Form.field_group('Make public', {
 			type: 'checkbox',
@@ -3879,13 +3909,14 @@ function append_clone_contest(elem, as_modal) {
 			name: 'name',
 			size: 24,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 		}).add(source_contest_input
 		).add(Form.field_group("Contest to clone (ID or URL)",
 			$('<input>', {
 				type: 'text',
 				required: true
 			}).on('input', function () {
-				var val = $(this).val();
+				var val = $(this).val().trim();
 				if (!isNaN(val)) {
 					source_contest_input.val(val);
 				} else {
@@ -3937,6 +3968,7 @@ function append_create_contest_round(elem, as_modal, contest_id) {
 			name: 'name',
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			required: true
 		}).add(Form.field_group('Begin time',
 			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
@@ -3975,6 +4007,7 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 			name: 'name',
 			size: 25,
 			// maxlength: 'TODO...',
+			trim_before_send: true,
 			placeholder: "The same as name of the cloned round"
 		}).add(source_contest_round_input
 		).add(Form.field_group("Contest round to clone (ID or URL)",
@@ -3982,7 +4015,7 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 				type: 'text',
 				required: true
 			}).on('input', function () {
-				var val = $(this).val();
+				var val = $(this).val().trim();
 				if (!isNaN(val)) {
 					source_contest_round_input.val(val);
 				} else {
@@ -4040,12 +4073,14 @@ function add_contest_problem(as_modal, contest_round_id) {
 				name: 'name',
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				placeholder: 'The same as in Problems',
 			}).add(Form.field_group('Problem ID', {
 				type: 'text',
 				name: 'problem_id',
 				size: 6,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).append(a_view_button('/p', 'Search problems', '', problem_chooser))
 			).add(Form.field_group('Final submission to select',
@@ -4054,7 +4089,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 					required: true,
 					html: $('<option>', {
 						value: 'LC',
-						text: 'The last that compiles'
+						text: 'Latest compiling'
 					}).add('<option>', {
 						value: 'WHS',
 						text: 'The one with the highest score',
@@ -4128,6 +4163,7 @@ function edit_contest(as_modal, contest_id) {
 				value: data.name,
 				size: 24,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Public', {
 				type: 'checkbox',
@@ -4170,6 +4206,7 @@ function edit_contest_round(as_modal, contest_round_id) {
 				value: round.name,
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Begin time',
 				dt_chooser_input('begins', true, true, utcdt_or_tm_to_Date(round.begins), 'The Big Bang', 'Never')
@@ -4205,6 +4242,7 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 				value: problem.name,
 				size: 25,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Score revealing',
 				$('<select>', {
@@ -4230,7 +4268,7 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 					required: true,
 					html: $('<option>', {
 						value: 'LC',
-						text: 'The last that compiles',
+						text: 'Latest compiling',
 						selected: (problem.final_selecting_method === 'LC')
 					}).add('<option>', {
 						value: 'WHS',
@@ -4538,7 +4576,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								$('<tr>', {html: [
 									$('<td>', {text: 'Final submission'}),
 									$('<td>', {text: problem.final_selecting_method === 'LC' ?
-										'The last compiling' : 'One with the highest score'})
+										'Latest compiling' : 'One with the highest score'})
 								]}),
 								(problem.score_revealing !== 'none' ? $('<tr>', {html: [
 									$('<td>', {text: 'Score revealing'}),
@@ -5182,6 +5220,7 @@ function add_contest_user(as_modal, contest_id) {
 				name: 'user_id',
 				size: 6,
 				// maxlength: 'TODO...',
+				trim_before_send: true,
 				required: true
 			}).append(a_view_button('/u', 'Search users', '', user_chooser))
 			.add(Form.field_group('Mode', $('<select>', {
@@ -5449,8 +5488,9 @@ function add_contest_file(as_modal, contest_id) {
 				type: 'text',
 				name: 'name',
 				size: 24,
-				placeholder: 'The same as name of the uploaded file'
-				// maxlength: 'TODO...'
+				// maxlength: 'TODO...',
+				trim_before_send: true,
+				placeholder: 'The same as name of the uploaded file',
 			}).add(Form.field_group('File', {
 				type: 'file',
 				name: 'file',
@@ -5492,8 +5532,9 @@ function edit_contest_file(as_modal, contest_file_id) {
 				name: 'name',
 				value: file.name,
 				size: 24,
-				placeholder: 'The same as name of uploaded file'
-				// maxlength: 'TODO...'
+				// maxlength: 'TODO...',
+				trim_before_send: true,
+				placeholder: 'The same as name of uploaded file',
 			}).add(Form.field_group('File', {
 				type: 'file',
 				name: 'file'

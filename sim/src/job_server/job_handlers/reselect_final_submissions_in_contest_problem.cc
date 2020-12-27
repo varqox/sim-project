@@ -18,7 +18,7 @@ void ReselectFinalSubmissionsInContestProblem::run() {
 	stmt.bind_and_execute(contest_problem_id_);
 
 	MySQL::Optional<uint64_t> sowner;
-	uint64_t problem_id;
+	uint64_t problem_id = 0;
 	stmt.res_bind_all(sowner, problem_id);
 	while (stmt.next()) {
 		submission::update_final_lock(mysql, sowner, problem_id);

@@ -23,10 +23,12 @@ struct CmdOptions {
 static int perform_upgrade() {
 	STACK_UNWINDING_MARK;
 
-	(void)remove(concat_tostr(sim_build, "sim-server"));
-	(void)remove(concat_tostr(sim_build, "job-server"));
-	(void)remove(concat_tostr(sim_build, "backup"));
-	(void)remove(concat_tostr(sim_build, "sim-merger"));
+	conn.update(
+	   "UPDATE submissions SET initial_report=REGEXP_REPLACE(initial_report, "
+	   "'^<h2>.*?</h2>', '')");
+	conn.update(
+	   "UPDATE submissions SET final_report=REGEXP_REPLACE(final_report, "
+	   "'^<h2>.*?</h2>', '')");
 
 	stdlog("\033[1;32mSim upgrading is complete\033[m");
 	return 0;
@@ -56,8 +58,8 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 	for (int i = 1; i < argc; ++i) {
 
 		if (argv[i][0] == '-') {
-			if (0 == strcmp(argv[i], "-h") or
-			    0 == strcmp(argv[i], "--help")) { // Help
+			if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help"))
+			{ // Help
 				print_help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 
@@ -83,9 +85,9 @@ static int true_main(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	// Signal control
-	struct sigaction sa;
+	struct sigaction sa {};
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = SIG_IGN;
+	sa.sa_handler = SIG_IGN; // NOLINT
 
 	(void)sigaction(SIGINT, &sa, nullptr);
 	(void)sigaction(SIGTERM, &sa, nullptr);

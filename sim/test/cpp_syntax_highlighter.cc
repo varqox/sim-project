@@ -23,13 +23,17 @@ vector<string> collect_tests(const string& tests_dir) {
 		bool test_file = false;
 		for (StringView suffix : {".in", ".out"}) {
 			if (has_suffix(file_name, suffix)) {
-				++test_file_num[file_name.substring(0, file_name.size() - suffix.size()).to_string()];
+				++test_file_num[file_name
+				                   .substring(0,
+				                              file_name.size() - suffix.size())
+				                   .to_string()];
 				test_file = true;
 				break;
 			}
 		}
 		if (not test_file) {
-			ADD_FAILURE() << "file " << file_name << " does not belong to any test";
+			ADD_FAILURE() << "file " << file_name
+			              << " does not belong to any test";
 		}
 	});
 	// Choose files that have both *.in and *.out
@@ -65,8 +69,8 @@ void test_cpp_systax_highlighter(string&& tests_dir) {
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(cpp_syntax_highlighter, syntax_highlighting) {
 	for (const auto& path : {string{"."}, executable_path(getpid())}) {
-		auto tests_dir_opt =
-		   deepest_ancestor_dir_with_subpath(path, "test/cpp_syntax_highlighter_test_cases/");
+		auto tests_dir_opt = deepest_ancestor_dir_with_subpath(
+		   path, "test/cpp_syntax_highlighter_test_cases/");
 		if (tests_dir_opt) {
 			test_cpp_systax_highlighter(std::move(*tests_dir_opt));
 			return;

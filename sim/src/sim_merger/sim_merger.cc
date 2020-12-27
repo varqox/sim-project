@@ -32,8 +32,9 @@ static void load_tables_from_other_sim_backup() {
 	cf.load_config_from_file(concat(main_sim_build, ".db.config"));
 
 	FileDescriptor fd(concat(other_sim_build, "dump.sql"), O_RDONLY);
-	if (not fd.is_open())
+	if (not fd.is_open()) {
 		THROW("Failed to open ", other_sim_build, "dump.sql");
+	}
 
 	Spawner::Options opts = {fd, STDOUT_FILENO, STDERR_FILENO};
 	auto es = Spawner::run("mysql",
@@ -41,8 +42,9 @@ static void load_tables_from_other_sim_backup() {
 	                        concat_tostr("-p", cf["password"].as_string()),
 	                        cf["db"].as_string(), "-B"},
 	                       opts);
-	if (es.si.code != CLD_EXITED or es.si.status != 0)
+	if (es.si.code != CLD_EXITED or es.si.status != 0) {
 		THROW("loading dump.sql failed: ", es.message);
+	}
 }
 
 namespace {
@@ -54,8 +56,9 @@ struct CmdOptions {
 } // namespace
 
 static void print_help(const char* program_name) {
-	if (not program_name)
+	if (not program_name) {
 		program_name = "sim-merger";
+	}
 
 	errlog.label(false);
 	errlog("Usage: ", program_name,
@@ -80,8 +83,8 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 	for (int i = 1; i < argc; ++i) {
 
 		if (argv[i][0] == '-') {
-			if (0 == strcmp(argv[i], "-h") or
-			    0 == strcmp(argv[i], "--help")) { // Help
+			if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help"))
+			{ // Help
 				print_help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 
@@ -90,16 +93,17 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 				stdlog.open("/dev/null");
 
 			} else if (0 == strcmp(argv[i], "-r") or
-			           0 ==
-			              strcmp(argv[i], "--reset-new-problems-time-limits")) {
+			           0 == strcmp(argv[i], "--reset-new-problems-time-limits"))
+			{
 				cmd_options.reset_new_problems_time_limits = true;
 
 			} else { // Unknown
 				eprintf("Unknown option: '%s'\n", argv[i]);
 			}
 
-		} else
+		} else {
 			argv[new_argc++] = argv[i];
+		}
 	}
 
 	argc = new_argc;
@@ -110,9 +114,9 @@ static int true_main(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	// Signal control
-	struct sigaction sa;
+	struct sigaction sa {};
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = SIG_IGN;
+	sa.sa_handler = SIG_IGN; // NOLINT
 
 	(void)sigaction(SIGINT, &sa, nullptr);
 	(void)sigaction(SIGTERM, &sa, nullptr);
@@ -128,15 +132,18 @@ static int true_main(int argc, char** argv) {
 	}
 
 	main_sim_build.append(argv[1]);
-	if (not has_suffix(main_sim_build, "/"))
+	if (not has_suffix(main_sim_build, "/")) {
 		main_sim_build.append('/');
+	}
 
 	other_sim_build.append(argv[2]);
-	if (not has_suffix(other_sim_build, "/"))
+	if (not has_suffix(other_sim_build, "/")) {
 		other_sim_build.append('/');
+	}
 
 	if (path_absolute(main_sim_build, get_cwd().to_string()) ==
-	    path_absolute(other_sim_build, get_cwd().to_string())) {
+	    path_absolute(other_sim_build, get_cwd().to_string()))
+	{
 		errlog.label(false);
 		errlog("sim_build and other_sim_build_backup cannot refer to the same "
 		       "directory");
@@ -189,8 +196,9 @@ static int true_main(int argc, char** argv) {
 	bool merge_successful = false;
 	Defer table_rename_undoer([&] {
 		STACK_UNWINDING_MARK;
-		if (merge_successful)
+		if (merge_successful) {
 			return;
+		}
 
 		try {
 			stdlog("Restoring tables");
@@ -303,8 +311,9 @@ static int true_main(int argc, char** argv) {
 	std::vector<MergerBase*> saves_to_rollback;
 	saves_to_rollback.reserve(mergers.size());
 	Defer saves_rollbacker([&] {
-		for (MergerBase* merger : saves_to_rollback)
+		for (MergerBase* merger : saves_to_rollback) {
 			merger->rollback_saving_merged_outside_database();
+		}
 	});
 
 	conn.update("SET AUTOCOMMIT=0");
@@ -333,8 +342,9 @@ static int true_main(int argc, char** argv) {
 
 	stdlog("\033[1;33mRemoving old main tables\033[m");
 	conn.update("SET FOREIGN_KEY_CHECKS=0");
-	for (auto table_name : tables)
+	for (auto table_name : tables) {
 		conn.update("DROP TABLE ", main_sim_table_prefix, table_name);
+	}
 	conn.update("SET FOREIGN_KEY_CHECKS=1");
 
 	return 0;

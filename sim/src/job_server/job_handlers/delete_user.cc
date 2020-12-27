@@ -22,8 +22,9 @@ void DeleteUser::run() {
 		InplaceBuff<32> username;
 		decltype(User::type) user_type;
 		stmt.res_bind_all(username, user_type);
-		if (not stmt.next())
+		if (not stmt.next()) {
 			return set_failure("User with id: ", user_id_, " does not exist");
+		}
 
 		job_log("username: ", username);
 		switch (user_type) {

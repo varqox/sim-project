@@ -1,5 +1,6 @@
 #include "sim/constants.hh"
 #include "sim/mysql.hh"
+#include "simlib/concat_tostr.hh"
 #include "simlib/debug.hh"
 #include "simlib/file_info.hh"
 #include "simlib/file_manip.hh"
@@ -9,6 +10,7 @@
 #include "simlib/spawner.hh"
 #include "simlib/time.hh"
 #include "simlib/working_directory.hh"
+#include <chrono>
 
 using std::string;
 using std::vector;
@@ -17,8 +19,9 @@ using std::vector;
  * @brief Displays help
  */
 static void help(const char* program_name) {
-	if (program_name == nullptr)
+	if (program_name == nullptr) {
 		program_name = "backup";
+	}
 
 	printf("Usage: %s [options]\n", program_name);
 	puts("Make a backup of solutions and database contents");
@@ -38,8 +41,8 @@ int main2(int argc, char** argv) {
 	// Get connection
 	auto conn = MySQL::make_conn_with_credential_file(".db.config");
 
-	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
-	                   S_0600};
+	FileDescriptor fd{MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
+	                  S_0600};
 	if (fd == -1) {
 		errlog("Failed to open file `" MYSQL_CNF "`: open()", errmsg());
 		return 1;
@@ -63,7 +66,7 @@ int main2(int argc, char** argv) {
 	// adding job was canceled between the first and second stage while it was
 	// pending)
 	{
-		using namespace std::chrono;
+		using std::chrono::system_clock;
 		using namespace std::chrono_literals;
 
 		auto transaction = conn.start_transaction();
@@ -73,7 +76,7 @@ int main2(int argc, char** argv) {
 		stmt.bind_and_execute(EnumVal(JobStatus::DONE),
 		                      EnumVal(JobStatus::FAILED),
 		                      EnumVal(JobStatus::CANCELED));
-		uint64_t tmp_file_id;
+		uint64_t tmp_file_id = 0;
 		stmt.res_bind_all(tmp_file_id);
 
 		auto deleter = conn.prepare("DELETE FROM internal_files WHERE id=?");
@@ -81,7 +84,8 @@ int main2(int argc, char** argv) {
 		while (stmt.next()) {
 			auto file_path = internal_file_path(tmp_file_id);
 			if (access(file_path, F_OK) == 0 and
-			    system_clock::now() - get_modification_time(file_path) > 2h) {
+			    system_clock::now() - get_modification_time(file_path) > 2h)
+			{
 				deleter.bind_and_execute(tmp_file_id);
 				(void)unlink(file_path);
 			}
@@ -99,17 +103,19 @@ int main2(int argc, char** argv) {
 		stmt.bind_and_execute();
 		InplaceBuff<32> file_id;
 		stmt.res_bind_all(file_id);
-		while (stmt.next())
+		while (stmt.next()) {
 			orphaned_files.erase(orphaned_files.find(file_id));
+		}
 
 		// Remove orphaned files that are older than 2h (not to delete files
 		// that are just created but not committed)
 		for (const std::string& file : orphaned_files) {
-			struct stat64 st;
+			struct stat64 st {};
 			auto file_path = concat(INTERNAL_FILES_DIR, file);
 			if (stat64(file_path.to_cstr().data(), &st)) {
-				if (errno == ENOENT)
+				if (errno == ENOENT) {
 					break;
+				}
 
 				THROW("stat64", errmsg());
 			}
@@ -125,14 +131,15 @@ int main2(int argc, char** argv) {
 
 	run_command({
 	   "mysqldump",
-	   "--defaults-file=" MYSQL_CNF,
+	   concat_tostr("--defaults-file=", MYSQL_CNF),
 	   "--result-file=dump.sql",
 	   "--single-transaction",
 	   conn.impl()->db,
 	});
 
-	if (chmod("dump.sql", S_0600))
+	if (chmod("dump.sql", S_0600)) {
 		THROW("chmod()", errmsg());
+	}
 
 	run_command({"git", "init"});
 	run_command({"git", "config", "--local", "user.name", "Sim backuper"});

@@ -9,9 +9,10 @@ class DeleteContestProblem final : public JobHandler {
 
 public:
 	DeleteContestProblem(uint64_t job_id, uint64_t contest_problem_id)
-	   : JobHandler(job_id), contest_problem_id_(contest_problem_id) {}
+	: JobHandler(job_id)
+	, contest_problem_id_(contest_problem_id) {}
 
-	void run() override final;
+	void run() final;
 };
 
 } // namespace job_handlers

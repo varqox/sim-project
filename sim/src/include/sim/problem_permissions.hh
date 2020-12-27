@@ -70,8 +70,9 @@ get_permissions(MySQL::Connection& mysql, T&& problem_id,
 	decltype(Problem::type) problem_type;
 	stmt.res_bind_all(problem_owner, problem_type);
 
-	if (not stmt.next())
+	if (not stmt.next()) {
 		return std::nullopt;
+	}
 
 	return get_permissions(user_id, user_type, problem_owner, problem_type);
 }

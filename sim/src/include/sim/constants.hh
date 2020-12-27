@@ -138,12 +138,12 @@ constexpr const char* css_color_class(SubmissionStatus status) noexcept {
 	switch (status) {
 	case SubmissionStatus::OK: return "green";
 	case SubmissionStatus::WA: return "red";
-	case SubmissionStatus::TLE: return "yellow";
+	case SubmissionStatus::TLE:
 	case SubmissionStatus::MLE: return "yellow";
 	case SubmissionStatus::RTE: return "intense-red";
 	case SubmissionStatus::PENDING: return "";
 	case SubmissionStatus::COMPILATION_ERROR: return "purple";
-	case SubmissionStatus::CHECKER_COMPILATION_ERROR: return "blue";
+	case SubmissionStatus::CHECKER_COMPILATION_ERROR:
 	case SubmissionStatus::JUDGE_ERROR: return "blue";
 	}
 
@@ -200,26 +200,26 @@ constexpr const char* to_string(JobType x) {
 	return "Unknown";
 }
 
-constexpr bool is_problem_job(JobType x) {
+constexpr bool is_problem_management_job(JobType x) {
 	using JT = JobType;
 	switch (x) {
-	case JT::ADD_PROBLEM: return true;
-	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return true;
-	case JT::REUPLOAD_PROBLEM: return true;
-	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return true;
-	case JT::EDIT_PROBLEM: return true;
-	case JT::DELETE_PROBLEM: return true;
-	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return true;
-	case JT::MERGE_PROBLEMS: return true;
+	case JT::ADD_PROBLEM:
+	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+	case JT::REUPLOAD_PROBLEM:
+	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
+	case JT::EDIT_PROBLEM:
+	case JT::DELETE_PROBLEM:
+	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+	case JT::MERGE_PROBLEMS:
 	case JT::CHANGE_PROBLEM_STATEMENT: return true;
-	case JT::JUDGE_SUBMISSION: return false;
-	case JT::REJUDGE_SUBMISSION: return false;
-	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: return false;
-	case JT::DELETE_USER: return false;
-	case JT::DELETE_CONTEST: return false;
-	case JT::DELETE_CONTEST_ROUND: return false;
-	case JT::DELETE_CONTEST_PROBLEM: return false;
-	case JT::DELETE_FILE: return false;
+	case JT::JUDGE_SUBMISSION:
+	case JT::REJUDGE_SUBMISSION:
+	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+	case JT::DELETE_USER:
+	case JT::DELETE_CONTEST:
+	case JT::DELETE_CONTEST_ROUND:
+	case JT::DELETE_CONTEST_PROBLEM:
+	case JT::DELETE_FILE:
 	case JT::MERGE_USERS: return false;
 	}
 	return false;
@@ -228,23 +228,23 @@ constexpr bool is_problem_job(JobType x) {
 constexpr bool is_submission_job(JobType x) {
 	using JT = JobType;
 	switch (x) {
-	case JT::JUDGE_SUBMISSION: return true;
+	case JT::JUDGE_SUBMISSION:
 	case JT::REJUDGE_SUBMISSION: return true;
-	case JT::ADD_PROBLEM: return false;
-	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return false;
-	case JT::REUPLOAD_PROBLEM: return false;
-	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return false;
-	case JT::EDIT_PROBLEM: return false;
-	case JT::DELETE_PROBLEM: return false;
-	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: return false;
-	case JT::DELETE_USER: return false;
-	case JT::DELETE_CONTEST: return false;
-	case JT::DELETE_CONTEST_ROUND: return false;
-	case JT::DELETE_CONTEST_PROBLEM: return false;
-	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return false;
-	case JT::MERGE_PROBLEMS: return false;
-	case JT::DELETE_FILE: return false;
-	case JT::CHANGE_PROBLEM_STATEMENT: return false;
+	case JT::ADD_PROBLEM:
+	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+	case JT::REUPLOAD_PROBLEM:
+	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
+	case JT::EDIT_PROBLEM:
+	case JT::DELETE_PROBLEM:
+	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+	case JT::DELETE_USER:
+	case JT::DELETE_CONTEST:
+	case JT::DELETE_CONTEST_ROUND:
+	case JT::DELETE_CONTEST_PROBLEM:
+	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+	case JT::MERGE_PROBLEMS:
+	case JT::DELETE_FILE:
+	case JT::CHANGE_PROBLEM_STATEMENT:
 	case JT::MERGE_USERS: return false;
 	}
 	return false;
@@ -255,20 +255,20 @@ constexpr uint priority(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::DELETE_FILE: return 40;
-	case JT::DELETE_PROBLEM: return 30;
-	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: return 30;
-	case JT::DELETE_USER: return 30;
-	case JT::DELETE_CONTEST: return 30;
-	case JT::DELETE_CONTEST_ROUND: return 30;
+	case JT::DELETE_PROBLEM:
+	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+	case JT::DELETE_USER:
+	case JT::DELETE_CONTEST:
+	case JT::DELETE_CONTEST_ROUND:
 	case JT::DELETE_CONTEST_PROBLEM: return 30;
-	case JT::MERGE_USERS: return 25;
-	case JT::MERGE_PROBLEMS: return 25;
-	case JT::EDIT_PROBLEM: return 25;
+	case JT::MERGE_USERS:
+	case JT::MERGE_PROBLEMS:
+	case JT::EDIT_PROBLEM:
 	case JT::CHANGE_PROBLEM_STATEMENT: return 25;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
-	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
+	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
 	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
-	case JT::ADD_PROBLEM: return 10;
+	case JT::ADD_PROBLEM:
 	case JT::REUPLOAD_PROBLEM: return 10;
 	case JT::JUDGE_SUBMISSION: return 5;
 	case JT::REJUDGE_SUBMISSION: return 4;
@@ -287,7 +287,7 @@ enum class JobStatus : uint8_t {
 
 constexpr const char* to_string(JobStatus x) {
 	switch (x) {
-	case JobStatus::PENDING: return "Pending";
+	case JobStatus::PENDING:
 	case JobStatus::NOTICED_PENDING: return "Pending";
 	case JobStatus::IN_PROGRESS: return "In progress";
 	case JobStatus::DONE: return "Done";

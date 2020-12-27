@@ -29,7 +29,7 @@ void job_dispatcher(uint64_t job_id, JobType jtype,
 	using std::make_unique;
 	std::unique_ptr<job_handlers::JobHandler> job_handler;
 	try {
-		using namespace job_handlers;
+		using namespace job_handlers; // NOLINT(google-build-using-namespace)
 		using JT = JobType;
 
 		switch (jtype) {

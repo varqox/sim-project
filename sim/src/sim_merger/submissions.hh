@@ -5,21 +5,21 @@
 #include "problems.hh"
 
 struct Submission {
-	uintmax_t id;
-	uintmax_t file_id;
+	uintmax_t id{};
+	uintmax_t file_id{};
 	std::optional<uintmax_t> owner;
-	uintmax_t problem_id;
+	uintmax_t problem_id{};
 	std::optional<uintmax_t> contest_problem_id;
 	std::optional<uintmax_t> contest_round_id;
 	std::optional<uintmax_t> contest_id;
-	EnumVal<SubmissionType> type;
-	EnumVal<SubmissionLanguage> language;
-	bool final_candidate;
-	bool problem_final;
-	bool contest_final;
-	bool contest_initial_final;
-	EnumVal<SubmissionStatus> initial_status;
-	EnumVal<SubmissionStatus> full_status;
+	EnumVal<SubmissionType> type{};
+	EnumVal<SubmissionLanguage> language{};
+	bool final_candidate{};
+	bool problem_final{};
+	bool contest_final{};
+	bool contest_initial_final{};
+	EnumVal<SubmissionStatus> initial_status{};
+	EnumVal<SubmissionStatus> full_status{};
 	InplaceBuff<24> submit_time;
 	std::optional<intmax_t> score;
 	InplaceBuff<24> last_judgment;
@@ -43,10 +43,10 @@ class SubmissionsMerger : public Merger<Submission> {
 		MySQL::Optional<uintmax_t> m_contest_problem_id;
 		MySQL::Optional<uintmax_t> m_contest_round_id;
 		MySQL::Optional<uintmax_t> m_contest_id;
-		unsigned char b_final_candidate;
-		unsigned char b_problem_final;
-		unsigned char b_contest_final;
-		unsigned char b_contest_initial_final;
+		uint8_t b_final_candidate = 0;
+		uint8_t b_problem_final = 0;
+		uint8_t b_contest_final = 0;
+		uint8_t b_contest_initial_final = 0;
 		MySQL::Optional<intmax_t> m_score;
 		auto stmt =
 		   conn.prepare("SELECT id, file_id, owner, problem_id,"
@@ -77,8 +77,9 @@ class SubmissionsMerger : public Merger<Submission> {
 			s.score = m_score.opt();
 
 			s.file_id = internal_files_.new_id(s.file_id, record_set.kind);
-			if (s.owner)
+			if (s.owner) {
 				s.owner = users_.new_id(s.owner.value(), record_set.kind);
+			}
 			s.problem_id = problems_.new_id(s.problem_id, record_set.kind);
 			if (s.contest_problem_id) {
 				s.contest_problem_id = contest_problems_.new_id(
@@ -101,7 +102,7 @@ class SubmissionsMerger : public Merger<Submission> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const Submission&) { return nullptr; });
+		Merger::merge([&](const Submission& /*unused*/) { return nullptr; });
 	}
 
 public:
@@ -144,11 +145,14 @@ public:
 	                  const ContestProblemsMerger& contest_problems,
 	                  const ContestRoundsMerger& contest_rounds,
 	                  const ContestsMerger& contests)
-	   : Merger("submissions", ids_from_both_jobs.main.submissions,
-	            ids_from_both_jobs.other.submissions),
-	     internal_files_(internal_files), users_(users), problems_(problems),
-	     contest_problems_(contest_problems), contest_rounds_(contest_rounds),
-	     contests_(contests) {
+	: Merger("submissions", ids_from_both_jobs.main.submissions,
+	         ids_from_both_jobs.other.submissions)
+	, internal_files_(internal_files)
+	, users_(users)
+	, problems_(problems)
+	, contest_problems_(contest_problems)
+	, contest_rounds_(contest_rounds)
+	, contests_(contests) {
 		STACK_UNWINDING_MARK;
 		initialize();
 	}

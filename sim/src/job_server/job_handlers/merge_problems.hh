@@ -13,9 +13,11 @@ class MergeProblems final : public JobHandler {
 public:
 	MergeProblems(uint64_t job_id, uint64_t donor_problem_id,
 	              const jobs::MergeProblemsInfo& info)
-	   : JobHandler(job_id), donor_problem_id_(donor_problem_id), info_(info) {}
+	: JobHandler(job_id)
+	, donor_problem_id_(donor_problem_id)
+	, info_(info) {}
 
-	void run() override final;
+	void run() final;
 
 private:
 	void run_impl();

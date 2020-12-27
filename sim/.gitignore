@@ -18,6 +18,9 @@
 # GNU Make dependences
 *.deps
 
+# Python
+__pycache__/
+
 # Others
 .clangd/
 *build/

@@ -17,9 +17,8 @@ enum StaticFile {
 
 // Technique used to force browsers to always keep up-to-date version of
 // the files below
-template<StaticFile static_file>
+template <StaticFile static_file>
 static StringView get_hash_of() {
-	using namespace std::chrono;
 	static auto str = [] {
 		auto path = [] {
 			switch (static_file) {
@@ -28,7 +27,9 @@ static StringView get_hash_of() {
 			case SCRIPTS_JS: return "static/kit/scripts.js";
 			}
 		}();
-		return to_string(duration_cast<microseconds>(get_modification_time(path).time_since_epoch()).count());
+		return to_string(std::chrono::duration_cast<std::chrono::microseconds>(
+		                    get_modification_time(path).time_since_epoch())
+		                    .count());
 	}();
 	return str;
 }
@@ -72,11 +73,13 @@ void Sim::page_template(StringView title, StringView styles,
 	                  "href=\"/kit/img/favicon.png\"/>");
 	// clang-format on
 
-	if (scripts.size())
+	if (!scripts.empty()) {
 		append("<script>", scripts, "</script>");
+	}
 
-	if (styles.size())
+	if (!styles.empty()) {
 		append("<style>", styles, "</style>");
+	}
 
 	// clang-format off
 	append("</head>"
@@ -94,19 +97,23 @@ void Sim::page_template(StringView title, StringView styles,
 	// clang-format on
 
 	if (session_is_open) {
-		if (uint(users_get_overall_permissions() & UserPermissions::VIEW_ALL))
+		if (uint(users_get_overall_permissions() & UserPermissions::VIEW_ALL)) {
 			append("<a href=\"/u\">Users</a>");
+		}
 
 		if (uint(submissions_get_overall_permissions() &
-		         SubmissionPermissions::VIEW_ALL)) {
+		         SubmissionPermissions::VIEW_ALL))
+		{
 			append("<a href=\"/s\">Submissions</a>");
 		}
 
-		if (uint(jobs_get_overall_permissions() & JobPermissions::VIEW_ALL))
+		if (uint(jobs_get_overall_permissions() & JobPermissions::VIEW_ALL)) {
 			append("<a href=\"/jobs\">Job queue</a>");
+		}
 
-		if (session_user_type == User::Type::ADMIN)
+		if (session_user_type == User::Type::ADMIN) {
 			append("<a href=\"/logs\">Logs</a>");
+		}
 	}
 
 	append("<time id=\"clock\">", date("%H:%M:%S"), "<sup>UTC</sup></time>");
@@ -135,9 +142,10 @@ void Sim::page_template(StringView title, StringView styles,
                 "</div>");
 		// clang-format on
 
-	} else
+	} else {
 		append("<a href=\"/login\"><strong>Log in</strong></a>"
 		       "<a href=\"/signup\">Sign up</a>");
+	}
 
 	// clang-format off
 	append("</div>"
@@ -189,8 +197,9 @@ void Sim::error_page_template(StringView status, StringView code,
 	resp.headers.clear();
 
 	auto prev = request.headers.get("Referer");
-	if (prev.empty())
+	if (prev.empty()) {
 		prev = "/";
+	}
 
 	page_template(status);
 	// clang-format off

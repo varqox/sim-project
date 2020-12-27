@@ -10,11 +10,12 @@ void ReuploadProblem::run() {
 	// Need to create the package
 	if (not tmp_file_id_.has_value()) {
 		build_package();
-		if (failed())
+		if (failed()) {
 			return;
+		}
 
 		if (need_main_solution_judge_report_) {
-			bool canceled;
+			bool canceled = false;
 			job_done(canceled);
 			if (not canceled) {
 				transaction.commit();
@@ -28,7 +29,7 @@ void ReuploadProblem::run() {
 
 	submit_solutions();
 
-	bool canceled;
+	bool canceled = false;
 	job_done(canceled);
 
 	if (not failed() and not canceled) {

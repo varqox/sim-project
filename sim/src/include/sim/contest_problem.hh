@@ -82,10 +82,11 @@ void iterate(MySQL::Connection& mysql, IterateIdKind id_kind, T&& id,
 	   "WHERE ",
 	   id_field, "=?");
 
-	if (show_all_rounds)
+	if (show_all_rounds) {
 		stmt.bind_and_execute(user_id, user_id, id);
-	else
+	} else {
 		stmt.bind_and_execute(curr_date, user_id, user_id, id);
+	}
 
 	ContestProblem cp;
 	ExtraIterateData extra_data;

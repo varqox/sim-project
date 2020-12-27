@@ -4,8 +4,9 @@ void Sim::contest_file_handle() {
 	STACK_UNWINDING_MARK;
 
 	StringView contest_file_id = url_args.extract_next_arg();
-	if (contest_file_id.empty() or not is_alnum(contest_file_id))
+	if (contest_file_id.empty() or not is_alnum(contest_file_id)) {
 		return error404();
+	}
 
 	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg == "edit") {
@@ -22,6 +23,7 @@ void Sim::contest_file_handle() {
 		append("<script>delete_contest_file(false, '", contest_file_id,
 		       "', window.location.hash);</script>");
 
-	} else
+	} else {
 		error404();
+	}
 }

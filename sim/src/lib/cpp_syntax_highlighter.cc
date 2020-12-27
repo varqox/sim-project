@@ -21,7 +21,7 @@ using std::vector;
 #define DEBUG_CSH(...)
 #endif
 
-typedef int8_t StyleType;
+using StyleType = int8_t;
 
 namespace {
 
@@ -46,10 +46,12 @@ struct Word {
 
 	template <uint8_t N>
 	constexpr Word(const char (&s)[N], Style stl)
-	   : str(s), size(N - 1), style(stl) {}
+	: str(s)
+	, size(N - 1)
+	, style(stl) {}
 };
 
-constexpr array<CStringView, 11> begin_style {{
+constexpr array<CStringView, 11> begin_style{{
    "<span style=\"color:#00a000\">",
    "<span style=\"color:#a0a0a0\">",
    "<span style=\"color:#0000ff;font-weight:bold\">",
@@ -65,7 +67,7 @@ constexpr array<CStringView, 11> begin_style {{
 
 constexpr CStringView end_style = "</span>";
 
-constexpr array<Word, 124> words {{
+constexpr array<Word, 124> words{{
    {"", COMMENT}, // Guard - ignored
    {"uint_least16_t", BUILTIN_TYPE},
    {"uint_least32_t", BUILTIN_TYPE},
@@ -206,14 +208,15 @@ constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
 template <size_t N, size_t... Idx>
 constexpr array<CStringView, N>
 extract_keywords_from_append(const array<CStringView, N>& base, CStringView x,
-                             std::integer_sequence<size_t, Idx...>) {
+                             std::integer_sequence<size_t, Idx...> /*unused*/) {
 	return {{base[Idx]..., x}};
 }
 
 template <size_t N, size_t RES_N, size_t RES_END>
 constexpr std::enable_if_t<RES_END >= RES_N, array<CStringView, RES_N>>
-extract_keywords_from(const array<Word, N>&,
-                      const array<CStringView, RES_N>& res = {}, size_t = 0) {
+extract_keywords_from(const array<Word, N>& /*unused*/,
+                      const array<CStringView, RES_N>& res = {},
+                      size_t /*unused*/ = 0) {
 	return res;
 }
 
@@ -230,7 +233,7 @@ template <size_t N, size_t RES_N, size_t RES_END = 0>
 	                 arr,
 	                 extract_keywords_from_append(
 	                    res, {arr[idx].str, arr[idx].size},
-	                    std::make_integer_sequence<size_t, RES_END> {}),
+	                    std::make_integer_sequence<size_t, RES_END>{}),
 	                 idx + 1)
 	            : extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
 }
@@ -247,8 +250,9 @@ CppSyntaxHighlighter::CppSyntaxHighlighter() {
 	static_assert(words[0].size == 0,
 	              "First (zero) element of words is a guard - because "
 	              "Aho-Corasick implementation takes only positive IDs");
-	for (uint i = 1; i < words.size(); ++i)
+	for (uint i = 1; i < words.size(); ++i) {
 		aho.add_pattern({words[i].str, words[i].size}, i);
+	}
 
 	aho.build_fail_edges();
 }
@@ -260,21 +264,24 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 		filtered_input.reserve(input.size());
 		for (size_t i = 0; i < input.size(); ++i) {
 			// i + 1 is safe - std::string adds extra '\0' at the end
-			if (input[i] == '\r' and input[i + 1] == '\n')
+			if (input[i] == '\r' and input[i + 1] == '\n') {
 				++i;
+			}
 			filtered_input += input[i];
 		}
 
 		input = filtered_input;
 	}
 
-	constexpr int BEGIN_GUARDS = 2, BEGIN = BEGIN_GUARDS;
+	constexpr int BEGIN_GUARDS = 2;
+	constexpr int BEGIN = BEGIN_GUARDS;
 	constexpr int END_GUARDS = 2;
 	constexpr char GUARD_CHARACTER = '\0';
 
 	// Make sure we can use int
 	if (input.size() + BEGIN_GUARDS + END_GUARDS >
-	    static_cast<size_t>(std::numeric_limits<int>::max())) {
+	    static_cast<size_t>(std::numeric_limits<int>::max()))
+	{
 		THROW("Input string is too long");
 	}
 
@@ -313,15 +320,17 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			if (str[i + 1] == '/') { // (One-)line comment
 				begs[i] = COMMENT;
 				i += 2;
-				while (i < end && str[i] != '\n')
+				while (i < end && str[i] != '\n') {
 					++i;
+				}
 				++ends[i];
 
 			} else if (str[i + 1] == '*') { // Multi-line comment
 				begs[i] = COMMENT;
 				i += 3;
-				while (i < end && !(str[i - 1] == '*' && str[i] == '/'))
+				while (i < end && !(str[i - 1] == '*' && str[i] == '/')) {
 					++i;
+				}
 				++ends[i + 1];
 			}
 			continue;
@@ -342,20 +351,16 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				/* Escape sequence */
 				begs[i++] = ESCAPED_CHARACTER;
 
-				// Octals
-				if (is_digit(str[i])) {
+				if (is_digit(str[i])) { // Octals
 					i += (is_digit(str[i + 1]) ? 1 + bool(is_digit(str[i + 2]))
 					                           : 0);
-				}
-				// Hexadecimal
-				else if (str[i] == 'x')
+				} else if (str[i] == 'x') { // Hexadecimal
 					i += 2;
-				// Unicode U+nnnn
-				else if (str[i] == 'u')
+				} else if (str[i] == 'u') { // Unicode U+nnnn
 					i += 4;
-				// Unicode U+nnnnnnnn
-				else if (str[i] == 'U')
+				} else if (str[i] == 'U') { // Unicode U+nnnnnnnn
 					i += 8;
+				}
 
 				// i has to point to the last character of the escaped sequence
 				i = std::min(i + 1, end);
@@ -425,8 +430,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 		};
 
 		control_style_depth();
-		if (styles_depth > 0)
+		if (styles_depth > 0) {
 			continue;
+		}
 
 		if (str[i] == '#') { // Preprocessor
 			begs[i] = PREPROCESSOR;
@@ -443,19 +449,21 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			int k = i - 1;
 			// Omit white-spaces between function name and '('
 			static_assert(BEGIN_GUARDS > 0, "Need for unguarded search");
-			while (is_space(str[k]))
+			while (is_space(str[k])) {
 				--k;
+			}
 
 			int name_end = k + 1;
 
 			// Function name
 			for (;;) {
 				// Namespaces
-				static_assert(BEGIN_GUARDS > 0, "");
-				if (str[k] == ':' && str[k - 1] == ':' && str[k + 1] != ':')
+				static_assert(BEGIN_GUARDS > 0);
+				if (str[k] == ':' && str[k - 1] == ':' && str[k + 1] != ':') {
 					--k;
-				else if (!is_name(str[k]))
+				} else if (!is_name(str[k])) {
 					break;
+				}
 
 				--k;
 			}
@@ -474,24 +482,28 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			}
 
 		} else if (is_digit(str[i])) { // Digits - numeric literals
-			static_assert(BEGIN_GUARDS > 0, "");
+			static_assert(BEGIN_GUARDS > 0);
 			// Ignore digits in names
-			if (is_name(str[i - 1]))
+			if (is_name(str[i - 1])) {
 				continue;
+			}
 			// Floating points may begin with '.', but inhibit highlighting
 			// the whole number 111.2.3
-			static_assert(GUARD_CHARACTER != '.', "");
-			if (str[i - 1] == '.' && is_digit(str[i - 2]))
+			static_assert(GUARD_CHARACTER != '.');
+			if (str[i - 1] == '.' && is_digit(str[i - 2])) {
 				continue;
+			}
 
 			// Number begins with dot
-			bool dot_appeared = false, dot_as_beginning = false,
-			     exponent_appeared = false;
+			bool dot_appeared = false;
+			bool dot_as_beginning = false;
+			bool exponent_appeared = false;
 			if (str[i - 1] == '.') {
 				dot_as_beginning = dot_appeared = true;
 				begs[i - 1] = DIGIT;
-			} else
+			} else {
 				begs[i] = DIGIT;
+			}
 
 			int k = i + 1;
 			auto curr_is_digit = is_digit<char>;
@@ -506,8 +518,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 					dot_as_beginning = dot_appeared = true;
 					++k;
 
-				} else if (!curr_is_digit(
-				              str[k])) { // Disallow numeric literal "0x"
+				} else if (!curr_is_digit(str[k]))
+				{ // Disallow numeric literal "0x"
 					begs[i - dot_as_beginning] = -1;
 					i = k - 1;
 					continue;
@@ -517,13 +529,15 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			// Now the main part of the numeric literal (digits + exponent)
 			for (; k < end; ++k) {
 				// Digits are always valid
-				if (curr_is_digit(str[k]))
+				if (curr_is_digit(str[k])) {
 					continue;
+				}
 
 				if (str[k] == '.') { // Dot
 					// Disallow double dot and double exponent
-					if (dot_appeared || exponent_appeared)
+					if (dot_appeared || exponent_appeared) {
 						goto kill_try;
+					}
 
 					dot_appeared = true;
 
@@ -537,8 +551,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 					exponent_appeared = true;
 
 				} else if (str[k - 1] == exp_sign &&
-				           (str[k] == '-' ||
-				            str[k] == '+')) { // Sign after exponent
+				           (str[k] == '-' || str[k] == '+'))
+				{ // Sign after exponent
 					continue;
 
 				} else {
@@ -551,7 +565,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			    // In floating-point hexadecimals exponent has to appear
 			    (exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
 			    // Allow literals like: "111."
-			    (str[k - 1] != '.' && !curr_is_digit(str[k - 1]))) {
+			    (str[k - 1] != '.' && !curr_is_digit(str[k - 1])))
+			{
 			kill_try:
 				// dot_as_beginning does not imply beg[i - 1] in hexadecimals
 				begs[i - (dot_as_beginning && exp_sign == 'e')] = -1;
@@ -561,7 +576,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 			/* Suffixes */
 			i = k;
-			static_assert(END_GUARDS > 0, "");
+			static_assert(END_GUARDS > 0);
 			// Float-point: (f|l)
 			if (dot_appeared || exponent_appeared) {
 				if (str[i] == 'f' || str[i] == 'F' || str[i] == 'l' ||
@@ -581,21 +596,23 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 			} else if (str[i] == 'l' || str[i] == 'L') { // l
 				++i;
-				if (str[i] == 'u' || str[i] == 'U') // lu
+				if (str[i] == 'u' || str[i] == 'U') { // lu
 					++i;
-				// Because lL and Ll suffixes are wrong
-				else if (str[i] == str[i - 1]) { // ll | LL
+				} else if (str[i] == str[i - 1]) { // ll | LL
+					// ^ Because lL and Ll suffixes are wrong
 					++i;
-					if (str[i] == 'u' || str[i] == 'U') // llu
+					if (str[i] == 'u' || str[i] == 'U') { // llu
 						++i;
+					}
 				}
 			} else if (str[i] == 'u' || str[i] == 'U') { // u
 				++i;
 				if (str[i] == 'l' || str[i] == 'L') { // ul
 					++i;
 					// Because lL and Ll suffixes are wrong
-					if (str[i] == str[i - 1]) // ull | uLL
+					if (str[i] == str[i - 1]) { // ull | uLL
 						++i;
+					}
 				}
 			}
 			++ends[i];
@@ -608,18 +625,13 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	DEBUG_CSH(dump_begs_ends();)
 
 	auto is_operator = [](unsigned char c) {
-		// In xxx are marked characters from "!%&()*+,-./:;<=>?[\\]^{|}~";
-		constexpr array<bool, 128> xxx {{
-		   //      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-		   /* 0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   /* 1 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   /* 2 */ 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-		   /* 3 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
-		   /* 4 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   /* 5 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
-		   /* 6 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   /* 7 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
-		}};
+		static constexpr auto xxx = [] {
+			array<bool, 128> res{};
+			for (char c : StringView("!%&()*+,-./:;<=>?[\\]^{|}~")) {
+				res[c] = true;
+			}
+			return res;
+		}();
 		return (c < 128 && xxx[c]);
 	};
 
@@ -629,16 +641,18 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	// number literals, string literals and character literals
 	auto highlight = [&](int beg, int endi) {
 		DEBUG_CSH(stdlog("highlight(", beg, ", ", endi, "):");)
-		if (beg >= endi)
+		if (beg >= endi) {
 			return;
+		}
 
 		auto aho_res = aho.search_in(substring(str, beg, endi));
 		// Handle last one to eliminate right boundary checks
 		for (int i = endi - 1; i >= beg;) {
-			int k = aho.pattern_id(aho_res[i - beg]), j;
+			int k = aho.pattern_id(aho_res[i - beg]);
+			int j = 0;
 
-			static_assert(BEGIN_GUARDS > 0, "");
-			static_assert(END_GUARDS > 0, "");
+			static_assert(BEGIN_GUARDS > 0);
+			static_assert(END_GUARDS > 0);
 			// Found a word
 			if (k && !is_name(str[i + 1]) &&
 			    !is_name(str[j = i - words[k].size])) {
@@ -647,8 +661,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				++ends[i + 1];
 				i = j;
 				continue;
-
-			} else if (is_operator(str[i])) {
+			}
+			if (is_operator(str[i])) {
 				begs[i] = OPERATOR;
 				++ends[i + 1];
 			}
@@ -661,8 +675,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 		int last_non_styled = 0;
 		for (int i = BEGIN, styles_depth = 0; i < end; ++i) {
 			int k = styles_depth;
-			if (begs[i] != -1)
+			if (begs[i] != -1) {
 				++styles_depth;
+			}
 			styles_depth -= ends[i];
 
 			if (k == 0 && styles_depth > 0) {
@@ -670,8 +685,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				// Needed for proper non-styled interval after this loop
 				last_non_styled = end;
 
-			} else if (k > 0 && styles_depth == 0)
+			} else if (k > 0 && styles_depth == 0) {
 				last_non_styled = i;
+			}
 		}
 		highlight(last_non_styled, end); // Take care of last non-styled piece
 	}
@@ -702,9 +718,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 			if (ends[i]) {
 				// Style elision (to compress and simplify output)
-				if (style_stack.back() == begs[i])
+				if (style_stack.back() == begs[i]) {
 					begs[i] = -1;
-				else {
+				} else {
 					style_stack.pop_back();
 					res += end_style;
 				}
@@ -716,8 +732,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			append_as_html_escaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 			// End styles
-			for (int k = style_stack.size(); k > 0; --k)
+			for (int k = style_stack.size(); k > 0; --k) {
 				res += end_style;
+			}
 			// Handle "\\\n"
 			do {
 				throw_assert(input[j] == '\\' && j + 1 < (int)input.size() &&
@@ -735,8 +752,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			} while (str[i] != input[j += 2]);
 
 			// Restore styles
-			for (StyleType style : style_stack)
+			for (StyleType style : style_stack) {
 				res += begin_style[style];
+			}
 		}
 
 		// Line ending
@@ -744,15 +762,17 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			append_as_html_escaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i + 1;
 			// End styles
-			for (int k = style_stack.size(); k > 0; --k)
+			for (int k = style_stack.size(); k > 0; --k) {
 				res += end_style;
+			}
 			// Break the line
 			++line;
 			back_insert(res, "\n</td></tr><tr><td id=\"L", line, "\" line=\"",
 			            line, "\"></td><td>");
 			// Restore styles
-			for (StyleType style : style_stack)
+			for (StyleType style : style_stack) {
 				res += begin_style[style];
+			}
 		}
 
 		// Begin style
@@ -768,9 +788,11 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	// Ending
 	append_as_html_escaped(res, substring(str, first_unescaped, end));
 	// End styles
-	for (uint i = end; i < ends.size(); ++i)
-		while (ends[i]--)
+	for (uint i = end; i < ends.size(); ++i) {
+		while (ends[i]--) {
 			res += end_style;
+		}
+	}
 	// End table
 	res += "</td></tr></tbody></table>";
 

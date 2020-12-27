@@ -9,8 +9,9 @@ get_overall_permissions(optional<User::Type> user_type) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = OverallPermissions;
 
-	if (not user_type)
+	if (not user_type) {
 		return PERM::VIEW_WITH_TYPE_PUBLIC;
+	}
 
 	switch (*user_type) {
 	case User::Type::ADMIN:
@@ -50,8 +51,9 @@ Permissions get_permissions(optional<decltype(User::id)> user_id,
 	   PERM::DELETE | PERM::MERGE | PERM::CHANGE_STATEMENT |
 	   PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
 
-	if (user_id and problem_owner and *user_id == *problem_owner)
+	if (user_id and problem_owner and *user_id == *problem_owner) {
 		return admin_perms;
+	}
 
 	switch (user_type.value()) {
 	case User::Type::ADMIN: return admin_perms;

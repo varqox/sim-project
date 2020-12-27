@@ -13,9 +13,11 @@ class MergeUsers final : public JobHandler {
 public:
 	MergeUsers(uint64_t job_id, uint64_t donor_user_id,
 	           const jobs::MergeUsersInfo& info)
-	   : JobHandler(job_id), donor_user_id_(donor_user_id), info_(info) {}
+	: JobHandler(job_id)
+	, donor_user_id_(donor_user_id)
+	, info_(info) {}
 
-	void run() override final;
+	void run() final;
 
 private:
 	void run_impl();

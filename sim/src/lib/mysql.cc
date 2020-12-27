@@ -8,13 +8,14 @@ Connection make_conn_with_credential_file(FilePath filename) {
 	cf.add_vars("host", "user", "password", "db");
 	cf.load_config_from_file(filename);
 
-	for (auto it : cf.get_vars()) {
+	for (const auto& it : cf.get_vars()) {
 		if (it.second.is_array()) {
 			THROW("Simfile: variable `", it.first,
 			      "` cannot be specified as an array");
 		}
-		if (not it.second.is_set())
+		if (not it.second.is_set()) {
 			THROW("Simfile: variable `", it.first, "` is not set");
+		}
 	};
 
 	// Connect

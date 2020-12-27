@@ -19,9 +19,9 @@ static int socket_fd;
 
 namespace server {
 
-static void* worker(void*) {
+static void* worker(void* /*unused*/) {
 	try {
-		sockaddr_in name;
+		sockaddr_in name{};
 		socklen_t client_name_len = sizeof(name);
 		char ip[INET_ADDRSTRLEN];
 		Connection conn(-1);
@@ -29,10 +29,12 @@ static void* worker(void*) {
 
 		for (;;) {
 			// accept the connection
-			FileDescriptor client_socket_fd {accept4(
-			   socket_fd, (sockaddr*)&name, &client_name_len, SOCK_CLOEXEC)};
-			if (client_socket_fd == -1)
+			FileDescriptor client_socket_fd{
+			   accept4(socket_fd, reinterpret_cast<sockaddr*>(&name),
+			           &client_name_len, SOCK_CLOEXEC)};
+			if (client_socket_fd == -1) {
 				continue;
+			}
 
 			// extract IP
 			inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN);
@@ -42,17 +44,18 @@ static void* worker(void*) {
 			HttpRequest req = conn.get_request();
 
 			if (conn.state() == Connection::OK) {
-				using namespace std::chrono;
+				using std::chrono::steady_clock;
 				auto beg = steady_clock::now();
 
 				HttpResponse resp = sim_worker.handle(ip, std::move(req));
 
 				auto microdur =
-				   duration_cast<microseconds>(steady_clock::now() - beg);
+				   std::chrono::duration_cast<std::chrono::microseconds>(
+				      steady_clock::now() - beg);
 				stdlog("Response generated in ", to_string(microdur * 1000),
 				       " ms.");
 
-				conn.send_response(std::move(resp));
+				conn.send_response(resp);
 			}
 
 			stdlog("Closing...");
@@ -89,7 +92,8 @@ int main() {
 	// stdlog (like everything) writes to stderr, so redirect stdout and stderr
 	// to the log file
 	if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
-	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1) {
+	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
+	{
 		errlog("Failed to open `", SERVER_LOG, '`', errmsg());
 	}
 
@@ -100,7 +104,7 @@ int main() {
 	}
 
 	// Signal control
-	struct sigaction sa;
+	struct sigaction sa {};
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
@@ -126,7 +130,7 @@ int main() {
 		return 6;
 	}
 
-	sockaddr_in name;
+	sockaddr_in name{};
 	name.sin_family = AF_INET;
 	memset(name.sin_zero, 0, sizeof(name.sin_zero));
 
@@ -134,7 +138,7 @@ int main() {
 	in_port_t port = 80; // server port
 	CStringView address_str;
 	if (size_t colon_pos = full_address.find(':');
-	    colon_pos != full_address.npos) {
+	    colon_pos != std::string::npos) {
 		full_address[colon_pos] = '\0';
 		address_str = CStringView(full_address.data(), colon_pos);
 
@@ -157,7 +161,8 @@ int main() {
 	if (address_str == "*") {
 		name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
 	} else if (address_str.empty() ||
-	           inet_aton(address_str.data(), &name.sin_addr) == 0) {
+	           inet_aton(address_str.data(), &name.sin_addr) == 0)
+	{
 		errlog("sim.config: incorrect IPv4 address");
 		return 8;
 	}
@@ -186,7 +191,8 @@ int main() {
 	constexpr int SLOW_TRIES = 8;
 	int bound = [&] {
 		auto call_bind = [&] {
-			return bind(socket_fd, (sockaddr*)&name, sizeof(name));
+			return bind(socket_fd, reinterpret_cast<sockaddr*>(&name),
+			            sizeof(name));
 		};
 		for (int try_no = 1; try_no <= FAST_SILENT_TRIES; ++try_no) {
 			if (try_no > 1) {
@@ -194,14 +200,16 @@ int main() {
 				   std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
 			}
 
-			if (call_bind() == 0)
+			if (call_bind() == 0) {
 				return true;
+			}
 		}
 
 		for (int try_no = 1; try_no <= SLOW_TRIES; ++try_no) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(800));
-			if (call_bind() == 0)
+			if (call_bind() == 0) {
 				return true;
+			}
 
 			errlog("Failed to bind (try ", try_no, ')', errmsg());
 		}
@@ -223,7 +231,8 @@ int main() {
 	pthread_attr_t attr;
 	constexpr size_t THREAD_STACK_SIZE = 4 << 20; // 4 MiB
 	if (pthread_attr_init(&attr) ||
-	    pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE)) {
+	    pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE))
+	{
 		errlog("Failed to set new thread stack size");
 		return 4;
 	}

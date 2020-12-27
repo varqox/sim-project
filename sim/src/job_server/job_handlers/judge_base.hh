@@ -16,10 +16,11 @@ protected:
 	static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang);
 
 	// Creates an xml report from JudgeReport
-	InplaceBuff<65536> construct_report(const sim::JudgeReport& jr, bool final);
+	static InplaceBuff<65536> construct_report(const sim::JudgeReport& jr,
+	                                           bool final);
 
 	// Returns OK or the first encountered error status
-	SubmissionStatus calc_status(const sim::JudgeReport& jr);
+	static SubmissionStatus calc_status(const sim::JudgeReport& jr);
 
 	void load_problem_package(FilePath problem_pkg_path);
 
@@ -41,9 +42,6 @@ protected:
 	                                      sim::SolutionLanguage lang);
 
 	std::optional<std::string> compile_checker();
-
-public:
-	virtual ~JudgeBase() = default;
 };
 
 } // namespace job_handlers

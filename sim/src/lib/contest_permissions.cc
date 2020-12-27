@@ -7,8 +7,9 @@ get_overall_permissions(std::optional<User::Type> user_type) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = OverallPermissions;
 
-	if (not user_type)
+	if (not user_type) {
 		return PERM::VIEW_PUBLIC;
+	}
 
 	switch (*user_type) {
 	case User::Type::ADMIN:
@@ -28,14 +29,16 @@ Permissions get_permissions(std::optional<User::Type> user_type,
 	using PERM = Permissions;
 	using CUM = ContestUser::Mode;
 
-	if (not user_type)
+	if (not user_type) {
 		return (contest_is_public ? PERM::VIEW : PERM::NONE);
+	}
 
-	if (*user_type == User::Type::ADMIN)
+	if (*user_type == User::Type::ADMIN) {
 		return PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN | PERM::DELETE |
 		       PERM::MAKE_PUBLIC | PERM::SELECT_FINAL_SUBMISSIONS |
 		       PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
 		       PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+	}
 
 	if (not cu_mode.has_value()) {
 		return (contest_is_public ? PERM::VIEW | PERM::PARTICIPATE
