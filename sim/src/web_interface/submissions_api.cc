@@ -891,6 +891,11 @@ void Sim::api_submission_add() {
 	}
 
 	CStringView solution_tmp_path = request.form_data.file_path("solution");
+	if (solution_tmp_path.empty()) {
+		add_notification("error", "Missing solution file");
+		return api_error400(notifications);
+	}
+
 	StringView code = request.form_data.get("code");
 	bool ignored_submission =
 	   (may_submit_ignored and request.form_data.exist("ignored"));
