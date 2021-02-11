@@ -1,5 +1,4 @@
 #include "simlib/file_manip.hh"
-#include "get_file_permissions.hh"
 #include "simlib/debug.hh"
 #include "simlib/defer.hh"
 #include "simlib/directory.hh"
@@ -9,6 +8,7 @@
 #include "simlib/opened_temporary_file.hh"
 #include "simlib/random.hh"
 #include "simlib/temporary_directory.hh"
+#include "test/get_file_permissions.hh"
 
 #include <gtest/gtest.h>
 

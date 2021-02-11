@@ -1,5 +1,4 @@
 #include "simlib/sim/conver.hh"
-#include "compilation_cache.hh"
 #include "simlib/concat.hh"
 #include "simlib/concat_tostr.hh"
 #include "simlib/concurrent/job_processor.hh"
@@ -17,6 +16,7 @@
 #include "simlib/string_compare.hh"
 #include "simlib/temporary_file.hh"
 #include "simlib/time.hh"
+#include "test/compilation_cache.hh"
 
 #include <chrono>
 #include <gtest/gtest.h>
