@@ -390,6 +390,8 @@ Sandbox::Sandbox() {
 
     // stat
     seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(stat), 0);
+    // statx
+    seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(statx), 0);
 
     // readlink(2) is a threshold for the insecure syscalls that are called
     // during the initialization of glibc - they are allwed before the first
