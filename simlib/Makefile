@@ -25,7 +25,7 @@ $(eval $(call add_static_library, $(PREFIX)gtest_main.a, $(GOOGLETEST_FLAGS), \
 $(eval $(call add_static_library, $(PREFIX)simlib.a, $(SIMLIB_FLAGS), \
 	$(PREFIX)src/aho_corasick.cc \
 	$(PREFIX)src/config_file.cc \
-	$(PREFIX)src/event_queue.c \
+	$(PREFIX)src/event_queue.cc \
 	$(PREFIX)src/file_contents.cc \
 	$(PREFIX)src/file_manip.cc \
 	$(PREFIX)src/http/response.cc \
@@ -36,6 +36,7 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a, $(SIMLIB_FLAGS), \
 	$(PREFIX)src/logger.cc \
 	$(PREFIX)src/path.cc \
 	$(PREFIX)src/proc_stat_file_contents.cc \
+	$(PREFIX)src/proc_status_file.cc \
 	$(PREFIX)src/process.cc \
 	$(PREFIX)src/random.cc \
 	$(PREFIX)src/sandbox.cc \
@@ -82,6 +83,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/directory.cc \
 	$(PREFIX)test/enum_val.cc \
 	$(PREFIX)test/event_queue.cc \
+	$(PREFIX)test/fd_pread_buff.cc \
 	$(PREFIX)test/file_contents.cc \
 	$(PREFIX)test/file_descriptor.cc \
 	$(PREFIX)test/file_info.cc \
@@ -101,6 +103,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/opened_temporary_file.cc \
 	$(PREFIX)test/path.cc \
 	$(PREFIX)test/proc_stat_file_contents.cc \
+	$(PREFIX)test/proc_status_file.cc \
 	$(PREFIX)test/process.cc \
 	$(PREFIX)test/random.cc \
 	$(PREFIX)test/ranges.cc \

@@ -2,9 +2,9 @@
 
 #include <csignal>
 #include <linux/sched.h>
-#include <linux/wait.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 extern "C" struct rusage;
