@@ -38,26 +38,30 @@ bool matches_pattern(StringView pattern, StringView str) noexcept {
     return is_subsequence(pattern, str.substring(0, pos));
 }
 
-set<string> files_matching_patterns(ArgvParser args) {
+set<string>
+files_matching_patterns(std::function<bool(StringView)> file_qualifies, ArgvParser cmd_args) {
     set<string> res;
     sim::PackageContents pc;
     pc.load_from_directory(".");
 
     vector<StringView> patterns;
-    while (args.size() > 0) {
-        if (auto arg = args.extract_next(); pc.exists(arg)) {
-            res.emplace(arg.to_string()); // Exact path to file
+    while (cmd_args.size() > 0) {
+        if (auto pattern = cmd_args.extract_next();
+            pc.exists(pattern) and file_qualifies(pattern)) {
+            res.emplace(pattern.to_string()); // Exact path to file
         } else {
-            patterns.emplace_back(arg);
+            patterns.emplace_back(pattern);
         }
     }
 
     if (not patterns.empty()) {
         pc.for_each_with_prefix("", [&](StringView file) {
-            for (auto& pattern : patterns) {
-                if (matches_pattern(pattern, file)) {
-                    res.emplace(file.to_string());
-                    break;
+            if (file_qualifies(file)) {
+                for (auto& pattern : patterns) {
+                    if (matches_pattern(pattern, file)) {
+                        res.emplace(file.to_string());
+                        break;
+                    }
                 }
             }
         });

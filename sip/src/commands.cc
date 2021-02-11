@@ -411,18 +411,19 @@ void name(ArgvParser args) {
     }
 }
 
-static std::set<StringView>
+static std::set<std::string>
 parse_args_to_solutions(const sim::Simfile& simfile, ArgvParser args) {
     STACK_UNWINDING_MARK;
 
-    std::set matched_files = files_matching_patterns(args);
-    std::set<StringView> choosen_solutions;
-    for (auto& solution : simfile.solutions) {
-        if (matched_files.find(solution) != matched_files.end()) {
-            choosen_solutions.emplace(solution);
-        }
+    std::set<StringView> solutions;
+    for (auto const& sol : simfile.solutions) {
+        solutions.emplace(sol);
     }
-    return choosen_solutions;
+    return files_matching_patterns(
+        [solutions = std::move(solutions)](StringView path) {
+            return solutions.count(path) == 1;
+        },
+        args);
 }
 
 void prog(ArgvParser args) {
@@ -431,7 +432,7 @@ void prog(ArgvParser args) {
     SipPackage sp;
     sp.rebuild_full_simfile();
 
-    std::set<StringView> solutions_to_compile;
+    std::set<std::string> solutions_to_compile;
     if (args.size() > 0) {
         solutions_to_compile = parse_args_to_solutions(sp.full_simfile, args);
     } else {
@@ -503,7 +504,7 @@ void test(ArgvParser args) {
         throw SipError("no solution was found");
     }
 
-    std::set<StringView> solutions_to_test;
+    std::set<std::string> solutions_to_test;
     if (args.size() > 0) {
         solutions_to_test = parse_args_to_solutions(sp.full_simfile, args);
     } else {

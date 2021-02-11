@@ -803,10 +803,9 @@ void SipPackage::compile_tex_files(ArgvParser args, bool watch) {
     STACK_UNWINDING_MARK;
 
     const char* empty_str = "";
-    set tex_files = filter(
-        files_matching_patterns(args.size() > 0 ? args : ArgvParser(1, &empty_str)),
-        [&](StringView str) { return has_suffix(str, ".tex"); });
-
+    set tex_files = files_matching_patterns(
+        [](StringView str) { return has_suffix(str, ".tex"); },
+        args.size() > 0 ? args : ArgvParser(1, &empty_str));
     if (tex_files.empty()) {
         log_warning(
             "no .tex file ", args.size() > 0 ? "matching specified patterns " : "",
