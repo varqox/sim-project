@@ -1,7 +1,8 @@
 #pragma once
 
+#include "simlib/string_view.hh"
+
 #include <optional>
-#include <simlib/string_view.hh>
 
 namespace templates {
 

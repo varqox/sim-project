@@ -1,8 +1,9 @@
 #pragma once
 
+#include "simlib/sim/problem_package.hh"
+
 #include <map>
 #include <optional>
-#include <simlib/sim/problem_package.hh>
 
 struct TestsFiles {
     struct Test {

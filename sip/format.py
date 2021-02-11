@@ -6,6 +6,8 @@ import sys
 def sip_sources(srcdir):
     return list(filter_subdirs(srcdir, [
         'src/',
+        'src/commands/',
+        'src/templates/',
         'templates/',
     ], ['c', 'cc', 'h', 'hh'], [
         'src/git_commit.hh',

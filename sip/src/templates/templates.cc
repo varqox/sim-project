@@ -1,10 +1,10 @@
-#include "templates.hh"
+#include "src/templates/templates.hh"
 #include "simlib/debug.hh"
 #include "simlib/file_contents.hh"
 #include "simlib/file_descriptor.hh"
 #include "simlib/string_traits.hh"
 #include "simlib/string_view.hh"
-#include "sip_error.hh"
+#include "src/sip_error.hh"
 
 #include <cstdlib>
 #include <sys/types.h>

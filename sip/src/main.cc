@@ -1,11 +1,10 @@
-#include "commands.hh"
-#include "sip_error.hh"
-#include "sip_package.hh"
-
-#include <simlib/directory.hh>
-#include <simlib/proc_stat_file_contents.hh>
-#include <simlib/signal_handling.hh>
-#include <simlib/working_directory.hh>
+#include "simlib/directory.hh"
+#include "simlib/proc_stat_file_contents.hh"
+#include "simlib/signal_handling.hh"
+#include "simlib/working_directory.hh"
+#include "src/commands/commands.hh"
+#include "src/sip_error.hh"
+#include "src/sip_package.hh"
 
 bool sip_verbose = false; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 

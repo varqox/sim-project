@@ -1,17 +1,17 @@
 #pragma once
 
+#include "simlib/enum_val.hh"
+#include "simlib/humanize.hh"
+#include "simlib/sim/judge_worker.hh"
 #include "simlib/sim/simfile.hh"
 #include "simlib/string_traits.hh"
 #include "simlib/string_transform.hh"
 #include "simlib/string_view.hh"
+#include "simlib/time.hh"
 
 #include <cstddef>
 #include <cstdint>
 #include <map>
-#include <simlib/enum_val.hh>
-#include <simlib/humanize.hh>
-#include <simlib/sim/judge_worker.hh>
-#include <simlib/time.hh>
 
 extern bool sip_verbose;
 

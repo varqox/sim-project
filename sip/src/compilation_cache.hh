@@ -1,8 +1,7 @@
 #pragma once
 
-#include "sip_package.hh"
-
-#include <simlib/sim/judge_worker.hh>
+#include "simlib/sim/judge_worker.hh"
+#include "src/sip_package.hh"
 
 class SipPackage::CompilationCache {
     static auto cached_path(StringView path) { return concat("utils/cache/", path); }

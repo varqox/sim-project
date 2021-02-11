@@ -3,8 +3,8 @@ include subprojects/simlib/makefile-utils/Makefile.config
 DESTDIR := /usr/local/bin
 
 define SIP_FLAGS =
-INTERNAL_EXTRA_CXX_FLAGS := -I '$(CURDIR)/subprojects/simlib/include'
-INTERNAL_EXTRA_LD_FLAGS := -L '$(CURDIR)/src/lib' -lsupc++ -lrt -lzip -lz -lseccomp -pthread
+INTERNAL_EXTRA_CXX_FLAGS := -I '$(CURDIR)/subprojects/simlib/include' -I '$(CURDIR)/'
+INTERNAL_EXTRA_LD_FLAGS := -lsupc++ -lrt -lzip -lz -lseccomp -pthread
 endef
 
 .PHONY: all
@@ -87,15 +87,48 @@ $(eval $(call add_generated_target, templates/gen.cc.dump.c, \
 	templates/gen.cc Makefile \
 ))
 
+$(eval $(call add_generated_target, src/git_commit.cc, \
+	src/gen_git_commit_cc.py > $$@, \
+	src/gen_git_commit_cc.py \
+	.git/logs/HEAD \
+	Makefile \
+))
+
 SIP_SRCS := \
-	src/command_version.cc \
-	src/commands.cc \
+	src/commands/checker.cc \
+	src/commands/clean.cc \
+	src/commands/devclean.cc \
+	src/commands/devzip.cc \
+	src/commands/doc.cc \
+	src/commands/docwatch.cc \
+	src/commands/gen.cc \
+	src/commands/genin.cc \
+	src/commands/genout.cc \
+	src/commands/help.cc \
+	src/commands/init.cc \
+	src/commands/interactive.cc \
+	src/commands/label.cc \
+	src/commands/main_sol.cc \
+	src/commands/mem.cc \
+	src/commands/name.cc \
+	src/commands/prog.cc \
+	src/commands/regen.cc \
+	src/commands/regenin.cc \
+	src/commands/reseed.cc \
+	src/commands/save.cc \
+	src/commands/statement.cc \
+	src/commands/template.cc \
+	src/commands/test.cc \
+	src/commands/unset.cc \
+	src/commands/version.cc \
+	src/commands/zip.cc \
 	src/compilation_cache.cc \
+	src/git_commit.cc \
 	src/main.cc \
 	src/proot_dump.c \
 	src/sip_package.cc \
 	src/sipfile.cc \
-	src/templates.cc \
+	src/templates/templates.cc \
 	src/tests_files.cc \
 	src/utils.cc \
 	subprojects/simlib/simlib.a \
@@ -112,11 +145,6 @@ INTERNAL_EXTRA_LD_FLAGS += -static -lzip -lseccomp -lrt -lz -Wl,--whole-archive 
 endef
 
 $(eval $(call add_executable, sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), $(SIP_SRCS)))
-
-BUILD_ARTIFACTS += src/git_commit.hh
-src/command_version.o: src/git_commit.hh
-src/git_commit.hh: .git/logs/HEAD
-	src/gen_git_commit_hh.py > $@
 
 .PHONY: format
 format:

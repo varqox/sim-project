@@ -1,6 +1,6 @@
 #pragma once
 
-#include <simlib/logger.hh>
+#include "simlib/logger.hh"
 
 template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 auto log_warning(Args&&... args) {
