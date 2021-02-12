@@ -6,12 +6,12 @@
 #include "simlib/path.hh"
 #include "simlib/process.hh"
 #include "simlib/string_view.hh"
+#include "simlib/syscalls.hh"
 
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
 
@@ -149,27 +149,13 @@ static void restart() {
 	spawn(servers[1]);
 
 	while (true) {
-		siginfo_t info;
-		int sig = sigwaitinfo(&mask, &info);
-		if (sig == -1) {
-			if (errno == EINTR) {
-				continue;
-			}
-			errlog("sigwaitinfo()", errmsg());
-			exit(EXIT_FAILURE);
-		}
-		if (sig != SIGCHLD) {
-			errlog("sigwaitinfo() returned ", sig, " which is not SIGCHLD (",
-			       SIGCHLD, "): ignoring this event");
-			continue;
-		}
-		// Handle SIGCHLD
-		if (waitpid(info.si_pid, nullptr, WNOHANG) == -1) {
-			errlog("waitpid()", errmsg());
+		siginfo_t si;
+		if (syscalls::waitid(P_ALL, 0, &si, WEXITED, nullptr)) {
+			errlog("waitid()", errmsg());
 		}
 		// Respawn server
 		for (auto& server : servers) {
-			if (server.pid == info.si_pid) {
+			if (server.pid == si.si_pid) {
 				spawn(server);
 				break;
 			}

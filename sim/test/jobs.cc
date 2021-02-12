@@ -4,7 +4,7 @@
 using namespace jobs; // NOLINT
 using std::string;
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(jobs, append_dumped_int) {
 	string buff;
 
@@ -22,7 +22,7 @@ TEST(jobs, append_dumped_int) {
 	          "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(jobs, append_dumped_string) {
 	string buff;
 
@@ -43,7 +43,7 @@ TEST(jobs, append_dumped_string) {
 	                           42));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(jobs, extract_dumped_int1) {
 	StringView buff(
 	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
@@ -61,7 +61,7 @@ TEST(jobs, extract_dumped_int1) {
 	ASSERT_EQ(buff, "");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(jobs, extract_dumped_int2) {
 	StringView buff(
 	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
@@ -88,7 +88,7 @@ TEST(jobs, extract_dumped_int2) {
 	ASSERT_EQ(buff, "");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(jobs, extract_dumped_string) {
 	StringView buff("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
 	                "12213\0\0\0\x09qdsp\x03l\xffr3",

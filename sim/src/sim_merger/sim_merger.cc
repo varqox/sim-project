@@ -160,6 +160,7 @@ static int true_main(int argc, char** argv) {
 	}
 
 	// Stop server and job server
+	// TODO: what about bin/manage???
 	kill_processes_by_exec({concat_tostr(main_sim_build, "sim-server"),
 	                        concat_tostr(main_sim_build, "job-server")});
 	Defer servers_restorer([] {

@@ -66,7 +66,7 @@ void test_cpp_systax_highlighter(string&& tests_dir) {
 	}
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+// NOLINTNEXTLINE
 TEST(cpp_syntax_highlighter, syntax_highlighting) {
 	for (const auto& path : {string{"."}, executable_path(getpid())}) {
 		auto tests_dir_opt = deepest_ancestor_dir_with_subpath(

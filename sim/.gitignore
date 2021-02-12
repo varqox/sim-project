@@ -22,6 +22,7 @@
 __pycache__/
 
 # Others
+.cache/
 .clangd/
 *build/
 compile_commands.json
