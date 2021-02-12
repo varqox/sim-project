@@ -26,7 +26,7 @@ sim::SolutionLanguage JudgeBase::to_sol_lang(SubmissionLanguage lang) {
 }
 
 InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
-                                               bool final) {
+                                               bool /*final*/) {
 	STACK_UNWINDING_MARK;
 
 	using sim::JudgeReport;
