@@ -3,17 +3,17 @@
 #include <simlib/aho_corasick.hh>
 
 class CppSyntaxHighlighter {
-	AhoCorasick aho;
+    AhoCorasick aho;
 
 public:
-	CppSyntaxHighlighter();
+    CppSyntaxHighlighter();
 
-	CppSyntaxHighlighter(const CppSyntaxHighlighter&) = default;
-	CppSyntaxHighlighter(CppSyntaxHighlighter&&) = default;
-	CppSyntaxHighlighter& operator=(const CppSyntaxHighlighter&) = default;
-	CppSyntaxHighlighter& operator=(CppSyntaxHighlighter&&) = default;
-	~CppSyntaxHighlighter() = default;
+    CppSyntaxHighlighter(const CppSyntaxHighlighter&) = default;
+    CppSyntaxHighlighter(CppSyntaxHighlighter&&) = default;
+    CppSyntaxHighlighter& operator=(const CppSyntaxHighlighter&) = default;
+    CppSyntaxHighlighter& operator=(CppSyntaxHighlighter&&) = default;
+    ~CppSyntaxHighlighter() = default;
 
-	// Returns html table containing coloured code @p input
-	std::string operator()(CStringView input) const;
+    // Returns html table containing coloured code @p input
+    std::string operator()(CStringView input) const;
 };

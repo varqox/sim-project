@@ -7,39 +7,38 @@ using std::string;
 
 namespace server {
 
-void HttpResponse::set_cookie(const string& name, const string& val,
-                              time_t expire, const string& path,
-                              const string& domain, bool http_only,
-                              bool secure) {
-	STACK_UNWINDING_MARK;
+void HttpResponse::set_cookie(
+    const string& name, const string& val, time_t expire, const string& path,
+    const string& domain, bool http_only, bool secure) {
+    STACK_UNWINDING_MARK;
 
-	string value = val;
+    string value = val;
 
-	if (expire != -1) {
-		char buff[35];
-		tm* ptm = gmtime(&expire);
-		if (strftime(buff, 35, "%a, %d %b %Y %H:%M:%S GMT", ptm)) {
-			value.append("; Expires=").append(buff);
-		}
-	}
+    if (expire != -1) {
+        char buff[35];
+        tm* ptm = gmtime(&expire);
+        if (strftime(buff, 35, "%a, %d %b %Y %H:%M:%S GMT", ptm)) {
+            value.append("; Expires=").append(buff);
+        }
+    }
 
-	if (!path.empty()) {
-		back_insert(value, "; Path=", path);
-	}
+    if (!path.empty()) {
+        back_insert(value, "; Path=", path);
+    }
 
-	if (!domain.empty()) {
-		back_insert(value, "; Domain=", domain);
-	}
+    if (!domain.empty()) {
+        back_insert(value, "; Domain=", domain);
+    }
 
-	if (http_only) {
-		value.append("; HttpOnly");
-	}
+    if (http_only) {
+        value.append("; HttpOnly");
+    }
 
-	if (secure) {
-		value.append("; Secure");
-	}
+    if (secure) {
+        value.append("; Secure");
+    }
 
-	cookies[name] = value;
+    cookies[name] = value;
 }
 
 } // namespace server
