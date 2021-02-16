@@ -1115,6 +1115,7 @@ int main() {
         chdir_relative_to_executable_dirpath("..");
     } catch (const std::exception& e) {
         errlog("Failed to change working directory: ", e.what());
+        return 1;
     }
 
     // Terminate older instances
@@ -1127,12 +1128,14 @@ int main() {
         dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
         errlog("Failed to open `", JOB_SERVER_LOG, '`', errmsg());
+        return 1;
     }
 
     try {
         errlog.open(JOB_SERVER_ERROR_LOG);
     } catch (const std::exception& e) {
         errlog("Failed to open `", JOB_SERVER_ERROR_LOG, "`: ", e.what());
+        return 1;
     }
 
     // Install signal handlers

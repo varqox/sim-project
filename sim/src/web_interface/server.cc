@@ -80,24 +80,26 @@ int main() {
         chdir_relative_to_executable_dirpath("..");
     } catch (const std::exception& e) {
         errlog("Failed to change working directory: ", e.what());
+        return 1;
     }
 
     // Terminate older instances
     kill_processes_by_exec({executable_path(getpid())}, std::chrono::seconds(4), true);
 
     // Loggers
-    // stdlog (like everything) writes to stderr, so redirect stdout and stderr
-    // to the log file
+    // stdlog writes to stderr (like everything), so redirect stdout and stderr to the log file
     if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
         dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
         errlog("Failed to open `", SERVER_LOG, '`', errmsg());
+        return 1;
     }
 
     try {
         errlog.open(SERVER_ERROR_LOG);
     } catch (const std::exception& e) {
         errlog("Failed to open `", SERVER_ERROR_LOG, "`: ", e.what());
+        return 1;
     }
 
     // Signal control
@@ -120,7 +122,7 @@ int main() {
     }
 
     string full_address = config["address"].as_string();
-    size_t workers = config["workers"].as<size_t>().value_or(0);
+    auto workers = config["workers"].as<size_t>().value_or(0);
 
     if (workers < 1) {
         errlog("sim.conf: Number of workers cannot be lower than 1");
