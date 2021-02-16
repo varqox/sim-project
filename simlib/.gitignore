@@ -21,8 +21,12 @@
 # Python
 __pycache__/
 
-# Others
-.cache/
-.clangd/
-*build/
-compile_commands.json
+# Build
+/*build/
+
+# Development
+/.cache/
+/.clangd/
+/compile_commands.json
+/*.sublime-project
+/*.sublime-workspace
