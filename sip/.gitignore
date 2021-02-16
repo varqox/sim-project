@@ -21,12 +21,16 @@
 # Python
 __pycache__/
 
+# Build
+/*build/
+
 # Build targets
 sip
 sip-static
 
-# Others
-.cache/
-.clangd/
-*build/
-compile_commands.json
+# Development
+/.cache/
+/.clangd/
+/compile_commands.json
+/*.sublime-project
+/*.sublime-workspace
