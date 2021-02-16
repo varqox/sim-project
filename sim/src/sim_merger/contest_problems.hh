@@ -19,7 +19,7 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
         auto stmt = conn.prepare(
             "SELECT cp.id, cp.contest_round_id, cp.contest_id,"
             " cp.problem_id, cp.name, cp.item,"
-            " cp.final_selecting_method, cp.score_revealing,"
+            " cp.method_of_choosing_final_submission, cp.score_revealing,"
             " MIN(s.submit_time) "
             "FROM ",
             record_set.sql_table_name, " cp LEFT JOIN ", record_set.sql_table_prefix,
@@ -28,7 +28,7 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
         stmt.bind_and_execute();
         stmt.res_bind_all(
             cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item,
-            cp.final_selecting_method, cp.score_revealing, earliest_submit_time);
+            cp.method_of_choosing_final_submission, cp.score_revealing, earliest_submit_time);
 
         auto curr_time = std::chrono::system_clock::now();
         while (stmt.next()) {
@@ -59,7 +59,7 @@ public:
             "INSERT INTO ", sql_table_name(),
             "(id, contest_round_id, contest_id,"
             " problem_id, name, item,"
-            " final_selecting_method, score_revealing) "
+            " method_of_choosing_final_submission, score_revealing) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 
         ProgressBar progress_bar("Contest problems saved:", new_table_.size(), 128);
@@ -68,7 +68,7 @@ public:
             const sim::ContestProblem& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.contest_round_id, x.contest_id, x.problem_id, x.name, x.item,
-                x.final_selecting_method, x.score_revealing);
+                x.method_of_choosing_final_submission, x.score_revealing);
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);

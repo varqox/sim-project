@@ -61,17 +61,18 @@ static void update_problem_final(
 static void update_contest_final(
     MySQL::Connection& mysql, uint64_t submission_owner, uint64_t contest_problem_id) {
     // TODO: update the initial_final if the submission is half-judged (only
-    // initial_status is set and final selecting method does not show points)
+    // initial_status is set and method of choosing the final submission does not show points)
     STACK_UNWINDING_MARK;
 
-    // Get the final selecting method and whether the score is revealed
-    auto stmt = mysql.prepare("SELECT final_selecting_method, score_revealing "
+    // Get the method of choosing the final submission and whether the score is revealed
+    auto stmt = mysql.prepare("SELECT method_of_choosing_final_submission, score_revealing "
                               "FROM contest_problems WHERE id=?");
     stmt.bind_and_execute(contest_problem_id);
 
-    decltype(ContestProblem::final_selecting_method) final_selecting_method;
+    decltype(ContestProblem::method_of_choosing_final_submission)
+        method_of_choosing_final_submission;
     decltype(ContestProblem::score_revealing) score_revealing;
-    stmt.res_bind_all(final_selecting_method, score_revealing);
+    stmt.res_bind_all(method_of_choosing_final_submission, score_revealing);
     if (not stmt.next()) {
         return; // Such contest problem does not exist (probably had just
                 // been deleted)
@@ -90,9 +91,8 @@ static void update_contest_final(
 
     uint64_t new_final_id = 0;
     uint64_t new_initial_final_id = 0;
-    using FSSM = ContestProblem::FinalSubmissionSelectingMethod;
-    switch (final_selecting_method) {
-    case FSSM::LAST_COMPILING: {
+    switch (method_of_choosing_final_submission) {
+    case ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING: {
         // Choose the new final submission
         stmt = mysql.prepare("SELECT id FROM submissions USE INDEX(final1) "
                              "WHERE owner=? AND contest_problem_id=?"
@@ -108,7 +108,7 @@ static void update_contest_final(
         new_initial_final_id = new_final_id;
         break;
     }
-    case FSSM::WITH_HIGHEST_SCORE: {
+    case ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE: {
         // Such index: (final_candidate, owner, contest_problem_id, score DESC,
         // full_status, id DESC) is what we need, but MySQL does not support it,
         // so the below workaround is used to select the final submission
@@ -147,7 +147,7 @@ static void update_contest_final(
 
         // Choose the new initial final submission
         switch (score_revealing) {
-        case ContestProblem::ScoreRevealingMode::NONE: {
+        case ContestProblem::ScoreRevealing::NONE: {
             // Such index: (final_candidate, owner, contest_problem_id,
             // initial_status, id DESC) is what we need, but MySQL does not
             // support it, so the below workaround is used to select the initial
@@ -174,7 +174,7 @@ static void update_contest_final(
             break;
         }
 
-        case ContestProblem::ScoreRevealingMode::ONLY_SCORE: {
+        case ContestProblem::ScoreRevealing::ONLY_SCORE: {
             // Such index: (final_candidate, owner, contest_problem_id,
             // score DESC, initial_status, id DESC) is what we need, but MySQL
             // does not support it, so the below workaround is used to select
@@ -202,7 +202,7 @@ static void update_contest_final(
             break;
         }
 
-        case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: {
+        case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: {
             new_initial_final_id = new_final_id;
             break;
         }

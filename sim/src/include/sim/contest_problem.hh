@@ -11,12 +11,12 @@
 namespace sim {
 
 struct ContestProblem {
-    enum class FinalSubmissionSelectingMethod : uint8_t {
-        LAST_COMPILING = 0,
-        WITH_HIGHEST_SCORE = 1
+    enum class MethodOfChoosingFinalSubmission : uint8_t {
+        LATEST_COMPILING = 0,
+        HIGHEST_SCORE = 1
     };
 
-    enum class ScoreRevealingMode : uint8_t {
+    enum class ScoreRevealing : uint8_t {
         NONE = 0,
         ONLY_SCORE = 1,
         SCORE_AND_FULL_STATUS = 2,
@@ -28,8 +28,8 @@ struct ContestProblem {
     uintmax_t problem_id;
     VarcharField<128> name;
     uintmax_t item;
-    EnumVal<FinalSubmissionSelectingMethod> final_selecting_method;
-    EnumVal<ScoreRevealingMode> score_revealing;
+    EnumVal<MethodOfChoosingFinalSubmission> method_of_choosing_final_submission;
+    EnumVal<ScoreRevealing> score_revealing;
 };
 
 namespace contest_problem {
@@ -67,7 +67,7 @@ void iterate(
 
     auto stmt = mysql.prepare(
         "SELECT cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id,"
-        " cp.name, cp.item, cp.final_selecting_method, cp.score_revealing,"
+        " cp.name, cp.item, cp.method_of_choosing_final_submission, cp.score_revealing,"
         " p.label, si.initial_status, sf.full_status, p.owner, p.type "
         "FROM contest_problems cp ",
         (show_all_rounds ? ""
@@ -95,7 +95,7 @@ void iterate(
     decltype(Problem::type) m_problem_type;
     stmt.res_bind_all(
         cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item,
-        cp.final_selecting_method, cp.score_revealing, extra_data.problem_label,
+        cp.method_of_choosing_final_submission, cp.score_revealing, extra_data.problem_label,
         m_initial_final_status, m_final_status, m_problem_owner, m_problem_type);
 
     while (stmt.next()) {

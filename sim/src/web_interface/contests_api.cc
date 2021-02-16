@@ -30,16 +30,16 @@ using std::pair;
 inline bool whether_to_show_full_status(
     sim::contest::Permissions cperms, const InfDatetime& full_results,
     const decltype(mysql_date())& curr_mysql_date,
-    ContestProblem::ScoreRevealingMode score_revealing) {
+    ContestProblem::ScoreRevealing score_revealing) {
     // TODO: check append_submission_status() for making it use the new function
     if (uint(cperms & sim::contest::Permissions::ADMIN) or full_results <= curr_mysql_date) {
         return true;
     }
 
     switch (score_revealing) {
-    case ContestProblem::ScoreRevealingMode::NONE:
-    case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return false;
-    case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+    case ContestProblem::ScoreRevealing::NONE:
+    case ContestProblem::ScoreRevealing::ONLY_SCORE: return false;
+    case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
     }
 
     __builtin_unreachable();
@@ -48,7 +48,7 @@ inline bool whether_to_show_full_status(
 inline bool whether_to_show_score(
     sim::contest::Permissions cperms, const InfDatetime& full_results,
     const decltype(mysql_date())& curr_mysql_date,
-    ContestProblem::ScoreRevealingMode score_revealing) {
+    ContestProblem::ScoreRevealing score_revealing) {
     // TODO: check append_submission_status() for making it use the new function
     if (uint(cperms & sim::contest::Permissions::ADMIN)) {
         return true;
@@ -59,9 +59,9 @@ inline bool whether_to_show_score(
     }
 
     switch (score_revealing) {
-    case ContestProblem::ScoreRevealingMode::NONE: return false;
-    case ContestProblem::ScoreRevealingMode::ONLY_SCORE:
-    case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+    case ContestProblem::ScoreRevealing::NONE: return false;
+    case ContestProblem::ScoreRevealing::ONLY_SCORE:
+    case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
     }
 
     __builtin_unreachable();
@@ -71,7 +71,7 @@ inline static InplaceBuff<32> color_class_json(
     sim::contest::Permissions cperms, const InfDatetime& full_results,
     const decltype(mysql_date())& curr_mysql_date, optional<SubmissionStatus> full_status,
     optional<SubmissionStatus> initial_status,
-    ContestProblem::ScoreRevealingMode score_revealing) {
+    ContestProblem::ScoreRevealing score_revealing) {
 
     if (whether_to_show_full_status(cperms, full_results, curr_mysql_date, score_revealing)) {
         if (full_status.has_value()) {
@@ -113,20 +113,22 @@ static void append_contest_actions_str(
     str.append('"');
 }
 
-static constexpr const char* to_json(ContestProblem::FinalSubmissionSelectingMethod fssm) {
+static constexpr const char* to_json(ContestProblem::MethodOfChoosingFinalSubmission fssm) {
     switch (fssm) {
-    case ContestProblem::FinalSubmissionSelectingMethod::LAST_COMPILING: return "\"LC\"";
-    case ContestProblem::FinalSubmissionSelectingMethod::WITH_HIGHEST_SCORE: return "\"WHS\"";
+    case ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING:
+        return "\"latest_compiling\"";
+    case ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE:
+        return "\"highest_score\"";
     }
 
     return "\"unknown\"";
 }
 
-static constexpr const char* to_json(ContestProblem::ScoreRevealingMode srm) {
+static constexpr const char* to_json(ContestProblem::ScoreRevealing srm) {
     switch (srm) {
-    case ContestProblem::ScoreRevealingMode::NONE: return "\"none\"";
-    case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return "\"only_score\"";
-    case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
+    case ContestProblem::ScoreRevealing::NONE: return "\"none\"";
+    case ContestProblem::ScoreRevealing::ONLY_SCORE: return "\"only_score\"";
+    case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS:
         return "\"score_and_full_status\"";
     }
 
@@ -179,7 +181,7 @@ public:
 		              "\"problem_label\","
 		              "\"name\","
 		              "\"item\","
-		              "\"final_selecting_method\","
+		              "\"method_of_choosing_final_submission\","
 		              "\"score_revealing\","
 		              "\"color_class\""
 		          "]}"
@@ -230,7 +232,7 @@ public:
 		   json_stringify(extra_data.problem_label), ',',
 		   json_stringify(cp.name), ',',
 		   cp.item, ',',
-		   to_json(cp.final_selecting_method), ',',
+		   to_json(cp.method_of_choosing_final_submission), ',',
 		   to_json(cp.score_revealing), ',',
 		   color_class_json(
 		      contest_perms_, round_to_full_results_[cp.contest_round_id],
@@ -804,12 +806,12 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
     // Add contest problems to the new contest
     stmt =
         mysql.prepare("INSERT contest_problems(contest_round_id, contest_id, problem_id, name,"
-                      " item, final_selecting_method, score_revealing) "
+                      " item, method_of_choosing_final_submission, score_revealing) "
                       "VALUES(?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
             cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item,
-            cp.final_selecting_method, cp.score_revealing);
+            cp.method_of_choosing_final_submission, cp.score_revealing);
     }
 
     // Add user to owners
@@ -1042,12 +1044,12 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contest::Permissio
     // Add contest problems to the new contest round
     stmt =
         mysql.prepare("INSERT contest_problems(contest_round_id, contest_id, problem_id, name,"
-                      " item, final_selecting_method, score_revealing) "
+                      " item, method_of_choosing_final_submission, score_revealing) "
                       "VALUES(?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
             cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item,
-            cp.final_selecting_method, cp.score_revealing);
+            cp.method_of_choosing_final_submission, cp.score_revealing);
     }
 
     transaction.commit();
@@ -1142,25 +1144,27 @@ void Sim::api_contest_problem_add(
     auto score_revealing_str = request.form_data.get("score_revealing");
     decltype(ContestProblem::score_revealing) score_revealing;
     if (score_revealing_str == "none") {
-        score_revealing = ContestProblem::ScoreRevealingMode::NONE;
+        score_revealing = ContestProblem::ScoreRevealing::NONE;
     } else if (score_revealing_str == "only_score") {
-        score_revealing = ContestProblem::ScoreRevealingMode::ONLY_SCORE;
+        score_revealing = ContestProblem::ScoreRevealing::ONLY_SCORE;
     } else if (score_revealing_str == "score_and_full_status") {
-        score_revealing = ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS;
+        score_revealing = ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS;
     } else {
         add_notification("error", "Invalid score revealing");
     }
 
-    // Validate final_selecting_method
-    auto fsm_str = request.form_data.get("final_selecting_method");
-    decltype(ContestProblem::final_selecting_method) final_selecting_method;
-    using FSSM = ContestProblem::FinalSubmissionSelectingMethod;
-    if (fsm_str == "LC") {
-        final_selecting_method = FSSM::LAST_COMPILING;
-    } else if (fsm_str == "WHS") {
-        final_selecting_method = FSSM::WITH_HIGHEST_SCORE;
+    // Validate method_of_choosing_final_submission
+    auto fsm_str = request.form_data.get("method_of_choosing_final_submission");
+    decltype(ContestProblem::method_of_choosing_final_submission)
+        method_of_choosing_final_submission;
+    if (fsm_str == "latest_compiling") {
+        method_of_choosing_final_submission =
+            ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING;
+    } else if (fsm_str == "highest_score") {
+        method_of_choosing_final_submission =
+            ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE;
     } else {
-        add_notification("error", "Invalid final selecting method");
+        add_notification("error", "Invalid method of choosing final submission");
     }
 
     if (notifications.size) {
@@ -1192,14 +1196,14 @@ void Sim::api_contest_problem_add(
 
     // Add contest problem
     stmt = mysql.prepare("INSERT contest_problems(contest_round_id, contest_id,"
-                         " problem_id, name, item, final_selecting_method,"
+                         " problem_id, name, item, method_of_choosing_final_submission,"
                          " score_revealing) "
                          "SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
                          "FROM contest_problems "
                          "WHERE contest_round_id=?");
     stmt.bind_and_execute(
         contest_round_id, contest_id, problem_id, (name.empty() ? problem_name : name),
-        final_selecting_method, score_revealing, contest_round_id);
+        method_of_choosing_final_submission, score_revealing, contest_round_id);
 
     transaction.commit();
     append(stmt.insert_id());
@@ -1242,26 +1246,28 @@ void Sim::api_contest_problem_edit(
     auto score_revealing_str = request.form_data.get("score_revealing");
     decltype(ContestProblem::score_revealing) score_revealing;
     if (score_revealing_str == "none") {
-        score_revealing = ContestProblem::ScoreRevealingMode::NONE;
+        score_revealing = ContestProblem::ScoreRevealing::NONE;
     } else if (score_revealing_str == "only_score") {
-        score_revealing = ContestProblem::ScoreRevealingMode::ONLY_SCORE;
+        score_revealing = ContestProblem::ScoreRevealing::ONLY_SCORE;
     } else if (score_revealing_str == "score_and_full_status") {
-        score_revealing = ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS;
+        score_revealing = ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS;
     } else {
         add_notification("error", "Invalid score revealing");
     }
 
-    // Validate final_selecting_method
-    auto fsm_str = request.form_data.get("final_selecting_method");
-    using FSSM = ContestProblem::FinalSubmissionSelectingMethod;
-    decltype(ContestProblem::final_selecting_method) final_selecting_method =
-        FSSM::LAST_COMPILING; // Silence warning about uninitialized value
-    if (fsm_str == "LC") {
-        final_selecting_method = FSSM::LAST_COMPILING;
-    } else if (fsm_str == "WHS") {
-        final_selecting_method = FSSM::WITH_HIGHEST_SCORE;
+    // Validate method_of_choosing_final_submission
+    auto fsm_str = request.form_data.get("method_of_choosing_final_submission");
+    decltype(ContestProblem::method_of_choosing_final_submission)
+        method_of_choosing_final_submission = ContestProblem::MethodOfChoosingFinalSubmission::
+            LATEST_COMPILING; // Silence warning about uninitialized value
+    if (fsm_str == "latest_compiling") {
+        method_of_choosing_final_submission =
+            ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING;
+    } else if (fsm_str == "highest_score") {
+        method_of_choosing_final_submission =
+            ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE;
     } else {
-        add_notification("error", "Invalid final selecting method");
+        add_notification("error", "Invalid method of choosing final submission");
     }
 
     if (notifications.size) {
@@ -1271,22 +1277,24 @@ void Sim::api_contest_problem_edit(
     // Have to check if it is necessary to reselect problem final submissions
     auto transaction = mysql.start_transaction();
 
-    // Get the old final selecting method and whether the score was revealed
-    auto stmt = mysql.prepare("SELECT final_selecting_method, score_revealing "
+    // Get the old method of choosing final submission and whether the score was revealed
+    auto stmt = mysql.prepare("SELECT method_of_choosing_final_submission, score_revealing "
                               "FROM contest_problems WHERE id=?");
     stmt.bind_and_execute(contest_problem_id);
 
-    decltype(ContestProblem::final_selecting_method) old_final_selecting_method;
+    decltype(ContestProblem::method_of_choosing_final_submission)
+        old_method_of_choosing_final_submission;
     decltype(ContestProblem::score_revealing) old_score_revealing;
-    stmt.res_bind_all(old_final_selecting_method, old_score_revealing);
+    stmt.res_bind_all(old_method_of_choosing_final_submission, old_score_revealing);
     if (not stmt.next()) {
         return; // Such contest problem does not exist (probably had just
                 // been deleted)
     }
 
     bool reselect_final_sumbissions =
-        (old_final_selecting_method != final_selecting_method or
-         (final_selecting_method == FSSM::WITH_HIGHEST_SCORE and
+        (old_method_of_choosing_final_submission != method_of_choosing_final_submission or
+         (method_of_choosing_final_submission ==
+              ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE and
           score_revealing != old_score_revealing));
 
     if (reselect_final_sumbissions) {
@@ -1304,10 +1312,12 @@ void Sim::api_contest_problem_edit(
     }
 
     // Update problem
-    stmt = mysql.prepare("UPDATE contest_problems "
-                         "SET name=?, score_revealing=?, final_selecting_method=? "
-                         "WHERE id=?");
-    stmt.bind_and_execute(name, score_revealing, final_selecting_method, contest_problem_id);
+    stmt =
+        mysql.prepare("UPDATE contest_problems "
+                      "SET name=?, score_revealing=?, method_of_choosing_final_submission=? "
+                      "WHERE id=?");
+    stmt.bind_and_execute(
+        name, score_revealing, method_of_choosing_final_submission, contest_problem_id);
 
     transaction.commit();
     jobs::notify_job_server();

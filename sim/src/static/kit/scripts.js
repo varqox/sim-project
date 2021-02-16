@@ -12,7 +12,7 @@ function elem_with_text(tag, text) {
 	elem.innerText = text;
 	return elem;
 }
-function appendChildren(elem, elements) {
+function append_children(elem, elements) {
 	for (var i in elements)
 		elem.appendChild(elements[i]);
 }
@@ -324,7 +324,7 @@ function StaticMap() {
  *
  * @return humanized file size
  */
-function humanizeFileSize(size) {
+function humanize_file_size(size) {
 	var MIN_KIB = 1024;
 	var MIN_MIB = 1048576;
 	var MIN_GIB = 1073741824;
@@ -2941,7 +2941,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 
 			// Actions
 			td = document.createElement('td');
-			appendChildren(td, ActionsToHTML.submission(x.id, x.actions, x.type));
+			append_children(td, ActionsToHTML.submission(x.id, x.actions, x.type));
 			row.appendChild(td);
 
 			this_.elem[0].querySelector('tbody').appendChild(row);
@@ -4085,13 +4085,13 @@ function add_contest_problem(as_modal, contest_round_id) {
 			}).append(a_view_button('/p', 'Search problems', '', problem_chooser))
 			).add(Form.field_group('Final submission to select',
 				$('<select>', {
-					name: 'final_selecting_method',
+					name: 'method_of_choosing_final_submission',
 					required: true,
 					html: $('<option>', {
-						value: 'LC',
+						value: 'latest_compiling',
 						text: 'Latest compiling'
 					}).add('<option>', {
-						value: 'WHS',
+						value: 'highest_score',
 						text: 'The one with the highest score',
 						selected: true
 					})
@@ -4264,16 +4264,16 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 				})
 			)).add(Form.field_group("Final submission to select",
 				$('<select>', {
-					name: 'final_selecting_method',
+					name: 'method_of_choosing_final_submission',
 					required: true,
 					html: $('<option>', {
-						value: 'LC',
+						value: 'latest_compiling',
 						text: 'Latest compiling',
-						selected: (problem.final_selecting_method === 'LC')
+						selected: (problem.method_of_choosing_final_submission === 'latest_compiling')
 					}).add('<option>', {
-						value: 'WHS',
+						value: 'highest_score',
 						text: 'The one with the highest score',
-						selected: (problem.final_selecting_method === 'WHS')
+						selected: (problem.method_of_choosing_final_submission === 'highest_score')
 					})
 				})
 			)).add('<div>', {
@@ -4575,7 +4575,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 							(id_for_api[0] === 'p' ? $('<table>', {html: [
 								$('<tr>', {html: [
 									$('<td>', {text: 'Final submission'}),
-									$('<td>', {text: problem.final_selecting_method === 'LC' ?
+									$('<td>', {text: problem.method_of_choosing_final_submission === 'latest_compiling' ?
 										'Latest compiling' : 'One with the highest score'})
 								]}),
 								(problem.score_revealing !== 'none' ? $('<tr>', {html: [
@@ -5454,7 +5454,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 				href: '/api/download/contest_file/' + x.id,
 				text: x.name
 			})}));
-			row.append($('<td>', {text: humanizeFileSize(x.file_size)}));
+			row.append($('<td>', {text: humanize_file_size(x.file_size)}));
 
 			row.append($('<td>', {text: x.description}));
 
@@ -5546,7 +5546,7 @@ function edit_contest_file(as_modal, contest_file_id) {
 				})
 			)).add(Form.field_group('File size', {
 				type: 'text',
-				value: humanizeFileSize(file.file_size) + ' (' + file.file_size + ' B)',
+				value: humanize_file_size(file.file_size) + ' (' + file.file_size + ' B)',
 				disabled: true
 			})).add(Form.field_group('Modified', normalize_datetime($('<span>', {
 				datetime: file.modified,

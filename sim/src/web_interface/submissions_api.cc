@@ -68,7 +68,7 @@ void Sim::api_submissions() {
     qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner,"
                    " u.username, u.first_name, u.last_name, s.problem_id,"
                    " p.name, s.contest_problem_id, cp.name,"
-                   " cp.final_selecting_method, cp.score_revealing,"
+                   " cp.method_of_choosing_final_submission, cp.score_revealing,"
                    " s.contest_round_id, r.name, r.full_results, r.ends,"
                    " s.contest_id, c.name, s.submit_time, s.problem_final,"
                    " s.contest_final, s.contest_initial_final,"
@@ -487,12 +487,12 @@ void Sim::api_submissions() {
                 } else {
                     throw_assert(score_revealing.has_value()); // This is a contest submission
                     switch (score_revealing.value()) {
-                    case ContestProblem::ScoreRevealingMode::NONE:
-                    case ContestProblem::ScoreRevealingMode::ONLY_SCORE: {
+                    case ContestProblem::ScoreRevealing::NONE:
+                    case ContestProblem::ScoreRevealing::ONLY_SCORE: {
                         subtype_to_show = (is_contest_initial_final ? INITIAL_FINAL : NORMAL);
                         break;
                     }
-                    case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: {
+                    case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: {
                         subtype_to_show = full_results_subtype();
                         break;
                     }
@@ -592,9 +592,9 @@ void Sim::api_submissions() {
         bool show_full_status = (show_full_results or [&] {
             if (score_revealing) {
                 switch (score_revealing.value()) {
-                case ContestProblem::ScoreRevealingMode::NONE:
-                case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return false;
-                case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+                case ContestProblem::ScoreRevealing::NONE:
+                case ContestProblem::ScoreRevealing::ONLY_SCORE: return false;
+                case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
                 }
             }
 
@@ -604,9 +604,9 @@ void Sim::api_submissions() {
         bool show_score = (show_full_results or [&] {
             if (score_revealing) {
                 switch (score_revealing.value()) {
-                case ContestProblem::ScoreRevealingMode::NONE: return false;
-                case ContestProblem::ScoreRevealingMode::ONLY_SCORE:
-                case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+                case ContestProblem::ScoreRevealing::NONE: return false;
+                case ContestProblem::ScoreRevealing::ONLY_SCORE:
+                case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
                 }
             }
 

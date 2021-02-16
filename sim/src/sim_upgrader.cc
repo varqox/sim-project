@@ -23,10 +23,8 @@ struct CmdOptions {
 static int perform_upgrade() {
     STACK_UNWINDING_MARK;
 
-    conn.update("UPDATE submissions SET initial_report=REGEXP_REPLACE(initial_report, "
-                "'^<h2>.*?</h2>', '')");
-    conn.update("UPDATE submissions SET final_report=REGEXP_REPLACE(final_report, "
-                "'^<h2>.*?</h2>', '')");
+    conn.update("ALTER TABLE contest_problems RENAME COLUMN final_selecting_method TO "
+                "method_of_choosing_final_submission");
 
     stdlog("\033[1;32mSim upgrading is complete\033[m");
     return 0;
@@ -114,11 +112,8 @@ static int true_main(int argc, char** argv) {
     }
 
     auto manage_path = concat_tostr(sim_build, "manage");
-    // Stop server and job server
+    // Stop web server and job server
     Spawner::run(manage_path, {manage_path, "stop"});
-    // TODO: remove this after the upgrade
-    kill_processes_by_exec(
-        {concat_tostr(sim_build, "sim-server"), concat_tostr(sim_build, "job-server")});
 
     Defer servers_restorer([&] {
         try {

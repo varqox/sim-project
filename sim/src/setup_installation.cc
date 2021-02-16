@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
 			"`problem_id` int unsigned NOT NULL,"
 			"`name` VARBINARY(", decltype(ContestProblem::name)::max_len, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
-			"`final_selecting_method` TINYINT NOT NULL,"
+			"`method_of_choosing_final_submission` TINYINT NOT NULL,"
 			"`score_revealing` TINYINT NOT NULL,"
 			"PRIMARY KEY (id),"
 			"UNIQUE (contest_round_id, item),"
