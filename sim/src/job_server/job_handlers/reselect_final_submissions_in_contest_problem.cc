@@ -1,7 +1,6 @@
-#include "reselect_final_submissions_in_contest_problem.hh"
-#include "../main.hh"
-
-#include <sim/submission.hh>
+#include "src/job_server/job_handlers/reselect_final_submissions_in_contest_problem.hh"
+#include "sim/submission.hh"
+#include "src/job_server/main.hh"
 
 namespace job_handlers {
 

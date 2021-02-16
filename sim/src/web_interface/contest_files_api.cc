@@ -1,12 +1,11 @@
-#include "sim.hh"
-
-#include <sim/constants.hh>
-#include <sim/jobs.hh>
-#include <sim/random.hh>
-#include <simlib/call_in_destructor.hh>
-#include <simlib/file_info.hh>
-#include <simlib/file_manip.hh>
-#include <simlib/humanize.hh>
+#include "sim/constants.hh"
+#include "sim/jobs.hh"
+#include "sim/random.hh"
+#include "simlib/call_in_destructor.hh"
+#include "simlib/file_info.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/humanize.hh"
+#include "src/web_interface/sim.hh"
 
 void Sim::api_contest_files() {
     STACK_UNWINDING_MARK;

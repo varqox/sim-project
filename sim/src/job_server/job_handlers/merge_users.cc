@@ -1,12 +1,11 @@
-#include "merge_users.hh"
-#include "../main.hh"
+#include "src/job_server/job_handlers/merge_users.hh"
+#include "sim/constants.hh"
 #include "sim/contest_user.hh"
+#include "sim/submission.hh"
+#include "simlib/utilities.hh"
+#include "src/job_server/main.hh"
 
-#include <bits/stdint-uintn.h>
 #include <deque>
-#include <sim/constants.hh>
-#include <sim/submission.hh>
-#include <simlib/utilities.hh>
 
 using sim::User;
 

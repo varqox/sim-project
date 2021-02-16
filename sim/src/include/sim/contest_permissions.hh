@@ -1,11 +1,11 @@
 #pragma once
 
-#include "contest_user.hh"
-#include "user.hh"
+#include "sim/contest_user.hh"
+#include "sim/user.hh"
+#include "simlib/meta.hh"
+#include "simlib/mysql.hh"
 
 #include <optional>
-#include <simlib/meta.hh>
-#include <simlib/mysql.hh>
 
 namespace sim::contest {
 

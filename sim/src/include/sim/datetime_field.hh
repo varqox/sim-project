@@ -1,7 +1,7 @@
 #pragma once
 
+#include "sim/varchar_field.hh"
 #include "simlib/string_view.hh"
-#include "varchar_field.hh"
 
 namespace sim {
 

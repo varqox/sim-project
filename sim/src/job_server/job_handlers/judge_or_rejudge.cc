@@ -1,7 +1,6 @@
-#include "judge_or_rejudge.hh"
-#include "../main.hh"
-
-#include <sim/submission.hh>
+#include "src/job_server/job_handlers/judge_or_rejudge.hh"
+#include "sim/submission.hh"
+#include "src/job_server/main.hh"
 
 namespace job_handlers {
 

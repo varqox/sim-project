@@ -1,9 +1,7 @@
-#include "delete_user.hh"
-
-#include "../main.hh"
-
-#include <sim/constants.hh>
-#include <sim/user.hh>
+#include "src/job_server/job_handlers/delete_user.hh"
+#include "sim/constants.hh"
+#include "sim/user.hh"
+#include "src/job_server/main.hh"
 
 using sim::User;
 

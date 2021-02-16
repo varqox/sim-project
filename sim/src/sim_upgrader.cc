@@ -1,13 +1,14 @@
+#include "sim/contest_round.hh"
+#include "sim/inf_datetime.hh"
+#include "sim/mysql.hh"
 #include "simlib/concat_tostr.hh"
+#include "simlib/defer.hh"
 #include "simlib/file_info.hh"
 #include "simlib/file_manip.hh"
+#include "simlib/process.hh"
+#include "simlib/spawner.hh"
+
 #include <climits>
-#include <sim/contest_round.hh>
-#include <sim/inf_datetime.hh>
-#include <sim/mysql.hh>
-#include <simlib/defer.hh>
-#include <simlib/process.hh>
-#include <simlib/spawner.hh>
 
 namespace {
 

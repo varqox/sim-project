@@ -1,9 +1,9 @@
 #pragma once
 
-#include "constants.hh"
-#include "problem.hh"
+#include "sim/constants.hh"
+#include "sim/problem.hh"
+#include "simlib/mysql.hh"
 
-#include <simlib/mysql.hh>
 #include <utility>
 #include <utime.h>
 

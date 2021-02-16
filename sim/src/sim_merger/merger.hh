@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ids_from_jobs.hh"
-#include "sim_merger.hh"
+#include "src/sim_merger/ids_from_jobs.hh"
+#include "src/sim_merger/sim_merger.hh"
 
 #include <map>
 #include <vector>

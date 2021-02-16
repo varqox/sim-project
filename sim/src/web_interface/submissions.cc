@@ -1,4 +1,4 @@
-#include "sim.hh"
+#include "src/web_interface/sim.hh"
 
 using sim::ContestUser;
 using sim::Problem;

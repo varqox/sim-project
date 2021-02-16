@@ -1,5 +1,5 @@
-#include "reupload_problem.hh"
-#include "../main.hh"
+#include "src/job_server/job_handlers/reupload_problem.hh"
+#include "src/job_server/main.hh"
 
 namespace job_handlers {
 

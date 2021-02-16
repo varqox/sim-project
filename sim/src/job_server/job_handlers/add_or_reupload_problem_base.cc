@@ -1,10 +1,9 @@
-#include "add_or_reupload_problem_base.hh"
-#include "../main.hh"
+#include "src/job_server/job_handlers/add_or_reupload_problem_base.hh"
 #include "sim/constants.hh"
-
-#include <sim/problem.hh>
-#include <simlib/libzip.hh>
-#include <simlib/sim/problem_package.hh>
+#include "sim/problem.hh"
+#include "simlib/libzip.hh"
+#include "simlib/sim/problem_package.hh"
+#include "src/job_server/main.hh"
 
 using sim::Problem;
 

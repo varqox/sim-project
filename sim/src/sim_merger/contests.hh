@@ -1,10 +1,9 @@
 #pragma once
 
-#include "merger.hh"
-
-#include <sim/constants.hh>
-#include <sim/contest.hh>
-#include <sim/datetime_field.hh>
+#include "sim/constants.hh"
+#include "sim/contest.hh"
+#include "sim/datetime_field.hh"
+#include "src/sim_merger/merger.hh"
 
 class ContestsMerger : public Merger<sim::Contest> {
     void load(RecordSet& record_set) override {

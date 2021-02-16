@@ -1,7 +1,8 @@
 #pragma once
 
+#include "simlib/string_traits.hh"
+
 #include <algorithm>
-#include <simlib/string_traits.hh>
 
 inline bool is_username(StringView str) noexcept {
     return std::all_of(

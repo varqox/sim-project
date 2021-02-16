@@ -1,11 +1,11 @@
 #pragma once
 
-#include "contests.hh"
-#include "internal_files.hh"
-#include "users.hh"
+#include "sim/random.hh"
+#include "src/sim_merger/contests.hh"
+#include "src/sim_merger/internal_files.hh"
+#include "src/sim_merger/users.hh"
 
 #include <set>
-#include <sim/random.hh>
 
 struct ContestFile {
     InplaceBuff<FILE_ID_LEN> id;

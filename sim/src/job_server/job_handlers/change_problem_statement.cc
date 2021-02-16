@@ -1,9 +1,8 @@
-#include "change_problem_statement.hh"
-#include "../main.hh"
-
-#include <sim/constants.hh>
-#include <simlib/path.hh>
-#include <simlib/sim/problem_package.hh>
+#include "src/job_server/job_handlers/change_problem_statement.hh"
+#include "sim/constants.hh"
+#include "simlib/path.hh"
+#include "simlib/sim/problem_package.hh"
+#include "src/job_server/main.hh"
 
 namespace job_handlers {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "job_handler.hh"
+#include "sim/jobs.hh"
+#include "src/job_server/job_handlers/job_handler.hh"
 
-#include <sim/jobs.hh>
 #include <utility>
 
 namespace job_handlers {

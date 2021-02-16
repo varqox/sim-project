@@ -1,6 +1,7 @@
 #pragma once
 
-#include "http_headers.hh"
+#include "sim/http/form_fields.hh"
+#include "src/web_interface/http_headers.hh"
 
 #include <optional>
 

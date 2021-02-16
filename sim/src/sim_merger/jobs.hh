@@ -1,10 +1,10 @@
 #pragma once
 
-#include "internal_files.hh"
 #include "sim/constants.hh"
 #include "sim/jobs.hh"
-#include "submissions.hh"
-#include "users.hh"
+#include "src/sim_merger/internal_files.hh"
+#include "src/sim_merger/submissions.hh"
+#include "src/sim_merger/users.hh"
 
 struct Job {
     uintmax_t id{};

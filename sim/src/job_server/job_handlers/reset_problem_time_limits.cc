@@ -1,8 +1,7 @@
-#include "reset_problem_time_limits.hh"
-#include "../main.hh"
-
-#include <sim/constants.hh>
-#include <simlib/sim/problem_package.hh>
+#include "src/job_server/job_handlers/reset_problem_time_limits.hh"
+#include "sim/constants.hh"
+#include "simlib/sim/problem_package.hh"
+#include "src/job_server/main.hh"
 
 namespace job_handlers {
 

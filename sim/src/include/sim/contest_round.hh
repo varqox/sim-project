@@ -1,8 +1,8 @@
 #pragma once
 
-#include "contest_permissions.hh"
-#include "inf_datetime_field.hh"
-#include "varchar_field.hh"
+#include "sim/contest_permissions.hh"
+#include "sim/inf_datetime_field.hh"
+#include "sim/varchar_field.hh"
 
 namespace sim {
 

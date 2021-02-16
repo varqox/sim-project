@@ -1,9 +1,9 @@
-#include "merge_problems.hh"
-#include "../main.hh"
+#include "src/job_server/job_handlers/merge_problems.hh"
+#include "sim/constants.hh"
+#include "sim/submission.hh"
+#include "src/job_server/main.hh"
 
 #include <deque>
-#include <sim/constants.hh>
-#include <sim/submission.hh>
 
 namespace job_handlers {
 

@@ -1,10 +1,9 @@
 #pragma once
 
-#include "contest_rounds.hh"
-#include "problems.hh"
-
-#include <sim/contest_problem.hh>
-#include <sim/datetime_field.hh>
+#include "sim/contest_problem.hh"
+#include "sim/datetime_field.hh"
+#include "src/sim_merger/contest_rounds.hh"
+#include "src/sim_merger/problems.hh"
 
 class ContestProblemsMerger : public Merger<sim::ContestProblem> {
     const ContestRoundsMerger& contest_rounds_;

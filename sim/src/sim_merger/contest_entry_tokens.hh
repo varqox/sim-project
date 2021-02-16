@@ -1,9 +1,9 @@
 #pragma once
 
-#include "contests.hh"
+#include "sim/random.hh"
+#include "src/sim_merger/contests.hh"
 
 #include <set>
-#include <sim/random.hh>
 
 struct ContestEntryToken {
     InplaceBuff<CONTEST_ENTRY_TOKEN_LEN> token;

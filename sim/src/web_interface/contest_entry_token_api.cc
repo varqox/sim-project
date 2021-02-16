@@ -1,8 +1,7 @@
-#include "sim.hh"
-
-#include <sim/contest.hh>
-#include <sim/contest_user.hh>
-#include <sim/random.hh>
+#include "sim/contest.hh"
+#include "sim/contest_user.hh"
+#include "sim/random.hh"
+#include "src/web_interface/sim.hh"
 
 using sim::Contest;
 

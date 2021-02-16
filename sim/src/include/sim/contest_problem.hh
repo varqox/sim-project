@@ -1,12 +1,11 @@
 #pragma once
 
-#include "contest_permissions.hh"
-#include "mysql.hh"
-#include "problem.hh"
-#include "problem_permissions.hh"
-#include "varchar_field.hh"
-
-#include "constants.hh" // TODO: remove when ExtraIterateData does not use it
+#include "sim/constants.hh" // TODO: remove when ExtraIterateData does not use it
+#include "sim/contest_permissions.hh"
+#include "sim/mysql.hh"
+#include "sim/problem.hh"
+#include "sim/problem_permissions.hh"
+#include "sim/varchar_field.hh"
 
 namespace sim {
 

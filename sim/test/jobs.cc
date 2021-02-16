@@ -1,5 +1,6 @@
+#include "sim/jobs.hh"
+
 #include <gtest/gtest.h>
-#include <sim/jobs.hh>
 
 using namespace jobs; // NOLINT
 using std::string;

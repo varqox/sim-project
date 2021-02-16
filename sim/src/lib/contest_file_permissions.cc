@@ -1,4 +1,4 @@
-#include <sim/contest_file_permissions.hh>
+#include "sim/contest_file_permissions.hh"
 
 namespace sim::contest_file {
 

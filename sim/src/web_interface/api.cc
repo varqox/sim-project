@@ -1,7 +1,6 @@
-#include "sim.hh"
-
-#include <simlib/file_contents.hh>
-#include <simlib/file_descriptor.hh>
+#include "simlib/file_contents.hh"
+#include "simlib/file_descriptor.hh"
+#include "src/web_interface/sim.hh"
 
 using sim::User;
 

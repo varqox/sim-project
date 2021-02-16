@@ -1,26 +1,26 @@
-#include "contest_entry_tokens.hh"
-#include "contest_files.hh"
-#include "contest_problems.hh"
-#include "contest_rounds.hh"
-#include "contest_users.hh"
-#include "contests.hh"
-#include "internal_files.hh"
-#include "jobs.hh"
-#include "problem_tags.hh"
-#include "problems.hh"
-#include "sessions.hh"
-#include "submissions.hh"
-#include "users.hh"
+#include "sim/mysql.hh"
+#include "simlib/config_file.hh"
+#include "simlib/defer.hh"
+#include "simlib/file_info.hh"
+#include "simlib/path.hh"
+#include "simlib/process.hh"
+#include "simlib/spawner.hh"
+#include "simlib/working_directory.hh"
+#include "src/sim_merger/contest_entry_tokens.hh"
+#include "src/sim_merger/contest_files.hh"
+#include "src/sim_merger/contest_problems.hh"
+#include "src/sim_merger/contest_rounds.hh"
+#include "src/sim_merger/contest_users.hh"
+#include "src/sim_merger/contests.hh"
+#include "src/sim_merger/internal_files.hh"
+#include "src/sim_merger/jobs.hh"
+#include "src/sim_merger/problem_tags.hh"
+#include "src/sim_merger/problems.hh"
+#include "src/sim_merger/sessions.hh"
+#include "src/sim_merger/submissions.hh"
+#include "src/sim_merger/users.hh"
 
 #include <iostream>
-#include <sim/mysql.hh>
-#include <simlib/config_file.hh>
-#include <simlib/defer.hh>
-#include <simlib/file_info.hh>
-#include <simlib/path.hh>
-#include <simlib/process.hh>
-#include <simlib/spawner.hh>
-#include <simlib/working_directory.hh>
 
 using std::vector;
 

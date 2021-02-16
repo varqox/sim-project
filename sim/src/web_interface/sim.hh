@@ -1,17 +1,17 @@
 #pragma once
 
-#include "http_request.hh"
-#include "http_response.hh"
+#include "sim/constants.hh"
+#include "sim/contest_file_permissions.hh"
+#include "sim/contest_permissions.hh"
+#include "sim/cpp_syntax_highlighter.hh"
+#include "sim/mysql.hh"
+#include "sim/problem_permissions.hh"
+#include "sim/user.hh"
+#include "simlib/http/response.hh"
+#include "simlib/request_uri_parser.hh"
+#include "src/web_interface/http_request.hh"
+#include "src/web_interface/http_response.hh"
 
-#include <sim/constants.hh>
-#include <sim/contest_file_permissions.hh>
-#include <sim/contest_permissions.hh>
-#include <sim/cpp_syntax_highlighter.hh>
-#include <sim/mysql.hh>
-#include <sim/problem_permissions.hh>
-#include <sim/user.hh>
-#include <simlib/http/response.hh>
-#include <simlib/request_uri_parser.hh>
 #include <utime.h>
 
 // Every object is independent, objects can be used in multi-thread program

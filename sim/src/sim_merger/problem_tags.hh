@@ -1,6 +1,6 @@
 #pragma once
 
-#include "problems.hh"
+#include "src/sim_merger/problems.hh"
 
 struct ProblemTag {
     ProblemTagId id;

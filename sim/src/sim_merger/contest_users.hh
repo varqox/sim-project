@@ -1,9 +1,8 @@
 #pragma once
 
-#include "contests.hh"
-#include "users.hh"
-
-#include <sim/contest_user.hh>
+#include "sim/contest_user.hh"
+#include "src/sim_merger/contests.hh"
+#include "src/sim_merger/users.hh"
 
 class ContestUsersMerger : public Merger<sim::ContestUser> {
     const UsersMerger& users_;

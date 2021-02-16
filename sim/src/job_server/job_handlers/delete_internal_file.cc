@@ -1,7 +1,6 @@
-#include "delete_internal_file.hh"
-#include "../main.hh"
-
-#include <sim/constants.hh>
+#include "src/job_server/job_handlers/delete_internal_file.hh"
+#include "sim/constants.hh"
+#include "src/job_server/main.hh"
 
 namespace job_handlers {
 

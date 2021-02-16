@@ -1,11 +1,11 @@
-#include "connection.hh"
+#include "src/web_interface/connection.hh"
+#include "simlib/debug.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/logger.hh"
 
 #include <iostream>
 #include <poll.h>
-#include <simlib/debug.hh>
-#include <simlib/file_descriptor.hh>
-#include <simlib/file_manip.hh>
-#include <simlib/logger.hh>
 #include <unistd.h>
 
 using std::pair;

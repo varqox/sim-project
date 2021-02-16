@@ -1,10 +1,10 @@
 #pragma once
 
-#include "users.hh"
+#include "sim/random.hh"
+#include "simlib/defer.hh"
+#include "src/sim_merger/users.hh"
 
 #include <set>
-#include <sim/random.hh>
-#include <simlib/defer.hh>
 
 struct Session {
     InplaceBuff<SESSION_ID_LEN> id;

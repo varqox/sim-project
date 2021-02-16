@@ -1,7 +1,6 @@
-#include "sim.hh"
-
-#include <sim/jobs.hh>
-#include <sim/problem_permissions.hh>
+#include "sim/jobs.hh"
+#include "sim/problem_permissions.hh"
+#include "src/web_interface/sim.hh"
 
 using sim::Problem;
 using sim::User;

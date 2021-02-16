@@ -1,8 +1,9 @@
 #pragma once
 
+#include "simlib/string_transform.hh"
+#include "simlib/time.hh"
+
 #include <cstdint>
-#include <simlib/string_transform.hh>
-#include <simlib/time.hh>
 
 namespace sim {
 

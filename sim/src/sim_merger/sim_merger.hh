@@ -1,8 +1,9 @@
 #pragma once
 
+#include "simlib/mysql.hh"
+
 #include <array>
 #include <climits>
-#include <simlib/mysql.hh>
 
 inline MySQL::Connection conn;
 

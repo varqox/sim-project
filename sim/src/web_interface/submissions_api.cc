@@ -1,19 +1,19 @@
-#include "sim.hh"
+#include "sim/constants.hh"
+#include "sim/contest_problem.hh"
+#include "sim/inf_datetime.hh"
+#include "sim/jobs.hh"
+#include "sim/submission.hh"
+#include "sim/utilities.hh"
+#include "simlib/call_in_destructor.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_info.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/humanize.hh"
+#include "simlib/process.hh"
+#include "src/web_interface/sim.hh"
 
 #include <functional>
 #include <optional>
-#include <sim/constants.hh>
-#include <sim/contest_problem.hh>
-#include <sim/inf_datetime.hh>
-#include <sim/jobs.hh>
-#include <sim/submission.hh>
-#include <sim/utilities.hh>
-#include <simlib/call_in_destructor.hh>
-#include <simlib/file_contents.hh>
-#include <simlib/file_info.hh>
-#include <simlib/file_manip.hh>
-#include <simlib/humanize.hh>
-#include <simlib/process.hh>
 
 using sim::ContestProblem;
 using sim::ContestUser;

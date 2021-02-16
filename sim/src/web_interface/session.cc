@@ -1,7 +1,6 @@
-#include "sim.hh"
-
-#include <sim/random.hh>
-#include <simlib/debug.hh>
+#include "sim/random.hh"
+#include "simlib/debug.hh"
+#include "src/web_interface/sim.hh"
 
 using sim::User;
 using std::string;

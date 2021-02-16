@@ -1,9 +1,8 @@
 #pragma once
 
-#include "problem.hh"
-#include "user.hh"
-
-#include <simlib/meta.hh>
+#include "sim/problem.hh"
+#include "sim/user.hh"
+#include "simlib/meta.hh"
 
 namespace sim::problem {
 

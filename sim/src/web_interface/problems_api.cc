@@ -1,16 +1,16 @@
-#include "sim.hh"
+#include "sim/constants.hh"
+#include "sim/jobs.hh"
+#include "sim/problem.hh"
+#include "sim/problem_permissions.hh"
+#include "simlib/config_file.hh"
+#include "simlib/file_info.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/humanize.hh"
+#include "simlib/libzip.hh"
+#include "simlib/sim/problem_package.hh"
+#include "src/web_interface/sim.hh"
 
 #include <cstdint>
-#include <sim/constants.hh>
-#include <sim/jobs.hh>
-#include <sim/problem.hh>
-#include <sim/problem_permissions.hh>
-#include <simlib/config_file.hh>
-#include <simlib/file_info.hh>
-#include <simlib/file_manip.hh>
-#include <simlib/humanize.hh>
-#include <simlib/libzip.hh>
-#include <simlib/sim/problem_package.hh>
 #include <type_traits>
 
 using sim::Problem;

@@ -1,10 +1,9 @@
 #pragma once
 
-#include "merger.hh"
-
-#include <simlib/defer.hh>
-#include <simlib/file_manip.hh>
-#include <simlib/time.hh>
+#include "simlib/defer.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/time.hh"
+#include "src/sim_merger/merger.hh"
 
 static std::chrono::system_clock::time_point file_mtime(FilePath path) {
     struct stat st {};

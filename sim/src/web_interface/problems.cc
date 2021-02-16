@@ -1,6 +1,5 @@
-#include "sim.hh"
-
-#include <sim/problem_permissions.hh>
+#include "sim/problem_permissions.hh"
+#include "src/web_interface/sim.hh"
 
 void Sim::problems_handle() {
     STACK_UNWINDING_MARK;

@@ -1,4 +1,14 @@
-#include "dispatcher.hh"
+#include "sim/constants.hh"
+#include "sim/jobs.hh"
+#include "sim/mysql.hh"
+#include "sim/submission.hh"
+#include "simlib/config_file.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/process.hh"
+#include "simlib/shared_function.hh"
+#include "simlib/time.hh"
+#include "simlib/working_directory.hh"
+#include "src/job_server/dispatcher.hh"
 
 #include <climits>
 #include <cstdint>
@@ -7,16 +17,6 @@
 #include <poll.h>
 #include <queue>
 #include <set>
-#include <sim/constants.hh>
-#include <sim/jobs.hh>
-#include <sim/mysql.hh>
-#include <sim/submission.hh>
-#include <simlib/config_file.hh>
-#include <simlib/file_manip.hh>
-#include <simlib/process.hh>
-#include <simlib/shared_function.hh>
-#include <simlib/time.hh>
-#include <simlib/working_directory.hh>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <unistd.h>

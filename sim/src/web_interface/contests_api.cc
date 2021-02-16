@@ -1,16 +1,16 @@
-#include "sim.hh"
+#include "sim/constants.hh"
+#include "sim/contest.hh"
+#include "sim/contest_permissions.hh"
+#include "sim/contest_problem.hh"
+#include "sim/contest_round.hh"
+#include "sim/contest_user.hh"
+#include "sim/inf_datetime.hh"
+#include "sim/jobs.hh"
+#include "sim/utilities.hh"
+#include "src/web_interface/sim.hh"
 
 #include <cstdint>
 #include <map>
-#include <sim/constants.hh>
-#include <sim/contest.hh>
-#include <sim/contest_permissions.hh>
-#include <sim/contest_problem.hh>
-#include <sim/contest_round.hh>
-#include <sim/contest_user.hh>
-#include <sim/inf_datetime.hh>
-#include <sim/jobs.hh>
-#include <sim/utilities.hh>
 #include <type_traits>
 #include <utility>
 

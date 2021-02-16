@@ -1,5 +1,5 @@
-#include "add_problem.hh"
-#include "../main.hh"
+#include "src/job_server/job_handlers/add_problem.hh"
+#include "src/job_server/main.hh"
 
 namespace job_handlers {
 

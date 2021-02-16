@@ -1,10 +1,10 @@
 #pragma once
 
-#include "http_request.hh"
-#include "http_response.hh"
+#include "simlib/likely.hh"
+#include "src/web_interface/http_request.hh"
+#include "src/web_interface/http_response.hh"
 
 #include <cstdint>
-#include <simlib/likely.hh>
 
 namespace server {
 

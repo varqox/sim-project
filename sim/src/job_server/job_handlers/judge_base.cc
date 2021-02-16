@@ -1,7 +1,6 @@
-#include "judge_base.hh"
-
-#include <sim/constants.hh>
-#include <simlib/enum_val.hh>
+#include "src/job_server/job_handlers/judge_base.hh"
+#include "sim/constants.hh"
+#include "simlib/enum_val.hh"
 
 namespace job_handlers {
 

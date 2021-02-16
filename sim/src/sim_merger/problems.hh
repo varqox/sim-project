@@ -1,14 +1,13 @@
 #pragma once
 
-#include "internal_files.hh"
-#include "users.hh"
-
-#include <sim/constants.hh>
-#include <sim/problem.hh>
-#include <simlib/concat.hh>
-#include <simlib/libzip.hh>
-#include <simlib/sim/problem_package.hh>
-#include <simlib/sim/simfile.hh>
+#include "sim/constants.hh"
+#include "sim/problem.hh"
+#include "simlib/concat.hh"
+#include "simlib/libzip.hh"
+#include "simlib/sim/problem_package.hh"
+#include "simlib/sim/simfile.hh"
+#include "src/sim_merger/internal_files.hh"
+#include "src/sim_merger/users.hh"
 
 static std::pair<std::vector<std::string>, std::string>
 package_fingerprint(FilePath zip_file_path) {

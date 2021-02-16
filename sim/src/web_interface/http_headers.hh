@@ -1,8 +1,9 @@
 #pragma once
 
+#include "simlib/string_compare.hh"
+#include "simlib/string_transform.hh"
+
 #include <map>
-#include <simlib/string_compare.hh>
-#include <simlib/string_transform.hh>
 #include <string>
 
 namespace server {

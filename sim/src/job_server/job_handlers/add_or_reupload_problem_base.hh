@@ -1,9 +1,8 @@
 #pragma once
 
-#include "job_handler.hh"
-
-#include <sim/jobs.hh>
-#include <simlib/libzip.hh>
+#include "sim/jobs.hh"
+#include "simlib/libzip.hh"
+#include "src/job_server/job_handlers/job_handler.hh"
 
 namespace job_handlers {
 

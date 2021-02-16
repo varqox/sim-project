@@ -1,11 +1,10 @@
 #pragma once
 
-#include "merger.hh"
-
-#include <sim/constants.hh>
-#include <sim/submission.hh>
-#include <sim/user.hh>
-#include <simlib/defer.hh>
+#include "sim/constants.hh"
+#include "sim/submission.hh"
+#include "sim/user.hh"
+#include "simlib/defer.hh"
+#include "src/sim_merger/merger.hh"
 
 // Merges users by username
 class UsersMerger : public Merger<sim::User> {

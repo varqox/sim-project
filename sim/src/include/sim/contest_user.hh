@@ -1,7 +1,7 @@
 #pragma once
 
-#include <simlib/meta.hh>
-#include <simlib/mysql.hh>
+#include "simlib/meta.hh"
+#include "simlib/mysql.hh"
 
 namespace sim {
 

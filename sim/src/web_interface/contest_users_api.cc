@@ -1,6 +1,6 @@
-#include "sim.hh"
+#include "sim/contest_user.hh"
+#include "src/web_interface/sim.hh"
 
-#include <sim/contest_user.hh>
 #include <type_traits>
 
 using sim::ContestUser;
