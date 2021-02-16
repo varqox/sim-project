@@ -1,8 +1,8 @@
 # Others
-backup
-job-server
-manage
-setup-installation
-sim-merger
-sim-server
-sim-upgrader
+/backup
+/job-server
+/manage
+/setup-installation
+/sim-merger
+/sim-server
+/sim-upgrader
