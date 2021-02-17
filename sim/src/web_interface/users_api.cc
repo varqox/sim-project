@@ -204,8 +204,8 @@ void Sim::api_user_add() {
     }
 
     // Validate fields
-    StringView pass = request.form_data.get("pass");
-    StringView pass1 = request.form_data.get("pass1");
+    StringView pass = request.form_fields.get_or("pass", "");
+    StringView pass1 = request.form_fields.get_or("pass1", "");
 
     if (pass != pass1) {
         return api_error403("Passwords do not match");
@@ -223,7 +223,7 @@ void Sim::api_user_add() {
         decltype(User::username)::max_len);
 
     // Validate user type
-    utype_str = request.form_data.get("type");
+    utype_str = request.form_fields.get_or("type", "");
     User::Type utype = User::Type::NORMAL; // Silence GCC warning
     if (utype_str == "A") {
         utype = User::Type::ADMIN;
@@ -303,7 +303,7 @@ void Sim::api_user_edit() {
         decltype(User::username)::max_len);
 
     // Validate user type
-    new_utype_str = request.form_data.get("type");
+    new_utype_str = request.form_fields.get_or("type", "");
     User::Type new_utype = User::Type::NORMAL;
     if (new_utype_str == "A") {
         new_utype = User::Type::ADMIN;
@@ -371,8 +371,8 @@ void Sim::api_user_change_password() {
         return api_error403();
     }
 
-    StringView new_pass = request.form_data.get("new_pass");
-    StringView new_pass1 = request.form_data.get("new_pass1");
+    StringView new_pass = request.form_fields.get_or("new_pass", "");
+    StringView new_pass1 = request.form_fields.get_or("new_pass1", "");
 
     if (new_pass != new_pass1) {
         return api_error400("Passwords do not match");

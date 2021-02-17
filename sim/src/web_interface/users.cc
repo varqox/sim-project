@@ -128,7 +128,7 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 
     return slow_equal(
         intentional_unsafe_string_view(sha3_512(intentional_unsafe_string_view(
-            concat(salt, request.form_data.get(password_field_name))))),
+            concat(salt, request.form_fields.get_or(password_field_name, ""))))),
         passwd_hash);
 }
 
@@ -148,7 +148,7 @@ void Sim::login() {
 
         form_validate(password, "password", "Password");
 
-        remember = request.form_data.exist("persistent-login");
+        remember = request.form_fields.contains("persistent-login");
 
         if (not notifications.size) {
             STACK_UNWINDING_MARK;

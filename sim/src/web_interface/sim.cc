@@ -53,7 +53,7 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr, server::HttpRequest
                     session_csrf_token = request.get_cookie("csrf_token");
                 }
 
-                if (request.form_data.get("csrf_token") != session_csrf_token) {
+                if (request.form_fields.get_or("csrf_token", "") != session_csrf_token) {
                     error403();
                     goto cleanup;
                 }

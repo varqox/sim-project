@@ -338,13 +338,13 @@ class Sim final {
         T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
 
-        auto val_opt = request.form_data.get_opt(name);
-        if (not val_opt) {
+        const auto* value = request.form_fields.get(name);
+        if (not value) {
             form_validation_error = true;
             add_notification("error", "Invalid ", html_escape(name_to_print));
             return false;
         }
-        if (val_opt->size() > max_size) {
+        if (value->size() > max_size) {
             form_validation_error = true;
             add_notification(
                 "error", html_escape(name_to_print), " cannot be longer than ", max_size,
@@ -352,7 +352,7 @@ class Sim final {
             return false;
         }
 
-        var = *val_opt;
+        var = *value;
         return true;
     }
 
@@ -388,18 +388,18 @@ class Sim final {
         T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
 
-        auto val_opt = request.form_data.get_opt(name);
-        if (not val_opt) {
+        const auto* value = request.form_fields.get(name);
+        if (not value) {
             form_validation_error = true;
             add_notification("error", "Invalid ", html_escape(name_to_print));
             return false;
         }
-        if (val_opt->empty()) {
+        if (value->empty()) {
             form_validation_error = true;
             add_notification("error", html_escape(name_to_print), " cannot be blank");
             return false;
         }
-        if (val_opt->size() > max_size) {
+        if (value->size() > max_size) {
             form_validation_error = true;
             add_notification(
                 "error", html_escape(name_to_print), " cannot be longer than ", max_size,
@@ -407,7 +407,7 @@ class Sim final {
             return false;
         }
 
-        var = *val_opt;
+        var = *value;
         return true;
     }
 
@@ -439,22 +439,21 @@ class Sim final {
 
     /// @brief Sets @p var to path of the uploaded file (its temporary location)
     ///  or sets an error if no file as @p name was submitted. To obtain the
-    // users's filename of the uploaded file use: request.form_data.get(name)
+    // users's filename of the uploaded file use: request.form_data.get_or(name, "")
     template <class T>
     bool form_validate_file_path_not_blank(
         T& var, const std::string& name, StringView name_to_print) {
         STACK_UNWINDING_MARK;
 
-        auto const& files = request.form_data.files;
-        auto it = files.find(name);
-        if (it == files.end()) {
+        const auto* file = request.form_fields.file_path(name);
+        if (not file) {
             form_validation_error = true;
             add_notification(
                 "error", html_escape(name_to_print), " has to be submitted as a file");
             return false;
         }
 
-        var = it->second;
+        var = *file;
         return true;
     }
 

@@ -356,7 +356,7 @@ void Sim::api_contest_file_edit(
     form_validate(description, "description", "Description", FILE_DESCRIPTION_MAX_LEN);
     bool reuploading_file = form_validate_file_path_not_blank(file_tmp_path, "file", "File");
 
-    CStringView user_filename = request.form_data.get("file");
+    CStringView user_filename = request.form_fields.get_or("file", "");
     reuploading_file &= not user_filename.empty();
 
     if (name.empty()) {

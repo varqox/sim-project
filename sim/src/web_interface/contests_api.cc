@@ -654,7 +654,7 @@ void Sim::api_contest_create(sim::contest::OverallPermissions overall_perms) {
     StringView name;
     form_validate_not_blank(name, "name", "Contest's name", decltype(Contest::name)::max_len);
 
-    bool is_public = request.form_data.exist("public");
+    bool is_public = request.form_fields.contains("public");
     if (is_public and uint(~overall_perms & PERM::ADD_PUBLIC)) {
         add_notification("error", "You have no permissions to add a public contest");
     }
@@ -699,7 +699,7 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
     StringView source_contest_id;
     form_validate_not_blank(source_contest_id, "source_contest", "ID of the contest to clone");
 
-    bool is_public = request.form_data.exist("public");
+    bool is_public = request.form_fields.contains("public");
     if (is_public and uint(~overall_perms & PERM::ADD_PUBLIC)) {
         add_notification("error", "You have no permissions to add a public contest");
     }
@@ -837,14 +837,14 @@ void Sim::api_contest_edit(
     StringView name;
     form_validate_not_blank(name, "name", "Contest's name", decltype(Contest::name)::max_len);
 
-    bool will_be_public = request.form_data.exist("public");
+    bool will_be_public = request.form_fields.contains("public");
     if (will_be_public and not is_public and
         uint(~perms & sim::contest::Permissions::MAKE_PUBLIC)) {
         add_notification("error", "You have no permissions to make this contest public");
     }
 
     bool make_submitters_contestants =
-        (not will_be_public and request.form_data.exist("make_submitters_contestants"));
+        (not will_be_public and request.form_fields.contains("make_submitters_contestants"));
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -1141,7 +1141,7 @@ void Sim::api_contest_problem_add(
         problem_id, "problem_id", "Problem ID",
         static_cast<bool (*)(const StringView&)>(is_digit), "Problem ID: invalid value");
     // Validate score_revealing
-    auto score_revealing_str = request.form_data.get("score_revealing");
+    auto score_revealing_str = request.form_fields.get_or("score_revealing", "");
     decltype(ContestProblem::score_revealing) score_revealing;
     if (score_revealing_str == "none") {
         score_revealing = ContestProblem::ScoreRevealing::NONE;
@@ -1154,7 +1154,7 @@ void Sim::api_contest_problem_add(
     }
 
     // Validate method_of_choosing_final_submission
-    auto fsm_str = request.form_data.get("method_of_choosing_final_submission");
+    auto fsm_str = request.form_fields.get_or("method_of_choosing_final_submission", "");
     decltype(ContestProblem::method_of_choosing_final_submission)
         method_of_choosing_final_submission;
     if (fsm_str == "latest_compiling") {
@@ -1243,7 +1243,7 @@ void Sim::api_contest_problem_edit(
     form_validate_not_blank(
         name, "name", "Problem's name", decltype(ContestProblem::name)::max_len);
 
-    auto score_revealing_str = request.form_data.get("score_revealing");
+    auto score_revealing_str = request.form_fields.get_or("score_revealing", "");
     decltype(ContestProblem::score_revealing) score_revealing;
     if (score_revealing_str == "none") {
         score_revealing = ContestProblem::ScoreRevealing::NONE;
@@ -1256,7 +1256,7 @@ void Sim::api_contest_problem_edit(
     }
 
     // Validate method_of_choosing_final_submission
-    auto fsm_str = request.form_data.get("method_of_choosing_final_submission");
+    auto fsm_str = request.form_fields.get_or("method_of_choosing_final_submission", "");
     decltype(ContestProblem::method_of_choosing_final_submission)
         method_of_choosing_final_submission = ContestProblem::MethodOfChoosingFinalSubmission::
             LATEST_COMPILING; // Silence warning about uninitialized value

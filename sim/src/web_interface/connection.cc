@@ -33,8 +33,6 @@ int Connection::peek() {
         pos_ = 0;
         buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
         D(stdlog("peek(): Reading completed; buff_size: ", buff_size_);)
-        // D(stdlog("buff: `", StringView((const char*)buffer_, buff_size_),
-        //          "`");)
 
         if (buff_size_ <= 0) {
             state_ = CLOSED;
@@ -137,7 +135,7 @@ void Connection::read_post(HttpRequest& req) {
                 return;
             }
 
-            req.form_data[field_name] = field_content;
+            req.form_fields.add_field(field_name, field_content);
         }
 
     } else if (has_prefix(con_type, "application/x-www-form-urlencoded")) {
@@ -163,8 +161,8 @@ void Connection::read_post(HttpRequest& req) {
                 return;
             }
 
-            req.form_data[decode_uri(field_name).to_string()] =
-                decode_uri(field_content).to_string();
+            req.form_fields.add_field(
+                decode_uri(field_name).to_string(), decode_uri(field_content).to_string());
         }
 
     } else if (has_prefix(con_type, "multipart/form-data")) {
@@ -223,7 +221,7 @@ void Connection::read_post(HttpRequest& req) {
                             (field_content.size() < boundary.size()
                                  ? 0
                                  : field_content.size() - boundary.size() + 1));
-                        req.form_data[field_name] = field_content;
+                        req.form_fields.add_field(field_name, field_content);
 
                     } else { // File
                         // Get file size
@@ -345,7 +343,7 @@ void Connection::read_post(HttpRequest& req) {
                             }
                         }
 
-                        // Add file field to req.form_data
+                        // Add file field to req.form_fields
                         if (fd != -1) {
                             if (tmp_file) {
                                 fclose(tmp_file);
@@ -353,9 +351,7 @@ void Connection::read_post(HttpRequest& req) {
                             }
 
                             tmp_file = fdopen(fd, "w");
-                            req.form_data.files[field_name] = tmp_filename;
-                            // field_name => client filename
-                            req.form_data[field_name] = field_content;
+                            req.form_fields.add_field(field_name, field_content, tmp_filename);
                         }
                     }
                 }

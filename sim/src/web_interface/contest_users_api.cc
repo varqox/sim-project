@@ -357,7 +357,7 @@ void Sim::api_contest_user_add(StringView contest_id) {
     using PERMS = ContestUserPermissions;
 
     PERMS perms = contest_user_get_overall_permissions(contest_id).second;
-    StringView mode_s = request.form_data.get("mode");
+    StringView mode_s = request.form_fields.get_or("mode", "");
 
     decltype(ContestUser::mode) mode;
     PERMS needed_perm;
@@ -407,7 +407,7 @@ void Sim::api_contest_user_change_mode(StringView contest_id, StringView user_id
     using CUM = ContestUser::Mode;
 
     PERMS perms = std::get<1>(contest_user_get_permissions(contest_id, user_id));
-    StringView mode_s = request.form_data.get("mode");
+    StringView mode_s = request.form_fields.get_or("mode", "");
 
     decltype(ContestUser::mode) new_mode;
     PERMS needed_perm = PERMS::NONE; // Silence GCC warning

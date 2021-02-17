@@ -830,7 +830,7 @@ void Sim::api_submission_add() {
 
     // Validate fields
     SubmissionLanguage slang = SubmissionLanguage::C11; // Silence GCC warning
-    auto slang_str = request.form_data.get("language");
+    auto slang_str = request.form_fields.get_or("language", "");
     if (slang_str == "c11") {
         slang = SubmissionLanguage::C11;
     } else if (slang_str == "cpp11") {
@@ -845,22 +845,23 @@ void Sim::api_submission_add() {
         add_notification("error", "Invalid language");
     }
 
-    CStringView solution_tmp_path = request.form_data.file_path("solution");
-    if (solution_tmp_path.empty()) {
+    auto* solution_tmp_path_opt = request.form_fields.file_path("solution");
+    if (!solution_tmp_path_opt) {
         add_notification("error", "Missing solution file");
         return api_error400(notifications);
     }
 
-    StringView code = request.form_data.get("code");
-    bool ignored_submission = (may_submit_ignored and request.form_data.exist("ignored"));
+    StringView code = request.form_fields.get_or("code", "");
+    bool ignored_submission = (may_submit_ignored and request.form_fields.contains("ignored"));
 
-    if ((code.empty() ^ request.form_data.get("solution").empty()) == 0) {
+    if ((code.empty() ^ request.form_fields.get_or("solution", "").empty()) == 0) {
         add_notification("error", "You have to either choose a file or paste the code");
         return api_error400(notifications);
     }
 
     // Check the solution size
-    if ((code.empty() ? get_file_size(solution_tmp_path) : code.size()) > SOLUTION_MAX_SIZE) {
+    if ((code.empty() ? get_file_size(*solution_tmp_path_opt) : code.size()) >
+        SOLUTION_MAX_SIZE) {
         add_notification(
             "error", "Solution is too big (maximum allowed size: ", SOLUTION_MAX_SIZE,
             " bytes = ", humanize_file_size(SOLUTION_MAX_SIZE), ')');
@@ -876,7 +877,7 @@ void Sim::api_submission_add() {
     // Save source file
     if (not code.empty()) {
         put_file_contents(internal_file_path(file_id), code);
-    } else if (move(solution_tmp_path, internal_file_path(file_id))) {
+    } else if (move(*solution_tmp_path_opt, internal_file_path(file_id))) {
         THROW("move()", errmsg());
     }
 
@@ -971,7 +972,7 @@ void Sim::api_submission_change_type() {
         return api_error403();
     }
 
-    StringView type_s = request.form_data.get("type");
+    StringView type_s = request.form_fields.get_or("type", "");
 
     EnumVal<SubmissionType> new_type{};
     if (type_s == "I") {

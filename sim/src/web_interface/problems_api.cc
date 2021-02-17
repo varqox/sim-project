@@ -427,10 +427,10 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     CStringView memory_limit;
     CStringView global_time_limit;
     CStringView package_file;
-    bool reset_time_limits = request.form_data.exist("reset_time_limits");
-    bool ignore_simfile = request.form_data.exist("ignore_simfile");
-    bool seek_for_new_tests = request.form_data.exist("seek_for_new_tests");
-    bool reset_scoring = request.form_data.exist("reset_scoring");
+    bool reset_time_limits = request.form_fields.contains("reset_time_limits");
+    bool ignore_simfile = request.form_fields.contains("ignore_simfile");
+    bool seek_for_new_tests = request.form_fields.contains("seek_for_new_tests");
+    bool reset_scoring = request.form_fields.contains("reset_scoring");
 
     form_validate(name, "name", "Problem's name", decltype(Problem::name)::max_len);
     form_validate(label, "label", "Problem's label", decltype(Problem::label)::max_len);
@@ -465,7 +465,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     }
 
     // Validate problem type
-    StringView ptype_str = request.form_data.get("type");
+    StringView ptype_str = request.form_fields.get_or("type", "");
     Problem::Type ptype = Problem::Type::PRIVATE; // Silence GCC warning
     if (ptype_str == "PRI") {
         ptype = Problem::Type::PRIVATE;
@@ -650,7 +650,7 @@ void Sim::api_problem_merge_into_another(sim::problem::Permissions perms) {
 
     InplaceBuff<32> target_problem_id;
     bool rejudge_transferred_submissions =
-        request.form_data.exist("rejudge_transferred_submissions");
+        request.form_fields.contains("rejudge_transferred_submissions");
     form_validate_not_blank(
         target_problem_id, "target_problem", "Target problem ID",
         is_digit_not_greater_than<
@@ -725,7 +725,7 @@ void Sim::api_problem_edit_tags(sim::problem::Permissions perms) {
     STACK_UNWINDING_MARK;
 
     auto add_tag = [&] {
-        bool hidden = (request.form_data.get("hidden") == "true");
+        bool hidden = (request.form_fields.get_or("hidden", "") == "true");
         StringView name;
         form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
         if (notifications.size) {
@@ -751,7 +751,7 @@ void Sim::api_problem_edit_tags(sim::problem::Permissions perms) {
     };
 
     auto edit_tag = [&] {
-        bool hidden = (request.form_data.get("hidden") == "true");
+        bool hidden = (request.form_fields.get_or("hidden", "") == "true");
         StringView name;
         StringView old_name;
         form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
@@ -792,7 +792,7 @@ void Sim::api_problem_edit_tags(sim::problem::Permissions perms) {
 
     auto delete_tag = [&] {
         StringView name;
-        bool hidden = (request.form_data.get("hidden") == "true");
+        bool hidden = (request.form_fields.get_or("hidden", "") == "true");
         form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
         if (notifications.size) {
             return api_error400(notifications);

@@ -6,9 +6,9 @@ using std::string;
 
 namespace server {
 
-HttpRequest::Form::~Form() {
-    for (auto&& [name, tmp_file_path] : files) {
-        (void)unlink(tmp_file_path);
+HttpRequest::~HttpRequest() {
+    for (auto const& [_, file_path] : form_fields.files()) {
+        (void)unlink(file_path);
     }
 }
 
