@@ -191,21 +191,20 @@ std::string to_string(T x) {
 template <class T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
 std::string to_string(T x, int precision = 6) {
     constexpr int STEP = 20;
-#if 0 // TODO: use it when std::to_chars for double becomes implemented in
-      // libstdc++
-	std::string res;
-	size_t len = STEP;
-	for (;;) {
-		res.resize(len);
-		auto [ptr, ec] =
-		   std::to_chars(res.data(), res.data() + len, x, std::chars_format::fixed);
-		if (ec == std::errc()) {
-			res.resize(ptr - res.data());
-			return res;
-		}
+#if 0 // TODO: use it when std::to_chars for double becomes implemented in libstdc++
+    std::string res;
+    size_t len = STEP;
+    for (;;) {
+        res.resize(len);
+        auto [ptr, ec] =
+            std::to_chars(res.data(), res.data() + len, x, std::chars_format::fixed);
+        if (ec == std::errc()) {
+            res.resize(ptr - res.data());
+            return res;
+        }
 
-		len *= STEP;
-	}
+        len *= STEP;
+    }
 #else
     std::string res(STEP, '\0');
     int len =

@@ -34,17 +34,17 @@ int compile(
              ? std::initializer_list<string>{}
              : std::initializer_list<string>{
                    // clang-format off
-	            proot_path,
-	            "-v", "-1",
-	            "-r", dir_to_chdir.to_string(),
-	            "-b", "/usr",
-	            "-b", "/bin",
-	            "-b", "/lib",
-	            "-b", "/lib32",
-	            "-b", "/libx32",
-	            "-b", "/lib64",
-	            "-b", "/etc/alternatives/",
-	            "-b", "/etc/fpc.cfg"}); // TODO: make this a specific option for the FPC compiler
+                proot_path,
+                "-v", "-1",
+                "-r", dir_to_chdir.to_string(),
+                "-b", "/usr",
+                "-b", "/bin",
+                "-b", "/lib",
+                "-b", "/lib32",
+                "-b", "/libx32",
+                "-b", "/lib64",
+                "-b", "/etc/alternatives/",
+                "-b", "/etc/fpc.cfg"}); // TODO: make this a specific option for the FPC compiler
     // clang-format on
 
     args.insert(args.end(), compile_command.begin(), compile_command.end());

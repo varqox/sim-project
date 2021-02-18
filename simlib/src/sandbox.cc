@@ -341,7 +341,7 @@ Sandbox::Sandbox() {
         seccomp_syscall_priority_both_ctx(SCMP_SYS(mremap), 253);
     }
 
-    /* ======================= Installing callbacks =======================	*/
+    /* ======================= Installing callbacks ======================= */
     class SyscallCallbackLimiting : public SyscallCallback {
         Sandbox& sandbox_;
         const uint limit_;

@@ -705,11 +705,11 @@ TEST(Simfile, validate_files) {
         const array<StringView, 5> tests{{"1", "2", "3a", "3b", "3c"}};
         array<string, tests.size() * 2> files{{
             // clang-format off
-		   "in/1.in", "out/1.out",
-		   "in/2.in", "out/2.out",
-		   "in/3a.in", "out/3a.out",
-		   "in/3b.in", "out/3b.out",
-		   "in/3c.in", "out/3c.out",
+            "in/1.in", "out/1.out",
+            "in/2.in", "out/2.out",
+            "in/3a.in", "out/3a.out",
+            "in/3b.in", "out/3b.out",
+            "in/3c.in", "out/3c.out",
             // clang-format on
         }};
 

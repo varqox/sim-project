@@ -227,15 +227,14 @@ template <
     std::enable_if_t<
         not std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> = 0>
 std::optional<T> str2num(StringView str) noexcept {
-#if 0 // TODO: use it when std::from_chars for double becomes implemented in
-      // libstdc++ (also remove always false from the above and include
-      // <cstdlib>)
-	std::optional<T> res {std::in_place};
-	auto [ptr, ec] = std::from_chars(str.begin(), str.end(), &*res);
-	if (ptr != str.end() or ec != std::errc())
-		return std::nullopt;
+#if 0 // TODO: use it when std::from_chars for double becomes implemented in libstdc++ (also
+      // remove always false from the above and include <cstdlib>)
+    std::optional<T> res{std::in_place};
+    auto [ptr, ec] = std::from_chars(str.begin(), str.end(), &*res);
+    if (ptr != str.end() or ec != std::errc())
+        return std::nullopt;
 
-	return res;
+    return res;
 #else
     static_assert(std::is_floating_point_v<T>);
     if (str.empty() or is_space(str[0])) {
