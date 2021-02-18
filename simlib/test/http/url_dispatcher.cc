@@ -73,20 +73,21 @@ TEST(http, UrlParser) {
 
 // NOLINTNEXTLINE
 TEST(http, UrlDispatcher_simple) {
-    http::UrlDispatcher ud;
+    http::UrlDispatcher<int> ud;
     static constexpr const char url[] = "/foo/{int}/bar/{string}/test";
     int runs = 0;
     ud.add_handler<url>([&](int64_t a, StringView b) {
         ++runs;
         EXPECT_EQ(a, -42);
         EXPECT_EQ(b, "hohahyhu!xd");
-        return http::Response{};
+        return 5;
     });
-    EXPECT_NE(ud.dispatch("/foo/-42/bar/hohahyhu!xd/test"), std::nullopt);
+    EXPECT_EQ(ud.dispatch("/foo/-42/bar/hohahyhu!xd/test"), 5);
     EXPECT_EQ(runs, 1);
 }
 
-static auto canonized_collisions(const http::UrlDispatcher& ud) {
+template <class ResponseT>
+static auto canonized_collisions(const http::UrlDispatcher<ResponseT>& ud) {
     auto collisions = ud.all_potential_collisions();
     for (auto& [a, b] : collisions) {
         if (a > b) {
@@ -99,7 +100,7 @@ static auto canonized_collisions(const http::UrlDispatcher& ud) {
 
 // NOLINTNEXTLINE
 TEST(http, UrlDispatcher_overlapping_patterns) {
-    http::UrlDispatcher ud;
+    http::UrlDispatcher<int> ud;
     static constexpr const char url0[] = "/{int}/{uint}/{uint}/";
     static constexpr const char url1[] = "/{uint}/{int}/{uint}/";
     static constexpr const char url2[] = "/{uint}/{uint}/{int}/";
@@ -109,26 +110,26 @@ TEST(http, UrlDispatcher_overlapping_patterns) {
         EXPECT_EQ(a, -1);
         EXPECT_EQ(b, 2);
         EXPECT_EQ(c, 3);
-        return http::Response{};
+        return 5;
     });
     ud.add_handler<url1>([&](uint64_t a, int64_t b, uint64_t c) {
         ++runs[1];
         EXPECT_EQ(a, 1);
         EXPECT_EQ(b, -2);
         EXPECT_EQ(c, 3);
-        return http::Response{};
+        return 55;
     });
     ud.add_handler<url2>([&](uint64_t a, uint64_t b, int64_t c) {
         ++runs[2];
         EXPECT_EQ(a, 1);
         EXPECT_EQ(b, 2);
         EXPECT_EQ(c, -3);
-        return http::Response{};
+        return 555;
     });
     // Positive
-    EXPECT_NE(ud.dispatch("/-1/2/3/"), std::nullopt);
-    EXPECT_NE(ud.dispatch("/1/-2/3/"), std::nullopt);
-    EXPECT_NE(ud.dispatch("/1/2/-3/"), std::nullopt);
+    EXPECT_EQ(ud.dispatch("/-1/2/3/"), 5);
+    EXPECT_EQ(ud.dispatch("/1/-2/3/"), 55);
+    EXPECT_EQ(ud.dispatch("/1/2/-3/"), 555);
     EXPECT_EQ(runs, (array{1, 1, 1}));
     // Negative
     EXPECT_EQ(ud.dispatch("/1/-2/-3/"), std::nullopt);
@@ -142,23 +143,22 @@ TEST(http, UrlDispatcher_overlapping_patterns) {
 
 // NOLINTNEXTLINE
 TEST(http, UrlDispatcher_all_potential_collisions) {
-    http::UrlDispatcher ud;
+    http::UrlDispatcher<int> ud;
     using VC = decltype(ud.all_potential_collisions());
 
     static constexpr const char url0[] = "/a/b/c/{string}/x/y/z/";
-    ud.add_handler<url0>([&](StringView /*unused*/) { return http::Response{}; });
+    ud.add_handler<url0>([&](StringView /*unused*/) { return 0; });
     EXPECT_EQ(canonized_collisions(ud), VC{});
 
     static constexpr const char url1[] = "/a/b/{string}/o/{string}/y/z/";
-    ud.add_handler<url1>(
-        [&](StringView /*unused*/, StringView /*unused*/) { return http::Response{}; });
+    ud.add_handler<url1>([&](StringView /*unused*/, StringView /*unused*/) { return 0; });
 
     static constexpr const char url2[] = "/a/b/c/o/{string}/y/z/";
-    ud.add_handler<url2>([&](StringView /*unused*/) { return http::Response{}; });
+    ud.add_handler<url2>([&](StringView /*unused*/) { return 0; });
     EXPECT_EQ(canonized_collisions(ud), (VC{{url2, url0}, {url2, url1}, {url0, url1}}));
 
     static constexpr const char url3[] = "/a/b/{string}/o/x/y/z/";
-    ud.add_handler<url3>([&](StringView /*unused*/) { return http::Response{}; });
+    ud.add_handler<url3>([&](StringView /*unused*/) { return 0; });
     EXPECT_EQ(
         canonized_collisions(ud),
         (VC{{url2, url0},
@@ -169,7 +169,7 @@ TEST(http, UrlDispatcher_all_potential_collisions) {
             {url3, url1}}));
     // This url does not collide
     static constexpr const char url4[] = "/z/y/x/{string}/c/b/a/";
-    ud.add_handler<url4>([&](StringView /*unused*/) { return http::Response{}; });
+    ud.add_handler<url4>([&](StringView /*unused*/) { return 0; });
     EXPECT_EQ(
         canonized_collisions(ud),
         (VC{{url2, url0},

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "simlib/debug.hh"
-#include "simlib/http/response.hh"
 #include "simlib/logger.hh"
 #include "simlib/string_traits.hh"
 #include "simlib/string_transform.hh"
@@ -50,7 +49,7 @@ struct VariableComponent {
 class UrlParsing {
 private:
     template <class ParsedComponentsTuple, size_t idx = 0, class... Args>
-    static constexpr auto handler_args_tuple() {
+    [[nodiscard]] static constexpr auto handler_args_tuple() {
         if constexpr (idx == std::tuple_size_v<ParsedComponentsTuple>) {
             return std::tuple<Args...>{};
         } else {
@@ -66,7 +65,7 @@ private:
 
     template <
         const char* url, class ParsedComponentsTuple, size_t idx = 0, size_t res_size = 1>
-    static constexpr StringView get_literal_prefix() {
+    [[nodiscard]] static constexpr StringView get_literal_prefix() {
         static_assert(url[0] == '/');
         if constexpr (idx == std::tuple_size_v<ParsedComponentsTuple>) {
             return StringView{url, res_size};
@@ -86,7 +85,7 @@ private:
         const char* url, class ParsedComponentsTuple,
         size_t idxp1 = std::tuple_size_v<ParsedComponentsTuple>,
         size_t res_beg = StringView{url}.size()>
-    static constexpr StringView get_literal_suffix() {
+    [[nodiscard]] static constexpr StringView get_literal_suffix() {
         static_assert(url[0] == '/');
         if constexpr (idxp1 == 0) {
             return StringView{url + res_beg};
@@ -114,7 +113,7 @@ private:
             get_literal_suffix<url_pattern, ParsedComponentsTuple>();
 
         template <size_t component_idx = 0, class... ParsedArgs>
-        static constexpr std::optional<HandlerArgsTuple>
+        [[nodiscard]] static constexpr std::optional<HandlerArgsTuple>
         try_parse(StringView url, ParsedArgs&&... parsed_args) {
             if constexpr (component_idx == std::tuple_size_v<ParsedComponentsTuple>) {
                 if (url.empty()) {
@@ -157,7 +156,7 @@ private:
     };
 
     template <size_t idx, auto Arg0, auto... Args>
-    static constexpr auto get_arg() noexcept {
+    [[nodiscard]] static constexpr auto get_arg() noexcept {
         if constexpr (idx == 0) {
             return Arg0;
         } else {
@@ -165,7 +164,8 @@ private:
         }
     }
 
-    static constexpr std::optional<StringView> str_component_parser(StringView str) {
+    [[nodiscard]] static constexpr std::optional<StringView>
+    str_component_parser(StringView str) {
         return str;
     }
 
@@ -173,7 +173,7 @@ public:
     template <
         const char* url, size_t url_idx, class ParsedComponentsTuple, size_t cp_idx,
         auto... CustomParsers>
-    static constexpr auto parse_url() {
+    [[nodiscard]] static constexpr auto parse_url() {
         static_assert(url[0] == '/');
         constexpr StringView suffix{url + url_idx};
         if constexpr (suffix.empty()) {
@@ -246,6 +246,7 @@ template <const char* url, auto... CustomParsers>
 using UrlParser =
     decltype(detail::UrlParsing::parse_url<url, 0, std::tuple<>, 0, CustomParsers...>());
 
+template <class ResponseT>
 class UrlDispatcher {
     struct ReverseComparer {
         bool operator()(StringView a, StringView b) const {
@@ -261,8 +262,8 @@ class UrlDispatcher {
             StringView,
             std::map<
                 StringView,
-                std::vector<
-                    std::pair<StringView, std::function<std::optional<Response>(StringView)>>>,
+                std::vector<std::pair<
+                    StringView, std::function<std::optional<ResponseT>(StringView)>>>,
                 ReverseComparer>>>
         handlers_;
 
@@ -277,7 +278,7 @@ class UrlDispatcher {
     static constexpr DebugLogger<false> debuglog{};
 
     template <class... Elems>
-    static strongly_typed_function<Response(Elems...)>
+    static strongly_typed_function<ResponseT(Elems...)>
     get_handler_type(const std::tuple<Elems...>&);
 
 public:
@@ -289,7 +290,7 @@ public:
         constexpr size_t slashes = count_slash(url_pattern);
         handlers_[slashes][UP::literal_prefix][UP::literal_suffix].emplace_back(
             url_pattern,
-            [handler = std::move(handler)](StringView url) -> std::optional<Response> {
+            [handler = std::move(handler)](StringView url) -> std::optional<ResponseT> {
                 auto args_tuple_opt = UP::try_parse(url);
                 if (not args_tuple_opt) {
                     debuglog("                parsing failed");
@@ -323,8 +324,9 @@ public:
     /// candidates matching the dispatched url must be tried. If the result is
     /// an empty vector, then url dispatch is the fastest possible, and this is
     /// what you should crave for when deciding url patterns.
-    std::vector<std::pair<StringView, StringView>> all_potential_collisions() const {
-        auto foreach_handler = [](const decltype(handlers_)::mapped_type& prefix_map,
+    [[nodiscard]] std::vector<std::pair<StringView, StringView>>
+    all_potential_collisions() const {
+        auto foreach_handler = [](const typename decltype(handlers_)::mapped_type& prefix_map,
                                   auto&& callback) {
             for (auto& [prefix, suffix_map] : prefix_map) {
                 for (auto& [suffix, handlers_vec] : suffix_map) {
@@ -365,7 +367,7 @@ public:
         return res;
     }
 
-    std::optional<Response> dispatch(StringView url) const {
+    [[nodiscard]] std::optional<ResponseT> dispatch(StringView url) const {
         size_t slashes = count_slash(url);
         debuglog("trying slashes: ", slashes);
         auto slash_it = handlers_.find(slashes);
