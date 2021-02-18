@@ -4,9 +4,11 @@
 #include "sim/contest_problem.hh"
 #include "sim/contest_round.hh"
 #include "sim/contest_user.hh"
+#include "sim/http/form_validator.hh"
 #include "sim/inf_datetime.hh"
 #include "sim/jobs.hh"
 #include "sim/utilities.hh"
+#include "simlib/string_view.hh"
 #include "src/web_interface/sim.hh"
 
 #include <cstdint>
@@ -113,28 +115,6 @@ static void append_contest_actions_str(
     str.append('"');
 }
 
-static constexpr const char* to_json(ContestProblem::MethodOfChoosingFinalSubmission fssm) {
-    switch (fssm) {
-    case ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING:
-        return "\"latest_compiling\"";
-    case ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE:
-        return "\"highest_score\"";
-    }
-
-    return "\"unknown\"";
-}
-
-static constexpr const char* to_json(ContestProblem::ScoreRevealing srm) {
-    switch (srm) {
-    case ContestProblem::ScoreRevealing::NONE: return "\"none\"";
-    case ContestProblem::ScoreRevealing::ONLY_SCORE: return "\"only_score\"";
-    case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS:
-        return "\"score_and_full_status\"";
-    }
-
-    return "\"unknown\"";
-}
-
 namespace {
 
 class ContestInfoResponseBuilder {
@@ -232,8 +212,8 @@ public:
 		   json_stringify(extra_data.problem_label), ',',
 		   json_stringify(cp.name), ',',
 		   cp.item, ',',
-		   to_json(cp.method_of_choosing_final_submission), ',',
-		   to_json(cp.score_revealing), ',',
+		   cp.method_of_choosing_final_submission.to_json_value(), ',',
+		   cp.score_revealing.to_json_value(), ',',
 		   color_class_json(
 		      contest_perms_, round_to_full_results_[cp.contest_round_id],
 		      curr_date_, extra_data.final_submission_full_status,
@@ -1129,46 +1109,14 @@ void Sim::api_contest_problem_add(
     }
 
     // Validate fields
-    StringView name;
-    StringView problem_id;
-    // NOLINTNEXTLINE(misc-redundant-expression)
-    static_assert(
-        decltype(ContestProblem::name)::max_len >= decltype(Problem::name)::max_len,
-        "Contest problem name has to be able to hold the attached "
-        "problem's name");
-    form_validate(name, "name", "Problem's name", decltype(ContestProblem::name)::max_len);
-    form_validate(
-        problem_id, "problem_id", "Problem ID",
-        static_cast<bool (*)(const StringView&)>(is_digit), "Problem ID: invalid value");
-    // Validate score_revealing
-    auto score_revealing_str = request.form_fields.get_or("score_revealing", "");
-    decltype(ContestProblem::score_revealing) score_revealing;
-    if (score_revealing_str == "none") {
-        score_revealing = ContestProblem::ScoreRevealing::NONE;
-    } else if (score_revealing_str == "only_score") {
-        score_revealing = ContestProblem::ScoreRevealing::ONLY_SCORE;
-    } else if (score_revealing_str == "score_and_full_status") {
-        score_revealing = ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS;
-    } else {
-        add_notification("error", "Invalid score revealing");
-    }
-
-    // Validate method_of_choosing_final_submission
-    auto fsm_str = request.form_fields.get_or("method_of_choosing_final_submission", "");
-    decltype(ContestProblem::method_of_choosing_final_submission)
-        method_of_choosing_final_submission;
-    if (fsm_str == "latest_compiling") {
-        method_of_choosing_final_submission =
-            ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING;
-    } else if (fsm_str == "highest_score") {
-        method_of_choosing_final_submission =
-            ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE;
-    } else {
-        add_notification("error", "Invalid method of choosing final submission");
-    }
-
-    if (notifications.size) {
-        return api_error400(notifications);
+    auto fv = http::FormValidator{request.form_fields};
+    auto problem_id = fv.validate<&ContestProblem::problem_id>();
+    auto name = fv.validate_allow_blank<&ContestProblem::name>();
+    auto method_of_choosing_final_submission =
+        fv.validate<&ContestProblem::method_of_choosing_final_submission>();
+    auto score_revealing = fv.validate<&ContestProblem::score_revealing>();
+    if (fv.has_errors()) {
+        return api_error400(fv.errors());
     }
 
     auto transaction = mysql.start_transaction();
@@ -1178,7 +1126,7 @@ void Sim::api_contest_problem_add(
 
     MySQL::Optional<decltype(Problem::owner)::value_type> problem_owner;
     decltype(Problem::type) problem_type;
-    decltype(ContestProblem::name) problem_name;
+    decltype(Problem::name) problem_name;
     stmt.res_bind_all(problem_owner, problem_type, problem_name);
     if (not stmt.next()) {
         return api_error404(intentional_unsafe_string_view(
@@ -1201,8 +1149,11 @@ void Sim::api_contest_problem_add(
                          "SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
                          "FROM contest_problems "
                          "WHERE contest_round_id=?");
+    static_assert( // NOLINTNEXTLINE(misc-redundant-expression)
+        decltype(ContestProblem::name)::max_len >= decltype(Problem::name)::max_len,
+        "Contest problem name has to be able to hold the attached problem's name");
     stmt.bind_and_execute(
-        contest_round_id, contest_id, problem_id, (name.empty() ? problem_name : name),
+        contest_round_id, contest_id, problem_id, (name.size == 0 ? problem_name : name),
         method_of_choosing_final_submission, score_revealing, contest_round_id);
 
     transaction.commit();
@@ -1239,39 +1190,13 @@ void Sim::api_contest_problem_edit(
     }
 
     // Validate fields
-    StringView name;
-    form_validate_not_blank(
-        name, "name", "Problem's name", decltype(ContestProblem::name)::max_len);
-
-    auto score_revealing_str = request.form_fields.get_or("score_revealing", "");
-    decltype(ContestProblem::score_revealing) score_revealing;
-    if (score_revealing_str == "none") {
-        score_revealing = ContestProblem::ScoreRevealing::NONE;
-    } else if (score_revealing_str == "only_score") {
-        score_revealing = ContestProblem::ScoreRevealing::ONLY_SCORE;
-    } else if (score_revealing_str == "score_and_full_status") {
-        score_revealing = ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS;
-    } else {
-        add_notification("error", "Invalid score revealing");
-    }
-
-    // Validate method_of_choosing_final_submission
-    auto fsm_str = request.form_fields.get_or("method_of_choosing_final_submission", "");
-    decltype(ContestProblem::method_of_choosing_final_submission)
-        method_of_choosing_final_submission = ContestProblem::MethodOfChoosingFinalSubmission::
-            LATEST_COMPILING; // Silence warning about uninitialized value
-    if (fsm_str == "latest_compiling") {
-        method_of_choosing_final_submission =
-            ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING;
-    } else if (fsm_str == "highest_score") {
-        method_of_choosing_final_submission =
-            ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE;
-    } else {
-        add_notification("error", "Invalid method of choosing final submission");
-    }
-
-    if (notifications.size) {
-        return api_error400(notifications);
+    auto fv = http::FormValidator{request.form_fields};
+    auto name = fv.validate<&ContestProblem::name>();
+    auto method_of_choosing_final_submission =
+        fv.validate<&ContestProblem::method_of_choosing_final_submission>();
+    auto score_revealing = fv.validate<&ContestProblem::score_revealing>();
+    if (fv.has_errors()) {
+        return api_error400(fv.errors());
     }
 
     // Have to check if it is necessary to reselect problem final submissions

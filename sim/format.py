@@ -7,6 +7,7 @@ def sim_sources(srcdir):
     return list(filter_subdirs(srcdir, [
         'src/',
         'src/include/sim/',
+        'src/include/sim/api/',
         'src/include/sim/http/',
         'src/job_server/',
         'src/job_server/job_handlers/',

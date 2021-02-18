@@ -1,11 +1,17 @@
 #pragma once
 
+#include "sim/api/enum.hh"
+#include "sim/api/int.hh"
+#include "sim/api/string.hh"
+#include "sim/blob_field.hh"
 #include "sim/constants.hh" // TODO: remove when ExtraIterateData does not use it
 #include "sim/contest_permissions.hh"
 #include "sim/mysql.hh"
 #include "sim/problem.hh"
 #include "sim/problem_permissions.hh"
 #include "sim/varchar_field.hh"
+#include "simlib/concat_tostr.hh"
+#include "simlib/string_view.hh"
 
 namespace sim {
 
@@ -24,12 +30,88 @@ struct ContestProblem {
     uintmax_t id;
     uintmax_t contest_round_id;
     uintmax_t contest_id;
-    uintmax_t problem_id;
-    VarcharField<128> name;
+
+    constexpr static const char problem_id_var_name[] = "problem_id";
+    constexpr static const char problem_id_var_descr[] = "Problem ID";
+    api::Int<uintmax_t, problem_id_var_name, problem_id_var_descr, 1> problem_id;
+
+    constexpr static const char name_var_name[] = "name";
+    constexpr static const char name_var_descr[] = "Problem's name";
+    api::String<VarcharField<128>, name_var_name, name_var_descr> name;
+
     uintmax_t item;
-    EnumVal<MethodOfChoosingFinalSubmission> method_of_choosing_final_submission;
-    EnumVal<ScoreRevealing> score_revealing;
+    api::Enum<MethodOfChoosingFinalSubmission> method_of_choosing_final_submission;
+    api::Enum<ScoreRevealing> score_revealing;
 };
+
+namespace api {
+
+template <>
+constexpr CStringView Enum<ContestProblem::ScoreRevealing>::api_var_name = "score_revealing";
+template <>
+constexpr CStringView Enum<ContestProblem::ScoreRevealing>::api_var_description =
+    "Score revealing";
+
+template <>
+constexpr std::optional<Enum<ContestProblem::ScoreRevealing>>
+Enum<ContestProblem::ScoreRevealing>::from_str_impl(StringView str) {
+    using SR = ContestProblem::ScoreRevealing;
+    if (str == "none") {
+        return SR::NONE;
+    }
+    if (str == "only_score") {
+        return SR::ONLY_SCORE;
+    }
+    if (str == "score_and_full_status") {
+        return SR::SCORE_AND_FULL_STATUS;
+    }
+    return std::nullopt;
+}
+
+template <>
+constexpr CStringView Enum<ContestProblem::ScoreRevealing>::to_str() const noexcept {
+    using SR = ContestProblem::ScoreRevealing;
+    switch (*this) {
+    case SR::NONE: return "none";
+    case SR::ONLY_SCORE: return "only_score";
+    case SR::SCORE_AND_FULL_STATUS: return "score_and_full_status";
+    }
+    return "unknown";
+}
+
+template <>
+constexpr CStringView Enum<ContestProblem::MethodOfChoosingFinalSubmission>::api_var_name =
+    "method_of_choosing_final_submission";
+template <>
+constexpr CStringView
+    Enum<ContestProblem::MethodOfChoosingFinalSubmission>::api_var_description =
+        "Method of choosing final submission";
+
+template <>
+constexpr std::optional<Enum<ContestProblem::MethodOfChoosingFinalSubmission>>
+Enum<ContestProblem::MethodOfChoosingFinalSubmission>::from_str_impl(StringView val) {
+    using MOCFS = ContestProblem::MethodOfChoosingFinalSubmission;
+    if (val == "latest_compiling") {
+        return MOCFS::LATEST_COMPILING;
+    }
+    if (val == "highest_score") {
+        return MOCFS::HIGHEST_SCORE;
+    }
+    return std::nullopt;
+}
+
+template <>
+constexpr CStringView
+Enum<ContestProblem::MethodOfChoosingFinalSubmission>::to_str() const noexcept {
+    using MOCFS = ContestProblem::MethodOfChoosingFinalSubmission;
+    switch (*this) {
+    case MOCFS::LATEST_COMPILING: return "latest_compiling";
+    case MOCFS::HIGHEST_SCORE: return "highest_score";
+    }
+    return "unknown";
+}
+
+} // namespace api
 
 namespace contest_problem {
 
