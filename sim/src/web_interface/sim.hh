@@ -333,7 +333,7 @@ class Sim final {
 
     /// Returns true if and only if the field @p name exists and its value is no
     /// longer than max_size
-    template <class T>
+    template <class T> // TODO: deprecate with reason "use FormValidator"
     bool form_validate(
         T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
@@ -357,7 +357,7 @@ class Sim final {
     }
 
     /// Validates field and (if not blank) checks it by comp
-    template <
+    template < // TODO: deprecate with reason "use FormValidator"
         class T, class Checker,
         typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
     bool form_validate(
@@ -383,7 +383,7 @@ class Sim final {
     }
 
     /// Like validate() but also validate not blank
-    template <class T>
+    template <class T> // TODO: deprecate with reason "use FormValidator"
     bool form_validate_not_blank(
         T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
@@ -412,7 +412,7 @@ class Sim final {
     }
 
     /// Validates field and checks it by comp
-    template <
+    template < // TODO: deprecate with reason "use FormValidator"
         class T, class Checker,
         typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
     bool form_validate_not_blank(
@@ -440,7 +440,7 @@ class Sim final {
     /// @brief Sets @p var to path of the uploaded file (its temporary location)
     ///  or sets an error if no file as @p name was submitted. To obtain the
     // users's filename of the uploaded file use: request.form_data.get_or(name, "")
-    template <class T>
+    template <class T> // TODO: deprecate with reason "use FormValidator"
     bool form_validate_file_path_not_blank(
         T& var, const std::string& name, StringView name_to_print) {
         STACK_UNWINDING_MARK;
