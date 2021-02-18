@@ -186,31 +186,31 @@ void Sim::login() {
 
     page_template("Login");
     // clang-format off
-	append("<div class=\"form-container\">"
-	           "<h1>Log in</h1>"
-	           "<form method=\"post\">"
-	               // Username
-	               "<div class=\"field-group\">"
-	                   "<label>Username</label>"
-	                   "<input type=\"text\" name=\"username\" "
-	                          "value=\"", html_escape(username), "\" "
-	                          "size=\"24\" "
-	                          "maxlength=\"", decltype(User::username)::max_len, "\" required>"
-	               "</div>"
-	               // Password
-	               "<div class=\"field-group\">"
-	                   "<label>Password</label>"
-	                   "<input type=\"password\" name=\"password\" size=\"24\">"
-	               "</div>"
-	               // Remember
-	               "<div class=\"field-group\">"
-	                   "<label>Remember me for a month</label>"
-	                   "<input type=\"checkbox\" name=\"persistent-login\"",
-	                           (remember ? " checked" : ""), ">"
-	               "</div>"
-	               "<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
-	           "</form>"
-	       "</div>");
+    append("<div class=\"form-container\">"
+               "<h1>Log in</h1>"
+               "<form method=\"post\">"
+                   // Username
+                   "<div class=\"field-group\">"
+                       "<label>Username</label>"
+                       "<input type=\"text\" name=\"username\" "
+                              "value=\"", html_escape(username), "\" "
+                              "size=\"24\" "
+                              "maxlength=\"", decltype(User::username)::max_len, "\" required>"
+                   "</div>"
+                   // Password
+                   "<div class=\"field-group\">"
+                       "<label>Password</label>"
+                       "<input type=\"password\" name=\"password\" size=\"24\">"
+                   "</div>"
+                   // Remember
+                   "<div class=\"field-group\">"
+                       "<label>Remember me for a month</label>"
+                       "<input type=\"checkbox\" name=\"persistent-login\"",
+                               (remember ? " checked" : ""), ">"
+                   "</div>"
+                   "<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
+               "</form>"
+           "</div>");
     // clang-format on
 }
 
@@ -287,58 +287,58 @@ void Sim::sign_up() {
 
     page_template("Sign up");
     // clang-format off
-	append("<div class=\"form-container\">"
-	           "<h1>Sign up</h1>"
-	           "<form method=\"post\">"
-	               // Username
-	               "<div class=\"field-group\">"
-	                   "<label>Username</label>"
-	                   "<input type=\"text\" name=\"username\" "
-	                          "value=\"", html_escape(username), "\" "
-	                          "size=\"24\" "
-	                          "maxlength=\"", decltype(User::username)::max_len, "\" required>"
-	               "</div>"
-	               // First Name
-	               "<div class=\"field-group\">"
-	                   "<label>First name</label>"
-	                   "<input type=\"text\" name=\"first_name\" "
-	                          "value=\"", html_escape(first_name), "\" "
-	                          "size=\"24\" "
-	                          "maxlength=\"", decltype(User::first_name)::max_len, "\" "
-	                          "required>"
-	               "</div>"
-	               // Last name
-	               "<div class=\"field-group\">"
-	                   "<label>Last name</label>"
-	                   "<input type=\"text\" name=\"last_name\" "
-	                          "value=\"", html_escape(last_name), "\" "
-	                          "size=\"24\" "
-	                          "maxlength=\"", decltype(User::last_name)::max_len, "\" "
-	                          "required>"
-	               "</div>"
-	               // Email
-	               "<div class=\"field-group\">"
-	                   "<label>Email</label>"
-	                   "<input type=\"email\" name=\"email\" "
-	                          "value=\"", html_escape(email), "\" size=\"24\" "
-	                          "maxlength=\"", decltype(User::email)::max_len, "\" required>"
-	               "</div>"
-	               // Password
-	               "<div class=\"field-group\">"
-	                   "<label>Password</label>"
-	                   "<input type=\"password\" name=\"password1\" "
-	                          "size=\"24\">"
-	               "</div>"
-	               // Password (repeat)
-	               "<div class=\"field-group\">"
-	                   "<label>Password (repeat)</label>"
-	                   "<input type=\"password\" name=\"password2\" "
-	                          "size=\"24\">"
-	               "</div>"
-	               "<input class=\"btn blue\" type=\"submit\" "
-	                      "value=\"Sign up\">"
-	           "</form>"
-	       "</div>");
+    append("<div class=\"form-container\">"
+               "<h1>Sign up</h1>"
+               "<form method=\"post\">"
+                   // Username
+                   "<div class=\"field-group\">"
+                       "<label>Username</label>"
+                       "<input type=\"text\" name=\"username\" "
+                              "value=\"", html_escape(username), "\" "
+                              "size=\"24\" "
+                              "maxlength=\"", decltype(User::username)::max_len, "\" required>"
+                   "</div>"
+                   // First Name
+                   "<div class=\"field-group\">"
+                       "<label>First name</label>"
+                       "<input type=\"text\" name=\"first_name\" "
+                              "value=\"", html_escape(first_name), "\" "
+                              "size=\"24\" "
+                              "maxlength=\"", decltype(User::first_name)::max_len, "\" "
+                              "required>"
+                   "</div>"
+                   // Last name
+                   "<div class=\"field-group\">"
+                       "<label>Last name</label>"
+                       "<input type=\"text\" name=\"last_name\" "
+                              "value=\"", html_escape(last_name), "\" "
+                              "size=\"24\" "
+                              "maxlength=\"", decltype(User::last_name)::max_len, "\" "
+                              "required>"
+                   "</div>"
+                   // Email
+                   "<div class=\"field-group\">"
+                       "<label>Email</label>"
+                       "<input type=\"email\" name=\"email\" "
+                              "value=\"", html_escape(email), "\" size=\"24\" "
+                              "maxlength=\"", decltype(User::email)::max_len, "\" required>"
+                   "</div>"
+                   // Password
+                   "<div class=\"field-group\">"
+                       "<label>Password</label>"
+                       "<input type=\"password\" name=\"password1\" "
+                              "size=\"24\">"
+                   "</div>"
+                   // Password (repeat)
+                   "<div class=\"field-group\">"
+                       "<label>Password (repeat)</label>"
+                       "<input type=\"password\" name=\"password2\" "
+                              "size=\"24\">"
+                   "</div>"
+                   "<input class=\"btn blue\" type=\"submit\" "
+                          "value=\"Sign up\">"
+               "</form>"
+           "</div>");
     // clang-format on
 }
 

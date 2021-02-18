@@ -136,36 +136,36 @@ public:
 
     void append_field_names() {
         // clang-format off
-		content_.append(
-		   "[\n{\"fields\":["
-		          "{\"name\":\"contest\",\"fields\":["
-		              "\"id\","
-		              "\"name\","
-		              "\"is_public\","
-		              "\"actions\""
-		          "]},"
-		          "{\"name\":\"rounds\",\"columns\":["
-		              "\"id\","
-		              "\"name\","
-		              "\"item\","
-		              "\"ranking_exposure\","
-		              "\"begins\","
-		              "\"full_results\","
-		              "\"ends\""
-		          "]},"
-		          "{\"name\":\"problems\",\"columns\":["
-		              "\"id\","
-		              "\"round_id\","
-		              "\"problem_id\","
-		              "\"can_view_problem\","
-		              "\"problem_label\","
-		              "\"name\","
-		              "\"item\","
-		              "\"method_of_choosing_final_submission\","
-		              "\"score_revealing\","
-		              "\"color_class\""
-		          "]}"
-		      "]},");
+        content_.append(
+           "[\n{\"fields\":["
+                  "{\"name\":\"contest\",\"fields\":["
+                      "\"id\","
+                      "\"name\","
+                      "\"is_public\","
+                      "\"actions\""
+                  "]},"
+                  "{\"name\":\"rounds\",\"columns\":["
+                      "\"id\","
+                      "\"name\","
+                      "\"item\","
+                      "\"ranking_exposure\","
+                      "\"begins\","
+                      "\"full_results\","
+                      "\"ends\""
+                  "]},"
+                  "{\"name\":\"problems\",\"columns\":["
+                      "\"id\","
+                      "\"round_id\","
+                      "\"problem_id\","
+                      "\"can_view_problem\","
+                      "\"problem_label\","
+                      "\"name\","
+                      "\"item\","
+                      "\"method_of_choosing_final_submission\","
+                      "\"score_revealing\","
+                      "\"color_class\""
+                  "]}"
+              "]},");
         // clang-format on
     }
 
@@ -181,14 +181,14 @@ public:
     void append_round(const ContestRound& contest_round) {
         round_to_full_results_.emplace(contest_round.id, contest_round.full_results);
         // clang-format off
-		content_.append(
-		   "\n[", contest_round.id, ',',
-		   json_stringify(contest_round.name), ',',
-		   contest_round.item, ","
-		   "\"", contest_round.ranking_exposure.as_inf_datetime().to_api_str(), "\","
-		   "\"", contest_round.begins.as_inf_datetime().to_api_str(), "\","
-		   "\"", contest_round.full_results.as_inf_datetime().to_api_str(), "\","
-		   "\"", contest_round.ends.as_inf_datetime().to_api_str(), "\"],");
+        content_.append(
+           "\n[", contest_round.id, ',',
+           json_stringify(contest_round.name), ',',
+           contest_round.item, ","
+           "\"", contest_round.ranking_exposure.as_inf_datetime().to_api_str(), "\","
+           "\"", contest_round.begins.as_inf_datetime().to_api_str(), "\","
+           "\"", contest_round.full_results.as_inf_datetime().to_api_str(), "\","
+           "\"", contest_round.ends.as_inf_datetime().to_api_str(), "\"],");
         // clang-format on
     }
 
@@ -204,22 +204,23 @@ public:
         const sim::contest_problem::ExtraIterateData& extra_data) {
         auto& cp = contest_problem;
         // clang-format off
-		content_.append(
-		   "\n[", cp.id, ',',
-		   cp.contest_round_id, ',',
-		   cp.problem_id, ',',
-		   (uint(extra_data.problem_perms & sim::problem::Permissions::VIEW) ? "true," : "false,"),
-		   json_stringify(extra_data.problem_label), ',',
-		   json_stringify(cp.name), ',',
-		   cp.item, ',',
-		   cp.method_of_choosing_final_submission.to_json_value(), ',',
-		   cp.score_revealing.to_json_value(), ',',
-		   color_class_json(
-		      contest_perms_, round_to_full_results_[cp.contest_round_id],
-		      curr_date_, extra_data.final_submission_full_status,
-		      extra_data.initial_final_submission_initial_status,
-		      cp.score_revealing),
-		   "],");
+        content_.append(
+            "\n[", cp.id, ',',
+            cp.contest_round_id, ',',
+            cp.problem_id, ',',
+            (uint(extra_data.problem_perms & sim::problem::Permissions::VIEW) ? "true,"
+                                                                              : "false,"),
+            json_stringify(extra_data.problem_label), ',',
+            json_stringify(cp.name), ',',
+            cp.item, ',',
+            cp.method_of_choosing_final_submission.to_json_value(), ',',
+            cp.score_revealing.to_json_value(), ',',
+            color_class_json(
+                contest_perms_, round_to_full_results_[cp.contest_round_id],
+                curr_date_, extra_data.final_submission_full_status,
+                extra_data.initial_final_submission_initial_status,
+                cp.score_revealing),
+            "],");
         // clang-format on
     }
 
@@ -323,12 +324,12 @@ void Sim::api_contests() {
 
     // Column names
     // clang-format off
-	append("[\n{\"columns\":["
-	           "\"id\","
-	           "\"name\","
-	           "\"is_public\","
-	           "\"actions\""
-	       "]}");
+    append("[\n{\"columns\":["
+               "\"id\","
+               "\"name\","
+               "\"is_public\","
+               "\"actions\""
+           "]}");
     // clang-format on
 
     while (res.next()) {
@@ -1354,18 +1355,18 @@ void Sim::api_contest_ranking(
     // show full or initial status and show or not show the score
     auto prepare_stmt = [&](auto&& extra_cr_sql, auto&&... extra_bind_params) {
         // clang-format off
-		stmt = mysql.prepare(
-		   "SELECT cr.id, cr.full_results, cp.id, cp.score_revealing, sf.owner,"
-		   " sf.id, sf.full_status, sf.score, si.id, si.initial_status "
-		   "FROM submissions sf "
-		   "JOIN submissions si ON si.owner=sf.owner"
-		   " AND si.contest_problem_id=sf.contest_problem_id"
-		   " AND si.contest_initial_final=1 "
-		   "JOIN contest_rounds cr ON cr.id=sf.contest_round_id ",
-		      std::forward<decltype(extra_cr_sql)>(extra_cr_sql), " "
-		   "JOIN contest_problems cp ON cp.id=sf.contest_problem_id "
-		   "WHERE sf.", submissions_query_id_name, "=? AND sf.contest_final=1 "
-		   "ORDER BY sf.owner");
+        stmt = mysql.prepare(
+           "SELECT cr.id, cr.full_results, cp.id, cp.score_revealing, sf.owner,"
+           " sf.id, sf.full_status, sf.score, si.id, si.initial_status "
+           "FROM submissions sf "
+           "JOIN submissions si ON si.owner=sf.owner"
+           " AND si.contest_problem_id=sf.contest_problem_id"
+           " AND si.contest_initial_final=1 "
+           "JOIN contest_rounds cr ON cr.id=sf.contest_round_id ",
+              std::forward<decltype(extra_cr_sql)>(extra_cr_sql), " "
+           "JOIN contest_problems cp ON cp.id=sf.contest_problem_id "
+           "WHERE sf.", submissions_query_id_name, "=? AND sf.contest_final=1 "
+           "ORDER BY sf.owner");
         // clang-format on
         stmt.bind_and_execute(
             std::forward<decltype(extra_bind_params)>(extra_bind_params)..., query_id);
@@ -1386,18 +1387,18 @@ void Sim::api_contest_ranking(
     append('[');
     // Column names
     // clang-format off
-	append("\n{\"columns\":["
-	           "\"id\",\"name\","
-	           "{\"name\":\"submissions\",\"columns\":["
-	               "\"id\",\"contest_round_id\","
-	               "\"contest_problem_id\","
-	               "{\"name\":\"status\",\"fields\":["
-	                   "\"class\","
-	                   "\"text\""
-	               "]},"
-	               "\"score\""
-	           "]}"
-	       "]}");
+    append("\n{\"columns\":["
+               "\"id\",\"name\","
+               "{\"name\":\"submissions\",\"columns\":["
+                   "\"id\",\"contest_round_id\","
+                   "\"contest_problem_id\","
+                   "{\"name\":\"status\",\"fields\":["
+                       "\"class\","
+                       "\"text\""
+                   "]},"
+                   "\"score\""
+               "]}"
+           "]}");
     // clang-format on
 
     const uint64_t session_uid =

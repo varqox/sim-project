@@ -152,23 +152,23 @@ void Sim::api_problems() {
 
     // Column names
     // clang-format off
-	append("[\n{\"columns\":["
-	           "\"id\","
-	           "\"added\","
-	           "\"type\","
-	           "\"name\","
-	           "\"label\","
-	           "\"owner_id\","
-	           "\"owner_username\","
-	           "\"actions\","
-	           "{\"name\":\"tags\",\"fields\":["
-	               "\"public\","
-	               "\"hidden\""
-	           "]},"
-	           "\"color_class\","
-	           "\"simfile\","
-	           "\"memory_limit\""
-	       "]}");
+    append("[\n{\"columns\":["
+               "\"id\","
+               "\"added\","
+               "\"type\","
+               "\"name\","
+               "\"label\","
+               "\"owner_id\","
+               "\"owner_username\","
+               "\"actions\","
+               "{\"name\":\"tags\",\"fields\":["
+                   "\"public\","
+                   "\"hidden\""
+               "]},"
+               "\"color_class\","
+               "\"simfile\","
+               "\"memory_limit\""
+           "]}");
     // clang-format on
 
     // Tags selector
@@ -936,14 +936,14 @@ void Sim::api_problem_attaching_contest_problems(sim::problem::Permissions perms
 
     // Column names
     // clang-format off
-	append("[\n{\"columns\":["
-	           "\"contest_id\","
-	           "\"contest_name\","
-	           "\"round_id\","
-	           "\"round_name\","
-	           "\"problem_id\","
-	           "\"problem_name\""
-	       "]}");
+    append("[\n{\"columns\":["
+               "\"contest_id\","
+               "\"contest_name\","
+               "\"round_id\","
+               "\"round_name\","
+               "\"problem_id\","
+               "\"problem_name\""
+           "]}");
     // clang-format on
 
     while (res.next()) {

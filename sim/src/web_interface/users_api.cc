@@ -95,15 +95,15 @@ void Sim::api_users() {
     auto res = mysql.query(query);
 
     // clang-format off
-	append("[\n{\"columns\":["
-	           "\"id\","
-	           "\"username\","
-	           "\"first_name\","
-	           "\"last_name\","
-	           "\"email\","
-	           "\"type\","
-	           "\"actions\""
-	       "]}");
+    append("[\n{\"columns\":["
+               "\"id\","
+               "\"username\","
+               "\"first_name\","
+               "\"last_name\","
+               "\"email\","
+               "\"type\","
+               "\"actions\""
+           "]}");
     // clang-format on
 
     while (res.next()) {

@@ -163,10 +163,10 @@ int main() {
     }
 
     // clang-format off
-	stdlog("\n=================== Server launched ==================="
-	       "\nPID: ", getpid(),
-	       "\nworkers: ", workers,
-	       "\naddress: ", address_str, ':', port);
+    stdlog("\n=================== Server launched ==================="
+           "\nPID: ", getpid(),
+           "\nworkers: ", workers,
+           "\naddress: ", address_str, ':', port);
     // clang-format on
 
     if ((socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP)) < 0) {

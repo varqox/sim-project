@@ -39,20 +39,20 @@ void Sim::api_contest_files() {
 
     auto append_column_names = [&] {
         // clang-format off
-		append("[{\"fields\":["
-		           "\"overall_actions\","
-		           "{\"name\":\"rows\", \"columns\":["
-		               "\"id\","
-		               "\"name\","
-		               "\"description\","
-		               "\"file_size\","
-		               "\"modified\","
-		               "\"contest_id\","
-		               "\"creator_id\","
-		               "\"creator_username\","
-		               "\"actions\""
-		           "]}"
-		       "]}");
+        append("[{\"fields\":["
+                   "\"overall_actions\","
+                   "{\"name\":\"rows\", \"columns\":["
+                       "\"id\","
+                       "\"name\","
+                       "\"description\","
+                       "\"file_size\","
+                       "\"modified\","
+                       "\"contest_id\","
+                       "\"creator_id\","
+                       "\"creator_username\","
+                       "\"actions\""
+                   "]}"
+               "]}");
         // clang-format on
     };
 

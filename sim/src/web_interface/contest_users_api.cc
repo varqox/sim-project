@@ -157,17 +157,17 @@ void Sim::api_contest_users() {
 
     auto append_column_names = [&] {
         // clang-format off
-		append("[{\"fields\":["
-		           "\"overall_actions\","
-		           "{\"name\":\"rows\", \"columns\":["
-		                "\"id\","
-		                "\"username\","
-		                "\"first_name\","
-		                "\"last_name\","
-		                "\"mode\","
-		                "\"actions\""
-		           "]}"
-		       "]}");
+        append("[{\"fields\":["
+                   "\"overall_actions\","
+                   "{\"name\":\"rows\", \"columns\":["
+                        "\"id\","
+                        "\"username\","
+                        "\"first_name\","
+                        "\"last_name\","
+                        "\"mode\","
+                        "\"actions\""
+                   "]}"
+               "]}");
         // clang-format on
     };
 

@@ -57,11 +57,9 @@ void Sim::api_jobs() {
     InplaceBuff<512> qwhere;
     qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
                    " j.info, j.creator, u.username");
-    qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id WHERE TRUE"); // Needed
-                                                                                // to
-                                                                                // easily
-                                                                                // append
-                                                                                // constraints
+    qwhere.append(
+        " FROM jobs j LEFT JOIN users u ON creator=u.id WHERE TRUE"); // Needed to easily
+                                                                      // append constraints
 
     enum ColumnIdx {
         JID,
@@ -78,18 +76,18 @@ void Sim::api_jobs() {
 
     auto append_column_names = [&] {
         // clang-format off
-		append("[\n{\"columns\":["
-		           "\"id\","
-		           "\"added\","
-		           "\"type\","
-		           "{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
-		           "\"priority\","
-		           "\"creator_id\","
-		           "\"creator_username\","
-		           "\"info\","
-		           "\"actions\","
-		           "{\"name\":\"log\",\"fields\":[\"is_incomplete\",\"text\"]}"
-		       "]}");
+        append("[\n{\"columns\":["
+                   "\"id\","
+                   "\"added\","
+                   "\"type\","
+                   "{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
+                   "\"priority\","
+                   "\"creator_id\","
+                   "\"creator_username\","
+                   "\"info\","
+                   "\"actions\","
+                   "{\"name\":\"log\",\"fields\":[\"is_incomplete\",\"text\"]}"
+               "]}");
         // clang-format on
     };
 
@@ -216,9 +214,9 @@ void Sim::api_jobs() {
             WONT_THROW(str2num<std::underlying_type_t<JobStatus>>(res[JSTATUS]).value())};
 
         // clang-format off
-		append(",\n[", res[JID], ","
-		       "\"", res[ADDED], "\","
-		       "\"", job_type_str(job_type), "\",");
+        append(",\n[", res[JID], ","
+               "\"", res[ADDED], "\","
+               "\"", job_type_str(job_type), "\",");
         // clang-format on
 
         // Status: (CSS class, text)

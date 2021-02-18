@@ -35,17 +35,17 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
     }
 
     // clang-format off
-	report.append("<table class=\"table\">"
-	                  "<thead>"
-	                      "<tr>"
-	                          "<th class=\"test\">Test</th>"
-	                          "<th class=\"result\">Result</th>"
-	                          "<th class=\"time\">Time [s]</th>"
-	                          "<th class=\"memory\">Memory [KiB]</th>"
-	                          "<th class=\"points\">Score</th>"
-	                      "</tr>"
-	                  "</thead>"
-	                  "<tbody>");
+    report.append("<table class=\"table\">"
+                      "<thead>"
+                          "<tr>"
+                              "<th class=\"test\">Test</th>"
+                              "<th class=\"result\">Result</th>"
+                              "<th class=\"time\">Time [s]</th>"
+                              "<th class=\"memory\">Memory [KiB]</th>"
+                              "<th class=\"points\">Score</th>"
+                          "</tr>"
+                      "</thead>"
+                      "<tbody>");
     // clang-format on
 
     auto append_normal_columns = [&](const JudgeReport::Test& test) {

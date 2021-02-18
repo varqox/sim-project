@@ -1170,10 +1170,10 @@ int main() {
         }
 
         // clang-format off
-		stdlog("\n=================== Job server launched ==================="
-		       "\nPID: ", getpid(),
-		       "\nlocal workers: ", lworkers_no,
-		       "\njudge workers: ", jworkers_no);
+        stdlog("\n=================== Job server launched ==================="
+               "\nPID: ", getpid(),
+               "\nlocal workers: ", lworkers_no,
+               "\njudge workers: ", jworkers_no);
         // clang-format on
 
         for (size_t i = 0; i < lworkers_no; ++i) {

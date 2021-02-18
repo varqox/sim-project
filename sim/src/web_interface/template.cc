@@ -55,20 +55,20 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
     resp.content = "";
 
     // clang-format off
-	append("<!DOCTYPE html>"
-	    "<html lang=\"en\">"
-	        "<head>"
-	            "<meta charset=\"utf-8\">"
-	            "<title>", html_escape(title), "</title>"
-	            "<link rel=\"stylesheet\" type=\"text/css\" "
-	                  "href=\"/kit/styles.css?",
-	                      get_hash_of<STYLES_CSS>(), "\">"
-	            "<script src=\"/kit/jquery.js?",
-	                get_hash_of<JQUERY_JS>(), "\"></script>"
-	            "<script src=\"/kit/scripts.js?",
-	                get_hash_of<SCRIPTS_JS>(), "\"></script>"
-	            "<link rel=\"shortcut icon\" type=\"image/png\" "
-	                  "href=\"/kit/img/favicon.png\"/>");
+    append("<!DOCTYPE html>"
+        "<html lang=\"en\">"
+            "<head>"
+                "<meta charset=\"utf-8\">"
+                "<title>", html_escape(title), "</title>"
+                "<link rel=\"stylesheet\" type=\"text/css\" "
+                      "href=\"/kit/styles.css?",
+                          get_hash_of<STYLES_CSS>(), "\">"
+                "<script src=\"/kit/jquery.js?",
+                    get_hash_of<JQUERY_JS>(), "\"></script>"
+                "<script src=\"/kit/scripts.js?",
+                    get_hash_of<SCRIPTS_JS>(), "\"></script>"
+                "<link rel=\"shortcut icon\" type=\"image/png\" "
+                      "href=\"/kit/img/favicon.png\"/>");
     // clang-format on
 
     if (!scripts.empty()) {
@@ -80,18 +80,18 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
     }
 
     // clang-format off
-	append("</head>"
-	        "<body>"
-	            "<div class=\"navbar\">"
-	                "<a href=\"/\" class=\"brand\">Sim beta</a>"
-	                "<script>"
-	                    "var nav = document.querySelector('.navbar');"
-	                    "nav.appendChild(a_view_button('/c', 'Contests',"
-	                                                  "undefined,"
-	                                                  "contest_chooser));"
-	                    "nav.querySelector('script').remove()"
-	                "</script>"
-	                "<a href=\"/p\">Problems</a>");
+    append("</head>"
+            "<body>"
+                "<div class=\"navbar\">"
+                    "<a href=\"/\" class=\"brand\">Sim beta</a>"
+                    "<script>"
+                        "var nav = document.querySelector('.navbar');"
+                        "nav.appendChild(a_view_button('/c', 'Contests',"
+                                                      "undefined,"
+                                                      "contest_chooser));"
+                        "nav.querySelector('script').remove()"
+                    "</script>"
+                    "<a href=\"/p\">Problems</a>");
     // clang-format on
 
     if (session_is_open) {
@@ -144,8 +144,8 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
     }
 
     // clang-format off
-	append("</div>"
-	       "<div class=\"notifications\">", notifications, "</div>");
+    append("</div>"
+           "<div class=\"notifications\">", notifications, "</div>");
     // clang-format on
 
 #ifdef DEBUG
@@ -161,26 +161,26 @@ void Sim::page_template_end() {
     if (page_template_began) {
         page_template_began = false;
         // clang-format off
-		append("<script>var start_time=", microtime() / 1000, ";"
-		       "function update_clock() {"
-		           "var t = new Date();"
-		           "t.setTime(t.getTime() -"
-		                        "window.performance.timing.responseStart +"
-		                        "start_time);"
-		           "var h = t.getHours();"
-		           "var m = t.getMinutes();"
-		           "var s = t.getSeconds();"
-		           "h = (h < 10 ? '0' : '') + h;"
-		           "m = (m < 10 ? '0' : '') + m;"
-		           "s = (s < 10 ? '0' : '') + s;"
-		           // Update the displayed time
-		           "var tzo = -t.getTimezoneOffset();"
-		           "document.getElementById('clock').innerHTML = "
-		              "String().concat(h, ':', m, ':', s, '<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>');"
-		           "setTimeout(update_clock, 1000 - t.getMilliseconds());"
-		       "}"
-		       "update_clock();"
-		       "</script></body></html>");
+        append("<script>var start_time=", microtime() / 1000, ";"
+               "function update_clock() {"
+                   "var t = new Date();"
+                   "t.setTime(t.getTime() -"
+                                "window.performance.timing.responseStart +"
+                                "start_time);"
+                   "var h = t.getHours();"
+                   "var m = t.getMinutes();"
+                   "var s = t.getSeconds();"
+                   "h = (h < 10 ? '0' : '') + h;"
+                   "m = (m < 10 ? '0' : '') + m;"
+                   "s = (s < 10 ? '0' : '') + s;"
+                   // Update the displayed time
+                   "var tzo = -t.getTimezoneOffset();"
+                   "document.getElementById('clock').innerHTML = "
+                      "String().concat(h, ':', m, ':', s, '<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>');"
+                   "setTimeout(update_clock, 1000 - t.getMilliseconds());"
+               "}"
+               "update_clock();"
+               "</script></body></html>");
         // clang-format on
     }
 }
@@ -198,10 +198,10 @@ void Sim::error_page_template(StringView status, StringView code, StringView mes
 
     page_template(status);
     // clang-format off
-	append("<center>"
-	       "<h1 style=\"font-size:25px;font-weight:normal;\">",
-	          code, " &mdash; ", message, "</h1>"
-	       "<a class=\"btn\" href=\"", prev, "\">Go back</a>"
-	       "</center>");
+    append("<center>"
+           "<h1 style=\"font-size:25px;font-weight:normal;\">",
+              code, " &mdash; ", message, "</h1>"
+           "<a class=\"btn\" href=\"", prev, "\">Go back</a>"
+           "</center>");
     // clang-format on
 }

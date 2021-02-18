@@ -128,26 +128,26 @@ void Sim::api_submissions() {
 
     auto append_column_names = [&] {
         // clang-format off
-		append("[\n{\"columns\":["
-		           "\"id\","
-		           "\"type\","
-		           "\"language\","
-		           "\"owner_id\","
-		           "\"owner_username\","
-		           "\"owner_first_name\","
-		           "\"owner_last_name\","
-		           "\"problem_id\","
-		           "\"problem_name\","
-		           "\"contest_problem_id\","
-		           "\"contest_problem_name\","
-		           "\"contest_round_id\","
-		           "\"contest_round_name\","
-		           "\"contest_id\","
-		           "\"contest_name\","
-		           "\"submit_time\","
-		           "{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
-		           "\"score\","
-		           "\"actions\"");
+        append("[\n{\"columns\":["
+                   "\"id\","
+                   "\"type\","
+                   "\"language\","
+                   "\"owner_id\","
+                   "\"owner_username\","
+                   "\"owner_first_name\","
+                   "\"owner_last_name\","
+                   "\"problem_id\","
+                   "\"problem_name\","
+                   "\"contest_problem_id\","
+                   "\"contest_problem_name\","
+                   "\"contest_round_id\","
+                   "\"contest_round_name\","
+                   "\"contest_id\","
+                   "\"contest_name\","
+                   "\"submit_time\","
+                   "{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
+                   "\"score\","
+                   "\"actions\"");
         // clang-format on
 
         if (select_one) {

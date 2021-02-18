@@ -71,17 +71,17 @@ static void help(const char* program_name) {
     }
 
     // clang-format off
-	stdlog("Usage: ", program_name, " [options] <command> [<command args>]\n"
-	       "Manage is a tool for controlling the Sim instance.\n"
-	       "Commands:\n"
-	       "  help    Display this information\n"
-	       "  restart Kill current Sim instance, start a new one, and\n"
-	       "            indefinitely restart it if it dies\n"
-	       "  start   Same as restart\n"
-	       "  stop    Kill current Sim instance\n"
-	       "Options: \n"
-	       "  -b      Before monitoring Sim instance for restarts make it a\n"
-	       "            background process");
+    stdlog("Usage: ", program_name, " [options] <command> [<command args>]\n"
+           "Manage is a tool for controlling the Sim instance.\n"
+           "Commands:\n"
+           "  help    Display this information\n"
+           "  restart Kill current Sim instance, start a new one, and\n"
+           "            indefinitely restart it if it dies\n"
+           "  start   Same as restart\n"
+           "  stop    Kill current Sim instance\n"
+           "Options: \n"
+           "  -b      Before monitoring Sim instance for restarts make it a\n"
+           "            background process");
     // clang-format on
 }
 
