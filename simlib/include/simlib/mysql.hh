@@ -361,6 +361,11 @@ public:
         binds_[idx].is_unsigned = std::is_unsigned_v<T>;
     }
 
+    template <class T, std::enable_if_t<std::is_integral_v<typename T::int_type>, int> = 0>
+    void bind(unsigned idx, T& x) NO_DEBUG_MYSQL(noexcept) {
+        bind(idx, static_cast<typename T::int_type&>(x));
+    }
+
     void bind(unsigned idx, char* str, size_t& length, size_t max_size)
         NO_DEBUG_MYSQL(noexcept) {
         DEBUG_MYSQL(throw_assert(idx < binds_size_);)
@@ -505,6 +510,11 @@ public:
         res_binds_[idx].buffer_type = mysql_type<T>;
         res_binds_[idx].buffer = &x;
         res_binds_[idx].is_unsigned = std::is_unsigned_v<T>;
+    }
+
+    template <class T, std::enable_if_t<std::is_integral_v<typename T::int_type>, int> = 0>
+    void res_bind(unsigned idx, T& x) NO_DEBUG_MYSQL(noexcept) {
+        res_bind(idx, static_cast<typename T::int_type&>(x));
     }
 
     void res_bind(unsigned idx, InplaceBuffBase& buff) NO_DEBUG_MYSQL(noexcept) {
