@@ -72,7 +72,6 @@ simlib_libsources = files([
     'src/file_contents.cc',
     'src/file_manip.cc',
     'src/http/response.cc',
-    'src/http/server.cc',
     'src/humanize.cc',
     'src/inotify.cc',
     'src/libarchive_zip.cc',
