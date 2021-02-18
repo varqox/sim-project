@@ -12,7 +12,9 @@
 
 namespace {
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 MySQL::Connection conn;
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 InplaceBuff<PATH_MAX> sim_build;
 
 struct CmdOptions {

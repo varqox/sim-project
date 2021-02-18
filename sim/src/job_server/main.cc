@@ -36,6 +36,7 @@ using std::string;
 using std::thread;
 using std::vector;
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local MySQL::Connection mysql;
 
 namespace {
@@ -437,7 +438,7 @@ public:
 
         return {other_jobs, *other_jobs.begin()};
     }
-} jobs_queue;
+} jobs_queue; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 class EventsQueue {
     mutex events_lock;
@@ -456,6 +457,7 @@ class EventsQueue {
         return notifier_fd_;
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static EventsQueue events_queue;
 
 public:
@@ -501,6 +503,7 @@ public:
     }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 EventsQueue EventsQueue::events_queue;
 
 class WorkersPool {
@@ -746,7 +749,7 @@ static void process_judge_job(const WorkersPool::NextJob& job) {
 
 static void sync_and_assign_jobs();
 
-static WorkersPool
+static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     local_workers(process_local_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
         STACK_UNWINDING_MARK;
 
@@ -763,7 +766,7 @@ static WorkersPool
         EventsQueue::register_event([] { spawn_worker(local_workers); });
     });
 
-static WorkersPool
+static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     judge_workers(process_judge_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
         STACK_UNWINDING_MARK;
 

@@ -9,17 +9,17 @@
 #include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
+#include <cstdint>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <thread>
 
 using std::string;
 
-static int socket_fd;
-
 namespace server {
 
-static void* worker(void* /*unused*/) {
+static void* worker(void* ptr) {
+    int socket_fd = reinterpret_cast<intptr_t>(ptr);
     try {
         sockaddr_in name{};
         socklen_t client_name_len = sizeof(name);
@@ -169,7 +169,8 @@ int main() {
            "\naddress: ", address_str, ':', port);
     // clang-format on
 
-    if ((socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP)) < 0) {
+    int socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
+    if (socket_fd < 0) {
         errlog("Failed to create socket", errmsg());
         return 1;
     }
@@ -230,11 +231,12 @@ int main() {
 
     std::vector<pthread_t> threads(workers);
     for (size_t i = 1; i < workers; ++i) {
-        pthread_create(&threads[i], &attr, server::worker,
-                       nullptr); // TODO: errors...
+        pthread_create(
+            &threads[i], &attr, server::worker,
+            reinterpret_cast<void*>(socket_fd)); // TODO: errors...
     }
     threads[0] = pthread_self();
-    server::worker(nullptr);
+    server::worker(reinterpret_cast<void*>(socket_fd));
 
     close(socket_fd);
     return 0;

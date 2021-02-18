@@ -24,8 +24,6 @@
 using std::array;
 using std::string;
 
-inline static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
-
 /**
  * @brief Displays help
  */
@@ -44,14 +42,20 @@ static void help(const char* program_name) {
     puts("  --only-drop-tables     Drop database tables and exit");
 }
 
-static void parse_options(int& argc, char** argv) {
+struct CmdOptions {
+    bool drop_tables = false;
+    bool only_drop_tables = false;
+};
+
+static CmdOptions parse_cmd_options(int& argc, char** argv) {
+    CmdOptions cmd_options;
     int new_argc = 1;
     for (int i = 1; i < argc; ++i) {
 
         if (argv[i][0] == '-') {
             // Drop tables
             if (0 == strcmp(argv[i], "--drop-tables")) {
-                DROP_TABLES = true;
+                cmd_options.drop_tables = true;
             }
             // Help
             else if (0 == strcmp(argv[i], "-h") || 0 == strcmp(argv[i], "--help"))
@@ -62,8 +66,8 @@ static void parse_options(int& argc, char** argv) {
             // Drop tables
             else if (0 == strcmp(argv[i], "--only-drop-tables"))
             {
-                DROP_TABLES = true;
-                ONLY_DROP_TABLES = true;
+                cmd_options.drop_tables = true;
+                cmd_options.only_drop_tables = true;
             }
             // Unknown
             else
@@ -76,6 +80,7 @@ static void parse_options(int& argc, char** argv) {
     }
 
     argc = new_argc;
+    return cmd_options;
 }
 
 static void create_db_config(FilePath db_config_path) {
@@ -155,7 +160,7 @@ int main(int argc, char** argv) {
     stdlog.label(false);
     errlog.label(false);
 
-    parse_options(argc, argv);
+    auto cmd_options = parse_cmd_options(argc, argv);
 
     if (argc != 2) {
         help(argc > 0 ? argv[0] : nullptr);
@@ -181,7 +186,7 @@ int main(int argc, char** argv) {
         return 4;
     }
 
-    if (DROP_TABLES) {
+    if (cmd_options.drop_tables) {
         try {
             conn.update("SET foreign_key_checks=0");
             for (auto&& table : tables) {
@@ -189,7 +194,7 @@ int main(int argc, char** argv) {
             }
             conn.update("SET foreign_key_checks=1");
 
-            if (ONLY_DROP_TABLES) {
+            if (cmd_options.only_drop_tables) {
                 return 0;
             }
 

@@ -43,25 +43,25 @@ static void daemonize() {
     }
 }
 
-namespace options {
+struct CmdOptions {
+    bool make_background = false;
+};
 
-bool make_background = false;
-
-static void parse(int& argc, char** argv) {
+static CmdOptions parse_cmd_options(int& argc, char** argv) {
+    CmdOptions cmd_options;
     int new_argc = 0;
     for (int i = 0; i < argc; ++i) {
         StringView arg = argv[i];
         if (arg == "-b") {
-            make_background = true;
+            cmd_options.make_background = true;
             continue;
         }
         argv[new_argc++] = argv[i];
     }
     argv[new_argc] = nullptr;
     argc = new_argc;
+    return cmd_options;
 }
-
-} // namespace options
 
 namespace command {
 
@@ -91,7 +91,7 @@ struct sim_paths {
     string job_server = concat_tostr(path_dirpath(manage), "bin/job-server");
 };
 
-static void restart() {
+static void restart(const CmdOptions& cmd_options) {
     sim_paths paths;
     // First kill manage so that we are the only one instance running
     kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
@@ -141,7 +141,7 @@ static void restart() {
         {-1, paths.job_server},
     }};
 
-    if (options::make_background) {
+    if (cmd_options.make_background) {
         daemonize();
     }
 
@@ -163,7 +163,7 @@ static void restart() {
     }
 }
 
-static void start() { restart(); }
+static void start(const CmdOptions& cmd_options) { restart(cmd_options); }
 
 static void stop() {
     sim_paths paths;
@@ -176,16 +176,16 @@ static void stop() {
 
 } // namespace command
 
-static int run_command(int argc, char** argv) {
+static int run_command(const CmdOptions& cmd_options, int argc, char** argv) {
     ArgvParser args(argc - 1, argv + 1);
     auto command = args.extract_next();
     int res = 0;
     if (command == "help") {
         command::help(argv[0]);
     } else if (command == "restart") {
-        command::restart();
+        command::restart(cmd_options);
     } else if (command == "start") {
-        command::start();
+        command::start(cmd_options);
     } else if (command == "stop") {
         command::stop();
     } else {
@@ -199,11 +199,11 @@ int main(int argc, char** argv) {
     stdlog.use(stdout);
     stdlog.label(false);
 
-    options::parse(argc, argv);
+    auto cmd_options = parse_cmd_options(argc, argv);
     if (argc < 2) {
         command::help(argv[0]);
         return 1;
     }
 
-    return run_command(argc, argv);
+    return run_command(cmd_options, argc, argv);
 }
