@@ -16,8 +16,8 @@ public:
     using EnumVal<EnumT>::EnumVal;
 
     // Needs to be implemented alongside specialization
-    constexpr static CStringView api_var_name;
-    constexpr static CStringView api_var_description;
+    static const CStringView api_var_name;
+    static const CStringView api_var_description;
 
     constexpr static std::optional<Enum> from_str_impl(StringView str);
 

@@ -47,8 +47,8 @@ public:
     friend auto stringify(Int& i) noexcept { return stringify(i.val); }
     friend auto stringify(Int&& i) noexcept { return stringify(i.val); }
 
-    constexpr static CStringView api_var_name = CStringView{var_name};
-    constexpr static CStringView api_var_description = CStringView{var_description};
+    static inline const CStringView api_var_name = CStringView{var_name};
+    static inline const CStringView api_var_description = CStringView{var_description};
 
     // Returns parsed object or error description
     [[nodiscard]] static std::variant<Int, std::string> from_str(StringView str) {

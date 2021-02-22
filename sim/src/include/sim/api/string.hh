@@ -16,8 +16,8 @@ class String : public StringT {
 public:
     using StringT::StringT;
 
-    constexpr static CStringView api_var_name = CStringView{var_name};
-    constexpr static CStringView api_var_description = CStringView{var_description};
+    static inline const CStringView api_var_name = CStringView{var_name};
+    static inline const CStringView api_var_description = CStringView{var_description};
 
     // Needs to be implemented alongside specialization
     // Returns parsed object or error description
