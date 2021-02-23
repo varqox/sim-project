@@ -6,6 +6,7 @@
 #include "sim/cpp_syntax_highlighter.hh"
 #include "sim/mysql.hh"
 #include "sim/problem_permissions.hh"
+#include "sim/session.hh"
 #include "sim/user.hh"
 #include "simlib/http/response.hh"
 #include "simlib/request_uri_parser.hh"
@@ -257,11 +258,11 @@ class Sim final {
 
     bool session_is_open = false;
     sim::User::Type session_user_type = sim::User::Type::NORMAL;
-    InplaceBuff<SESSION_ID_LEN + 1> session_id;
-    InplaceBuff<SESSION_CSRF_TOKEN_LEN + 1> session_csrf_token;
-    InplaceBuff<32> session_user_id;
+    decltype(sim::Session::id) session_id;
+    decltype(sim::Session::csrf_token) session_csrf_token;
+    decltype(sim::Session::user_id) session_user_id;
     decltype(sim::User::username) session_username;
-    InplaceBuff<4096> session_data;
+    decltype(sim::Session::data) session_data;
 
     /**
      * @brief Creates session and opens it
@@ -484,7 +485,7 @@ private:
     friend DECLARE_ENUM_OPERATOR(UserPermissions, &);
 
     UserPermissions users_perms = UserPermissions::NONE;
-    InplaceBuff<32> users_uid;
+    decltype(sim::User::id) users_uid;
 
     UserPermissions users_get_overall_permissions() noexcept;
 
@@ -498,10 +499,10 @@ private:
      * @return ORed permissions flags
      */
     Sim::UserPermissions
-    users_get_permissions(StringView user_id, sim::User::Type utype) noexcept;
+    users_get_permissions(decltype(sim::User::id) user_id, sim::User::Type utype) noexcept;
 
     // Queries MySQL
-    UserPermissions users_get_permissions(StringView user_id);
+    UserPermissions users_get_permissions(decltype(sim::User::id) user_id);
 
     // Return true if the submitted password is correct, false otherwise
     bool check_submitted_password(StringView password_field_name = "password");

@@ -1,4 +1,5 @@
 #include "sim/random.hh"
+#include "sim/session.hh"
 #include "simlib/debug.hh"
 #include "src/web_interface/sim.hh"
 
@@ -25,8 +26,8 @@ bool Sim::session_open() {
                               " AND u.id=s.user_id");
     stmt.bind_and_execute(session_id, mysql_date());
 
-    InplaceBuff<SESSION_IP_LEN + 1> session_ip;
-    InplaceBuff<4096> user_agent;
+    decltype(sim::Session::ip) session_ip;
+    decltype(sim::Session::user_agent) user_agent;
     decltype(User::type) s_u_type;
     stmt.res_bind_all(
         session_csrf_token, session_user_id, session_data, s_u_type, session_username,
@@ -54,14 +55,14 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
                               " data, ip, user_agent, expires) "
                               "VALUES(?,?,?,'',?,?,?)");
 
-    session_csrf_token = generate_random_token(SESSION_CSRF_TOKEN_LEN);
+    session_csrf_token = generate_random_token(decltype(sim::Session::csrf_token)::max_len);
     auto user_agent = request.headers.get("User-Agent");
     time_t exp_time =
         time(nullptr) + (temporary_session ? TMP_SESSION_MAX_LIFETIME : SESSION_MAX_LIFETIME);
     auto exp_datetime = mysql_date(exp_time);
 
     do {
-        session_id = generate_random_token(SESSION_ID_LEN);
+        session_id = generate_random_token(decltype(sim::Session::id)::max_len);
         stmt.bind_and_execute(
             session_id, session_csrf_token, user_id, client_ip, user_agent, exp_datetime);
 

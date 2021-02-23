@@ -247,7 +247,8 @@ void Sim::api_contests() {
     qwhere.append(
         " FROM contests c LEFT JOIN contest_users cu ON "
         "cu.contest_id=c.id AND cu.user_id=",
-        (session_is_open ? session_user_id : StringView("''")));
+        (session_is_open ? intentional_unsafe_string_view(to_string(session_user_id))
+                         : StringView("''")));
 
     enum ColumnIdx { CID, CNAME, IS_PUBLIC, USER_MODE };
 
@@ -263,7 +264,7 @@ void Sim::api_contests() {
     // Get the overall permissions to the contests list
     using CO_PERMS = sim::contest::OverallPermissions;
     CO_PERMS contest_overall_perms = sim::contest::get_overall_permissions(
-        (session_is_open ? optional(session_user_type) : std::nullopt));
+        (session_is_open ? optional{session_user_type} : std::nullopt));
     // Choose contests to select
     if (uint(~contest_overall_perms & CO_PERMS::VIEW_ALL)) {
         if (uint(contest_overall_perms & CO_PERMS::VIEW_PUBLIC)) {
@@ -446,8 +447,7 @@ void Sim::api_contest() {
 
     sim::contest_problem::iterate(
         mysql, sim::contest_problem::IterateIdKind::CONTEST, contest_id, contest_perms,
-        (session_is_open ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                         : std::nullopt),
+        (session_is_open ? optional{session_user_id} : std::nullopt),
         (session_is_open ? optional{session_user_type} : std::nullopt), curr_date,
         [&](const ContestProblem& contest_problem,
             const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -524,9 +524,7 @@ void Sim::api_contest_round(StringView contest_round_id) {
 
     sim::contest_problem::iterate(
         mysql, sim::contest_problem::IterateIdKind::CONTEST_ROUND, contest_round_id,
-        contest_perms,
-        (session_is_open ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                         : std::nullopt),
+        contest_perms, (session_is_open ? optional{session_user_id} : std::nullopt),
         (session_is_open ? optional{session_user_type} : std::nullopt), curr_date,
         [&](const ContestProblem& contest_problem,
             const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -560,9 +558,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
         contest_problem_info;
     sim::contest_problem::iterate(
         mysql, sim::contest_problem::IterateIdKind::CONTEST_PROBLEM, contest_problem_id,
-        contest_perms,
-        (session_is_open ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                         : std::nullopt),
+        contest_perms, (session_is_open ? optional{session_user_id} : std::nullopt),
         (session_is_open ? optional{session_user_type} : std::nullopt), curr_date,
         [&](const ContestProblem& contest_problem,
             const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -722,9 +718,7 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
     optional<ContestProblem> unclonable_contest_problem;
     sim::contest_problem::iterate(
         mysql, sim::contest_problem::IterateIdKind::CONTEST, source_contest_id,
-        source_contest_perms,
-        (session_is_open ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                         : std::nullopt),
+        source_contest_perms, (session_is_open ? optional{session_user_id} : std::nullopt),
         (session_is_open ? optional{session_user_type} : std::nullopt), curr_date,
         [&](const ContestProblem& cp,
             const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -982,9 +976,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contest::Permissio
     optional<ContestProblem> unclonable_contest_problem;
     sim::contest_problem::iterate(
         mysql, sim::contest_problem::IterateIdKind::CONTEST_ROUND, source_contest_round_id,
-        source_contest_perms,
-        (session_is_open ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                         : std::nullopt),
+        source_contest_perms, (session_is_open ? optional{session_user_id} : std::nullopt),
         (session_is_open ? optional{session_user_type} : std::nullopt), curr_date,
         [&](const ContestProblem& cp,
             const sim::contest_problem::ExtraIterateData& extra_data) {
@@ -1135,8 +1127,7 @@ void Sim::api_contest_problem_add(
     }
 
     auto problem_perms = sim::problem::get_permissions(
-        (session_is_open ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                         : std::nullopt),
+        (session_is_open ? optional{session_user_id} : std::nullopt),
         (session_is_open ? optional{session_user_type} : std::nullopt), problem_owner,
         problem_type);
     if (uint(~problem_perms & sim::problem::Permissions::VIEW)) {
@@ -1401,8 +1392,7 @@ void Sim::api_contest_ranking(
            "]}");
     // clang-format on
 
-    const uint64_t session_uid =
-        (session_is_open ? WONT_THROW(str2num<uintmax_t>(session_user_id).value()) : 0);
+    const uint64_t session_uid = (session_is_open ? session_user_id : 0);
 
     bool first_owner = true;
     std::optional<uintmax_t> prev_owner;

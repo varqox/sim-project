@@ -2,9 +2,15 @@
 
 #include "sim/blob_field.hh"
 #include "sim/constants.hh"
+#include "sim/contest.hh"
+#include "sim/contest_problem.hh"
+#include "sim/contest_round.hh"
 #include "sim/contest_user.hh"
 #include "sim/datetime_field.hh"
 #include "sim/jobs.hh"
+#include "sim/problem.hh"
+#include "sim/session.hh"
+#include "sim/user.hh"
 #include "simlib/ranges.hh"
 #include "simlib/time.hh"
 #include "src/sim_merger/sim_merger.hh"
@@ -72,19 +78,21 @@ inline bool operator<(const ContestUser::Id& a, const ContestUser::Id& b) noexce
 
 // Loads all information about ids from jobs
 struct IdsFromJobs {
-    IdsWithTime<uintmax_t> internal_files;
-    IdsWithTime<uintmax_t> users;
-    IdsWithTime<InplaceBuff<SESSION_ID_LEN>> sessions;
-    IdsWithTime<uintmax_t> problems;
-    IdsWithTime<ProblemTagId> problem_tags;
-    IdsWithTime<uintmax_t> contests;
-    IdsWithTime<uintmax_t> contest_rounds;
-    IdsWithTime<uintmax_t> contest_problems;
-    IdsWithTime<sim::ContestUser::Id> contest_users;
-    IdsWithTime<InplaceBuff<FILE_ID_LEN>> contest_files;
-    IdsWithTime<InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>> contest_entry_tokens;
-    IdsWithTime<uintmax_t> submissions;
-    IdsWithTime<uintmax_t> jobs;
+    IdsWithTime<uintmax_t> internal_files; // TODO: replace with appropriate decltype
+    IdsWithTime<decltype(sim::User::id)> users;
+    IdsWithTime<decltype(sim::Session::id)> sessions;
+    IdsWithTime<decltype(sim::Problem::id)> problems;
+    IdsWithTime<ProblemTagId> problem_tags; // TODO: replace with appropriate decltype
+    IdsWithTime<decltype(sim::Contest::id)> contests;
+    IdsWithTime<decltype(sim::ContestRound::id)> contest_rounds;
+    IdsWithTime<decltype(sim::ContestProblem::id)> contest_problems;
+    IdsWithTime<decltype(sim::ContestUser::id)> contest_users;
+    IdsWithTime<InplaceBuff<FILE_ID_LEN>>
+        contest_files; // TODO: replace with appropriate decltype
+    IdsWithTime<InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>>
+        contest_entry_tokens; // TODO: replace with appropriate decltype
+    IdsWithTime<uintmax_t> submissions; // TODO: replace with appropriate decltype
+    IdsWithTime<uintmax_t> jobs; // TODO: replace with appropriate decltype
 
     void initialize(StringView job_table_name) {
         STACK_UNWINDING_MARK;

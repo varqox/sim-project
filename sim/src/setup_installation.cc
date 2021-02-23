@@ -4,6 +4,7 @@
 #include "sim/contest_round.hh"
 #include "sim/contest_user.hh"
 #include "sim/mysql.hh"
+#include "sim/session.hh"
 #include "sim/user.hh"
 #include "simlib/concat.hh"
 #include "simlib/concat_tostr.hh"
@@ -248,14 +249,15 @@ int main(int argc, char** argv) {
         });
     // clang-format on
 
+    using sim::Session;
     // clang-format off
     try_to_create_table("session", concat(
         "CREATE TABLE IF NOT EXISTS `session` ("
-            "`id` BINARY(", SESSION_ID_LEN, ") NOT NULL,"
-            "`csrf_token` BINARY(", SESSION_CSRF_TOKEN_LEN, ") NOT NULL,"
+            "`id` BINARY(", decltype(Session::id)::max_len, ") NOT NULL,"
+            "`csrf_token` BINARY(", decltype(Session::csrf_token)::max_len, ") NOT NULL,"
             "`user_id` int unsigned NOT NULL,"
             "`data` blob NOT NULL,"
-            "`ip` VARBINARY(", SESSION_IP_LEN, ") NOT NULL,"
+            "`ip` VARBINARY(", decltype(Session::ip)::max_len, ") NOT NULL,"
             "`user_agent` blob NOT NULL,"
             "`expires` datetime NOT NULL,"
             "PRIMARY KEY (id),"

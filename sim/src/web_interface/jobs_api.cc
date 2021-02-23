@@ -186,7 +186,7 @@ void Sim::api_jobs() {
 
         } else if (cond == 'u' and ~mask & USER_ID_COND) { // User (creator)
             qwhere.append(" AND creator=", arg_id);
-            if (arg_id == session_user_id) {
+            if (str2num<decltype(session_user_id)>(arg_id) == session_user_id) {
                 allow_access = true;
             }
 

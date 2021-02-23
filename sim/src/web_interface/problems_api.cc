@@ -8,6 +8,7 @@
 #include "simlib/humanize.hh"
 #include "simlib/libzip.hh"
 #include "simlib/sim/problem_package.hh"
+#include "simlib/string_view.hh"
 #include "src/web_interface/sim.hh"
 
 #include <cstdint>
@@ -43,7 +44,7 @@ void Sim::api_problems() {
     qwhere.append(
         " FROM problems p LEFT JOIN users u ON p.owner=u.id "
         "LEFT JOIN submissions s ON s.owner=",
-        (session_is_open ? StringView(session_user_id) : "''"),
+        (session_is_open ? intentional_unsafe_string_view(to_string(session_user_id)) : "''"),
         " AND s.problem_id=p.id AND s.problem_final=1 "
         "WHERE TRUE"); // Needed to easily append constraints
 
@@ -131,7 +132,7 @@ void Sim::api_problems() {
         } else if (cond == 'u' and ~mask & USER_ID_COND) { // User (owner)
             // Prevent bypassing unset VIEW_OWNER permission
             if (not session_is_open or
-                (arg_id != session_user_id and
+                (str2num<decltype(session_user_id)>(arg_id) != session_user_id and
                  not uint(overall_perms & OPERMS::SELECT_BY_OWNER)))
             {
                 return api_error403("You have no permissions to select others' "
@@ -184,9 +185,7 @@ void Sim::api_problems() {
         EnumVal<Problem::Type> problem_type{
             WONT_THROW(str2num<std::underlying_type_t<Problem::Type>>(res[PTYPE]).value())};
         auto problem_perms = sim::problem::get_permissions(
-            (session_is_open
-                 ? std::optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                 : std::nullopt),
+            (session_is_open ? std::optional{session_user_id} : std::nullopt),
             (session_is_open ? std::optional{session_user_type} : std::nullopt),
             (res.is_null(OWNER)
                  ? std::nullopt
@@ -378,9 +377,7 @@ void Sim::api_problem() {
     }
 
     auto problem_perms = sim::problem::get_permissions(
-        (session_is_open
-             ? std::optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-             : std::nullopt),
+        (session_is_open ? std::optional{session_user_id} : std::nullopt),
         (session_is_open ? std::optional{session_user_type} : std::nullopt), problem_owner,
         problem_type);
 
@@ -666,9 +663,7 @@ void Sim::api_problem_merge_into_another(sim::problem::Permissions perms) {
 
     auto tp_perms_opt = sim::problem::get_permissions(
         mysql, target_problem_id,
-        (session_is_open
-             ? std::optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-             : std::nullopt),
+        (session_is_open ? std::optional{session_user_id} : std::nullopt),
         (session_is_open ? std::optional{session_user_type} : std::nullopt));
     if (not tp_perms_opt) {
         return api_error400("Target problem does not exist");

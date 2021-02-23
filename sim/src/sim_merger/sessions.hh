@@ -1,25 +1,16 @@
 #pragma once
 
 #include "sim/random.hh"
+#include "sim/session.hh"
 #include "simlib/defer.hh"
 #include "src/sim_merger/users.hh"
 
 #include <set>
 
-struct Session {
-    InplaceBuff<SESSION_ID_LEN> id;
-    InplaceBuff<SESSION_CSRF_TOKEN_LEN> csrf_token;
-    uintmax_t user_id{};
-    InplaceBuff<32> data;
-    InplaceBuff<SESSION_IP_LEN> ip;
-    InplaceBuff<128> user_agent;
-    InplaceBuff<24> expires;
-};
-
-class SessionsMerger : public Merger<Session> {
+class SessionsMerger : public Merger<sim::Session> {
     const UsersMerger& users_;
 
-    std::set<InplaceBuff<SESSION_ID_LEN>> taken_sessions_ids_;
+    std::set<decltype(sim::Session::id)> taken_sessions_ids_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
@@ -33,7 +24,7 @@ class SessionsMerger : public Merger<Session> {
             THROW("BUG");
         }();
 
-        Session ses;
+        sim::Session ses;
         auto stmt = conn.prepare(
             "SELECT id, csrf_token, user_id, data, ip, "
             "user_agent, expires FROM ",
@@ -51,17 +42,17 @@ class SessionsMerger : public Merger<Session> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const Session& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::Session& /*unused*/) { return nullptr; });
     }
 
-    InplaceBuff<SESSION_ID_LEN> new_id_for_record_to_merge_into_new_records(
-        const InplaceBuff<SESSION_ID_LEN>& record_id) override {
+    decltype(sim::Session::id) new_id_for_record_to_merge_into_new_records(
+        const decltype(sim::Session::id)& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_sessions_ids_.emplace(new_id).second) {
-            new_id = generate_random_token(SESSION_ID_LEN);
+            new_id = generate_random_token(decltype(sim::Session::id)::max_len);
         }
-        return InplaceBuff<SESSION_ID_LEN>(new_id);
+        return decltype(sim::Session::id)(new_id);
     }
 
 public:
@@ -78,7 +69,7 @@ public:
         ProgressBar progress_bar("Sessions saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const Session& x = new_record.data;
+            const sim::Session& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.csrf_token, x.user_id, x.data, x.ip, x.user_agent, x.expires);
         }

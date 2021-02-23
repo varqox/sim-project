@@ -1,4 +1,5 @@
 #include "sim/contest_user.hh"
+#include "sim/user.hh"
 #include "src/web_interface/sim.hh"
 
 #include <type_traits>
@@ -387,7 +388,8 @@ void Sim::api_contest_user_add(StringView contest_id) {
         return api_error403();
     }
 
-    UserPermissions user_perms = users_get_permissions(user_id);
+    UserPermissions user_perms =
+        users_get_permissions(str2num<decltype(sim::User::id)>(user_id).value_or(0));
     if (uint(~user_perms & UserPermissions::VIEW)) {
         return api_error400("Specified user does not exist or you have no "
                             "permission to add them");

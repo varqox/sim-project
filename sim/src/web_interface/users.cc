@@ -19,7 +19,7 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 
     switch (session_user_type) {
     case User::Type::ADMIN:
-        if (session_user_id == intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID))) {
+        if (session_user_id == sim::SIM_ROOT_UID) {
             return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN | PERM::ADD_TEACHER |
                 PERM::ADD_NORMAL;
         } else {
@@ -34,7 +34,7 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 }
 
 Sim::UserPermissions
-Sim::users_get_permissions(StringView user_id, User::Type utype) noexcept {
+Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcept {
     using PERM = UserPermissions;
     constexpr UserPermissions PERM_ADMIN = PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS |
         PERM::ADMIN_CHANGE_PASS | PERM::DELETE | PERM::MERGE;
@@ -43,8 +43,8 @@ Sim::users_get_permissions(StringView user_id, User::Type utype) noexcept {
         return PERM::NONE;
     }
 
-    auto viewer = EnumVal(session_user_type).int_val() +
-        (session_user_id != intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID)));
+    auto viewer =
+        EnumVal(session_user_type).int_val() + (session_user_id != sim::SIM_ROOT_UID);
     if (session_user_id == user_id) {
         constexpr UserPermissions perm[4] = {
             // Sim root
@@ -61,8 +61,7 @@ Sim::users_get_permissions(StringView user_id, User::Type utype) noexcept {
         return perm[viewer] | users_get_overall_permissions();
     }
 
-    auto user = EnumVal(utype).int_val() +
-        (user_id != intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID)));
+    auto user = EnumVal(utype).int_val() + (user_id != sim::SIM_ROOT_UID);
     // Permission table [ viewer ][ user ]
     constexpr UserPermissions perm[4][4] = {
         {// Sim root
@@ -98,7 +97,7 @@ Sim::users_get_permissions(StringView user_id, User::Type utype) noexcept {
     return perm[viewer][user] | users_get_overall_permissions();
 }
 
-Sim::UserPermissions Sim::users_get_permissions(StringView user_id) {
+Sim::UserPermissions Sim::users_get_permissions(decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
     using PERM = UserPermissions;
 
@@ -350,17 +349,12 @@ void Sim::users_handle() {
     }
 
     StringView next_arg = url_args.extract_next_arg();
-    if (is_digit(next_arg)) {
-        users_uid = next_arg;
-        return users_user();
-    }
-
     if (next_arg == "add") { // Add user
         page_template("Add user");
         append("<script>add_user(false);</script>");
 
-    } else if (is_digit(next_arg)) { // View user
-        users_uid = next_arg;
+    } else if (auto uid = str2num<decltype(users_uid)>(next_arg)) { // View user
+        users_uid = *uid;
         return users_user();
 
     } else if (next_arg.empty()) { // List users

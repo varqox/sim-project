@@ -48,18 +48,13 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
     // This check has to be done as the last one because it gives the least
     // permissions
-    if (session_is_open and problem_owner and
-        WONT_THROW(str2num<uintmax_t>(session_user_id).value()) == problem_owner.value())
-    {
+    if (session_is_open and problem_owner and session_user_id == problem_owner.value()) {
         if (stype == STYPE::PROBLEM_SOLUTION) {
             return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FINAL_REPORT |
                 PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
         }
 
-        if (submission_owner and
-            WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
-                submission_owner.value())
-        {
+        if (submission_owner and session_user_id == submission_owner.value()) {
             return overall_perms | PERM_SUBMISSION_ADMIN;
         }
 
@@ -67,9 +62,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
             PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
     }
 
-    if (session_is_open and submission_owner and
-        WONT_THROW(str2num<uintmax_t>(session_user_id).value()) == submission_owner.value())
-    {
+    if (session_is_open and submission_owner and session_user_id == submission_owner.value()) {
         return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
     }
 

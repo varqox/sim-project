@@ -86,7 +86,9 @@ Sim::JobPermissions Sim::jobs_get_permissions(
         }
     }
 
-    if (creator_id.has_value() and session_user_id == creator_id.value()) {
+    if (creator_id.has_value() and
+        session_user_id == str2num<decltype(session_user_id)>(creator_id.value()))
+    {
         if (is_one_of(job_status, JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS)) {
             return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
         }
@@ -104,10 +106,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
 
     auto problem_perms =
         sim::problem::get_permissions(
-            mysql, problem_id,
-            (session_is_open
-                 ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                 : std::nullopt),
+            mysql, problem_id, (session_is_open ? optional{session_user_id} : std::nullopt),
             (session_is_open ? optional{session_user_type} : std::nullopt))
             .value_or(P_PERMS::NONE);
 
@@ -157,9 +156,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
         // The below check has to be done as the last one because it gives the
         // least permissions
         auto problem_perms = sim::problem::get_permissions(
-            (session_is_open
-                 ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                 : std::nullopt),
+            (session_is_open ? optional{session_user_id} : std::nullopt),
             (session_is_open ? optional{session_user_type} : std::nullopt), problem_owner,
             problem_type);
         // Give access to the problem's submissions' jobs to the problem's admin

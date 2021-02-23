@@ -10,6 +10,7 @@
 #include "simlib/file_manip.hh"
 #include "simlib/humanize.hh"
 #include "simlib/process.hh"
+#include "simlib/string_view.hh"
 #include "src/web_interface/sim.hh"
 
 #include <functional>
@@ -273,9 +274,7 @@ void Sim::api_submissions() {
 
                 problem_perms = sim::problem::get_permissions(
                     mysql, arg_id,
-                    (session_is_open
-                         ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                         : std::nullopt),
+                    (session_is_open ? optional{session_user_id} : std::nullopt),
                     (session_is_open ? optional{session_user_type} : std::nullopt));
                 if (not problem_perms) {
                     return set_empty_response();
@@ -371,7 +370,7 @@ void Sim::api_submissions() {
                 qwhere.append(" AND s.owner=", arg_id);
 
                 // Owner (almost) always has access to theirs submissions
-                if (arg_id == session_user_id) {
+                if (str2num<decltype(session_user_id)>(arg_id) == session_user_id) {
                     after_checks.emplace_back([&] {
                         if (allow_access) {
                             return;
@@ -771,10 +770,7 @@ void Sim::api_submission_add() {
     if (not contest_problem_id.has_value()) { // Problem submission
         // Check permissions to the problem
         auto problem_perms_opt = sim::problem::get_permissions(
-            mysql, problem_id,
-            (session_is_open
-                 ? optional{WONT_THROW(str2num<uintmax_t>(session_user_id).value())}
-                 : std::nullopt),
+            mysql, problem_id, (session_is_open ? optional{session_user_id} : std::nullopt),
             (session_is_open ? optional{session_user_type} : std::nullopt));
         if (not problem_perms_opt) {
             return api_error404();

@@ -4,6 +4,7 @@
 #include "sim/utilities.hh"
 #include "simlib/random.hh"
 #include "simlib/sha.hh"
+#include "simlib/string_transform.hh"
 #include "simlib/utilities.hh"
 #include "src/web_interface/sim.hh"
 
@@ -122,7 +123,8 @@ void Sim::api_users() {
         // Allowed actions
         append('"');
 
-        auto perms = users_get_permissions(res[UID], utype);
+        auto perms =
+            users_get_permissions(str2num<decltype(sim::User::id)>(res[UID]).value(), utype);
         if (uint(perms & PERM::VIEW)) {
             append('v');
         }
@@ -173,7 +175,11 @@ void Sim::api_user() {
         return api_error400();
     }
 
-    users_uid = next_arg;
+    auto uid_opt = str2num<decltype(users_uid)>(next_arg);
+    if (not uid_opt) {
+        return api_error404();
+    }
+    users_uid = *uid_opt;
     users_perms = users_get_permissions(users_uid);
     if (users_perms == UserPermissions::NONE) {
         return api_error404();
@@ -444,11 +450,16 @@ void Sim::api_user_merge_into_another() {
         return api_error400(notifications);
     }
 
-    if (donor_user_id == target_user_id) {
+    if (donor_user_id == str2num<decltype(donor_user_id)>(target_user_id)) {
         return api_error400("You cannot merge user with themselves");
     }
 
-    auto target_user_perms = users_get_permissions(target_user_id);
+    auto target_user_perms = [&] {
+        if (auto uid_opt = str2num<decltype(sim::User::id)>(target_user_id)) {
+            return users_get_permissions(*uid_opt);
+        }
+        return UserPermissions::NONE;
+    }();
     if (uint(~target_user_perms & UserPermissions::MERGE)) {
         return api_error403("You do not have permission to merge to the target user");
     }
