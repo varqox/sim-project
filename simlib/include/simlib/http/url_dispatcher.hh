@@ -387,12 +387,12 @@ public:
         }
     }
 
-    /// Returns all pairs of url patterns against which there exist an url that
-    /// will be matched to both -- you can think of it like an ambiguity or a
-    /// collision between two url patterns. It results in slower dispatch as all
-    /// candidates matching the dispatched url must be tried. If the result is
-    /// an empty vector, then url dispatch is the fastest possible, and this is
-    /// what you should crave for when deciding url patterns.
+    /// Returns all pairs of url patterns against which there exist an url that will be matched
+    /// to both and more than one handler has to be tried -- you can think of it like an
+    /// ambiguity or a collision between two url patterns or handlers. It results in slower
+    /// dispatch as all candidates matching the dispatched url must be tried. If the result is
+    /// an empty vector, then url dispatch is the fastest possible, and this is what you should
+    /// crave for when deciding url patterns.
     [[nodiscard]] std::vector<std::pair<StringView, StringView>>
     all_potential_collisions() const {
         auto foreach_handler = [](const typename decltype(handlers_)::mapped_type& prefix_map,
@@ -414,14 +414,20 @@ public:
 
         std::vector<std::pair<StringView, StringView>> res;
         for (auto& [slashes, pref_map] : handlers_) {
+            std::optional<StringView> prev_url_a;
             foreach_handler(
                 pref_map,
                 [&, &pref_map = pref_map](
                     StringView pref_a, StringView suff_a, StringView url_a) {
+                    // Single url_pattern with two handlers is also a collision
+                    if (std::exchange(prev_url_a, url_a) == url_a) {
+                        debuglog("collision: ", url_a, ' ', url_a);
+                        res.emplace_back(url_a, url_a);
+                    }
+
                     foreach_handler(
                         pref_map, [&](StringView pref_b, StringView suff_b, StringView url_b) {
-                            // Consider each pair only once and skip pairs of
-                            // one element
+                            // Consider each pair only once and skip pairs of the form (x, x)
                             if (url_a.data() >= url_b.data()) {
                                 return;
                             }

@@ -281,3 +281,49 @@ TEST(http, UrlDispatcher_all_potential_collisions) {
             {url0, url1},
             {url3, url1}}));
 }
+
+// NOLINTNEXTLINE
+TEST(http, UrlDispatcher_two_handlers_for_the_same_url_without_custom_prasers) {
+    http::UrlDispatcher<int> ud;
+    using VC = decltype(ud.all_potential_collisions());
+
+    static constexpr const char url[] = "/a/{i64}/b";
+    ud.add_handler<url>([&](int64_t /*unused*/) { return 0; });
+    ud.add_handler<url>([&](int64_t /*unused*/) { return 0; });
+
+    EXPECT_EQ(canonized_collisions(ud), (VC{{url, url}}));
+}
+
+static std::optional<StringView> has_even_length(StringView s) {
+    return s.size() % 2 == 0 ? std::optional{s} : std::nullopt;
+}
+static std::optional<StringView> has_odd_length(StringView s) {
+    return s.size() % 2 == 1 ? std::optional{s} : std::nullopt;
+}
+
+// NOLINTNEXTLINE
+TEST(http, UrlDispatcher_two_handlers_for_the_same_url_with_custom_prasers) {
+    http::UrlDispatcher<int> ud;
+    using VC = decltype(ud.all_potential_collisions());
+
+    static constexpr const char url[] = "/a/{custom}/b";
+    int runs = 0;
+    ud.add_handler<url, has_even_length>([&](StringView s) {
+        ++runs;
+        EXPECT_EQ(s.size() % 2, 0);
+        return 0;
+    });
+    ud.add_handler<url, &has_odd_length>([&](StringView s) {
+        ++runs;
+        EXPECT_EQ(s.size() % 2, 1);
+        return 1;
+    });
+
+    EXPECT_EQ(canonized_collisions(ud), (VC{{url, url}}));
+
+    EXPECT_EQ(ud.dispatch("/a/x/b"), 1);
+    EXPECT_EQ(ud.dispatch("/a/xy/b"), 0);
+    EXPECT_EQ(ud.dispatch("/a/xyz/b"), 1);
+    EXPECT_EQ(ud.dispatch("/a/xyza/b"), 0);
+    EXPECT_EQ(runs, 4);
+}
