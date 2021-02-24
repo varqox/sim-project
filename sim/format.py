@@ -14,6 +14,7 @@ def sim_sources(srcdir):
         'src/lib/',
         'src/sim_merger/',
         'src/web_interface/',
+        'src/web_interface/web_worker/',
         'test/'
     ], ['c', 'cc', 'h', 'hh'], [
     ]))

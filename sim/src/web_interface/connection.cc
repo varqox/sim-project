@@ -718,7 +718,7 @@ void Connection::send_response(const HttpResponse& res) {
         str += "\r\n";
     }
 
-    for (auto&& [name, val] : res.cookies) {
+    for (auto&& [name, val] : res.cookies.cookies_as_headers) {
         str += "Set-Cookie: ";
         str += name;
         str += '=';

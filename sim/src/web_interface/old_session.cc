@@ -38,7 +38,7 @@ bool Sim::session_open() {
         return (session_is_open = true);
     }
 
-    resp.set_cookie("session", "", 0); // Delete cookie
+    resp.cookies.set("session", "", 0); // Delete cookie
     return false;
 }
 
@@ -69,14 +69,14 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
     } while (stmt.affected_rows() == 0);
 
     if (temporary_session) {
-        exp_time = -1; // -1 causes set_cookie() to not set Expire= field
+        exp_time = -1; // -1 causes cookies.set() to not set Expire= field
     }
 
     // There is no better method than looking on the referer
     bool is_https = has_prefix(request.headers["referer"], "https://");
-    resp.set_cookie(
+    resp.cookies.set(
         "csrf_token", session_csrf_token.to_string(), exp_time, "/", "", false, is_https);
-    resp.set_cookie("session", session_id.to_string(), exp_time, "/", "", true, is_https);
+    resp.cookies.set("session", session_id.to_string(), exp_time, "/", "", true, is_https);
     session_is_open = true;
 }
 
@@ -93,8 +93,8 @@ void Sim::session_destroy() {
         ERRLOG_CATCH(e);
     }
 
-    resp.set_cookie("csrf_token", "", 0); // Delete cookie
-    resp.set_cookie("session", "", 0); // Delete cookie
+    resp.cookies.set("csrf_token", "", 0); // Delete cookie
+    resp.cookies.set("session", "", 0); // Delete cookie
     session_is_open = false;
 }
 

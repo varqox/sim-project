@@ -44,6 +44,8 @@ public:
         return it->second;
     }
 
+    [[nodiscard]] bool is_empty() const noexcept { return entries_.empty(); }
+
     [[nodiscard]] auto begin() noexcept { return entries_.begin(); }
     [[nodiscard]] auto begin() const noexcept { return entries_.begin(); }
     [[nodiscard]] auto end() noexcept { return entries_.end(); }

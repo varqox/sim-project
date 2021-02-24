@@ -12,6 +12,7 @@
 #include "simlib/request_uri_parser.hh"
 #include "src/web_interface/http_request.hh"
 #include "src/web_interface/http_response.hh"
+#include "src/web_interface/web_worker/web_worker.hh"
 
 #include <utime.h>
 
@@ -26,6 +27,9 @@ class Sim final {
     server::HttpResponse resp;
     RequestUriParser url_args{""};
     CppSyntaxHighlighter cpp_syntax_highlighter;
+    // This is part of the new request handling, but it is kept here so that we can integrate
+    // it with the old request handling
+    std::unique_ptr<sim::web_worker::WebWorker> web_worker;
 
     /**
      * @brief Sets headers to make a redirection
@@ -672,7 +676,8 @@ private:
     void view_logs();
 
 public:
-    Sim() = default;
+    Sim();
+
     Sim(const Sim&) = delete;
     Sim(Sim&&) = delete;
     Sim& operator=(const Sim&) = delete;

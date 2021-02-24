@@ -1,11 +1,17 @@
 #include "src/web_interface/sim.hh"
+#include "simlib/mysql.hh"
 #include "simlib/path.hh"
 #include "simlib/random.hh"
+#include "src/web_interface/http_request.hh"
+#include "src/web_interface/http_response.hh"
 
+#include <memory>
 #include <sys/stat.h>
 
 using sim::User;
 using std::string;
+
+Sim::Sim() { web_worker = std::make_unique<sim::web_worker::WebWorker>(mysql); }
 
 server::HttpResponse Sim::handle(CStringView client_ip_addr, server::HttpRequest req) {
     client_ip = client_ip_addr;
@@ -33,6 +39,13 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr, server::HttpRequest
 
     try {
         STACK_UNWINDING_MARK;
+        // Try to handle the request using the new request handling
+        auto res = web_worker->handle(std::move(request));
+        if (auto* response = std::get_if<server::HttpResponse>(&res)) {
+            return *response;
+        }
+        request = std::move(std::get<server::HttpRequest>(res));
+
         try {
             STACK_UNWINDING_MARK;
 

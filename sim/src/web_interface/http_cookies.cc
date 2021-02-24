@@ -1,4 +1,4 @@
-#include "src/web_interface/http_response.hh"
+#include "src/web_interface/http_cookies.hh"
 #include "simlib/debug.hh"
 
 #include <ctime>
@@ -7,8 +7,8 @@ using std::string;
 
 namespace server {
 
-void HttpResponse::set_cookie(
-    const string& name, const string& val, time_t expire, const string& path,
+void HttpCookies::set(
+    StringView name, const string& val, time_t expire, const string& path,
     const string& domain, bool http_only, bool secure) {
     STACK_UNWINDING_MARK;
 
@@ -38,7 +38,7 @@ void HttpResponse::set_cookie(
         value.append("; Secure");
     }
 
-    cookies[name] = value;
+    cookies_as_headers[name] = value;
 }
 
 } // namespace server
