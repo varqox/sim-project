@@ -619,8 +619,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
     auto is_operator = [](unsigned char c) {
         static constexpr auto xxx = [] {
             array<bool, 128> res{};
-            for (char c : StringView("!%&()*+,-./:;<=>?[\\]^{|}~")) {
-                res[c] = true;
+            for (char x : StringView("!%&()*+,-./:;<=>?[\\]^{|}~")) {
+                res[x] = true;
             }
             return res;
         }();

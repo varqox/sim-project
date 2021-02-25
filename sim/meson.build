@@ -3,7 +3,7 @@ project('sim',
     license: 'MIT',
     meson_version : '>=0.52.1',
     default_options : meson.get_cross_property('project_configuration', [
-        'cpp_std=c++17',
+        'cpp_std=gnu++17',
         'warning_level=3',
     ])
 )
@@ -19,12 +19,27 @@ if get_option('warning_level') > '0'
         '-Wgnu',
         '-Wunused-lambda-capture',
         '-Wno-c++20-designator',
+        '-Wno-gnu-zero-variadic-macro-arguments',
     ]
     foreach warning : warnings
         if cc.has_argument(warning)
             add_project_arguments(warning, language : 'c')
         endif
         if cpp.has_argument(warning)
+            add_project_arguments(warning, language : 'cpp')
+        endif
+    endforeach
+
+    extra_gcc_warnings = [
+        '-Wno-shadow',
+        '-Wshadow=local',
+        '-Wno-pedantic',
+    ]
+    foreach warning : extra_gcc_warnings
+        if cc.get_id() == 'gcc'
+            add_project_arguments(warning, language : 'c')
+        endif
+        if cpp.get_id() == 'gcc'
             add_project_arguments(warning, language : 'cpp')
         endif
     endforeach
