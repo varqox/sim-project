@@ -160,6 +160,7 @@ tests = [
     ['test/defer.cc', [], {}],
     ['test/directory.cc', [], {}],
     ['test/enum_val.cc', [], {}],
+    ['test/err_defer.cc', [], {}],
     ['test/event_queue.cc', [], {}],
     ['test/fd_pread_buff.cc', [], {}],
     ['test/file_contents.cc', [], {}],
