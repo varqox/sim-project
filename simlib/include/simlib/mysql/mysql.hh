@@ -28,24 +28,6 @@
 #define NO_DEBUG_MYSQL(...) __VA_ARGS__
 #endif
 
-template <class...>
-constexpr inline bool is_enum_val = false;
-template <class T>
-constexpr inline bool is_enum_val<EnumVal<T>> = true;
-
-template <class T>
-struct EnumValTypeHelper {
-    using type = void;
-};
-
-template <class T>
-struct EnumValTypeHelper<EnumVal<T>> {
-    using type = T;
-};
-
-template <class T>
-using EnumValType = typename EnumValTypeHelper<T>::type;
-
 namespace mysql {
 
 // Optional type used to access data retrieved from MySQL
@@ -85,9 +67,9 @@ public:
     // NOLINTNEXTLINE(google-explicit-constructor)
     operator std::optional<T>() const { return opt(); }
 
-    template <class U = T>
+    template <class U = T, std::enable_if_t<is_enum_val<U>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    operator std::enable_if_t<is_enum_val<U>, std::optional<EnumValType<T>>>() const {
+    operator std::optional<typename U::EnumType>() const {
         return has_no_value_ ? std::optional<T>() : value_;
     }
 

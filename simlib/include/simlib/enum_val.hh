@@ -6,6 +6,7 @@ template <class Enum>
 class EnumVal {
 public:
     static_assert(std::is_enum<Enum>::value, "EnumVal is designed only for enums");
+    using EnumType = Enum;
     using ValType = std::underlying_type_t<Enum>;
 
 private:
@@ -41,3 +42,8 @@ public:
 
     constexpr explicit operator const ValType&() const& noexcept { return val_; }
 };
+
+template <class...>
+constexpr inline bool is_enum_val = false;
+template <class T>
+constexpr inline bool is_enum_val<EnumVal<T>> = true;
