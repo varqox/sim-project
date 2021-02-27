@@ -1,4 +1,4 @@
-#include "simlib/mysql.hh"
+#include "simlib/mysql/mysql.hh"
 
 #include <gtest/gtest.h>
 

@@ -46,7 +46,7 @@ struct EnumValTypeHelper<EnumVal<T>> {
 template <class T>
 using EnumValType = typename EnumValTypeHelper<T>::type;
 
-namespace MySQL {
+namespace mysql {
 
 // Optional type used to access data retrieved from MySQL
 template <class T>
@@ -484,7 +484,7 @@ public:
                 return InplaceBuff<inplace_buff_size>(arg);
             } else if constexpr (std::is_same_v<TypeNoRef, const std::string>) {
                 return InplaceBuff<inplace_buff_size>(arg);
-            } else if constexpr (MySQL::is_optional<TypeNoRefNoCV>) {
+            } else if constexpr (mysql::is_optional<TypeNoRefNoCV>) {
                 return arg.opt();
             } else if constexpr (std::is_const_v<TypeNoRef>) {
                 return TypeNoRefNoCV(arg); // We need a reference to a non-const
@@ -535,7 +535,7 @@ public:
 
     /// Binds optional value @p x - std::nullopt corresponds to NULL
     template <class T>
-    void res_bind(unsigned idx, MySQL::Optional<T>& x) NO_DEBUG_MYSQL(noexcept) {
+    void res_bind(unsigned idx, mysql::Optional<T>& x) NO_DEBUG_MYSQL(noexcept) {
         res_bind(idx, x.value_);
         res_binds_[idx].is_null = &x.has_no_value_;
     }
@@ -937,6 +937,6 @@ inline Transaction::~Transaction() {
     }
 }
 
-} // namespace MySQL
+} // namespace mysql
 
 #endif // __has_include(<mysql.h>)

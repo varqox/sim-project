@@ -193,7 +193,7 @@ tests = [
     ['test/logger.cc', [], {}],
     ['test/member_comparator.cc', [], {}],
     ['test/memory.cc', [], {}],
-    ['test/mysql.cc', [], {}],
+    ['test/mysql/mysql.cc', [], {}],
     ['test/opened_temporary_file.cc', [gmock_dep], {}],
     ['test/path.cc', [], {}],
     ['test/proc_stat_file_contents.cc', [], {}],
