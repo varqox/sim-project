@@ -1,13 +1,15 @@
 #pragma once
 
 #include "sim/constants.hh"
-#include "sim/problem.hh"
+#include "sim/problems/problem.hh"
 #include "simlib/concat.hh"
 #include "simlib/libzip.hh"
 #include "simlib/sim/problem_package.hh"
 #include "simlib/sim/simfile.hh"
 #include "src/sim_merger/internal_files.hh"
 #include "src/sim_merger/users.hh"
+
+namespace sim_merger {
 
 static std::pair<std::vector<std::string>, std::string>
 package_fingerprint(FilePath zip_file_path) {
@@ -29,7 +31,7 @@ package_fingerprint(FilePath zip_file_path) {
     return {entries_list, statement_contents};
 }
 
-class ProblemsMerger : public Merger<sim::Problem> {
+class ProblemsMerger : public Merger<sim::problems::Problem> {
     const InternalFilesMerger& internal_files_;
     const UsersMerger& users_;
     bool reset_new_problems_time_limits_;
@@ -38,8 +40,8 @@ class ProblemsMerger : public Merger<sim::Problem> {
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
-        sim::Problem prob;
-        MySQL::Optional<decltype(prob.owner)::value_type> m_owner;
+        sim::problems::Problem prob;
+        mysql::Optional<decltype(prob.owner)::value_type> m_owner;
         auto stmt = conn.prepare(
             "SELECT id, file_id, type, name, label, "
             "simfile, owner, added, last_edit FROM ",
@@ -63,7 +65,7 @@ class ProblemsMerger : public Merger<sim::Problem> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::Problem& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::problems::Problem& /*unused*/) { return nullptr; });
 
         std::map<size_t, size_t> dsu; // (problem idx, target problem idx)
         // Returns problem index to which problem of index @p idx will be merged
@@ -134,7 +136,7 @@ public:
         ProgressBar progress_bar("Problems saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::Problem& x = new_record.data;
+            const sim::problems::Problem& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.file_id, x.type, x.name, x.label, x.simfile, x.owner, x.added,
                 x.last_edit);
@@ -165,14 +167,14 @@ public:
             conn.prepare("INSERT jobs (creator, status, priority, type, added,"
                          " aux_id, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
                 .bind_and_execute(
-                    EnumVal(JobStatus::PENDING), priority(JobType::MERGE_PROBLEMS),
-                    EnumVal(JobType::MERGE_PROBLEMS), mysql_date(), src_id,
-                    jobs::MergeProblemsInfo(dest_id, false).dump());
+                    EnumVal(sim::JobStatus::PENDING), priority(sim::JobType::MERGE_PROBLEMS),
+                    EnumVal(sim::JobType::MERGE_PROBLEMS), mysql_date(), src_id,
+                    sim::jobs::MergeProblemsInfo(dest_id, false).dump());
         }
 
         if (reset_new_problems_time_limits_) {
             for (auto& new_record : new_table_) {
-                const sim::Problem& p = new_record.data;
+                const sim::problems::Problem& p = new_record.data;
                 if (not new_record.other_ids.empty() and to_merge_.count(p.id) == 0) {
                     schedule_reseting_problem_time_limits(p.id);
                 }
@@ -188,9 +190,11 @@ private:
                      " info, data) "
                      "VALUES(NULL, ?, ?, ?, ?, ?, '', '')")
             .bind_and_execute(
-                EnumVal(JobStatus::PENDING),
-                priority(JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-                EnumVal(JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION), mysql_date(),
-                problem_new_id);
+                EnumVal(sim::JobStatus::PENDING),
+                priority(sim::JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+                EnumVal(sim::JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+                mysql_date(), problem_new_id);
     }
 };
+
+} // namespace sim_merger

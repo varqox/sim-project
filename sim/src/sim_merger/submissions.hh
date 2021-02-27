@@ -4,6 +4,8 @@
 #include "src/sim_merger/internal_files.hh"
 #include "src/sim_merger/problems.hh"
 
+namespace sim_merger {
+
 struct Submission {
     uintmax_t id{};
     uintmax_t file_id{};
@@ -12,14 +14,14 @@ struct Submission {
     std::optional<uintmax_t> contest_problem_id;
     std::optional<uintmax_t> contest_round_id;
     std::optional<uintmax_t> contest_id;
-    EnumVal<SubmissionType> type{};
-    EnumVal<SubmissionLanguage> language{};
+    EnumVal<sim::SubmissionType> type{};
+    EnumVal<sim::SubmissionLanguage> language{};
     bool final_candidate{};
     bool problem_final{};
     bool contest_final{};
     bool contest_initial_final{};
-    EnumVal<SubmissionStatus> initial_status{};
-    EnumVal<SubmissionStatus> full_status{};
+    EnumVal<sim::SubmissionStatus> initial_status{};
+    EnumVal<sim::SubmissionStatus> full_status{};
     InplaceBuff<24> submit_time;
     std::optional<intmax_t> score;
     InplaceBuff<24> last_judgment;
@@ -39,15 +41,15 @@ class SubmissionsMerger : public Merger<Submission> {
         STACK_UNWINDING_MARK;
 
         Submission s;
-        MySQL::Optional<uintmax_t> m_owner;
-        MySQL::Optional<uintmax_t> m_contest_problem_id;
-        MySQL::Optional<uintmax_t> m_contest_round_id;
-        MySQL::Optional<uintmax_t> m_contest_id;
+        mysql::Optional<uintmax_t> m_owner;
+        mysql::Optional<uintmax_t> m_contest_problem_id;
+        mysql::Optional<uintmax_t> m_contest_round_id;
+        mysql::Optional<uintmax_t> m_contest_id;
         uint8_t b_final_candidate = 0;
         uint8_t b_problem_final = 0;
         uint8_t b_contest_final = 0;
         uint8_t b_contest_initial_final = 0;
-        MySQL::Optional<intmax_t> m_score;
+        mysql::Optional<intmax_t> m_score;
         auto stmt = conn.prepare(
             "SELECT id, file_id, owner, problem_id,"
             " contest_problem_id, contest_round_id, contest_id,"
@@ -152,3 +154,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

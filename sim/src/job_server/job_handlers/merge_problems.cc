@@ -1,11 +1,15 @@
 #include "src/job_server/job_handlers/merge_problems.hh"
 #include "sim/constants.hh"
-#include "sim/submission.hh"
+#include "sim/submissions/update_final.hh"
 #include "src/job_server/main.hh"
 
 #include <deque>
 
-namespace job_handlers {
+using sim::JobStatus;
+using sim::JobType;
+using sim::SubmissionType;
+
+namespace job_server::job_handlers {
 
 void MergeProblems::run() {
     STACK_UNWINDING_MARK;
@@ -86,8 +90,8 @@ void MergeProblems::run_impl() {
 
     // Collect update finals
     struct FTU {
-        MySQL::Optional<uint64_t> owner;
-        MySQL::Optional<uint64_t> contest_problem_id;
+        mysql::Optional<uint64_t> owner;
+        mysql::Optional<uint64_t> contest_problem_id;
     };
     std::deque<FTU> finals_to_update;
     {
@@ -111,7 +115,7 @@ void MergeProblems::run_impl() {
             .bind_and_execute(
                 EnumVal(JobStatus::PENDING), priority(JobType::REJUDGE_SUBMISSION),
                 EnumVal(JobType::REJUDGE_SUBMISSION), mysql_date(),
-                jobs::dump_string(
+                sim::jobs::dump_string(
                     intentional_unsafe_string_view(to_string(info_.target_problem_id))),
                 donor_problem_id_);
     }
@@ -122,8 +126,8 @@ void MergeProblems::run_impl() {
 
     // Update finals (both contest and problem finals are being taken care of)
     for (auto const& ftu_elem : finals_to_update) {
-        submission::update_final_lock(mysql, ftu_elem.owner, info_.target_problem_id);
-        submission::update_final(
+        sim::submissions::update_final_lock(mysql, ftu_elem.owner, info_.target_problem_id);
+        sim::submissions::update_final(
             mysql, ftu_elem.owner, info_.target_problem_id, ftu_elem.contest_problem_id,
             false);
     }
@@ -141,4 +145,4 @@ void MergeProblems::run_impl() {
     transaction.commit();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

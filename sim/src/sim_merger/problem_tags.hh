@@ -2,6 +2,8 @@
 
 #include "src/sim_merger/problems.hh"
 
+namespace sim_merger {
+
 struct ProblemTag {
     ProblemTagId id;
     bool hidden = false;
@@ -34,7 +36,7 @@ class ProblemTagsMerger : public Merger<ProblemTag> {
     }
 
     ProblemTagId
-    new_id_for_record_to_merge_into_new_records(const ProblemTagId& record_id) override {
+    pre_merge_record_id_to_post_merge_record_id(const ProblemTagId& record_id) override {
         return record_id;
     }
 
@@ -67,3 +69,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

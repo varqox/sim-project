@@ -1,11 +1,11 @@
 #include "sim/constants.hh"
-#include "sim/contest.hh"
-#include "sim/contest_problem.hh"
-#include "sim/contest_round.hh"
-#include "sim/contest_user.hh"
-#include "sim/mysql.hh"
-#include "sim/session.hh"
-#include "sim/user.hh"
+#include "sim/contest_problems/contest_problem.hh"
+#include "sim/contest_rounds/contest_round.hh"
+#include "sim/contest_users/contest_user.hh"
+#include "sim/contests/contest.hh"
+#include "sim/mysql/mysql.hh"
+#include "sim/sessions/session.hh"
+#include "sim/users/user.hh"
 #include "simlib/concat.hh"
 #include "simlib/concat_tostr.hh"
 #include "simlib/config_file.hh"
@@ -128,9 +128,9 @@ constexpr std::array<CStringView, 13> tables = {{
 
 struct TryToCreateTable {
     bool error = false;
-    MySQL::Connection& conn_;
+    mysql::Connection& conn_;
 
-    explicit TryToCreateTable(MySQL::Connection& conn)
+    explicit TryToCreateTable(mysql::Connection& conn)
     : conn_(conn) {}
 
     template <class Str, class Func>
@@ -173,10 +173,10 @@ int main(int argc, char** argv) {
         create_db_config(db_config_path);
     }
 
-    MySQL::Connection conn;
+    mysql::Connection conn;
     try {
         // Get connection
-        conn = MySQL::make_conn_with_credential_file(db_config_path);
+        conn = sim::mysql::make_conn_with_credential_file(db_config_path);
         conn.update("SET foreign_key_checks=1"); // Just for sure
 
     } catch (const std::exception& e) {
@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
-    using sim::User;
+    using sim::users::User;
     // clang-format off
     try_to_create_table("users", concat(
         "CREATE TABLE IF NOT EXISTS `users` ("
@@ -235,21 +235,21 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
         [&] {
             // Add default user sim with password sim
-            char salt_bin[decltype(sim::User::salt)::max_len >> 1];
+            char salt_bin[decltype(sim::users::User::salt)::max_len >> 1];
             fill_randomly(salt_bin, sizeof(salt_bin));
             auto salt = to_hex(StringView(salt_bin, sizeof(salt_bin)));
 
             auto stmt = conn.prepare("INSERT IGNORE users (id, username,"
                                      " first_name, last_name, email, salt,"
                                      " password, type) "
-                                     "VALUES (", sim::SIM_ROOT_UID, ", 'sim', 'sim',"
+                                     "VALUES (", sim::users::SIM_ROOT_UID, ", 'sim', 'sim',"
                                      " 'sim', 'sim@sim', ?, ?, 0)");
             stmt.bind_and_execute(
                salt, sha3_512(intentional_unsafe_string_view(concat(salt, "sim"))));
         });
     // clang-format on
 
-    using sim::Session;
+    using sim::sessions::Session;
     // clang-format off
     try_to_create_table("session", concat(
         "CREATE TABLE IF NOT EXISTS `session` ("
@@ -267,7 +267,7 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"));
     // clang-format on
 
-    using sim::Problem;
+    using sim::problems::Problem;
     // clang-format off
     try_to_create_table("problems", concat(
         "CREATE TABLE IF NOT EXISTS `problems` ("
@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
     try_to_create_table("problem_tags", concat(
         "CREATE TABLE IF NOT EXISTS `problem_tags` ("
             "`problem_id` int unsigned NOT NULL,"
-            "`tag` VARBINARY(", PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
+            "`tag` VARBINARY(", sim::PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
             "`hidden` BOOLEAN NOT NULL,"
             "PRIMARY KEY (problem_id, hidden, tag),"
             "KEY (tag, problem_id),"
@@ -300,7 +300,7 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
-    using sim::Contest;
+    using sim::contests::Contest;
     // clang-format off
     try_to_create_table("contests",
         concat("CREATE TABLE IF NOT EXISTS `contests` ("
@@ -312,7 +312,7 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
-    using sim::ContestRound;
+    using sim::contest_rounds::ContestRound;
     // clang-format off
     try_to_create_table("contest_rounds",
         concat("CREATE TABLE IF NOT EXISTS `contest_rounds` ("
@@ -332,7 +332,7 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
-    using sim::ContestProblem;
+    using sim::contest_problems::ContestProblem;
     // clang-format off
     try_to_create_table("contest_problems",
         concat("CREATE TABLE IF NOT EXISTS `contest_problems` ("
@@ -359,7 +359,7 @@ int main(int argc, char** argv) {
         "CREATE TABLE IF NOT EXISTS `contest_users` ("
             "`user_id` int unsigned NOT NULL,"
             "`contest_id` int unsigned NOT NULL,"
-            "`mode` tinyint(1) unsigned NOT NULL DEFAULT ", EnumVal(sim::ContestUser::Mode::CONTESTANT).int_val(), ","
+            "`mode` tinyint(1) unsigned NOT NULL DEFAULT ", EnumVal(sim::contest_users::ContestUser::Mode::CONTESTANT).int_val(), ","
             "PRIMARY KEY (user_id, contest_id),"
             "KEY (contest_id, user_id),"
             "KEY (contest_id, mode, user_id),"
@@ -371,11 +371,11 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("contest_files", concat(
         "CREATE TABLE IF NOT EXISTS `contest_files` ("
-            "`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
+            "`id` BINARY(", sim::FILE_ID_LEN, ") NOT NULL,"
             "`file_id` int unsigned NOT NULL,"
             "`contest_id` int unsigned NOT NULL,"
-            "`name` VARBINARY(", FILE_NAME_MAX_LEN, ") NOT NULL,"
-            "`description` VARBINARY(", FILE_DESCRIPTION_MAX_LEN, ") "
+            "`name` VARBINARY(", sim::FILE_NAME_MAX_LEN, ") NOT NULL,"
+            "`description` VARBINARY(", sim::FILE_DESCRIPTION_MAX_LEN, ") "
                 "NOT NULL,"
             "`file_size` bigint unsigned NOT NULL,"
             "`modified` datetime NOT NULL,"
@@ -391,9 +391,9 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("contest_entry_tokens",
         concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
-            "`token` BINARY(", CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
+            "`token` BINARY(", sim::CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
             "`contest_id` int unsigned NOT NULL,"
-            "`short_token` BINARY(", CONTEST_ENTRY_SHORT_TOKEN_LEN, ") NULL,"
+            "`short_token` BINARY(", sim::CONTEST_ENTRY_SHORT_TOKEN_LEN, ") NULL,"
             "`short_token_expiration` datetime NULL,"
             "PRIMARY KEY (token),"
             "UNIQUE KEY (contest_id),"

@@ -1,17 +1,21 @@
 #pragma once
 
-#include "sim/contest_user.hh"
+#include "sim/contest_users/contest_user.hh"
 #include "src/sim_merger/contests.hh"
+#include "src/sim_merger/merger.hh"
 #include "src/sim_merger/users.hh"
 
-class ContestUsersMerger : public Merger<sim::ContestUser> {
+namespace sim_merger {
+
+class ContestUsersMerger
+: public Merger<sim::contest_users::ContestUser, DefaultIdGetter, ContestUserIdCmp> {
     const UsersMerger& users_;
     const ContestsMerger& contests_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::ContestUser cu{};
+        sim::contest_users::ContestUser cu{};
         auto stmt =
             conn.prepare("SELECT user_id, contest_id, mode FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
@@ -26,11 +30,12 @@ class ContestUsersMerger : public Merger<sim::ContestUser> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::ContestUser& /*unused*/) { return nullptr; });
+        Merger::merge(
+            [&](const sim::contest_users::ContestUser& /*unused*/) { return nullptr; });
     }
 
-    sim::ContestUser::Id new_id_for_record_to_merge_into_new_records(
-        const sim::ContestUser::Id& record_id) override {
+    decltype(sim::contest_users::ContestUser::id) pre_merge_record_id_to_post_merge_record_id(
+        const decltype(sim::contest_users::ContestUser::id)& record_id) override {
         return record_id;
     }
 
@@ -47,7 +52,7 @@ public:
         ProgressBar progress_bar("Contest users saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::ContestUser& x = new_record.data;
+            const sim::contest_users::ContestUser& x = new_record.data;
             stmt.bind_and_execute(x.id.user_id, x.id.contest_id, x.mode);
         }
 
@@ -66,3 +71,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

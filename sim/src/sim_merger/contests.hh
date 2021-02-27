@@ -1,16 +1,19 @@
 #pragma once
 
 #include "sim/constants.hh"
-#include "sim/contest.hh"
-#include "sim/datetime_field.hh"
+#include "sim/contests/contest.hh"
+#include "sim/sql_fields/datetime.hh"
+#include "simlib/defer.hh"
 #include "src/sim_merger/merger.hh"
 
-class ContestsMerger : public Merger<sim::Contest> {
+namespace sim_merger {
+
+class ContestsMerger : public Merger<sim::contests::Contest> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::Contest c;
-        MySQL::Optional<sim::DatetimeField> earliest_submit_time;
+        sim::contests::Contest c;
+        mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
         uint8_t b_is_public = false;
         auto stmt = conn.prepare(
             "SELECT c.id, c.name, c.is_public, MIN(s.submit_time) "
@@ -35,7 +38,7 @@ class ContestsMerger : public Merger<sim::Contest> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::Contest& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contests::Contest& /*unused*/) { return nullptr; });
     }
 
 public:
@@ -49,7 +52,7 @@ public:
         ProgressBar progress_bar("Contests saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::Contest& x = new_record.data;
+            const sim::contests::Contest& x = new_record.data;
             stmt.bind_and_execute(x.id, x.name, x.is_public);
         }
 
@@ -63,3 +66,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

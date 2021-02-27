@@ -1,3 +1,4 @@
+#include "sim/constants.hh"
 #include "src/job_server/job_handlers/add_problem.hh"
 #include "src/job_server/job_handlers/add_problem__judge_main_solution.hh"
 #include "src/job_server/job_handlers/change_problem_statement.hh"
@@ -18,6 +19,11 @@
 #include "src/job_server/main.hh"
 
 #include <thread>
+
+using sim::JobStatus;
+using sim::JobType;
+
+namespace job_server {
 
 void job_dispatcher(
     uint64_t job_id, JobType jtype, std::optional<uint64_t> file_id,
@@ -54,7 +60,7 @@ void job_dispatcher(
 
         case JT::MERGE_PROBLEMS:
             job_handler = make_unique<MergeProblems>(
-                job_id, aux_id.value(), jobs::MergeProblemsInfo(info));
+                job_id, aux_id.value(), sim::jobs::MergeProblemsInfo(info));
             break;
 
         case JT::DELETE_USER:
@@ -62,8 +68,8 @@ void job_dispatcher(
             break;
 
         case JT::MERGE_USERS:
-            job_handler =
-                make_unique<MergeUsers>(job_id, aux_id.value(), jobs::MergeUsersInfo(info));
+            job_handler = make_unique<MergeUsers>(
+                job_id, aux_id.value(), sim::jobs::MergeUsersInfo(info));
             break;
 
         case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
@@ -90,7 +96,7 @@ void job_dispatcher(
         case JT::CHANGE_PROBLEM_STATEMENT:
             job_handler = make_unique<ChangeProblemStatement>(
                 job_id, aux_id.value(), file_id.value(),
-                jobs::ChangeProblemStatementInfo(info));
+                sim::jobs::ChangeProblemStatementInfo(info));
             break;
 
         case JT::JUDGE_SUBMISSION:
@@ -149,3 +155,5 @@ void job_dispatcher(
         transaction.commit();
     }
 }
+
+} // namespace job_server

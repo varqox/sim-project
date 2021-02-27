@@ -1,21 +1,21 @@
 #pragma once
 
-#include "sim/jobs.hh"
+#include "sim/jobs/jobs.hh"
 #include "src/job_server/job_handlers/job_handler.hh"
 
 #include <utility>
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class ChangeProblemStatement final : public JobHandler {
     uint64_t problem_id_;
     uint64_t job_file_id_;
-    jobs::ChangeProblemStatementInfo info_;
+    sim::jobs::ChangeProblemStatementInfo info_;
 
 public:
     ChangeProblemStatement(
         uint64_t job_id, uint64_t problem_id, uint64_t job_file_id,
-        jobs::ChangeProblemStatementInfo info)
+        sim::jobs::ChangeProblemStatementInfo info)
     : JobHandler(job_id)
     , problem_id_(problem_id)
     , job_file_id_(job_file_id)
@@ -24,4 +24,4 @@ public:
     void run() final;
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

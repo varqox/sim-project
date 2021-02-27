@@ -2,7 +2,10 @@
 #include "sim/constants.hh"
 #include "src/job_server/main.hh"
 
-namespace job_handlers {
+using sim::JobStatus;
+using sim::JobType;
+
+namespace job_server::job_handlers {
 
 void DeleteContestProblem::run() {
     STACK_UNWINDING_MARK;
@@ -60,4 +63,4 @@ void DeleteContestProblem::run() {
     transaction.commit();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

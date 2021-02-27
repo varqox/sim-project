@@ -1,11 +1,13 @@
 #include "src/job_server/job_handlers/delete_user.hh"
 #include "sim/constants.hh"
-#include "sim/user.hh"
+#include "sim/users/user.hh"
 #include "src/job_server/main.hh"
 
-using sim::User;
+using sim::JobStatus;
+using sim::JobType;
+using sim::users::User;
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 void DeleteUser::run() {
     STACK_UNWINDING_MARK;
@@ -50,4 +52,4 @@ void DeleteUser::run() {
     transaction.commit();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

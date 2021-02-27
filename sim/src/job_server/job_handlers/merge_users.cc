@@ -1,15 +1,15 @@
 #include "src/job_server/job_handlers/merge_users.hh"
 #include "sim/constants.hh"
-#include "sim/contest_user.hh"
-#include "sim/submission.hh"
+#include "sim/contest_users/contest_user.hh"
+#include "sim/submissions/update_final.hh"
 #include "simlib/utilities.hh"
 #include "src/job_server/main.hh"
 
 #include <deque>
 
-using sim::User;
+using sim::users::User;
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 void MergeUsers::run() {
     STACK_UNWINDING_MARK;
@@ -98,7 +98,7 @@ void MergeUsers::run_impl() {
 
     // Transfer contest_users
     {
-        using CUM = sim::ContestUser::Mode;
+        using CUM = sim::contest_users::ContestUser::Mode;
         (void)[](CUM x) {
             switch (x) { // If compiler warns here, update the below static_assert
             case CUM::CONTESTANT:
@@ -132,7 +132,7 @@ void MergeUsers::run_impl() {
     // Collect update finals
     struct FTU {
         uint64_t problem_id{};
-        MySQL::Optional<uint64_t> contest_problem_id;
+        mysql::Optional<uint64_t> contest_problem_id;
     };
     std::deque<FTU> finals_to_update;
     {
@@ -152,8 +152,8 @@ void MergeUsers::run_impl() {
 
     // Update finals (both contest and problem finals are being taken care of)
     for (auto const& ftu_elem : finals_to_update) {
-        submission::update_final_lock(mysql, info_.target_user_id, ftu_elem.problem_id);
-        submission::update_final(
+        sim::submissions::update_final_lock(mysql, info_.target_user_id, ftu_elem.problem_id);
+        sim::submissions::update_final(
             mysql, info_.target_user_id, ftu_elem.problem_id, ftu_elem.contest_problem_id,
             false);
     }
@@ -169,4 +169,4 @@ void MergeUsers::run_impl() {
     transaction.commit();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

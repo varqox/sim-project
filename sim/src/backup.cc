@@ -1,5 +1,5 @@
 #include "sim/constants.hh"
-#include "sim/mysql.hh"
+#include "sim/mysql/mysql.hh"
 #include "simlib/concat_tostr.hh"
 #include "simlib/debug.hh"
 #include "simlib/file_info.hh"
@@ -13,12 +13,11 @@
 
 #include <chrono>
 
+using sim::JobStatus;
 using std::string;
 using std::vector;
 
-/**
- * @brief Displays help
- */
+/// @brief Displays help
 static void help(const char* program_name) {
     if (program_name == nullptr) {
         program_name = "backup";
@@ -40,7 +39,7 @@ int main2(int argc, char** argv) {
     FileRemover mysql_cnf_guard;
 
     // Get connection
-    auto conn = MySQL::make_conn_with_credential_file(".db.config");
+    auto conn = sim::mysql::make_conn_with_credential_file(".db.config");
 
     FileDescriptor fd{MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_0600};
     if (fd == -1) {
@@ -82,7 +81,7 @@ int main2(int argc, char** argv) {
         auto deleter = conn.prepare("DELETE FROM internal_files WHERE id=?");
         // Remove jobs temporary internal files
         while (stmt.next()) {
-            auto file_path = internal_file_path(tmp_file_id);
+            auto file_path = sim::internal_file_path(tmp_file_id);
             if (access(file_path, F_OK) == 0 and
                 system_clock::now() - get_modification_time(file_path) > 2h)
             {
@@ -93,7 +92,7 @@ int main2(int argc, char** argv) {
 
         // Remove internal files that do not have an entry in internal_files
         sim::PackageContents fc;
-        fc.load_from_directory(INTERNAL_FILES_DIR);
+        fc.load_from_directory(sim::INTERNAL_FILES_DIR);
         std::set<std::string, std::less<>> orphaned_files;
         fc.for_each_with_prefix(
             "", [&](StringView file) { orphaned_files.emplace(file.to_string()); });
@@ -110,7 +109,7 @@ int main2(int argc, char** argv) {
         // that are just created but not committed)
         for (const std::string& file : orphaned_files) {
             struct stat64 st {};
-            auto file_path = concat(INTERNAL_FILES_DIR, file);
+            auto file_path = concat(sim::INTERNAL_FILES_DIR, file);
             if (stat64(file_path.to_cstr().data(), &st)) {
                 if (errno == ENOENT) {
                     break;

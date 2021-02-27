@@ -2,7 +2,7 @@
 
 #include "src/job_server/job_handlers/job_handler.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class DeleteContest final : public JobHandler {
     uint64_t contest_id_;
@@ -15,4 +15,4 @@ public:
     void run() final;
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

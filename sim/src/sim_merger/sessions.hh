@@ -1,16 +1,18 @@
 #pragma once
 
 #include "sim/random.hh"
-#include "sim/session.hh"
+#include "sim/sessions/session.hh"
 #include "simlib/defer.hh"
 #include "src/sim_merger/users.hh"
 
 #include <set>
 
-class SessionsMerger : public Merger<sim::Session> {
+namespace sim_merger {
+
+class SessionsMerger : public Merger<sim::sessions::Session> {
     const UsersMerger& users_;
 
-    std::set<decltype(sim::Session::id)> taken_sessions_ids_;
+    std::set<decltype(sim::sessions::Session::id)> taken_sessions_ids_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
@@ -24,7 +26,7 @@ class SessionsMerger : public Merger<sim::Session> {
             THROW("BUG");
         }();
 
-        sim::Session ses;
+        sim::sessions::Session ses;
         auto stmt = conn.prepare(
             "SELECT id, csrf_token, user_id, data, ip, "
             "user_agent, expires FROM ",
@@ -42,17 +44,17 @@ class SessionsMerger : public Merger<sim::Session> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::Session& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::sessions::Session& /*unused*/) { return nullptr; });
     }
 
-    decltype(sim::Session::id) new_id_for_record_to_merge_into_new_records(
-        const decltype(sim::Session::id)& record_id) override {
+    decltype(sim::sessions::Session::id) pre_merge_record_id_to_post_merge_record_id(
+        const decltype(sim::sessions::Session::id)& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_sessions_ids_.emplace(new_id).second) {
-            new_id = generate_random_token(decltype(sim::Session::id)::max_len);
+            new_id = sim::generate_random_token(decltype(sim::sessions::Session::id)::max_len);
         }
-        return decltype(sim::Session::id)(new_id);
+        return decltype(sim::sessions::Session::id)(new_id);
     }
 
 public:
@@ -69,7 +71,7 @@ public:
         ProgressBar progress_bar("Sessions saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::Session& x = new_record.data;
+            const sim::sessions::Session& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.csrf_token, x.user_id, x.data, x.ip, x.user_agent, x.expires);
         }
@@ -84,3 +86,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

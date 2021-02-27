@@ -69,17 +69,17 @@ libsim_dependencies = [
     mariadb_dep,
 ]
 
-libsim_incdir = include_directories('src/include', is_system : false)
+libsim_incdir = include_directories('include', is_system : false)
 libsim = library('sim',
     sources : [
-        'src/lib/contest_file_permissions.cc',
-        'src/lib/contest_permissions.cc',
-        'src/lib/cpp_syntax_highlighter.cc',
-        'src/lib/jobs.cc',
-        'src/lib/mysql.cc',
-        'src/lib/problem_permissions.cc',
-        'src/lib/random.cc',
-        'src/lib/submission.cc',
+        'src/sim/contest_files/permissions.cc',
+        'src/sim/contests/permissions.cc',
+        'src/sim/cpp_syntax_highlighter.cc',
+        'src/sim/jobs/jobs.cc',
+        'src/sim/mysql/mysql.cc',
+        'src/sim/problems/permissions.cc',
+        'src/sim/random.cc',
+        'src/sim/submissions/update_final.cc',
     ],
     include_directories : libsim_incdir,
     dependencies : libsim_dependencies,
@@ -169,30 +169,31 @@ backup = executable('backup',
 
 sim_server = executable('sim-server',
     sources : [
-        'src/web_interface/api.cc',
-        'src/web_interface/connection.cc',
-        'src/web_interface/contest_entry_token_api.cc',
-        'src/web_interface/contest_files.cc',
-        'src/web_interface/contest_files_api.cc',
-        'src/web_interface/contest_users_api.cc',
-        'src/web_interface/contests.cc',
-        'src/web_interface/contests_api.cc',
-        'src/web_interface/http_cookies.cc',
-        'src/web_interface/http_request.cc',
-        'src/web_interface/jobs.cc',
-        'src/web_interface/jobs_api.cc',
-        'src/web_interface/old_session.cc',
-        'src/web_interface/problems.cc',
-        'src/web_interface/problems_api.cc',
-        'src/web_interface/server.cc',
-        'src/web_interface/sim.cc',
-        'src/web_interface/submissions.cc',
-        'src/web_interface/submissions_api.cc',
-        'src/web_interface/template.cc',
-        'src/web_interface/users.cc',
-        'src/web_interface/users_api.cc',
-        'src/web_interface/web_worker/context.cc',
-        'src/web_interface/web_worker/web_worker.cc',
+        'src/web_server/http/cookies.cc',
+        'src/web_server/http/request.cc',
+        'src/web_server/http/response.cc',
+        'src/web_server/old/api.cc',
+        'src/web_server/old/contest_entry_token_api.cc',
+        'src/web_server/old/contest_files.cc',
+        'src/web_server/old/contest_files_api.cc',
+        'src/web_server/old/contest_users_api.cc',
+        'src/web_server/old/contests.cc',
+        'src/web_server/old/contests_api.cc',
+        'src/web_server/old/jobs.cc',
+        'src/web_server/old/jobs_api.cc',
+        'src/web_server/old/problems.cc',
+        'src/web_server/old/problems_api.cc',
+        'src/web_server/old/session.cc',
+        'src/web_server/old/sim.cc',
+        'src/web_server/old/submissions.cc',
+        'src/web_server/old/submissions_api.cc',
+        'src/web_server/old/template.cc',
+        'src/web_server/old/users.cc',
+        'src/web_server/old/users_api.cc',
+        'src/web_server/server/connection.cc',
+        'src/web_server/server/server.cc',
+        'src/web_server/web_worker/context.cc',
+        'src/web_server/web_worker/web_worker.cc',
     ],
     dependencies : [
         libsim_dep,
@@ -229,7 +230,7 @@ run_target('tidy', command : [find_program('tidy')], depends : base_targets)
 
 ################################# Installation #################################
 
-install_subdir('src/static', install_dir : '.')
+install_subdir('src/web_server/static', install_dir : '.')
 
 if host_machine.cpu_family() == 'x86'
     proot_bin = 'bin/proot-x86'
@@ -254,8 +255,8 @@ gtest_main_dep = simlib_proj.get_variable('gtest_main_dep')
 gmock_dep = simlib_proj.get_variable('gmock_dep')
 
 tests = [
-    ['test/jobs.cc', [], {}],
-    ['test/cpp_syntax_highlighter.cc', [], {}],
+    ['test/sim/cpp_syntax_highlighter.cc', [], {}],
+    ['test/sim/jobs/jobs.cc', [], {}],
 ]
 foreach test : tests
     name = test[0].underscorify()

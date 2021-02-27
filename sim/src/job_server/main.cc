@@ -1,7 +1,7 @@
 #include "sim/constants.hh"
-#include "sim/jobs.hh"
-#include "sim/mysql.hh"
-#include "sim/submission.hh"
+#include "sim/jobs/jobs.hh"
+#include "sim/mysql/mysql.hh"
+#include "sim/submissions/update_final.hh"
 #include "simlib/config_file.hh"
 #include "simlib/file_manip.hh"
 #include "simlib/process.hh"
@@ -27,6 +27,8 @@
 #define DEBUG_JOB_SERVER(...)
 #endif
 
+using sim::JobStatus;
+using sim::JobType;
 using std::array;
 using std::function;
 using std::lock_guard;
@@ -36,8 +38,12 @@ using std::string;
 using std::thread;
 using std::vector;
 
+namespace job_server {
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local MySQL::Connection mysql;
+thread_local mysql::Connection mysql;
+
+} // namespace job_server
 
 namespace {
 
@@ -132,17 +138,17 @@ public:
 
         uint64_t jid = 0;
         EnumVal<JobType> jtype{};
-        MySQL::Optional<uintmax_t> aux_id;
+        mysql::Optional<uintmax_t> aux_id;
         uint priority = 0;
         InplaceBuff<512> info;
         // Select jobs
-        auto stmt = mysql.prepare("SELECT id, type, priority, aux_id, info "
-                                  "FROM jobs "
-                                  "WHERE status=? "
-                                  "ORDER BY priority DESC, id ASC LIMIT 4");
+        auto stmt = job_server::mysql.prepare("SELECT id, type, priority, aux_id, info "
+                                              "FROM jobs "
+                                              "WHERE status=? "
+                                              "ORDER BY priority DESC, id ASC LIMIT 4");
         stmt.res_bind_all(jid, jtype, priority, aux_id, info);
         // Sets job's status to NOTICED_PENDING
-        auto mark_stmt = mysql.prepare("UPDATE jobs SET status=? WHERE id=?");
+        auto mark_stmt = job_server::mysql.prepare("UPDATE jobs SET status=? WHERE id=?");
         // Add jobs to internal queue
         using JT = JobType;
         for (;;) {
@@ -194,8 +200,8 @@ public:
                 switch (jtype) {
                 case JT::JUDGE_SUBMISSION:
                 case JT::REJUDGE_SUBMISSION: {
-                    auto opt = str2num<uint64_t>(
-                        intentional_unsafe_string_view(jobs::extract_dumped_string(info)));
+                    auto opt = str2num<uint64_t>(intentional_unsafe_string_view(
+                        sim::jobs::extract_dumped_string(info)));
                     if (not opt) {
                         THROW("Corrupted job's info field");
                     }
@@ -626,7 +632,7 @@ public:
             try {
                 thread_local Worker w(*this);
                 // Connect to databases
-                mysql = MySQL::make_conn_with_credential_file(".db.config");
+                job_server::mysql = sim::mysql::make_conn_with_credential_file(".db.config");
 
                 for (;;) {
                     job_handler_(w.wait_for_next_job_id());
@@ -693,17 +699,17 @@ static void process_job(const WorkersPool::NextJob& job) {
     };
 
     EnumVal<JobType> jtype{};
-    MySQL::Optional<uint64_t> file_id;
-    MySQL::Optional<uint64_t> tmp_file_id;
-    MySQL::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
+    mysql::Optional<uint64_t> file_id;
+    mysql::Optional<uint64_t> tmp_file_id;
+    mysql::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
     InplaceBuff<32> added;
-    MySQL::Optional<uint64_t> aux_id; // TODO: normalize this column...
+    mysql::Optional<uint64_t> aux_id; // TODO: normalize this column...
     InplaceBuff<512> info;
 
     {
-        auto stmt =
-            mysql.prepare("SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
-                          "FROM jobs WHERE id=? AND status!=?");
+        auto stmt = job_server::mysql.prepare(
+            "SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
+            "FROM jobs WHERE id=? AND status!=?");
         stmt.bind_and_execute(job.id, EnumVal(JobStatus::CANCELED));
         stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
 
@@ -713,7 +719,7 @@ static void process_job(const WorkersPool::NextJob& job) {
     }
 
     // Mark as in progress
-    mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
+    job_server::mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
         .bind_and_execute(EnumVal(JobStatus::IN_PROGRESS), job.id);
 
     stdlog("Processing job ", job.id, "...");
@@ -722,7 +728,8 @@ static void process_job(const WorkersPool::NextJob& job) {
     if (creator.has_value()) {
         creat = creator.value();
     }
-    job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, added);
+    job_server::job_dispatcher(
+        job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, added);
 
     exit_procedures();
 }
@@ -759,8 +766,9 @@ static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-va
                 jobs_queue.unlock_problem(winfo.next_job.problem_id);
             }
 
-            jobs::restart_job(
-                mysql, intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
+            sim::jobs::restart_job(
+                job_server::mysql,
+                intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
         }
 
         EventsQueue::register_event([] { spawn_worker(local_workers); });
@@ -776,8 +784,9 @@ static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-va
                 jobs_queue.unlock_problem(winfo.next_job.problem_id);
             }
 
-            jobs::restart_job(
-                mysql, intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
+            sim::jobs::restart_job(
+                job_server::mysql,
+                intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
         }
 
         EventsQueue::register_event([] { spawn_worker(judge_workers); });
@@ -889,14 +898,14 @@ static void events_loop() noexcept {
             auto* event = reinterpret_cast<struct inotify_event*>(inotify_buff);
             if (event->mask & IN_MOVE_SELF) {
                 // If notify file has been moved
-                (void)create_file(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+                (void)create_file(sim::JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
                 inotify_rm_watch(inotify_fd, inotify_wd);
                 inotify_wd = -1;
                 return false;
             }
             if (event->mask & IN_IGNORED) {
                 // If notify file has disappeared
-                (void)create_file(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+                (void)create_file(sim::JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
                 inotify_wd = -1;
                 return false;
             }
@@ -928,12 +937,12 @@ static void events_loop() noexcept {
                     // Try to fix inotify_wd
                 inotify_partially_works:
                     // Ensure that notify-file exists
-                    if (access(JOB_SERVER_NOTIFYING_FILE, F_OK) == -1) {
-                        (void)create_file(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+                    if (access(sim::JOB_SERVER_NOTIFYING_FILE, F_OK) == -1) {
+                        (void)create_file(sim::JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
                     }
 
                     inotify_wd = inotify_add_watch(
-                        inotify_fd, JOB_SERVER_NOTIFYING_FILE, IN_ATTRIB | IN_MOVE_SELF);
+                        inotify_fd, sim::JOB_SERVER_NOTIFYING_FILE, IN_ATTRIB | IN_MOVE_SELF);
                     if (inotify_wd == -1) {
                         errlog("inotify_add_watch() failed", errmsg());
                     } else {
@@ -1084,11 +1093,11 @@ static void clean_up_db() {
 
     try {
         // Do it in a transaction to speed things up
-        auto transaction = mysql.start_transaction();
+        auto transaction = job_server::mysql.start_transaction();
 
         // Fix jobs that are in progress after the job-server died
-        auto stmt = mysql.prepare("SELECT id, type, info FROM jobs WHERE "
-                                  "status=?");
+        auto stmt = job_server::mysql.prepare("SELECT id, type, info FROM jobs WHERE "
+                                              "status=?");
         stmt.bind_and_execute(EnumVal(JobStatus::IN_PROGRESS));
 
         uintmax_t job_id = 0;
@@ -1096,13 +1105,13 @@ static void clean_up_db() {
         InplaceBuff<128> job_info;
         stmt.res_bind_all(job_id, job_type, job_info);
         while (stmt.next()) {
-            jobs::restart_job(
-                mysql, intentional_unsafe_string_view(to_string(job_id)), job_type, job_info,
-                false);
+            sim::jobs::restart_job(
+                job_server::mysql, intentional_unsafe_string_view(to_string(job_id)), job_type,
+                job_info, false);
         }
 
         // Fix jobs that are noticed [ending] after the job-server died
-        mysql.prepare("UPDATE jobs SET status=? WHERE status=?")
+        job_server::mysql.prepare("UPDATE jobs SET status=? WHERE status=?")
             .bind_and_execute(
                 EnumVal(JobStatus::PENDING), EnumVal(JobStatus::NOTICED_PENDING));
         transaction.commit();
@@ -1127,17 +1136,17 @@ int main() {
     // Loggers
     // stdlog, like everything, writes to stderr, so redirect stdout and stderr
     // to the log file
-    if (freopen(JOB_SERVER_LOG, "ae", stdout) == nullptr ||
+    if (freopen(sim::JOB_SERVER_LOG, "ae", stdout) == nullptr ||
         dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
-        errlog("Failed to open `", JOB_SERVER_LOG, '`', errmsg());
+        errlog("Failed to open `", sim::JOB_SERVER_LOG, '`', errmsg());
         return 1;
     }
 
     try {
-        errlog.open(JOB_SERVER_ERROR_LOG);
+        errlog.open(sim::JOB_SERVER_ERROR_LOG);
     } catch (const std::exception& e) {
-        errlog("Failed to open `", JOB_SERVER_ERROR_LOG, "`: ", e.what());
+        errlog("Failed to open `", sim::JOB_SERVER_ERROR_LOG, "`: ", e.what());
         return 1;
     }
 
@@ -1152,7 +1161,7 @@ int main() {
 
     // Connect to the databases
     try {
-        mysql = MySQL::make_conn_with_credential_file(".db.config");
+        job_server::mysql = sim::mysql::make_conn_with_credential_file(".db.config");
 
         clean_up_db();
 

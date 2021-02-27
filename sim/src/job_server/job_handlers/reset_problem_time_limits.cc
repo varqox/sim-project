@@ -3,7 +3,11 @@
 #include "simlib/sim/problem_package.hh"
 #include "src/job_server/main.hh"
 
-namespace job_handlers {
+using sim::internal_file_path;
+using sim::JobStatus;
+using sim::JobType;
+
+namespace job_server::job_handlers {
 
 void ResetProblemTimeLimits::run() {
     STACK_UNWINDING_MARK;
@@ -73,4 +77,4 @@ void ResetProblemTimeLimits::run() {
     new_pkg_remover.cancel();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

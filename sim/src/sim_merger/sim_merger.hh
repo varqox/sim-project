@@ -1,11 +1,13 @@
 #pragma once
 
-#include "simlib/mysql.hh"
+#include "simlib/mysql/mysql.hh"
 
 #include <array>
 #include <climits>
 
-inline MySQL::Connection conn;
+namespace sim_merger {
+
+inline mysql::Connection conn;
 
 inline InplaceBuff<PATH_MAX> main_sim_build;
 inline InplaceBuff<PATH_MAX> other_sim_build;
@@ -26,3 +28,5 @@ constexpr std::array<CStringView, 13> tables = {{
     "submissions",
     "users",
 }};
+
+} // namespace sim_merger

@@ -1,8 +1,8 @@
 #include "src/job_server/job_handlers/reselect_final_submissions_in_contest_problem.hh"
-#include "sim/submission.hh"
+#include "sim/submissions/update_final.hh"
 #include "src/job_server/main.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 void ReselectFinalSubmissionsInContestProblem::run() {
     STACK_UNWINDING_MARK;
@@ -16,12 +16,12 @@ void ReselectFinalSubmissionsInContestProblem::run() {
                                       // running, one would block until the other finishes
     stmt.bind_and_execute(contest_problem_id_);
 
-    MySQL::Optional<uint64_t> sowner;
+    mysql::Optional<uint64_t> sowner;
     uint64_t problem_id = 0;
     stmt.res_bind_all(sowner, problem_id);
     while (stmt.next()) {
-        submission::update_final_lock(mysql, sowner, problem_id);
-        submission::update_final(mysql, sowner, problem_id, contest_problem_id_, false);
+        sim::submissions::update_final_lock(mysql, sowner, problem_id);
+        sim::submissions::update_final(mysql, sowner, problem_id, contest_problem_id_, false);
     }
 
     job_done();
@@ -29,4 +29,4 @@ void ReselectFinalSubmissionsInContestProblem::run() {
     transaction.commit();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

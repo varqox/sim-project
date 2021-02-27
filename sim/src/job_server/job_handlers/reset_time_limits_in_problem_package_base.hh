@@ -2,7 +2,7 @@
 
 #include "src/job_server/job_handlers/judge_base.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class ResetTimeLimitsInProblemPackageBase : public JudgeBase {
 protected:
@@ -15,4 +15,4 @@ protected:
     void reset_package_time_limits(FilePath package_path);
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

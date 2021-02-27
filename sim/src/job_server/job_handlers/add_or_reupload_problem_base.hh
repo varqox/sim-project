@@ -1,16 +1,18 @@
 #pragma once
 
-#include "sim/jobs.hh"
+#include "sim/jobs/jobs.hh"
 #include "simlib/libzip.hh"
 #include "src/job_server/job_handlers/job_handler.hh"
 
-namespace job_handlers {
+#include <utility>
+
+namespace job_server::job_handlers {
 
 class AddOrReuploadProblemBase : virtual public JobHandler {
 protected:
-    JobType job_type_;
+    sim::JobType job_type_;
     StringView job_creator_;
-    jobs::AddProblemInfo info_;
+    sim::jobs::AddProblemInfo info_;
     FileRemover package_file_remover_;
     uint64_t job_file_id_;
     std::optional<uint64_t> tmp_file_id_;
@@ -30,17 +32,18 @@ private:
 
 protected:
     AddOrReuploadProblemBase(
-        JobType job_type, StringView job_creator, const jobs::AddProblemInfo& info,
+        sim::JobType job_type, StringView job_creator, sim::jobs::AddProblemInfo info,
         uint64_t job_file_id, std::optional<uint64_t> tmp_file_id,
         std::optional<uint64_t> problem_id)
     : job_type_(job_type)
     , job_creator_(job_creator)
-    , info_(info)
+    , info_(std::move(info))
     , job_file_id_(job_file_id)
     , tmp_file_id_(tmp_file_id)
     , problem_id_(problem_id) {
-        if (tmp_file_id.has_value())
+        if (tmp_file_id.has_value()) {
             load_job_log_from_db();
+        }
     }
 
     static void assert_transaction_is_open();
@@ -63,9 +66,6 @@ protected:
     using JobHandler::job_done;
 
     void job_done(bool& job_was_canceled);
-
-public:
-    virtual ~AddOrReuploadProblemBase() = default;
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

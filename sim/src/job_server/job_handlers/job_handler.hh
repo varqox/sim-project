@@ -2,7 +2,7 @@
 
 #include "simlib/sim/conver.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class JobHandler {
 private:
@@ -53,4 +53,4 @@ public:
     [[nodiscard]] const auto& get_log() const noexcept { return job_log_holder_; }
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

@@ -1,6 +1,6 @@
-#include "sim/contest_round.hh"
+#include "sim/contest_rounds/contest_round.hh"
 #include "sim/inf_datetime.hh"
-#include "sim/mysql.hh"
+#include "sim/mysql/mysql.hh"
 #include "simlib/concat_tostr.hh"
 #include "simlib/defer.hh"
 #include "simlib/file_info.hh"
@@ -13,7 +13,7 @@
 namespace {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-MySQL::Connection conn;
+mysql::Connection conn;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 InplaceBuff<PATH_MAX> sim_build;
 
@@ -108,7 +108,7 @@ static int true_main(int argc, char** argv) {
 
     try {
         // Get connection
-        conn = MySQL::make_conn_with_credential_file(concat(sim_build, ".db.config"));
+        conn = sim::mysql::make_conn_with_credential_file(concat(sim_build, ".db.config"));
     } catch (const std::exception& e) {
         errlog("\033[31mFailed to connect to database\033[m - ", e.what());
         return 1;

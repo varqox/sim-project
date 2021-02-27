@@ -5,6 +5,8 @@
 #include "simlib/time.hh"
 #include "src/sim_merger/merger.hh"
 
+namespace sim_merger {
+
 static std::chrono::system_clock::time_point file_mtime(FilePath path) {
     struct stat st {};
     if (stat(path, &st)) {
@@ -174,3 +176,5 @@ public:
         THROW("Invalid new_id");
     }
 };
+
+} // namespace sim_merger

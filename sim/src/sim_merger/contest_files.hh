@@ -7,12 +7,14 @@
 
 #include <set>
 
+namespace sim_merger {
+
 struct ContestFile {
-    InplaceBuff<FILE_ID_LEN> id;
+    InplaceBuff<sim::FILE_ID_LEN> id;
     uintmax_t file_id{};
     uintmax_t contest_id{};
-    InplaceBuff<FILE_NAME_MAX_LEN> name;
-    InplaceBuff<FILE_DESCRIPTION_MAX_LEN> description;
+    InplaceBuff<sim::FILE_NAME_MAX_LEN> name;
+    InplaceBuff<sim::FILE_DESCRIPTION_MAX_LEN> description;
     uintmax_t file_size{};
     InplaceBuff<24> modified;
     std::optional<uintmax_t> creator;
@@ -23,13 +25,13 @@ class ContestFilesMerger : public Merger<ContestFile> {
     const ContestsMerger& contests_;
     const UsersMerger& users_;
 
-    std::set<InplaceBuff<FILE_ID_LEN>> taken_contest_files_ids_;
+    std::set<InplaceBuff<sim::FILE_ID_LEN>> taken_contest_files_ids_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
         ContestFile cf;
-        MySQL::Optional<uintmax_t> m_creator;
+        mysql::Optional<uintmax_t> m_creator;
         auto stmt = conn.prepare(
             "SELECT id, file_id, contest_id, name, description, "
             "file_size, modified, creator FROM ",
@@ -57,14 +59,14 @@ class ContestFilesMerger : public Merger<ContestFile> {
         Merger::merge([&](const ContestFile& /*unused*/) { return nullptr; });
     }
 
-    InplaceBuff<FILE_ID_LEN> new_id_for_record_to_merge_into_new_records(
-        const InplaceBuff<FILE_ID_LEN>& record_id) override {
+    InplaceBuff<sim::FILE_ID_LEN> pre_merge_record_id_to_post_merge_record_id(
+        const InplaceBuff<sim::FILE_ID_LEN>& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_contest_files_ids_.emplace(new_id).second) {
-            new_id = generate_random_token(FILE_ID_LEN);
+            new_id = sim::generate_random_token(sim::FILE_ID_LEN);
         }
-        return InplaceBuff<FILE_ID_LEN>(new_id);
+        return InplaceBuff<sim::FILE_ID_LEN>(new_id);
     }
 
 public:
@@ -104,3 +106,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

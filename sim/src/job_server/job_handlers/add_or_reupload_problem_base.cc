@@ -1,13 +1,18 @@
 #include "src/job_server/job_handlers/add_or_reupload_problem_base.hh"
 #include "sim/constants.hh"
-#include "sim/problem.hh"
+#include "sim/problems/problem.hh"
 #include "simlib/libzip.hh"
 #include "simlib/sim/problem_package.hh"
 #include "src/job_server/main.hh"
 
-using sim::Problem;
+using sim::JobStatus;
+using sim::JobType;
+using sim::SubmissionLanguage;
+using sim::SubmissionStatus;
+using sim::SubmissionType;
+using sim::problems::Problem;
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 void AddOrReuploadProblemBase::load_job_log_from_db() {
     STACK_UNWINDING_MARK;
@@ -37,7 +42,7 @@ void AddOrReuploadProblemBase::build_package() {
 
     replace_db_job_log_ = true;
 
-    auto source_package = internal_file_path(job_file_id_);
+    auto source_package = sim::internal_file_path(job_file_id_);
 
     mysql.update("INSERT INTO internal_files VALUES()");
     tmp_file_id_ = mysql.insert_id();
@@ -53,14 +58,14 @@ void AddOrReuploadProblemBase::build_package() {
     copts.label = (info_.label.empty() ? std::nullopt : std::optional(info_.label));
     copts.memory_limit = info_.memory_limit;
     copts.global_time_limit = info_.global_time_limit;
-    copts.max_time_limit = MAX_TIME_LIMIT;
+    copts.max_time_limit = sim::MAX_TIME_LIMIT;
     copts.reset_time_limits_using_main_solution = info_.reset_time_limits;
     copts.ignore_simfile = info_.ignore_simfile;
     copts.seek_for_new_tests = info_.seek_for_new_tests;
     copts.reset_scoring = info_.reset_scoring;
     copts.require_statement = true;
-    copts.rtl_opts.min_time_limit = MIN_TIME_LIMIT;
-    copts.rtl_opts.solution_runtime_coefficient = SOLUTION_RUNTIME_COEFFICIENT;
+    copts.rtl_opts.min_time_limit = sim::MIN_TIME_LIMIT;
+    copts.rtl_opts.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
 
     sim::Conver::ConstructionResult cr;
     try {
@@ -90,7 +95,7 @@ void AddOrReuploadProblemBase::build_package() {
     // Update job record
     mysql.prepare("UPDATE jobs SET tmp_file_id=? WHERE id=?")
         .bind_and_execute(tmp_file_id_.value(), job_id_);
-    auto tmp_package = internal_file_path(tmp_file_id_.value());
+    auto tmp_package = sim::internal_file_path(tmp_file_id_.value());
     // Copy source_package to tmp_package, substituting Simfile in the fly
     {
         ZipFile src_zip(source_package, ZIP_RDONLY);
@@ -194,7 +199,7 @@ void AddOrReuploadProblemBase::open_package() {
 
     assert_transaction_is_open();
 
-    zip_ = ZipFile(internal_file_path(tmp_file_id_.value()), ZIP_RDONLY);
+    zip_ = ZipFile(sim::internal_file_path(tmp_file_id_.value()), ZIP_RDONLY);
     main_dir_ = sim::zip_package_main_dir(zip_);
     simfile_str_ = zip_.extract_to_str(zip_.get_index(concat(main_dir_, "Simfile")));
 
@@ -305,7 +310,8 @@ void AddOrReuploadProblemBase::submit_solutions() {
 
         // Save the submission source code
         zip_.extract_to_file(
-            zip_.get_index(concat(main_dir_, solution)), internal_file_path(file_id), S_0600);
+            zip_.get_index(concat(main_dir_, solution)), sim::internal_file_path(file_id),
+            S_0600);
     }
 
     // Add jobs to judge the solutions
@@ -319,10 +325,11 @@ void AddOrReuploadProblemBase::submit_solutions() {
         .bind_and_execute(
             EnumVal(JobType::JUDGE_SUBMISSION), priority(JobType::JUDGE_SUBMISSION) + 1,
             EnumVal(JobStatus::PENDING), current_date_,
-            jobs::dump_string(intentional_unsafe_string_view(to_string(problem_id_.value()))),
+            sim::jobs::dump_string(
+                intentional_unsafe_string_view(to_string(problem_id_.value()))),
             problem_id_.value(), EnumVal(SubmissionType::PROBLEM_SOLUTION));
 
     job_log("Done.");
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

@@ -5,10 +5,12 @@
 
 #include <set>
 
+namespace sim_merger {
+
 struct ContestEntryToken {
-    InplaceBuff<CONTEST_ENTRY_TOKEN_LEN> token;
+    InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN> token;
     uintmax_t contest_id{};
-    std::optional<InplaceBuff<CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
+    std::optional<InplaceBuff<sim::CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
     std::optional<InplaceBuff<24>> short_token_expiration;
 };
 
@@ -22,15 +24,15 @@ struct ContestEntryTokenIdGetter {
 class ContestEntryTokensMerger : public Merger<ContestEntryToken, ContestEntryTokenIdGetter> {
     const ContestsMerger& contests_;
 
-    std::set<InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>> taken_tokens_;
-    std::set<InplaceBuff<CONTEST_ENTRY_SHORT_TOKEN_LEN>> taken_short_tokens_;
+    std::set<InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN>> taken_tokens_;
+    std::set<InplaceBuff<sim::CONTEST_ENTRY_SHORT_TOKEN_LEN>> taken_short_tokens_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
         ContestEntryToken cet;
-        MySQL::Optional<decltype(ContestEntryToken::short_token)::value_type> m_short_token;
-        MySQL::Optional<decltype(ContestEntryToken::short_token_expiration)::value_type>
+        mysql::Optional<decltype(ContestEntryToken::short_token)::value_type> m_short_token;
+        mysql::Optional<decltype(ContestEntryToken::short_token_expiration)::value_type>
             m_short_token_expiration;
         auto stmt = conn.prepare(
             "SELECT token, contest_id, short_token,"
@@ -49,7 +51,8 @@ class ContestEntryTokensMerger : public Merger<ContestEntryToken, ContestEntryTo
             if (cet.short_token) {
                 std::string new_short_token = cet.short_token->to_string();
                 while (not taken_short_tokens_.emplace(new_short_token).second) {
-                    new_short_token = generate_random_token(CONTEST_ENTRY_SHORT_TOKEN_LEN);
+                    new_short_token =
+                        sim::generate_random_token(sim::CONTEST_ENTRY_SHORT_TOKEN_LEN);
                 }
                 cet.short_token = new_short_token;
             }
@@ -64,14 +67,14 @@ class ContestEntryTokensMerger : public Merger<ContestEntryToken, ContestEntryTo
         Merger::merge([&](const ContestEntryToken& /*unused*/) { return nullptr; });
     }
 
-    InplaceBuff<CONTEST_ENTRY_TOKEN_LEN> new_id_for_record_to_merge_into_new_records(
-        const InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>& record_id) override {
+    InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN> pre_merge_record_id_to_post_merge_record_id(
+        const InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN>& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_tokens_.emplace(new_id).second) {
-            new_id = generate_random_token(CONTEST_ENTRY_TOKEN_LEN);
+            new_id = sim::generate_random_token(sim::CONTEST_ENTRY_TOKEN_LEN);
         }
-        return InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>(new_id);
+        return InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN>(new_id);
     }
 
 public:
@@ -106,3 +109,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

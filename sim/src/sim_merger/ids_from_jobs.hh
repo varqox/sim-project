@@ -1,16 +1,16 @@
 #pragma once
 
-#include "sim/blob_field.hh"
 #include "sim/constants.hh"
-#include "sim/contest.hh"
-#include "sim/contest_problem.hh"
-#include "sim/contest_round.hh"
-#include "sim/contest_user.hh"
-#include "sim/datetime_field.hh"
-#include "sim/jobs.hh"
-#include "sim/problem.hh"
-#include "sim/session.hh"
-#include "sim/user.hh"
+#include "sim/contest_problems/contest_problem.hh"
+#include "sim/contest_rounds/contest_round.hh"
+#include "sim/contest_users/contest_user.hh"
+#include "sim/contests/contest.hh"
+#include "sim/jobs/jobs.hh"
+#include "sim/problems/problem.hh"
+#include "sim/sessions/session.hh"
+#include "sim/sql_fields/blob.hh"
+#include "sim/sql_fields/datetime.hh"
+#include "sim/users/user.hh"
 #include "simlib/ranges.hh"
 #include "simlib/time.hh"
 #include "src/sim_merger/sim_merger.hh"
@@ -18,10 +18,12 @@
 #include <chrono>
 #include <map>
 
+namespace sim_merger {
+
 // For each id, we keep the first date that it appeared with
-template <class IdType>
+template <class IdType, class IdCmp = std::less<IdType>>
 struct IdsWithTime {
-    std::map<IdType, std::chrono::system_clock::time_point> ids;
+    std::map<IdType, std::chrono::system_clock::time_point, IdCmp> ids;
 
     void add_id(IdType id, std::chrono::system_clock::time_point tp) {
         auto it = ids.find(id);
@@ -53,7 +55,7 @@ struct IdsWithTime {
 
 struct ProblemTagId {
     uintmax_t problem_id;
-    InplaceBuff<PROBLEM_TAG_MAX_LEN> tag;
+    InplaceBuff<sim::PROBLEM_TAG_MAX_LEN> tag;
 };
 
 inline bool operator<(const ProblemTagId& a, const ProblemTagId& b) noexcept {
@@ -64,47 +66,44 @@ inline auto stringify(ProblemTagId ptag) {
     return concat("(problem: ", ptag.problem_id, " tag: ", ptag.tag, ')');
 }
 
-namespace sim {
-
-inline auto stringify(ContestUser::Id cuser) {
-    return concat("(user: ", cuser.user_id, " contest: ", cuser.contest_id, ')');
-}
-
-inline bool operator<(const ContestUser::Id& a, const ContestUser::Id& b) noexcept {
-    return std::pair(a.user_id, a.contest_id) < std::pair(b.user_id, b.contest_id);
-}
-
-} // namespace sim
+struct ContestUserIdCmp {
+    bool operator()(
+        const decltype(sim::contest_users::ContestUser::id)& a,
+        const decltype(sim::contest_users::ContestUser::id)& b) const noexcept {
+        return std::pair(a.user_id, a.contest_id) < std::pair(b.user_id, b.contest_id);
+    }
+};
 
 // Loads all information about ids from jobs
 struct IdsFromJobs {
     IdsWithTime<uintmax_t> internal_files; // TODO: replace with appropriate decltype
-    IdsWithTime<decltype(sim::User::id)> users;
-    IdsWithTime<decltype(sim::Session::id)> sessions;
-    IdsWithTime<decltype(sim::Problem::id)> problems;
+    IdsWithTime<decltype(sim::users::User::id)> users;
+    IdsWithTime<decltype(sim::sessions::Session::id)> sessions;
+    IdsWithTime<decltype(sim::problems::Problem::id)> problems;
     IdsWithTime<ProblemTagId> problem_tags; // TODO: replace with appropriate decltype
-    IdsWithTime<decltype(sim::Contest::id)> contests;
-    IdsWithTime<decltype(sim::ContestRound::id)> contest_rounds;
-    IdsWithTime<decltype(sim::ContestProblem::id)> contest_problems;
-    IdsWithTime<decltype(sim::ContestUser::id)> contest_users;
-    IdsWithTime<InplaceBuff<FILE_ID_LEN>>
+    IdsWithTime<decltype(sim::contests::Contest::id)> contests;
+    IdsWithTime<decltype(sim::contest_rounds::ContestRound::id)> contest_rounds;
+    IdsWithTime<decltype(sim::contest_problems::ContestProblem::id)> contest_problems;
+    IdsWithTime<decltype(sim::contest_users::ContestUser::id), ContestUserIdCmp> contest_users;
+    IdsWithTime<InplaceBuff<::sim::FILE_ID_LEN>>
         contest_files; // TODO: replace with appropriate decltype
-    IdsWithTime<InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>>
+    IdsWithTime<InplaceBuff<::sim::CONTEST_ENTRY_TOKEN_LEN>>
         contest_entry_tokens; // TODO: replace with appropriate decltype
     IdsWithTime<uintmax_t> submissions; // TODO: replace with appropriate decltype
     IdsWithTime<uintmax_t> jobs; // TODO: replace with appropriate decltype
 
     void initialize(StringView job_table_name) {
         STACK_UNWINDING_MARK;
+        using sim::JobType;
 
         uintmax_t id = 0;
-        MySQL::Optional<uintmax_t> creator;
+        mysql::Optional<uintmax_t> creator;
         EnumVal<JobType> type{};
-        MySQL::Optional<uintmax_t> file_id;
-        MySQL::Optional<uintmax_t> tmp_file_id;
-        sim::DatetimeField added_str;
-        MySQL::Optional<uintmax_t> aux_id;
-        sim::BlobField<32> info;
+        mysql::Optional<uintmax_t> file_id;
+        mysql::Optional<uintmax_t> tmp_file_id;
+        sim::sql_fields::Datetime added_str;
+        mysql::Optional<uintmax_t> aux_id;
+        sim::sql_fields::Blob<32> info;
 
         auto stmt = conn.prepare(
             "SELECT id, creator, type, file_id, "
@@ -146,14 +145,14 @@ struct IdsFromJobs {
 
             case JobType::MERGE_PROBLEMS:
                 problems.add_id(aux_id.value(), added);
-                problems.add_id(jobs::MergeProblemsInfo(info).target_problem_id, added);
+                problems.add_id(sim::jobs::MergeProblemsInfo(info).target_problem_id, added);
                 break;
 
             case JobType::DELETE_USER: users.add_id(aux_id.value(), added); break;
 
             case JobType::MERGE_USERS:
                 users.add_id(aux_id.value(), added);
-                users.add_id(jobs::MergeUsersInfo(info).target_user_id, added);
+                users.add_id(sim::jobs::MergeUsersInfo(info).target_user_id, added);
                 break;
 
             case JobType::DELETE_CONTEST: contests.add_id(aux_id.value(), added); break;
@@ -189,3 +188,5 @@ struct IdsFromMainAndOtherJobs {
     IdsFromJobs main{intentional_unsafe_string_view(concat(main_sim_table_prefix, "jobs"))};
     IdsFromJobs other{"jobs"};
 };
+
+} // namespace sim_merger

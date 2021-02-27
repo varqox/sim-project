@@ -5,8 +5,8 @@ DESTDIR := sim
 MYSQL_CONFIG := $(shell which mariadb_config 2> /dev/null || which mysql_config 2> /dev/null)
 
 define SIM_FLAGS =
-INTERNAL_EXTRA_CXX_FLAGS = -I '$(CURDIR)/src/include' -I '$(CURDIR)/subprojects/simlib/include' $(shell $(MYSQL_CONFIG) --include)
-INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs) -lsupc++ -pthread -lrt -lzip -lseccomp
+INTERNAL_EXTRA_CXX_FLAGS = -I '$(CURDIR)/include' -I '$(CURDIR)/subprojects/simlib/include' $(shell $(MYSQL_CONFIG) --include)
+INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src' $(shell $(MYSQL_CONFIG) --libs) -lsupc++ -pthread -lrt -lzip -lseccomp
 endef
 
 .PHONY: all
@@ -79,15 +79,15 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	$(abspath $(DESTDIR)/manage) -b start
 	@printf "\033[;32mRunning finished\033[0m\n"
 
-$(eval $(call add_static_library, src/lib/sim.a, $(SIM_FLAGS), \
-	src/lib/contest_file_permissions.cc \
-	src/lib/contest_permissions.cc \
-	src/lib/cpp_syntax_highlighter.cc \
-	src/lib/jobs.cc \
-	src/lib/mysql.cc \
-	src/lib/problem_permissions.cc \
-	src/lib/random.cc \
-	src/lib/submission.cc \
+$(eval $(call add_static_library, src/sim.a, $(SIM_FLAGS), \
+	src/sim/contest_files/permissions.cc \
+	src/sim/contests/permissions.cc \
+	src/sim/cpp_syntax_highlighter.cc \
+	src/sim/jobs/jobs.cc \
+	src/sim/mysql/mysql.cc \
+	src/sim/problems/permissions.cc \
+	src/sim/random.cc \
+	src/sim/submissions/update_final.cc \
 ))
 
 $(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
@@ -112,72 +112,75 @@ $(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
 	src/job_server/job_handlers/reset_time_limits_in_problem_package_base.cc \
 	src/job_server/job_handlers/reupload_problem.cc \
 	src/job_server/main.cc \
-	src/lib/sim.a \
+	src/sim.a \
 	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, src/sim-merger, $(SIM_FLAGS), \
-	src/lib/sim.a \
-	subprojects/simlib/simlib.a \
+	src/sim.a \
 	src/sim_merger/sim_merger.cc \
+	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, src/sim-upgrader, $(SIM_FLAGS), \
-	src/lib/sim.a \
-	subprojects/simlib/simlib.a \
+	src/sim.a \
 	src/sim_upgrader.cc \
+	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, src/setup-installation, $(SIM_FLAGS), \
-	src/lib/sim.a \
-	subprojects/simlib/simlib.a \
 	src/setup_installation.cc \
+	src/sim.a \
+	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, src/backup, $(SIM_FLAGS), \
 	src/backup.cc \
-	src/lib/sim.a \
+	src/sim.a \
 	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, src/sim-server, $(SIM_FLAGS), \
-	src/lib/sim.a \
+	src/sim.a \
+	src/web_server/http/cookies.cc \
+	src/web_server/http/request.cc \
+	src/web_server/http/response.cc \
+	src/web_server/old/api.cc \
+	src/web_server/old/contest_entry_token_api.cc \
+	src/web_server/old/contest_files.cc \
+	src/web_server/old/contest_files_api.cc \
+	src/web_server/old/contest_users_api.cc \
+	src/web_server/old/contests.cc \
+	src/web_server/old/contests_api.cc \
+	src/web_server/old/jobs.cc \
+	src/web_server/old/jobs_api.cc \
+	src/web_server/old/problems.cc \
+	src/web_server/old/problems_api.cc \
+	src/web_server/old/session.cc \
+	src/web_server/old/sim.cc \
+	src/web_server/old/submissions.cc \
+	src/web_server/old/submissions_api.cc \
+	src/web_server/old/template.cc \
+	src/web_server/old/users.cc \
+	src/web_server/old/users_api.cc \
+	src/web_server/server/connection.cc \
+	src/web_server/server/server.cc \
+	src/web_server/web_worker/context.cc \
+	src/web_server/web_worker/web_worker.cc \
 	subprojects/simlib/simlib.a \
-	src/web_interface/api.cc \
-	src/web_interface/connection.cc \
-	src/web_interface/contest_entry_token_api.cc \
-	src/web_interface/contest_users_api.cc \
-	src/web_interface/contests.cc \
-	src/web_interface/contests_api.cc \
-	src/web_interface/contest_files.cc \
-	src/web_interface/contest_files_api.cc \
-	src/web_interface/http_request.cc \
-	src/web_interface/http_response.cc \
-	src/web_interface/jobs.cc \
-	src/web_interface/jobs_api.cc \
-	src/web_interface/problems.cc \
-	src/web_interface/problems_api.cc \
-	src/web_interface/server.cc \
-	src/web_interface/session.cc \
-	src/web_interface/sim.cc \
-	src/web_interface/submissions.cc \
-	src/web_interface/submissions_api.cc \
-	src/web_interface/template.cc \
-	src/web_interface/users.cc \
-	src/web_interface/users_api.cc \
 ))
 
 $(eval $(call add_executable, src/manage, $(SIM_FLAGS), \
-	subprojects/simlib/simlib.a \
 	src/manage.cc \
+	subprojects/simlib/simlib.a \
 ))
 
 $(eval $(call add_executable, test/exec, $(SIM_FLAGS), \
-	src/lib/sim.a \
+	src/sim.a \
 	subprojects/simlib/gtest_main.a \
 	subprojects/simlib/simlib.a \
-	test/cpp_syntax_highlighter.cc \
-	test/jobs.cc \
+	test/sim/cpp_syntax_highlighter.cc \
+	test/sim/jobs/jobs.cc \
 ))
 
 .PHONY: format

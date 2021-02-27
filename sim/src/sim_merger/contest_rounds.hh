@@ -1,17 +1,19 @@
 #pragma once
 
-#include "sim/contest_round.hh"
-#include "sim/datetime_field.hh"
+#include "sim/contest_rounds/contest_round.hh"
+#include "sim/sql_fields/datetime.hh"
 #include "src/sim_merger/contests.hh"
 
-class ContestRoundsMerger : public Merger<sim::ContestRound> {
+namespace sim_merger {
+
+class ContestRoundsMerger : public Merger<sim::contest_rounds::ContestRound> {
     const ContestsMerger& contests_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::ContestRound cr;
-        MySQL::Optional<sim::DatetimeField> earliest_submit_time;
+        sim::contest_rounds::ContestRound cr;
+        mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
         auto stmt = conn.prepare(
             "SELECT cr.id, cr.contest_id, cr.name, cr.item,"
             " cr.begins, cr.ends, cr.full_results,"
@@ -39,7 +41,8 @@ class ContestRoundsMerger : public Merger<sim::ContestRound> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::ContestRound& /*unused*/) { return nullptr; });
+        Merger::merge(
+            [&](const sim::contest_rounds::ContestRound& /*unused*/) { return nullptr; });
     }
 
 public:
@@ -56,7 +59,7 @@ public:
         ProgressBar progress_bar("Contest rounds saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::ContestRound& x = new_record.data;
+            const sim::contest_rounds::ContestRound& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.contest_id, x.name, x.item, x.begins, x.ends, x.full_results,
                 x.ranking_exposure);
@@ -76,3 +79,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

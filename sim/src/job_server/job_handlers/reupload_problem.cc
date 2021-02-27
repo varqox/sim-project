@@ -1,7 +1,7 @@
 #include "src/job_server/job_handlers/reupload_problem.hh"
 #include "src/job_server/main.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 void ReuploadProblem::run() {
     STACK_UNWINDING_MARK;
@@ -39,4 +39,4 @@ void ReuploadProblem::run() {
     }
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

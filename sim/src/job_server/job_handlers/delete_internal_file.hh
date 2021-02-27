@@ -2,7 +2,7 @@
 
 #include "src/job_server/job_handlers/job_handler.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class DeleteInternalFile final : public JobHandler {
     uint64_t internal_file_id_;
@@ -15,4 +15,4 @@ public:
     void run() final;
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

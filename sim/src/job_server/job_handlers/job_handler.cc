@@ -2,7 +2,9 @@
 #include "sim/constants.hh"
 #include "src/job_server/main.hh"
 
-namespace job_handlers {
+using sim::JobStatus;
+
+namespace job_server::job_handlers {
 
 void JobHandler::job_canceled() {
     STACK_UNWINDING_MARK;
@@ -25,4 +27,4 @@ void JobHandler::job_done(StringView new_info) {
         .bind_and_execute(EnumVal(JobStatus::DONE), new_info, get_log(), job_id_);
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

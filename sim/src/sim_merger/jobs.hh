@@ -1,19 +1,21 @@
 #pragma once
 
 #include "sim/constants.hh"
-#include "sim/jobs.hh"
+#include "sim/jobs/jobs.hh"
 #include "src/sim_merger/internal_files.hh"
 #include "src/sim_merger/submissions.hh"
 #include "src/sim_merger/users.hh"
+
+namespace sim_merger {
 
 struct Job {
     uintmax_t id{};
     std::optional<uintmax_t> file_id;
     std::optional<uintmax_t> tmp_file_id;
     std::optional<uintmax_t> creator;
-    EnumVal<JobType> type{};
+    EnumVal<sim::JobType> type{};
     uintmax_t priority{};
-    EnumVal<JobStatus> status{};
+    EnumVal<sim::JobStatus> status{};
     InplaceBuff<24> added;
     std::optional<uintmax_t> aux_id;
     InplaceBuff<128> info;
@@ -31,12 +33,13 @@ class JobsMerger : public Merger<Job> {
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
+        using sim::JobType;
 
         Job job;
-        MySQL::Optional<uintmax_t> m_file_id;
-        MySQL::Optional<uintmax_t> m_tmp_file_id;
-        MySQL::Optional<uintmax_t> m_creator;
-        MySQL::Optional<uintmax_t> m_aux_id;
+        mysql::Optional<uintmax_t> m_file_id;
+        mysql::Optional<uintmax_t> m_tmp_file_id;
+        mysql::Optional<uintmax_t> m_creator;
+        mysql::Optional<uintmax_t> m_aux_id;
         auto stmt = conn.prepare(
             "SELECT id, file_id, tmp_file_id, creator, type,"
             " priority, status, added, aux_id, info, data "
@@ -84,7 +87,7 @@ class JobsMerger : public Merger<Job> {
 
             case JobType::MERGE_PROBLEMS: {
                 job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
-                auto info = jobs::MergeProblemsInfo(job.info);
+                auto info = sim::jobs::MergeProblemsInfo(job.info);
                 info.target_problem_id =
                     problems_.new_id(info.target_problem_id, record_set.kind);
                 job.info = info.dump();
@@ -93,7 +96,7 @@ class JobsMerger : public Merger<Job> {
 
             case JobType::MERGE_USERS: {
                 job.aux_id = users_.new_id(job.aux_id.value(), record_set.kind);
-                auto info = jobs::MergeUsersInfo(job.info);
+                auto info = sim::jobs::MergeUsersInfo(job.info);
                 info.target_user_id = users_.new_id(info.target_user_id, record_set.kind);
                 job.info = info.dump();
                 break;
@@ -179,3 +182,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

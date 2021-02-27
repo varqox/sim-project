@@ -1,11 +1,13 @@
 #pragma once
 
-#include "sim/contest_problem.hh"
-#include "sim/datetime_field.hh"
+#include "sim/contest_problems/contest_problem.hh"
+#include "sim/sql_fields/datetime.hh"
 #include "src/sim_merger/contest_rounds.hh"
 #include "src/sim_merger/problems.hh"
 
-class ContestProblemsMerger : public Merger<sim::ContestProblem> {
+namespace sim_merger {
+
+class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProblem> {
     const ContestRoundsMerger& contest_rounds_;
     const ContestsMerger& contests_;
     const ProblemsMerger& problems_;
@@ -13,8 +15,8 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::ContestProblem cp;
-        MySQL::Optional<sim::DatetimeField> earliest_submit_time;
+        sim::contest_problems::ContestProblem cp;
+        mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
         auto stmt = conn.prepare(
             "SELECT cp.id, cp.contest_round_id, cp.contest_id,"
             " cp.problem_id, cp.name, cp.item,"
@@ -46,7 +48,8 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::ContestProblem& /*unused*/) { return nullptr; });
+        Merger::merge(
+            [&](const sim::contest_problems::ContestProblem& /*unused*/) { return nullptr; });
     }
 
 public:
@@ -64,7 +67,7 @@ public:
         ProgressBar progress_bar("Contest problems saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::ContestProblem& x = new_record.data;
+            const sim::contest_problems::ContestProblem& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.contest_round_id, x.contest_id, x.problem_id, x.name, x.item,
                 x.method_of_choosing_final_submission, x.score_revealing);
@@ -88,3 +91,5 @@ public:
         initialize();
     }
 };
+
+} // namespace sim_merger

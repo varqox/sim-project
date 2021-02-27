@@ -1,8 +1,12 @@
 #include "src/job_server/job_handlers/judge_or_rejudge.hh"
-#include "sim/submission.hh"
+#include "sim/constants.hh"
+#include "sim/submissions/update_final.hh"
 #include "src/job_server/main.hh"
 
-namespace job_handlers {
+using sim::SubmissionLanguage;
+using sim::SubmissionStatus;
+
+namespace job_server::job_handlers {
 
 void JudgeOrRejudge::run() {
     STACK_UNWINDING_MARK;
@@ -17,8 +21,8 @@ void JudgeOrRejudge::run() {
     uint64_t submission_file_id = 0;
     uint64_t problem_file_id = 0;
     uint64_t problem_id = 0;
-    MySQL::Optional<uint64_t> sowner;
-    MySQL::Optional<uint64_t> contest_problem_id;
+    mysql::Optional<uint64_t> sowner;
+    mysql::Optional<uint64_t> contest_problem_id;
     InplaceBuff<64> last_judgment;
     InplaceBuff<64> p_last_edit;
     EnumVal<SubmissionLanguage> lang{};
@@ -45,16 +49,16 @@ void JudgeOrRejudge::run() {
     std::string judging_began = mysql_date();
 
     job_log("Judging submission ", submission_id_, " (problem: ", problem_id, ')');
-    load_problem_package(internal_file_path(problem_file_id));
+    load_problem_package(sim::internal_file_path(problem_file_id));
 
     auto update_submission = [&](SubmissionStatus initial_status, SubmissionStatus full_status,
                                  std::optional<int64_t> score, auto&& initial_report,
                                  auto&& final_report) {
         {
             auto transaction = mysql.start_transaction();
-            submission::update_final_lock(mysql, sowner, problem_id);
+            sim::submissions::update_final_lock(mysql, sowner, problem_id);
 
-            using ST = SubmissionType;
+            using ST = sim::SubmissionType;
             // Get the submission's ACTUAL type
             stmt = mysql.prepare("SELECT type FROM submissions WHERE id=?");
             stmt.bind_and_execute(submission_id_);
@@ -82,14 +86,15 @@ void JudgeOrRejudge::run() {
                     judging_began, initial_report, final_report, submission_id_);
             }
 
-            submission::update_final(mysql, sowner, problem_id, contest_problem_id, false);
+            sim::submissions::update_final(
+                mysql, sowner, problem_id, contest_problem_id, false);
 
             transaction.commit();
         }
     };
 
     auto compilation_errors =
-        compile_solution(internal_file_path(submission_file_id), to_sol_lang(lang));
+        compile_solution(sim::internal_file_path(submission_file_id), to_sol_lang(lang));
     if (compilation_errors.has_value()) {
         update_submission(
             SubmissionStatus::COMPILATION_ERROR, SubmissionStatus::COMPILATION_ERROR,
@@ -220,4 +225,4 @@ void JudgeOrRejudge::run() {
     }
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

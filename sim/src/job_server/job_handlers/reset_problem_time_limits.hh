@@ -2,7 +2,7 @@
 
 #include "src/job_server/job_handlers/reset_time_limits_in_problem_package_base.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class ResetProblemTimeLimits final : public ResetTimeLimitsInProblemPackageBase {
 protected:
@@ -16,4 +16,4 @@ public:
     void run() override;
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

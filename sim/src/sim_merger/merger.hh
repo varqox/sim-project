@@ -4,7 +4,11 @@
 #include "src/sim_merger/sim_merger.hh"
 
 #include <map>
+#include <type_traits>
+#include <utility>
 #include <vector>
+
+namespace sim_merger {
 
 // TODO: export it to simlib after updating it to the current version
 class ProgressBar {
@@ -85,7 +89,10 @@ public:
 
 enum class IdKind { Main, Other };
 
-template <class Record, class IdGetter = DefaultIdGetter>
+template <
+    class Record, class IdGetter = DefaultIdGetter,
+    class IdCmp = std::less<std::remove_cv_t<
+        std::remove_reference_t<decltype(IdGetter{}(std::declval<Record>()))>>>>
 class Merger : public MergerBase {
     constexpr static bool debug = false;
 
@@ -116,10 +123,10 @@ protected:
 
     private:
         const IdGetter& id_getter;
-        IdsWithTime<IdType> ids;
+        IdsWithTime<IdType, IdCmp> ids;
         std::vector<Record> table = {};
-        std::map<IdType, size_t> id_to_table_idx = {}; // Filled up after load
-        std::map<IdType, IdType> id_to_new_id = {}; // Filled up during merge()
+        std::map<IdType, size_t, IdCmp> id_to_table_idx = {}; // Filled up after load
+        std::map<IdType, IdType, IdCmp> id_to_new_id = {}; // Filled up during merge()
 
         void fill_id_to_table_idx() {
             for (size_t i = 0; i < table.size(); ++i) {
@@ -129,7 +136,7 @@ protected:
 
         RecordSet(
             IdKind my_kind, std::string my_sql_tbl_name, StringView my_sql_tbl_prefix,
-            const IdGetter& my_id_getter, IdsWithTime<IdType> my_ids)
+            const IdGetter& my_id_getter, IdsWithTime<IdType, IdCmp> my_ids)
         : kind(my_kind)
         , sql_table_name(std::move(my_sql_tbl_name))
         , sql_table_prefix(my_sql_tbl_prefix)
@@ -194,7 +201,7 @@ protected:
             auto it = record_set.id_to_table_idx.find(id);
             if (it == record_set.id_to_table_idx.end()) {
                 // id has no corresponding record
-                IdType new_id = new_id_for_record_to_merge_into_new_records(id);
+                IdType new_id = pre_merge_record_id_to_post_merge_record_id(id);
                 record_set.id_to_new_id.emplace(id, new_id);
                 log_added(new_id);
                 return;
@@ -205,7 +212,7 @@ protected:
                 try_merging_into_existing_new_record_wrapper(record, record_set.kind);
             if (not new_record) {
                 new_record = &new_table_.emplace_back(record);
-                id_getter_(new_record->data) = new_id_for_record_to_merge_into_new_records(id);
+                id_getter_(new_record->data) = pre_merge_record_id_to_post_merge_record_id(id);
             }
 
             record_set.id_to_new_id.emplace(id, id_getter_(new_record->data));
@@ -222,7 +229,7 @@ protected:
         other_.ids.normalize_times();
 
         using IdsElem = std::pair<const IdType, system_clock::time_point>;
-        ::merge(
+        sim_merger::merge(
             main_.ids.ids, other_.ids.ids,
             [&](const IdsElem& main_elem) {
                 process_id(main_, main_elem.first, main_elem.second);
@@ -237,7 +244,7 @@ protected:
             });
     }
 
-    virtual IdType new_id_for_record_to_merge_into_new_records(const IdType& record_id) {
+    virtual IdType pre_merge_record_id_to_post_merge_record_id(const IdType& record_id) {
         STACK_UNWINDING_MARK;
         (void)record_id;
         if constexpr (std::is_integral_v<IdType>) {
@@ -251,8 +258,8 @@ protected:
     virtual void merge() = 0;
 
     Merger(
-        StringView orig_sql_table_name, IdsWithTime<IdType> main_ids,
-        IdsWithTime<IdType> other_ids)
+        StringView orig_sql_table_name, IdsWithTime<IdType, IdCmp> main_ids,
+        IdsWithTime<IdType, IdCmp> other_ids)
     : sql_table_name_(orig_sql_table_name.to_string())
     , main_{IdKind::Main, concat_tostr(main_sim_table_prefix, orig_sql_table_name), main_sim_table_prefix, id_getter_, std::move(main_ids)}
     , other_{
@@ -342,3 +349,5 @@ public:
         THROW("BUG");
     }
 };
+
+} // namespace sim_merger

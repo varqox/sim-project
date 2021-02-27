@@ -4,7 +4,7 @@
 #include "simlib/sim/judge_worker.hh"
 #include "src/job_server/job_handlers/job_handler.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class JudgeBase : virtual public JobHandler {
 protected:
@@ -12,13 +12,13 @@ protected:
 
     JudgeBase();
 
-    static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang);
+    static sim::SolutionLanguage to_sol_lang(sim::SubmissionLanguage lang);
 
     // Creates an xml report from JudgeReport
     static InplaceBuff<65536> construct_report(const sim::JudgeReport& jr, bool final);
 
     // Returns OK or the first encountered error status
-    static SubmissionStatus calc_status(const sim::JudgeReport& jr);
+    static sim::SubmissionStatus calc_status(const sim::JudgeReport& jr);
 
     void load_problem_package(FilePath problem_pkg_path);
 
@@ -40,4 +40,4 @@ protected:
     std::optional<std::string> compile_checker();
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

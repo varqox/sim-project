@@ -1,14 +1,16 @@
 #pragma once
 
 #include "sim/constants.hh"
-#include "sim/submission.hh"
-#include "sim/user.hh"
+#include "sim/submissions/update_final.hh"
+#include "sim/users/user.hh"
 #include "simlib/defer.hh"
 #include "src/sim_merger/merger.hh"
 
+namespace sim_merger {
+
 // Merges users by username
-class UsersMerger : public Merger<sim::User> {
-    std::map<decltype(sim::User::username), size_t> username_to_new_table_idx_;
+class UsersMerger : public Merger<sim::users::User> {
+    std::map<decltype(sim::users::User::username), size_t> username_to_new_table_idx_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
@@ -22,7 +24,7 @@ class UsersMerger : public Merger<sim::User> {
             THROW("BUG");
         }();
 
-        sim::User user;
+        sim::users::User user;
         auto stmt = conn.prepare(
             "SELECT id, username, first_name, last_name, "
             "email, salt, password, type FROM ",
@@ -39,7 +41,7 @@ class UsersMerger : public Merger<sim::User> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::User& x, IdKind kind) -> NewRecord* {
+        Merger::merge([&](const sim::users::User& x, IdKind kind) -> NewRecord* {
             auto it = username_to_new_table_idx_.find(x.username);
             if (it != username_to_new_table_idx_.end()) {
                 NewRecord& res = new_table_[it->second];
@@ -70,7 +72,7 @@ public:
         ProgressBar progress_bar("Users saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::User& x = new_record.data;
+            const sim::users::User& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.username, x.first_name, x.last_name, x.email, x.salt, x.password,
                 x.type);
@@ -93,7 +95,7 @@ public:
         for (auto const& user : new_table_) {
             if (user.main_ids.size() > 1 or user.other_ids.size() > 1) {
                 uintmax_t problem_id = 0;
-                MySQL::Optional<uintmax_t> contest_problem_id;
+                mysql::Optional<uintmax_t> contest_problem_id;
 
                 auto stmt = conn.prepare("SELECT problem_id, contest_problem_id "
                                          "FROM submissions "
@@ -102,7 +104,7 @@ public:
                 stmt.bind_and_execute(user.data.id);
                 stmt.res_bind_all(problem_id, contest_problem_id);
                 while (stmt.next()) {
-                    submission::update_final(
+                    sim::submissions::update_final(
                         conn, user.data.id, problem_id, contest_problem_id, false);
                 }
             }
@@ -114,3 +116,5 @@ public:
         transaction.commit();
     }
 };
+
+} // namespace sim_merger

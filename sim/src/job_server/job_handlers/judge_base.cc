@@ -2,12 +2,15 @@
 #include "sim/constants.hh"
 #include "simlib/enum_val.hh"
 
-namespace job_handlers {
+using sim::SubmissionLanguage;
+using sim::SubmissionStatus;
+
+namespace job_server::job_handlers {
 
 JudgeBase::JudgeBase() {
-    jworker_.checker_time_limit = CHECKER_TIME_LIMIT;
-    jworker_.checker_memory_limit = CHECKER_MEMORY_LIMIT;
-    jworker_.score_cut_lambda = SCORE_CUT_LAMBDA;
+    jworker_.checker_time_limit = sim::CHECKER_TIME_LIMIT;
+    jworker_.checker_memory_limit = sim::CHECKER_MEMORY_LIMIT;
+    jworker_.score_cut_lambda = sim::SCORE_CUT_LAMBDA;
 }
 
 sim::SolutionLanguage JudgeBase::to_sol_lang(SubmissionLanguage lang) {
@@ -188,8 +191,8 @@ std::optional<std::string> JudgeBase::compile_solution_impl(
 
     std::string compilation_errors;
     if ((jworker_.*compile_method)(
-            solution_path, lang, SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-            COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+            solution_path, lang, sim::SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
+            sim::COMPILATION_ERRORS_MAX_LENGTH, sim::PROOT_PATH))
     {
         tmplog(" failed:\n", compilation_errors);
         return compilation_errors;
@@ -223,8 +226,8 @@ std::optional<std::string> JudgeBase::compile_checker() {
 
     std::string compilation_errors;
     if (jworker_.compile_checker(
-            SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-            COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+            sim::SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
+            sim::COMPILATION_ERRORS_MAX_LENGTH, sim::PROOT_PATH))
     {
         tmplog(" failed:\n", compilation_errors);
         return compilation_errors;
@@ -234,4 +237,4 @@ std::optional<std::string> JudgeBase::compile_checker() {
     return std::nullopt;
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

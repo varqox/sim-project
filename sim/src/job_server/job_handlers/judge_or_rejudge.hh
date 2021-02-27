@@ -2,7 +2,7 @@
 
 #include "src/job_server/job_handlers/judge_base.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 class JudgeOrRejudge final : public JudgeBase {
 private:
@@ -18,4 +18,4 @@ public:
     void run() override;
 };
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

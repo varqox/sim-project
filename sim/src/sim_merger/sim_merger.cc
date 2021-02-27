@@ -1,4 +1,4 @@
-#include "sim/mysql.hh"
+#include "sim/mysql/mysql.hh"
 #include "simlib/config_file.hh"
 #include "simlib/defer.hh"
 #include "simlib/file_info.hh"
@@ -23,6 +23,8 @@
 #include <iostream>
 
 using std::vector;
+
+namespace sim_merger {
 
 static void load_tables_from_other_sim_backup() {
     STACK_UNWINDING_MARK;
@@ -153,7 +155,8 @@ static int true_main(int argc, char** argv) {
 
     try {
         // Get connection
-        conn = MySQL::make_conn_with_credential_file(concat(main_sim_build, ".db.config"));
+        conn =
+            sim::mysql::make_conn_with_credential_file(concat(main_sim_build, ".db.config"));
     } catch (const std::exception& e) {
         errlog("\033[31mFailed to connect to database\033[m - ", e.what());
         return 1;
@@ -349,9 +352,11 @@ static int true_main(int argc, char** argv) {
     return 0;
 }
 
+} // namespace sim_merger
+
 int main(int argc, char** argv) {
     try {
-        return true_main(argc, argv);
+        return sim_merger::true_main(argc, argv);
     } catch (const std::exception& e) {
         ERRLOG_CATCH(e);
         throw;

@@ -2,7 +2,7 @@
 #include "simlib/sim/problem_package.hh"
 #include "src/job_server/main.hh"
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath package_path) {
     STACK_UNWINDING_MARK;
@@ -37,8 +37,8 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath pac
 
     try {
         sim::Conver::ResetTimeLimitsOptions opts;
-        opts.min_time_limit = MIN_TIME_LIMIT;
-        opts.solution_runtime_coefficient = SOLUTION_RUNTIME_COEFFICIENT;
+        opts.min_time_limit = sim::MIN_TIME_LIMIT;
+        opts.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
 
         sim::Conver::reset_time_limits_using_jugde_reports(
             simfile, initial_rep, final_rep, opts);
@@ -50,4 +50,4 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath pac
     new_simfile_ = simfile.dump();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers
