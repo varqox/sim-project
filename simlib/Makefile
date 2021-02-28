@@ -29,7 +29,6 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a, $(SIMLIB_FLAGS), \
 	$(PREFIX)src/file_contents.cc \
 	$(PREFIX)src/file_manip.cc \
 	$(PREFIX)src/http/response.cc \
-	$(PREFIX)src/http/server.cc \
 	$(PREFIX)src/humanize.cc \
 	$(PREFIX)src/inotify.cc \
 	$(PREFIX)src/libarchive_zip.cc \
@@ -99,7 +98,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/logger.cc \
 	$(PREFIX)test/member_comparator.cc \
 	$(PREFIX)test/memory.cc \
-	$(PREFIX)test/mysql.cc \
+	$(PREFIX)test/mysql/mysql.cc \
 	$(PREFIX)test/opened_temporary_file.cc \
 	$(PREFIX)test/path.cc \
 	$(PREFIX)test/proc_stat_file_contents.cc \
