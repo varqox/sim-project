@@ -8,6 +8,7 @@
 #include "simlib/sim/simfile.hh"
 #include "simlib/temporary_directory.hh"
 #include "simlib/time.hh"
+#include "simlib/to_string.hh"
 #include "simlib/utilities.hh"
 
 #include <utility>
@@ -86,9 +87,9 @@ public:
                     res, "  ", padded_string(test.name, 11, LEFT),
                     padded_string(
                         intentional_unsafe_string_view(
-                            to_string(floor_to_10ms(test.runtime), false)),
+                            ::to_string(floor_to_10ms(test.runtime), false)),
                         4),
-                    " / ", to_string(floor_to_10ms(test.time_limit), false), " s  ",
+                    " / ", ::to_string(floor_to_10ms(test.time_limit), false), " s  ",
                     test.memory_consumed >> 10, " / ", test.memory_limit >> 10,
                     " KiB    Status: ");
                 // Status
@@ -233,9 +234,9 @@ class VerboseJudgeLogger : public JudgeLogger {
             log("  ", padded_string(test_name, 12, LEFT), ' ',
                 padded_string(
                     intentional_unsafe_string_view(
-                        to_string(floor_to_10ms(test_report.runtime), false)),
+                        ::to_string(floor_to_10ms(test_report.runtime), false)),
                     4),
-                " / ", to_string(floor_to_10ms(test_report.time_limit), false), " s  ",
+                " / ", ::to_string(floor_to_10ms(test_report.time_limit), false), " s  ",
                 test_report.memory_consumed >> 10, " / ", test_report.memory_limit >> 10,
                 " KiB  Status: ");
         // Status
@@ -253,8 +254,8 @@ class VerboseJudgeLogger : public JudgeLogger {
 
         // Rest
         tmplog(
-            " [ CPU: ", to_string(es.cpu_runtime, false),
-            " RT: ", to_string(es.runtime, false), " ]");
+            " [ CPU: ", ::to_string(es.cpu_runtime, false),
+            " RT: ", ::to_string(es.runtime, false), " ]");
 
         func(tmplog);
     }
@@ -295,8 +296,8 @@ public:
             }
 
             tmplog(
-                " [ CPU: ", to_string(checker_es.cpu_runtime, false),
-                " RT: ", to_string(checker_es.runtime, false), " ] ",
+                " [ CPU: ", ::to_string(checker_es.cpu_runtime, false),
+                " RT: ", ::to_string(checker_es.runtime, false), " ] ",
                 checker_es.vm_peak >> 10);
             if (checker_mem_limit.has_value()) {
                 tmplog(" / ", checker_mem_limit.value() >> 10, " KiB");
@@ -305,7 +306,7 @@ public:
     }
 
     void group_score(int64_t score, int64_t max_score, double score_ratio) override {
-        log("Score: ", score, " / ", max_score, " (ratio: ", to_string(score_ratio, 4), ')');
+        log("Score: ", score, " / ", max_score, " (ratio: ", ::to_string(score_ratio, 4), ')');
     }
 
     void final_score(int64_t total_score, int64_t max_score) override {
