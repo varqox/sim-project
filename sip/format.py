@@ -6,12 +6,12 @@ import sys
 def sip_sources(srcdir):
     return list(filter_subdirs(srcdir, [
         'src/',
-        'src/commands/',
-        'src/templates/',
         'templates/',
+        'test/',
     ], ['c', 'cc', 'h', 'hh'], [
         'src/git_commit.hh',
         'src/proot_dump.c',
+        'test/sip_test_cases/.*'
     ]))
 
 if __name__ == '__main__':
