@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -12,12 +13,12 @@ def filter_subdirs(dir, subdirs, allowed_extensions, denied_suffixes):
         for ext in allowed_extensions:
             if path.endswith(ext):
                 for dsuf in denied_suffixes:
-                    if path.endswith(dsuf):
+                    if re.search(dsuf + '$', path):
                         return False
                 return True
         return False
 
-    return filter(qualifies, [str(f) for subdir in subdirs for f in (dir / subdir).glob('*')])
+    return filter(qualifies, [str(f) for subdir in subdirs for f in (dir / subdir).glob('**/*')])
 
 def format_sources(sources):
     with ThreadPoolExecutor() as e:
@@ -30,20 +31,13 @@ def format_sources(sources):
 
 def simlib_sources(srcdir):
     return list(filter_subdirs(srcdir, [
-        'include/simlib/',
-        'include/simlib/concurrent/',
-        'include/simlib/http/',
-        'include/simlib/mysql/',
-        'include/simlib/sim/',
+        'include/',
         'src/',
-        'src/http/',
-        'src/sim/',
         'test/',
-        'test/http/',
-        'test/mysql/',
-        'test/sim/',
     ], ['c', 'cc', 'h', 'hh'], [
         'src/sim/default_checker_dump.c',
+        'test/conver_test_cases/.*',
+        'test/sandbox_test_cases/.*',
     ]))
 
 if __name__ == '__main__':
