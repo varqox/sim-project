@@ -132,4 +132,4 @@ run_target('format', command : [find_program('format.py'), meson.current_source_
 run_target('tidy', command : [find_program('tidy')], depends : base_targets)
 
 #################################### Tests ####################################
-test('sip_tests', find_program('test/run_sip_tests.py'), args : [sip.full_path()], priority : -10)
+test('sip_tests', find_program('test/run_sip_tests.py'), args : [sip.full_path()], priority : 10)
