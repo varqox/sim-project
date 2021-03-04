@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DESTDIR=build
+DESTDIR=sim/
 
 trap '' SIGINT SIGQUIT SIGTERM
 
@@ -11,22 +11,21 @@ db=$(grep 'db:' "$DESTDIR/.db.config" | sed 's/db: //' | sed 's/^"\|"$//g')
 echo $db
 
 echo "Stop SIM"
-src/killinstc --wait $DESTDIR/sim-server
-src/killinstc --wait $DESTDIR/job-server
+$DESTDIR/manage stop
 
 echo "Backup database"
 mysqldump --defaults-file=.mysql.cnf --result-file=upd_db_sch_backup.sql --extended-insert=FALSE $db || exit 1 # Without backup do nothing!
 mysqldump --defaults-file=.mysql.cnf --result-file=upd_db_sch.sql --complete-insert -t $db || exit 1
 
 echo "Update Schemas"
-src/setup-installation "$DESTDIR" --drop-tables
+build/setup-installation --drop-tables "$DESTDIR"
 
 echo "Fill with data"
-echo "DELETE FROM users;" | mysql --defaults-file=.mysql.cnf $db
+echo "DELETE FROM users;" | mysql --defaults-file=.mysql.cnf $db # Remove just created root account
 mysql --defaults-file=.mysql.cnf $db < upd_db_sch.sql || mysql --defaults-file=.mysql.cnf $db < upd_db_sch_backup.sql
 
 echo "Restore SIM"
-make run DESTDIR="$DESTDIR"
+$DESTDIR/manage -b start
 
 echo "Save backup"
 for ((i=0;;++i)); do
