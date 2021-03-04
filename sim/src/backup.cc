@@ -140,13 +140,17 @@ int main2(int argc, char** argv) {
     }
 
     run_command({"git", "init"});
+    run_command({"git", "config", "--local", "pack.packSizeLimit", "1g"});
+    run_command({"git", "config", "--local", "gc.auto", "0"});
     run_command({"git", "config", "--local", "user.name", "Sim backuper"});
-    run_command({"git", "add", "--verbose", "sim.conf", ".db.config"});
-    run_command({"git", "add", "--verbose", "static"});
     run_command({"git", "add", "--verbose", "dump.sql"});
+    run_command({"git", "add", "--verbose", "bin/", "manage", "proot"});
     run_command({"git", "add", "--verbose", "internal_files/"});
     run_command({"git", "add", "--verbose", "logs/"});
-    run_command({"git", "commit", "-m", concat_tostr("Backup ", mysql_date())});
+    run_command({"git", "add", "--verbose", "sim.conf", ".db.config"});
+    run_command({"git", "add", "--verbose", "static/"});
+    run_command({"git", "commit", "-q", "-m", concat_tostr("Backup ", mysql_date())});
+    run_command({"git", "--no-pager", "show", "--stat"});
 
     return 0;
 }
