@@ -1,9 +1,9 @@
-#include "sim/constants.hh"
+#include "sim/submissions/submission.hh"
 #include "src/web_server/old/sim.hh"
 
-using sim::SubmissionType;
 using sim::contest_users::ContestUser;
 using sim::problems::Problem;
+using sim::submissions::Submission;
 using sim::users::User;
 
 namespace web_server::old {
@@ -25,11 +25,11 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 }
 
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
-    std::optional<uintmax_t> submission_owner, SubmissionType stype,
+    decltype(Submission::owner) submission_owner, Submission::Type stype,
     std::optional<ContestUser::Mode> cu_mode,
     decltype(Problem::owner) problem_owner) noexcept {
     using PERM = SubmissionPermissions;
-    using STYPE = SubmissionType;
+    using STYPE = Submission::Type;
     using CUM = ContestUser::Mode;
 
     PERM overall_perms = submissions_get_overall_permissions();

@@ -1,10 +1,8 @@
 #include "src/job_server/job_handlers/judge_or_rejudge.hh"
-#include "sim/constants.hh"
 #include "sim/submissions/update_final.hh"
 #include "src/job_server/main.hh"
 
-using sim::SubmissionLanguage;
-using sim::SubmissionStatus;
+using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
@@ -25,7 +23,7 @@ void JudgeOrRejudge::run() {
     mysql::Optional<uint64_t> contest_problem_id;
     InplaceBuff<64> last_judgment;
     InplaceBuff<64> p_last_edit;
-    EnumVal<SubmissionLanguage> lang{};
+    EnumVal<Submission::Language> lang{};
     stmt.res_bind_all(
         submission_file_id, lang, sowner, contest_problem_id, problem_id, last_judgment,
         problem_file_id, p_last_edit);
@@ -49,16 +47,16 @@ void JudgeOrRejudge::run() {
     std::string judging_began = mysql_date();
 
     job_log("Judging submission ", submission_id_, " (problem: ", problem_id, ')');
-    load_problem_package(sim::internal_file_path(problem_file_id));
+    load_problem_package(sim::internal_files::path_of(problem_file_id));
 
-    auto update_submission = [&](SubmissionStatus initial_status, SubmissionStatus full_status,
-                                 std::optional<int64_t> score, auto&& initial_report,
-                                 auto&& final_report) {
+    auto update_submission = [&](Submission::Status initial_status,
+                                 Submission::Status full_status, std::optional<int64_t> score,
+                                 auto&& initial_report, auto&& final_report) {
         {
             auto transaction = mysql.start_transaction();
             sim::submissions::update_final_lock(mysql, sowner, problem_id);
 
-            using ST = sim::SubmissionType;
+            using ST = Submission::Type;
             // Get the submission's ACTUAL type
             stmt = mysql.prepare("SELECT type FROM submissions WHERE id=?");
             stmt.bind_and_execute(submission_id_);
@@ -94,10 +92,10 @@ void JudgeOrRejudge::run() {
     };
 
     auto compilation_errors =
-        compile_solution(sim::internal_file_path(submission_file_id), to_sol_lang(lang));
+        compile_solution(sim::internal_files::path_of(submission_file_id), to_sol_lang(lang));
     if (compilation_errors.has_value()) {
         update_submission(
-            SubmissionStatus::COMPILATION_ERROR, SubmissionStatus::COMPILATION_ERROR,
+            Submission::Status::COMPILATION_ERROR, Submission::Status::COMPILATION_ERROR,
             std::nullopt,
             concat(
                 "<pre class=\"compilation-errors\">", html_escape(compilation_errors.value()),
@@ -114,54 +112,54 @@ void JudgeOrRejudge::run() {
             "Job ", job_id_, " (submission ", submission_id_, ", problem ", problem_id,
             "): Checker compilation failed");
         update_submission(
-            SubmissionStatus::CHECKER_COMPILATION_ERROR,
-            SubmissionStatus::CHECKER_COMPILATION_ERROR, std::nullopt, "", "");
+            Submission::Status::CHECKER_COMPILATION_ERROR,
+            Submission::Status::CHECKER_COMPILATION_ERROR, std::nullopt, "", "");
 
         return job_done();
     }
 
-    auto send_judge_report = [&, initial_status = SubmissionStatus::OK,
-                              initial_report = InplaceBuff<1 << 16>(),
-                              initial_score = static_cast<int64_t>(0)](
-                                 const sim::JudgeReport& jreport, bool final,
-                                 bool partial) mutable {
-        auto rep = construct_report(jreport, final);
-        auto status = calc_status(jreport);
-        // Count score
-        int64_t score = 0;
-        for (auto&& group : jreport.groups) {
-            score += group.score;
-        }
+    auto send_judge_report =
+        [&, initial_status = Submission::Status::OK, initial_report = InplaceBuff<1 << 16>(),
+         initial_score = static_cast<int64_t>(0)](
+            const sim::JudgeReport& jreport, bool final, bool partial) mutable {
+            auto rep = construct_report(jreport, final);
+            auto status = calc_status(jreport);
+            // Count score
+            int64_t score = 0;
+            for (auto&& group : jreport.groups) {
+                score += group.score;
+            }
 
-        // Log reports
-        auto job_log_len = job_log_holder_.size;
-        job_log(
-            "Job ", job_id_, " -> submission ", submission_id_, " (problem ", problem_id,
-            ")\n", (partial ? "Partial j" : "J"), "udge report: ", jreport.judge_log);
+            // Log reports
+            auto job_log_len = job_log_holder_.size;
+            job_log(
+                "Job ", job_id_, " -> submission ", submission_id_, " (problem ", problem_id,
+                ")\n", (partial ? "Partial j" : "J"), "udge report: ", jreport.judge_log);
 
-        stmt = mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
-        stmt.bind_and_execute(get_log(), job_id_);
-        if (partial) {
-            job_log_holder_.size = job_log_len;
-        }
+            stmt = mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
+            stmt.bind_and_execute(get_log(), job_id_);
+            if (partial) {
+                job_log_holder_.size = job_log_len;
+            }
 
-        if (not final) {
-            initial_report = rep;
-            initial_status = status;
-            initial_score = score;
-            return update_submission(status, SubmissionStatus::PENDING, std::nullopt, rep, "");
-        }
+            if (not final) {
+                initial_report = rep;
+                initial_status = status;
+                initial_score = score;
+                return update_submission(
+                    status, Submission::Status::PENDING, std::nullopt, rep, "");
+            }
 
-        // Final
-        score += initial_score;
-        // If initial tests haven't passed
-        if (initial_status != SubmissionStatus::OK and status != SubmissionStatus::JUDGE_ERROR)
-        {
-            status = initial_status;
-        }
+            // Final
+            score += initial_score;
+            // If initial tests haven't passed
+            if (initial_status != Submission::Status::OK and
+                status != Submission::Status::JUDGE_ERROR) {
+                status = initial_status;
+            }
 
-        update_submission(initial_status, status, score, initial_report, rep);
-    };
+            update_submission(initial_status, status, score, initial_report, rep);
+        };
 
     try {
         // Judge
@@ -218,7 +216,7 @@ void JudgeOrRejudge::run() {
         job_log("Caught exception -> ", e.what());
 
         update_submission(
-            SubmissionStatus::JUDGE_ERROR, SubmissionStatus::JUDGE_ERROR, std::nullopt, "",
+            Submission::Status::JUDGE_ERROR, Submission::Status::JUDGE_ERROR, std::nullopt, "",
             "");
 
         return job_done();

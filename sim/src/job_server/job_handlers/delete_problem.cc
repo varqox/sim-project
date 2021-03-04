@@ -1,9 +1,8 @@
 #include "src/job_server/job_handlers/delete_problem.hh"
-#include "sim/constants.hh"
+#include "sim/jobs/job.hh"
 #include "src/job_server/main.hh"
 
-using sim::JobStatus;
-using sim::JobType;
+using sim::jobs::Job;
 
 namespace job_server::job_handlers {
 
@@ -43,8 +42,8 @@ void DeleteProblem::run() {
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM problems WHERE id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), mysql_date(), problem_id_);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), mysql_date(), problem_id_);
 
     // Add jobs to delete problem submissions' files
     mysql
@@ -53,8 +52,8 @@ void DeleteProblem::run() {
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM submissions WHERE problem_id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), mysql_date(), problem_id_);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), mysql_date(), problem_id_);
 
     // Delete problem (all necessary actions will take plate thanks to foreign
     // key constrains)

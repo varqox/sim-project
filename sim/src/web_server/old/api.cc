@@ -1,5 +1,7 @@
 #include "simlib/file_contents.hh"
 #include "simlib/file_descriptor.hh"
+#include "src/job_server/logs.hh"
+#include "src/web_server/logs.hh"
 #include "src/web_server/old/sim.hh"
 
 using sim::users::User;
@@ -103,6 +105,9 @@ void Sim::api_handle() {
 void Sim::api_logs() {
     STACK_UNWINDING_MARK;
 
+    constexpr unsigned LOGS_FIRST_CHUNK_MAX_LEN = 16 << 10; // 16 KiB
+    constexpr unsigned LOGS_OTHER_CHUNK_MAX_LEN = 128 << 10; // 128 KiB
+
     if (not session_is_open || session_user_type != User::Type::ADMIN) {
         return api_error403();
     }
@@ -110,20 +115,20 @@ void Sim::api_logs() {
     StringView type = url_args.extract_next_arg();
     CStringView filename;
     if (type == "web") {
-        filename = sim::SERVER_LOG;
+        filename = web_server::stdlog_file;
     } else if (type == "web_err") {
-        filename = sim::SERVER_ERROR_LOG;
+        filename = web_server::errlog_file;
     } else if (type == "jobs") {
-        filename = sim::JOB_SERVER_LOG;
+        filename = job_server::stdlog_file;
     } else if (type == "jobs_err") {
-        filename = sim::JOB_SERVER_ERROR_LOG;
+        filename = job_server::errlog_file;
     } else {
         return api_error404();
     }
 
     off64_t end_offset = 0;
     StringView query = url_args.extract_query();
-    uint chunk_max_len = sim::LOGS_FIRST_CHUNK_MAX_LEN;
+    uint chunk_max_len = LOGS_FIRST_CHUNK_MAX_LEN;
     if (!query.empty()) {
         auto opt = str2num<off64_t>(query);
         if (not opt or *opt < 0) {
@@ -131,7 +136,7 @@ void Sim::api_logs() {
         }
 
         end_offset = *opt;
-        chunk_max_len = sim::LOGS_OTHER_CHUNK_MAX_LEN;
+        chunk_max_len = LOGS_OTHER_CHUNK_MAX_LEN;
     }
 
     FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
@@ -156,8 +161,7 @@ void Sim::api_logs() {
     }
 
     // Read the data
-    InplaceBuff<meta::max(sim::LOGS_FIRST_CHUNK_MAX_LEN, sim::LOGS_OTHER_CHUNK_MAX_LEN)> buff(
-        len);
+    InplaceBuff<meta::max(LOGS_FIRST_CHUNK_MAX_LEN, LOGS_OTHER_CHUNK_MAX_LEN)> buff(len);
     auto ret = read_all(fd, buff.data(), len);
     // TODO: read_all() and write_all() - support offset argument -
     // p(write|read)

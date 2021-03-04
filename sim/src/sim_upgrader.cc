@@ -1,21 +1,41 @@
+#include "sim/contest_entry_tokens/contest_entry_token.hh"
+#include "sim/contest_files/contest_file.hh"
 #include "sim/contest_rounds/contest_round.hh"
+#include "sim/contest_users/contest_user.hh"
 #include "sim/inf_datetime.hh"
 #include "sim/mysql/mysql.hh"
+#include "sim/problem_tags/problem_tag.hh"
+#include "sim/users/user.hh"
+#include "simlib/concat.hh"
 #include "simlib/concat_tostr.hh"
+#include "simlib/config_file.hh"
 #include "simlib/defer.hh"
+#include "simlib/err_defer.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_descriptor.hh"
 #include "simlib/file_info.hh"
 #include "simlib/file_manip.hh"
+#include "simlib/opened_temporary_file.hh"
 #include "simlib/process.hh"
+#include "simlib/ranges.hh"
 #include "simlib/spawner.hh"
+#include "simlib/string_view.hh"
+#include "simlib/temporary_file.hh"
+#include "src/sql_tables.hh"
+#include "src/web_server/logs.hh"
 
 #include <climits>
+#include <cstdio>
+#include <fcntl.h>
+#include <fstream>
+#include <unistd.h>
 
 namespace {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 mysql::Connection conn;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-InplaceBuff<PATH_MAX> sim_build;
+InplaceBuff<PATH_MAX> sim_build; // with trailing '/'
 
 struct CmdOptions {
     bool reset_new_problems_time_limits = false;
@@ -23,11 +43,139 @@ struct CmdOptions {
 
 } // namespace
 
+static void
+run_command(const std::vector<std::string>& args, const Spawner::Options& options = {}) {
+    auto es = Spawner::run(args[0], args, options);
+    if (es.si.code != CLD_EXITED or es.si.status != 0) {
+        THROW(args[0], " failed: ", es.message);
+    }
+}
+
+// Works if and only if:
+// - no table is renamed
+// - no column is added / removed
+// - columns stay in the same order
+// - column's type is convertible to column's new type compatible
+template <class Func>
+static void update_db_schema(Func&& prepare_database) {
+    OpenedTemporaryFile mysql_cnf("/tmp/sim-upgrade-mysql-cnf.XXXXXX");
+    write_all_throw(
+        mysql_cnf,
+        intentional_unsafe_string_view(concat(
+            "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd,
+            "\"\n")));
+
+    static constexpr auto backup_table_suffix = "_bkp";
+    auto drop_backup_tables = [&] {
+        for (auto table : reverse_view(tables)) {
+            conn.update("DROP TABLE IF EXISTS `", table, backup_table_suffix, '`');
+        }
+    };
+
+    TemporaryFile db_backup("/tmp/sim-upgrade-db-backup.XXXXXX");
+    TemporaryFile db_dump("/tmp/sim-upgrade-db-dump.XXXXXX");
+
+    drop_backup_tables();
+    run_command({
+        "mysqldump",
+        concat_tostr("--defaults-file=", mysql_cnf.path()),
+        concat_tostr("--result-file=", db_backup.path()),
+        "--single-transaction",
+        conn.impl()->db,
+    });
+
+    ErrDefer save_backup = [&] {
+        for (int i = 0; i < 100000; ++i) {
+            auto filename = concat("db-backup.", i);
+            if (access(filename, F_OK) == 0) {
+                continue;
+            }
+            if (copy(db_backup.path(), filename) == 0) {
+                stdlog("Database backup saved as: ", filename);
+                break;
+            }
+        }
+    };
+    {
+        ErrDefer restore_from_backup = [&] {
+            stdlog("Restore tables from dump-backup");
+            run_command(
+                {
+                    "mysql",
+                    concat_tostr("--defaults-file=", mysql_cnf.path()),
+                    conn.impl()->db,
+                },
+                Spawner::Options{
+                    FileDescriptor{db_backup.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO,
+                    "."});
+            drop_backup_tables();
+        };
+        prepare_database();
+        // Save records for reinsertion in the new schema
+        run_command({
+            "mysqldump",
+            concat_tostr("--defaults-file=", mysql_cnf.path()),
+            concat_tostr("--result-file=", db_dump.path()),
+            "--single-transaction",
+            "-t",
+            conn.impl()->db,
+        });
+        // Rename tables (as a fast backup)
+        stdlog("Rename tables (as a backup)");
+        std::string query = "RENAME TABLE ";
+        for (auto table : tables) {
+            if (table != tables.front()) {
+                back_insert(query, ", ");
+            }
+            back_insert(query, '`', table, "` TO `", table, backup_table_suffix, '`');
+        }
+        conn.update(query);
+    }
+    bool done = false;
+    ErrDefer restore_by_rename = [&] {
+        if (done) {
+            return;
+        }
+        stdlog("Restore backup via renaming tables");
+        // First drop tables that we will rename to
+        for (auto table : reverse_view(tables)) {
+            conn.update("DROP TABLE IF EXISTS `", table, '`');
+        }
+        std::string query = "RENAME TABLE ";
+        for (auto table : tables) {
+            if (table != tables.front()) {
+                back_insert(query, ", ");
+            }
+            back_insert(query, '`', table, backup_table_suffix, "` TO `", table, '`');
+        }
+        conn.update(query);
+    };
+
+    run_command({"build/setup-installation", "--drop-tables", sim_build.to_string()});
+    conn.update("DELETE FROM users"); // Remove the just created root account
+    run_command(
+        {
+            "mysql",
+            concat_tostr("--defaults-file=", mysql_cnf.path()),
+            conn.impl()->db,
+        },
+        Spawner::Options{
+            FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO, "."});
+    done = true;
+    drop_backup_tables();
+}
+
 static int perform_upgrade() {
     STACK_UNWINDING_MARK;
 
-    conn.update("ALTER TABLE contest_problems RENAME COLUMN final_selecting_method TO "
-                "method_of_choosing_final_submission");
+    (void)renameat2(
+        AT_FDCWD, concat(sim_build, "logs/server.log").to_string().data(), AT_FDCWD,
+        concat(sim_build, web_server::stdlog_file).to_string().data(), RENAME_NOREPLACE);
+    (void)renameat2(
+        AT_FDCWD, concat(sim_build, "logs/server-error.log").to_string().data(), AT_FDCWD,
+        concat(sim_build, web_server::errlog_file).to_string().data(), RENAME_NOREPLACE);
+
+    update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
 
     stdlog("\033[1;32mSim upgrading is complete\033[m");
     return 0;

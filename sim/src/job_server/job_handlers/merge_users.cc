@@ -1,5 +1,4 @@
 #include "src/job_server/job_handlers/merge_users.hh"
-#include "sim/constants.hh"
 #include "sim/contest_users/contest_user.hh"
 #include "sim/submissions/update_final.hh"
 #include "simlib/utilities.hh"
@@ -89,7 +88,7 @@ void MergeUsers::run_impl() {
     }
 
     // Transfer sessions
-    mysql.prepare("UPDATE session SET user_id=? WHERE user_id=?")
+    mysql.prepare("UPDATE sessions SET user_id=? WHERE user_id=?")
         .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Transfer problems

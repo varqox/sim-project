@@ -1,14 +1,17 @@
-#include "sim/constants.hh"
-#include "sim/jobs/jobs.hh"
+#include "sim/jobs/job.hh"
+#include "sim/jobs/utils.hh"
 #include "sim/mysql/mysql.hh"
 #include "sim/submissions/update_final.hh"
 #include "simlib/config_file.hh"
+#include "simlib/file_info.hh"
 #include "simlib/file_manip.hh"
 #include "simlib/process.hh"
 #include "simlib/shared_function.hh"
 #include "simlib/time.hh"
 #include "simlib/working_directory.hh"
 #include "src/job_server/dispatcher.hh"
+#include "src/job_server/logs.hh"
+#include "src/job_server/notify_file.hh"
 
 #include <climits>
 #include <cstdint>
@@ -27,8 +30,7 @@
 #define DEBUG_JOB_SERVER(...)
 #endif
 
-using sim::JobStatus;
-using sim::JobType;
+using sim::jobs::Job;
 using std::array;
 using std::function;
 using std::lock_guard;
@@ -137,8 +139,8 @@ public:
         STACK_UNWINDING_MARK;
 
         uint64_t jid = 0;
-        EnumVal<JobType> jtype{};
-        mysql::Optional<uintmax_t> aux_id;
+        EnumVal<sim::jobs::Job::Type> jtype{};
+        mysql::Optional<decltype(sim::jobs::Job::aux_id)::value_type> aux_id;
         uint priority = 0;
         InplaceBuff<512> info;
         // Select jobs
@@ -150,9 +152,9 @@ public:
         // Sets job's status to NOTICED_PENDING
         auto mark_stmt = job_server::mysql.prepare("UPDATE jobs SET status=? WHERE id=?");
         // Add jobs to internal queue
-        using JT = JobType;
+        using JT = sim::jobs::Job::Type;
         for (;;) {
-            stmt.bind_and_execute(EnumVal(JobStatus::PENDING));
+            stmt.bind_and_execute(EnumVal(sim::jobs::Job::Status::PENDING));
             if (not stmt.next()) {
                 break;
             }
@@ -238,7 +240,8 @@ public:
                 case JT::DELETE_CONTEST_PROBLEM:
                 case JT::DELETE_FILE: other_jobs.insert({jid, priority, false}); break;
                 }
-                mark_stmt.bind_and_execute(EnumVal(JobStatus::NOTICED_PENDING), jid);
+                mark_stmt.bind_and_execute(
+                    EnumVal(sim::jobs::Job::Status::NOTICED_PENDING), jid);
             } while (stmt.next());
         }
 
@@ -698,7 +701,7 @@ static void process_job(const WorkersPool::NextJob& job) {
         });
     };
 
-    EnumVal<JobType> jtype{};
+    EnumVal<sim::jobs::Job::Type> jtype{};
     mysql::Optional<uint64_t> file_id;
     mysql::Optional<uint64_t> tmp_file_id;
     mysql::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
@@ -710,7 +713,7 @@ static void process_job(const WorkersPool::NextJob& job) {
         auto stmt = job_server::mysql.prepare(
             "SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
             "FROM jobs WHERE id=? AND status!=?");
-        stmt.bind_and_execute(job.id, EnumVal(JobStatus::CANCELED));
+        stmt.bind_and_execute(job.id, EnumVal(sim::jobs::Job::Status::CANCELED));
         stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
 
         if (not stmt.next()) { // Job has been probably canceled
@@ -720,7 +723,7 @@ static void process_job(const WorkersPool::NextJob& job) {
 
     // Mark as in progress
     job_server::mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-        .bind_and_execute(EnumVal(JobStatus::IN_PROGRESS), job.id);
+        .bind_and_execute(EnumVal(sim::jobs::Job::Status::IN_PROGRESS), job.id);
 
     stdlog("Processing job ", job.id, "...");
 
@@ -898,14 +901,14 @@ static void events_loop() noexcept {
             auto* event = reinterpret_cast<struct inotify_event*>(inotify_buff);
             if (event->mask & IN_MOVE_SELF) {
                 // If notify file has been moved
-                (void)create_file(sim::JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+                (void)create_file(job_server::notify_file, S_IRUSR);
                 inotify_rm_watch(inotify_fd, inotify_wd);
                 inotify_wd = -1;
                 return false;
             }
             if (event->mask & IN_IGNORED) {
                 // If notify file has disappeared
-                (void)create_file(sim::JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+                (void)create_file(job_server::notify_file, S_IRUSR);
                 inotify_wd = -1;
                 return false;
             }
@@ -937,12 +940,12 @@ static void events_loop() noexcept {
                     // Try to fix inotify_wd
                 inotify_partially_works:
                     // Ensure that notify-file exists
-                    if (access(sim::JOB_SERVER_NOTIFYING_FILE, F_OK) == -1) {
-                        (void)create_file(sim::JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+                    if (access(job_server::notify_file, F_OK) == -1) {
+                        (void)create_file(job_server::notify_file, S_IRUSR);
                     }
 
                     inotify_wd = inotify_add_watch(
-                        inotify_fd, sim::JOB_SERVER_NOTIFYING_FILE, IN_ATTRIB | IN_MOVE_SELF);
+                        inotify_fd, job_server::notify_file.data(), IN_ATTRIB | IN_MOVE_SELF);
                     if (inotify_wd == -1) {
                         errlog("inotify_add_watch() failed", errmsg());
                     } else {
@@ -1098,10 +1101,10 @@ static void clean_up_db() {
         // Fix jobs that are in progress after the job-server died
         auto stmt = job_server::mysql.prepare("SELECT id, type, info FROM jobs WHERE "
                                               "status=?");
-        stmt.bind_and_execute(EnumVal(JobStatus::IN_PROGRESS));
+        stmt.bind_and_execute(EnumVal(sim::jobs::Job::Status::IN_PROGRESS));
 
-        uintmax_t job_id = 0;
-        EnumVal<JobType> job_type{};
+        decltype(sim::jobs::Job::id) job_id = 0;
+        EnumVal<sim::jobs::Job::Type> job_type{};
         InplaceBuff<128> job_info;
         stmt.res_bind_all(job_id, job_type, job_info);
         while (stmt.next()) {
@@ -1113,7 +1116,8 @@ static void clean_up_db() {
         // Fix jobs that are noticed [ending] after the job-server died
         job_server::mysql.prepare("UPDATE jobs SET status=? WHERE status=?")
             .bind_and_execute(
-                EnumVal(JobStatus::PENDING), EnumVal(JobStatus::NOTICED_PENDING));
+                EnumVal(sim::jobs::Job::Status::PENDING),
+                EnumVal(sim::jobs::Job::Status::NOTICED_PENDING));
         transaction.commit();
 
     } catch (const std::exception& e) {
@@ -1136,17 +1140,17 @@ int main() {
     // Loggers
     // stdlog, like everything, writes to stderr, so redirect stdout and stderr
     // to the log file
-    if (freopen(sim::JOB_SERVER_LOG, "ae", stdout) == nullptr ||
+    if (freopen(job_server::stdlog_file.data(), "ae", stdout) == nullptr ||
         dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
-        errlog("Failed to open `", sim::JOB_SERVER_LOG, '`', errmsg());
+        errlog("Failed to open `", job_server::stdlog_file, '`', errmsg());
         return 1;
     }
 
     try {
-        errlog.open(sim::JOB_SERVER_ERROR_LOG);
+        errlog.open(job_server::errlog_file);
     } catch (const std::exception& e) {
-        errlog("Failed to open `", sim::JOB_SERVER_ERROR_LOG, "`: ", e.what());
+        errlog("Failed to open `", job_server::errlog_file, "`: ", e.what());
         return 1;
     }
 

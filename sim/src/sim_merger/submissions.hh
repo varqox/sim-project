@@ -6,30 +6,7 @@
 
 namespace sim_merger {
 
-struct Submission {
-    uintmax_t id{};
-    uintmax_t file_id{};
-    std::optional<uintmax_t> owner;
-    uintmax_t problem_id{};
-    std::optional<uintmax_t> contest_problem_id;
-    std::optional<uintmax_t> contest_round_id;
-    std::optional<uintmax_t> contest_id;
-    EnumVal<sim::SubmissionType> type{};
-    EnumVal<sim::SubmissionLanguage> language{};
-    bool final_candidate{};
-    bool problem_final{};
-    bool contest_final{};
-    bool contest_initial_final{};
-    EnumVal<sim::SubmissionStatus> initial_status{};
-    EnumVal<sim::SubmissionStatus> full_status{};
-    InplaceBuff<24> submit_time;
-    std::optional<intmax_t> score;
-    InplaceBuff<24> last_judgment;
-    InplaceBuff<1> initial_report;
-    InplaceBuff<1> final_report;
-};
-
-class SubmissionsMerger : public Merger<Submission> {
+class SubmissionsMerger : public Merger<sim::submissions::Submission> {
     const InternalFilesMerger& internal_files_;
     const UsersMerger& users_;
     const ProblemsMerger& problems_;
@@ -40,16 +17,16 @@ class SubmissionsMerger : public Merger<Submission> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        Submission s;
-        mysql::Optional<uintmax_t> m_owner;
-        mysql::Optional<uintmax_t> m_contest_problem_id;
-        mysql::Optional<uintmax_t> m_contest_round_id;
-        mysql::Optional<uintmax_t> m_contest_id;
+        sim::submissions::Submission s;
+        mysql::Optional<decltype(s.owner)::value_type> m_owner;
+        mysql::Optional<decltype(s.contest_problem_id)::value_type> m_contest_problem_id;
+        mysql::Optional<decltype(s.contest_round_id)::value_type> m_contest_round_id;
+        mysql::Optional<decltype(s.contest_id)::value_type> m_contest_id;
         uint8_t b_final_candidate = 0;
         uint8_t b_problem_final = 0;
         uint8_t b_contest_final = 0;
         uint8_t b_contest_initial_final = 0;
-        mysql::Optional<intmax_t> m_score;
+        mysql::Optional<decltype(s.score)::value_type> m_score;
         auto stmt = conn.prepare(
             "SELECT id, file_id, owner, problem_id,"
             " contest_problem_id, contest_round_id, contest_id,"
@@ -101,7 +78,7 @@ class SubmissionsMerger : public Merger<Submission> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const Submission& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::submissions::Submission& /*unused*/) { return nullptr; });
     }
 
 public:
@@ -123,7 +100,7 @@ public:
         ProgressBar progress_bar("Submissions saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const Submission& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.file_id, x.owner, x.problem_id, x.contest_problem_id,
                 x.contest_round_id, x.contest_id, x.type, x.language, x.final_candidate,

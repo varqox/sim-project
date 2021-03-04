@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sim/contest_files/contest_file.hh"
 #include "sim/random.hh"
 #include "src/sim_merger/contests.hh"
 #include "src/sim_merger/internal_files.hh"
@@ -9,29 +10,18 @@
 
 namespace sim_merger {
 
-struct ContestFile {
-    InplaceBuff<sim::FILE_ID_LEN> id;
-    uintmax_t file_id{};
-    uintmax_t contest_id{};
-    InplaceBuff<sim::FILE_NAME_MAX_LEN> name;
-    InplaceBuff<sim::FILE_DESCRIPTION_MAX_LEN> description;
-    uintmax_t file_size{};
-    InplaceBuff<24> modified;
-    std::optional<uintmax_t> creator;
-};
-
-class ContestFilesMerger : public Merger<ContestFile> {
+class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
     const InternalFilesMerger& internal_files_;
     const ContestsMerger& contests_;
     const UsersMerger& users_;
 
-    std::set<InplaceBuff<sim::FILE_ID_LEN>> taken_contest_files_ids_;
+    std::set<decltype(sim::contest_files::ContestFile::id)> taken_contest_files_ids_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        ContestFile cf;
-        mysql::Optional<uintmax_t> m_creator;
+        sim::contest_files::ContestFile cf;
+        mysql::Optional<decltype(cf.creator)::value_type> m_creator;
         auto stmt = conn.prepare(
             "SELECT id, file_id, contest_id, name, description, "
             "file_size, modified, creator FROM ",
@@ -56,17 +46,19 @@ class ContestFilesMerger : public Merger<ContestFile> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const ContestFile& /*unused*/) { return nullptr; });
+        Merger::merge(
+            [&](const sim::contest_files::ContestFile& /*unused*/) { return nullptr; });
     }
 
-    InplaceBuff<sim::FILE_ID_LEN> pre_merge_record_id_to_post_merge_record_id(
-        const InplaceBuff<sim::FILE_ID_LEN>& record_id) override {
+    decltype(sim::contest_files::ContestFile::id) pre_merge_record_id_to_post_merge_record_id(
+        const decltype(sim::contest_files::ContestFile::id)& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_contest_files_ids_.emplace(new_id).second) {
-            new_id = sim::generate_random_token(sim::FILE_ID_LEN);
+            new_id = sim::generate_random_token(
+                decltype(sim::contest_files::ContestFile::id)::max_len);
         }
-        return InplaceBuff<sim::FILE_ID_LEN>(new_id);
+        return decltype(sim::contest_files::ContestFile::id)(new_id);
     }
 
 public:
@@ -83,7 +75,7 @@ public:
         ProgressBar progress_bar("Contest files saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const ContestFile& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.file_id, x.contest_id, x.name, x.description, x.file_size, x.modified,
                 x.creator);

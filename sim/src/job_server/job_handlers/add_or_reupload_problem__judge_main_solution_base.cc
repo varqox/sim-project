@@ -1,4 +1,5 @@
 #include "src/job_server/job_handlers/add_or_reupload_problem__judge_main_solution_base.hh"
+#include "sim/internal_files/internal_file.hh"
 #include "simlib/sim/problem_package.hh"
 
 namespace job_server::job_handlers {
@@ -6,7 +7,7 @@ namespace job_server::job_handlers {
 void AddOrReuploadProblemJudgeModelSolutionBase::run() {
     STACK_UNWINDING_MARK;
 
-    auto package_path = sim::internal_file_path(tmp_file_id_.value());
+    auto package_path = sim::internal_files::path_of(tmp_file_id_.value());
     reset_package_time_limits(package_path);
     if (failed()) {
         return;

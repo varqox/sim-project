@@ -52,7 +52,7 @@ public:
         ProgressBar progress_bar("Contest users saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::contest_users::ContestUser& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(x.id.user_id, x.id.contest_id, x.mode);
         }
 

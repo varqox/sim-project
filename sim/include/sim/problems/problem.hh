@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sim/internal_files/internal_file.hh"
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
 #include "sim/sql_fields/varchar.hh"
@@ -17,7 +18,7 @@ struct Problem {
     };
 
     uint64_t id;
-    uint64_t file_id;
+    decltype(internal_files::InternalFile::id) file_id;
     EnumVal<Type> type;
     sql_fields::Varchar<128> name;
     sql_fields::Varchar<64> label;
@@ -25,6 +26,8 @@ struct Problem {
     std::optional<decltype(users::User::id)> owner;
     sql_fields::Datetime added;
     sql_fields::Datetime last_edit;
+
+    static constexpr uint64_t new_statement_max_size = 10 << 20; // 10 MiB
 };
 
 } // namespace sim::problems

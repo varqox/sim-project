@@ -1,10 +1,10 @@
 #pragma once
 
-#include "sim/constants.hh" // TODO: remove when ExtraIterateData does not use it
 #include "sim/contest_problems/contest_problem.hh"
 #include "sim/contests/permissions.hh"
 #include "sim/problems/permissions.hh"
 #include "sim/problems/problem.hh"
+#include "sim/submissions/submission.hh"
 
 namespace sim::contest_problems {
 
@@ -12,8 +12,9 @@ enum class IterateIdKind { CONTEST, CONTEST_ROUND, CONTEST_PROBLEM };
 
 struct ExtraIterateData {
     decltype(problems::Problem::label) problem_label;
-    std::optional<EnumVal<SubmissionStatus>> initial_final_submission_initial_status;
-    std::optional<EnumVal<SubmissionStatus>> final_submission_full_status;
+    std::optional<EnumVal<sim::submissions::Submission::Status>>
+        initial_final_submission_initial_status;
+    std::optional<EnumVal<sim::submissions::Submission::Status>> final_submission_full_status;
     problems::Permissions problem_perms;
 };
 
@@ -63,8 +64,8 @@ void iterate(
 
     ContestProblem cp;
     ExtraIterateData extra_data;
-    mysql::Optional<EnumVal<SubmissionStatus>> m_initial_final_status;
-    mysql::Optional<EnumVal<SubmissionStatus>> m_final_status;
+    mysql::Optional<EnumVal<sim::submissions::Submission::Status>> m_initial_final_status;
+    mysql::Optional<EnumVal<sim::submissions::Submission::Status>> m_final_status;
     mysql::Optional<decltype(problems::Problem::owner)::value_type> m_problem_owner;
     decltype(problems::Problem::type) m_problem_type;
     stmt.res_bind_all(

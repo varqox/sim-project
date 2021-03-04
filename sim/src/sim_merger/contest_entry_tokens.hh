@@ -1,18 +1,12 @@
 #pragma once
 
+#include "sim/contest_entry_tokens/contest_entry_token.hh"
 #include "sim/random.hh"
 #include "src/sim_merger/contests.hh"
 
 #include <set>
 
 namespace sim_merger {
-
-struct ContestEntryToken {
-    InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN> token;
-    uintmax_t contest_id{};
-    std::optional<InplaceBuff<sim::CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
-    std::optional<InplaceBuff<24>> short_token_expiration;
-};
 
 struct ContestEntryTokenIdGetter {
     template <class T>
@@ -21,18 +15,23 @@ struct ContestEntryTokenIdGetter {
     }
 };
 
-class ContestEntryTokensMerger : public Merger<ContestEntryToken, ContestEntryTokenIdGetter> {
+class ContestEntryTokensMerger
+: public Merger<sim::contest_entry_tokens::ContestEntryToken, ContestEntryTokenIdGetter> {
     const ContestsMerger& contests_;
 
-    std::set<InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN>> taken_tokens_;
-    std::set<InplaceBuff<sim::CONTEST_ENTRY_SHORT_TOKEN_LEN>> taken_short_tokens_;
+    std::set<decltype(sim::contest_entry_tokens::ContestEntryToken::token)> taken_tokens_;
+    std::set<decltype(sim::contest_entry_tokens::ContestEntryToken::short_token)::value_type>
+        taken_short_tokens_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        ContestEntryToken cet;
-        mysql::Optional<decltype(ContestEntryToken::short_token)::value_type> m_short_token;
-        mysql::Optional<decltype(ContestEntryToken::short_token_expiration)::value_type>
+        sim::contest_entry_tokens::ContestEntryToken cet;
+        mysql::Optional<decltype(
+            sim::contest_entry_tokens::ContestEntryToken::short_token)::value_type>
+            m_short_token;
+        mysql::Optional<decltype(
+            sim::contest_entry_tokens::ContestEntryToken::short_token_expiration)::value_type>
             m_short_token_expiration;
         auto stmt = conn.prepare(
             "SELECT token, contest_id, short_token,"
@@ -51,8 +50,9 @@ class ContestEntryTokensMerger : public Merger<ContestEntryToken, ContestEntryTo
             if (cet.short_token) {
                 std::string new_short_token = cet.short_token->to_string();
                 while (not taken_short_tokens_.emplace(new_short_token).second) {
-                    new_short_token =
-                        sim::generate_random_token(sim::CONTEST_ENTRY_SHORT_TOKEN_LEN);
+                    new_short_token = sim::generate_random_token(
+                        decltype(sim::contest_entry_tokens::ContestEntryToken::short_token)::
+                            value_type::max_len);
                 }
                 cet.short_token = new_short_token;
             }
@@ -64,17 +64,21 @@ class ContestEntryTokensMerger : public Merger<ContestEntryToken, ContestEntryTo
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const ContestEntryToken& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contest_entry_tokens::ContestEntryToken& /*unused*/) {
+            return nullptr;
+        });
     }
 
-    InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN> pre_merge_record_id_to_post_merge_record_id(
-        const InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN>& record_id) override {
+    decltype(sim::contest_entry_tokens::ContestEntryToken::token)
+    pre_merge_record_id_to_post_merge_record_id(const decltype(
+        sim::contest_entry_tokens::ContestEntryToken::token)& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_tokens_.emplace(new_id).second) {
-            new_id = sim::generate_random_token(sim::CONTEST_ENTRY_TOKEN_LEN);
+            new_id = sim::generate_random_token(
+                decltype(sim::contest_entry_tokens::ContestEntryToken::token)::max_len);
         }
-        return InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN>(new_id);
+        return decltype(sim::contest_entry_tokens::ContestEntryToken::token)(new_id);
     }
 
 public:
@@ -91,7 +95,7 @@ public:
         ProgressBar progress_bar("Contest entry tokens saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const ContestEntryToken& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(
                 x.token, x.contest_id, x.short_token, x.short_token_expiration);
         }

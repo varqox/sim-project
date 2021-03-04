@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sim/constants.hh"
+#include "sim/submissions/submission.hh"
 #include "sim/submissions/update_final.hh"
 #include "sim/users/user.hh"
 #include "simlib/defer.hh"
@@ -27,12 +27,12 @@ class UsersMerger : public Merger<sim::users::User> {
         sim::users::User user;
         auto stmt = conn.prepare(
             "SELECT id, username, first_name, last_name, "
-            "email, salt, password, type FROM ",
+            "email, password_salt, password_hash, type FROM ",
             record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(
-            user.id, user.username, user.first_name, user.last_name, user.email, user.salt,
-            user.password, user.type);
+            user.id, user.username, user.first_name, user.last_name, user.email,
+            user.password_salt, user.password_hash, user.type);
 
         while (stmt.next()) {
             record_set.add_record(user, time);
@@ -66,16 +66,16 @@ public:
         auto stmt = conn.prepare(
             "INSERT INTO ", sql_table_name(),
             "(id, username, first_name, last_name, email,"
-            " salt, password, type) "
+            " password_salt, password_hash, type) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 
         ProgressBar progress_bar("Users saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::users::User& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(
-                x.id, x.username, x.first_name, x.last_name, x.email, x.salt, x.password,
-                x.type);
+                x.id, x.username, x.first_name, x.last_name, x.email, x.password_salt,
+                x.password_hash, x.type);
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
@@ -94,8 +94,10 @@ public:
         auto transaction = conn.start_transaction();
         for (auto const& user : new_table_) {
             if (user.main_ids.size() > 1 or user.other_ids.size() > 1) {
-                uintmax_t problem_id = 0;
-                mysql::Optional<uintmax_t> contest_problem_id;
+                decltype(sim::submissions::Submission::problem_id) problem_id = 0;
+                mysql::Optional<decltype(
+                    sim::submissions::Submission::contest_problem_id)::value_type>
+                    contest_problem_id;
 
                 auto stmt = conn.prepare("SELECT problem_id, contest_problem_id "
                                          "FROM submissions "

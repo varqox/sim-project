@@ -1,6 +1,5 @@
-#include "sim/constants.hh"
 #include "sim/is_username.hh"
-#include "sim/jobs/jobs.hh"
+#include "sim/jobs/utils.hh"
 #include "sim/users/user.hh"
 #include "simlib/random.hh"
 #include "simlib/sha.hh"
@@ -14,8 +13,7 @@
 #include <type_traits>
 
 using sim::is_username;
-using sim::JobStatus;
-using sim::JobType;
+using sim::jobs::Job;
 using sim::users::User;
 using std::array;
 using std::string;
@@ -56,7 +54,7 @@ void Sim::api_users() {
     }
 
     // Process restrictions
-    auto rows_limit = sim::API_FIRST_QUERY_ROWS_LIMIT;
+    auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
     StringView next_arg = url_args.extract_next_arg();
     for (uint mask = 0; !next_arg.empty(); next_arg = url_args.extract_next_arg()) {
         constexpr uint ID_COND = 1;
@@ -85,7 +83,7 @@ void Sim::api_users() {
             return api_error400();
 
         } else if (is_one_of(cond, '<', '>') and ~mask & ID_COND) {
-            rows_limit = sim::API_OTHER_QUERY_ROWS_LIMIT;
+            rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
             query_append("id", arg);
             mask |= ID_COND;
 
@@ -273,18 +271,18 @@ void Sim::api_user_add() {
     }
 
     // All fields are valid
-    static_assert(decltype(User::salt)::max_len % 2 == 0);
-    array<char, (decltype(User::salt)::max_len >> 1)> salt_bin{};
-    fill_randomly(salt_bin.data(), salt_bin.size());
-    auto salt = to_hex({salt_bin.data(), salt_bin.size()});
+    static_assert(decltype(User::password_salt)::max_len % 2 == 0);
+    array<char, (decltype(User::password_salt)::max_len >> 1)> password_salt_bin{};
+    fill_randomly(password_salt_bin.data(), password_salt_bin.size());
+    auto password_salt = to_hex({password_salt_bin.data(), password_salt_bin.size()});
 
     auto stmt = mysql.prepare("INSERT IGNORE users (username, type,"
-                              " first_name, last_name, email, salt, password) "
+                              " first_name, last_name, email, password_salt, password) "
                               "VALUES(?, ?, ?, ?, ?, ?, ?)");
 
     stmt.bind_and_execute(
-        username, uint(utype), fname, lname, email, salt,
-        sha3_512(intentional_unsafe_string_view(concat(salt, pass))));
+        username, uint(utype), fname, lname, email, password_salt,
+        sha3_512(intentional_unsafe_string_view(concat(password_salt, pass))));
 
     // User account successfully created
     if (stmt.affected_rows() != 1) {
@@ -361,7 +359,7 @@ void Sim::api_user_edit() {
     stmt = mysql.prepare("SELECT 1 FROM users WHERE username=? AND id=?");
     stmt.bind_and_execute(username, users_uid);
     if (not stmt.next()) {
-        mysql.prepare("DELETE FROM session WHERE user_id=? AND id!=?")
+        mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
             .bind_and_execute(users_uid, session_id);
     }
 
@@ -396,20 +394,22 @@ void Sim::api_user_change_password() {
     }
 
     // Commit password change
-    static_assert(decltype(User::salt)::max_len % 2 == 0);
-    array<char, (decltype(User::salt)::max_len >> 1)> salt_bin{};
-    fill_randomly(salt_bin.data(), salt_bin.size());
-    InplaceBuff<decltype(User::salt)::max_len> salt(
-        to_hex({salt_bin.data(), salt_bin.size()}));
+    static_assert(decltype(User::password_salt)::max_len % 2 == 0);
+    array<char, (decltype(User::password_salt)::max_len >> 1)> password_salt_bin{};
+    fill_randomly(password_salt_bin.data(), password_salt_bin.size());
+    InplaceBuff<decltype(User::password_salt)::max_len> password_salt(
+        to_hex({password_salt_bin.data(), password_salt_bin.size()}));
 
     auto transaction = mysql.start_transaction();
 
-    mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?")
+    mysql.prepare("UPDATE users SET password_salt=?, password_hash=? WHERE id=?")
         .bind_and_execute(
-            salt, sha3_512(intentional_unsafe_string_view(concat(salt, new_pass))), users_uid);
+            password_salt,
+            sha3_512(intentional_unsafe_string_view(concat(password_salt, new_pass))),
+            users_uid);
 
     // Remove other sessions (for security reasons)
-    mysql.prepare("DELETE FROM session WHERE user_id=? AND id!=?")
+    mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
         .bind_and_execute(users_uid, session_id);
 
     transaction.commit();
@@ -431,8 +431,9 @@ void Sim::api_user_delete() {
                               " added, aux_id, info, data)"
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(JobStatus::PENDING), priority(JobType::DELETE_USER),
-        EnumVal(JobType::DELETE_USER), mysql_date(), users_uid);
+        session_user_id, EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::DELETE_USER), EnumVal(Job::Type::DELETE_USER),
+        mysql_date(), users_uid);
 
     sim::jobs::notify_job_server();
     append(stmt.insert_id());
@@ -479,9 +480,13 @@ void Sim::api_user_merge_into_another() {
                               " added, aux_id, info, data)"
                               "VALUES(?, ?, ?, ?, ?, ?, ?, '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(JobStatus::PENDING), priority(JobType::MERGE_USERS),
-        EnumVal(JobType::MERGE_USERS), mysql_date(), donor_user_id,
-        sim::jobs::MergeUsersInfo(WONT_THROW(str2num<uintmax_t>(target_user_id).value()))
+        session_user_id, EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::MERGE_USERS), EnumVal(Job::Type::MERGE_USERS),
+        mysql_date(), donor_user_id,
+        sim::jobs::MergeUsersInfo(
+            WONT_THROW(
+                str2num<decltype(sim::jobs::MergeUsersInfo::target_user_id)>(target_user_id)
+                    .value()))
             .dump());
 
     sim::jobs::notify_job_server();

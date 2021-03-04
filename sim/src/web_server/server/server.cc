@@ -4,6 +4,7 @@
 #include "simlib/process.hh"
 #include "simlib/time.hh"
 #include "simlib/working_directory.hh"
+#include "src/web_server/logs.hh"
 #include "src/web_server/old/sim.hh"
 #include "src/web_server/server/connection.hh"
 
@@ -89,17 +90,17 @@ int main() {
 
     // Loggers
     // stdlog writes to stderr (like everything), so redirect stdout and stderr to the log file
-    if (freopen(sim::SERVER_LOG, "a", stdout) == nullptr ||
+    if (freopen(web_server::stdlog_file.data(), "a", stdout) == nullptr ||
         dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
-        errlog("Failed to open `", sim::SERVER_LOG, '`', errmsg());
+        errlog("Failed to open `", web_server::stdlog_file, '`', errmsg());
         return 1;
     }
 
     try {
-        errlog.open(sim::SERVER_ERROR_LOG);
+        errlog.open(web_server::errlog_file);
     } catch (const std::exception& e) {
-        errlog("Failed to open `", sim::SERVER_ERROR_LOG, "`: ", e.what());
+        errlog("Failed to open `", web_server::errlog_file, "`: ", e.what());
         return 1;
     }
 

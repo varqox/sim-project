@@ -18,7 +18,7 @@ void Context::open_session() {
     Session s;
     auto stmt =
         mysql.prepare("SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
-                      "session s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
+                      "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
     stmt.bind_and_execute(session_id, mysql_date());
     stmt.res_bind_all(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
     if (not stmt.next()) {
@@ -34,7 +34,7 @@ void Context::open_session() {
 void Context::close_session() {
     assert(session.has_value());
     if (session->data != session->orig_data) {
-        auto stmt = mysql.prepare("UPDATE session SET data=? WHERE id=?");
+        auto stmt = mysql.prepare("UPDATE sessions SET data=? WHERE id=?");
         stmt.bind_and_execute(session->data, session->id);
     }
     session = std::nullopt;

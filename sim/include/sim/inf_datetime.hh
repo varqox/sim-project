@@ -1,5 +1,6 @@
 #pragma once
 
+#include "simlib/string_traits.hh"
 #include "simlib/string_transform.hh"
 #include "simlib/time.hh"
 
@@ -80,9 +81,10 @@ public:
     }
 
     InfDatetime& from_str(CStringView str) {
-        if (str == NEG_INF_STR) {
+        // has_prefix() instead of == because @p str may be have many trailing null bytes
+        if (has_prefix(str, NEG_INF_STR)) {
             set_neg_inf();
-        } else if (str == INF_STR) {
+        } else if (has_prefix(str, INF_STR)) {
             set_inf();
         } else {
             set_datetime(str);
@@ -166,7 +168,7 @@ inline InfDatetime inf_timestamp_to_InfDatetime(StringView str) {
         res.set_neg_inf();
     } else {
         res.set_datetime(intentional_unsafe_cstring_view(
-            mysql_date(WONT_THROW(str2num<uintmax_t>(str).value()))));
+            mysql_date(WONT_THROW(str2num<uint64_t>(str).value()))));
     }
 
     return res;

@@ -1,12 +1,15 @@
 #pragma once
 
-#include "sim/constants.hh"
 #include "sim/contest_files/permissions.hh"
+#include "sim/contest_rounds/contest_round.hh"
+#include "sim/contests/contest.hh"
 #include "sim/contests/permissions.hh"
 #include "sim/cpp_syntax_highlighter.hh"
+#include "sim/jobs/job.hh"
 #include "sim/mysql/mysql.hh"
 #include "sim/problems/permissions.hh"
 #include "sim/sessions/session.hh"
+#include "sim/submissions/submission.hh"
 #include "sim/users/user.hh"
 #include "simlib/http/response.hh"
 #include "simlib/request_uri_parser.hh"
@@ -77,6 +80,9 @@ class Sim final {
         set_response("404 Not Found", response_body);
     }
 
+    static constexpr unsigned API_FIRST_QUERY_ROWS_LIMIT = 50;
+    static constexpr unsigned API_OTHER_QUERY_ROWS_LIMIT = 200;
+
     // api.cc
     void api_handle();
 
@@ -87,17 +93,17 @@ class Sim final {
 
     void api_job();
 
-    void api_job_restart(sim::JobType job_type, StringView job_info);
+    void api_job_restart(sim::jobs::Job::Type job_type, StringView job_info);
 
     void api_job_cancel();
 
     void api_job_download_log();
 
-    void
-    api_job_download_uploaded_package(std::optional<uint64_t> file_id, sim::JobType job_type);
+    void api_job_download_uploaded_package(
+        std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type);
 
     void api_job_download_uploaded_statement(
-        std::optional<uint64_t> file_id, sim::JobType job_type, StringView info);
+        std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type, StringView info);
 
     // jobs_api.cc
     void api_problems();
@@ -151,8 +157,8 @@ class Sim final {
 
     // submissions_api.cc
     void append_submission_status(
-        sim::SubmissionStatus initial_status, sim::SubmissionStatus full_status,
-        bool show_full_status);
+        sim::submissions::Submission::Status initial_status,
+        sim::submissions::Submission::Status full_status, bool show_full_status);
 
     void api_submissions();
 
@@ -192,15 +198,20 @@ class Sim final {
 
     void api_contest_round_clone(StringView contest_id, sim::contests::Permissions perms);
 
-    void api_contest_round_edit(uintmax_t contest_round_id, sim::contests::Permissions perms);
+    void api_contest_round_edit(
+        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        sim::contests::Permissions perms);
 
-    void
-    api_contest_round_delete(uintmax_t contest_round_id, sim::contests::Permissions perms);
+    void api_contest_round_delete(
+        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        sim::contests::Permissions perms);
 
     void api_contest_problem_statement(StringView problem_id);
 
     void api_contest_problem_add(
-        uintmax_t contest_id, uintmax_t contest_round_id, sim::contests::Permissions perms);
+        decltype(sim::contests::Contest::id) contest_id,
+        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        sim::contests::Permissions perms);
 
     void api_contest_problem_rejudge_all_submissions(
         StringView contest_problem_id, sim::contests::Permissions perms,
@@ -245,7 +256,8 @@ class Sim final {
 
     void api_contest_entry_token_short_delete(StringView contest_id);
 
-    void api_contest_entry_token_use_to_enter_contest(uintmax_t contest_id);
+    void api_contest_entry_token_use_to_enter_contest(
+        decltype(sim::contests::Contest::id) contest_id);
 
     // contest_files_api.cc
 
@@ -267,7 +279,7 @@ class Sim final {
     /* ============================== Session ============================== */
 
     bool session_is_open = false;
-    sim::users::User::Type session_user_type = sim::users::User::Type::NORMAL;
+    decltype(sim::users::User::type) session_user_type = sim::users::User::Type::NORMAL;
     decltype(sim::sessions::Session::id) session_id;
     decltype(sim::sessions::Session::csrf_token) session_csrf_token;
     decltype(sim::sessions::Session::user_id) session_user_id;
@@ -279,11 +291,11 @@ class Sim final {
      * @details First closes old session and then creates and opens new one
      *
      * @param user_id Id of user to which session will belong
-     * @param temporary_session Whether create temporary or persistent session
+     * @param short_session Whether create short or long session
      *
      * @errors Throws an exception in any case of error
      */
-    void session_create_and_open(StringView user_id, bool temporary_session);
+    void session_create_and_open(StringView user_id, bool short_session);
 
     /// Destroys session (removes from database, etc.)
     void session_destroy();
@@ -300,7 +312,7 @@ class Sim final {
     InplaceBuff<1024> notifications;
 
     // Appends
-    void page_template(StringView title, StringView styles = {}, StringView scripts = {});
+    void page_template(StringView title, StringView styles = {});
 
     void page_template_end();
 
@@ -558,8 +570,8 @@ private:
 
     // Session must be open to access the jobs
     JobPermissions jobs_get_permissions(
-        std::optional<StringView> creator_id, sim::JobType job_type,
-        sim::JobStatus job_status) noexcept;
+        std::optional<StringView> creator_id, sim::jobs::Job::Type job_type,
+        sim::jobs::Job::Status job_status) noexcept;
 
     // Used to get granted permissions to the problem jobs
     JobPermissions jobs_granted_permissions_problem(StringView problem_id);
@@ -657,13 +669,14 @@ private:
     SubmissionPermissions submissions_get_overall_permissions() noexcept;
 
     SubmissionPermissions submissions_get_permissions(
-        std::optional<uintmax_t> submission_owner, sim::SubmissionType stype,
+        decltype(sim::submissions::Submission::owner) submission_owner,
+        sim::submissions::Submission::Type stype,
         std::optional<sim::contest_users::ContestUser::Mode> cu_mode,
         decltype(sim::problems::Problem::owner) problem_owner) noexcept;
 
     StringView submissions_sid;
     uint64_t submissions_file_id{};
-    sim::SubmissionLanguage submissions_slang{};
+    sim::submissions::Submission::Language submissions_slang{};
     SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
     // Pages

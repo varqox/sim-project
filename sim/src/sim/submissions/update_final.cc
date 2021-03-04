@@ -1,10 +1,10 @@
 #include "sim/submissions/update_final.hh"
-#include "sim/constants.hh"
 #include "sim/contest_problems/contest_problem.hh"
+#include "sim/submissions/submission.hh"
 #include "simlib/time.hh"
 
-using sim::SubmissionStatus;
 using sim::contest_problems::ContestProblem;
+using sim::submissions::Submission;
 
 static void update_problem_final(
     mysql::Connection& mysql, uint64_t submission_owner, uint64_t problem_id) {
@@ -31,7 +31,7 @@ static void update_problem_final(
         return; // Nothing more to be done
     }
 
-    EnumVal<SubmissionStatus> full_status{};
+    EnumVal<Submission::Status> full_status{};
     stmt = mysql.prepare("SELECT full_status "
                          "FROM submissions USE INDEX(final3) "
                          "WHERE final_candidate=1 AND owner=? AND problem_id=?"
@@ -126,7 +126,7 @@ static void update_contest_final(
             return unset_all_finals();
         }
 
-        EnumVal<SubmissionStatus> full_status{};
+        EnumVal<Submission::Status> full_status{};
         stmt = mysql.prepare("SELECT full_status "
                              "FROM submissions USE INDEX(final2) "
                              "WHERE final_candidate=1 AND owner=?"
@@ -153,7 +153,7 @@ static void update_contest_final(
             // initial_status, id DESC) is what we need, but MySQL does not
             // support it, so the below workaround is used to select the initial
             // final submission efficiently
-            EnumVal<SubmissionStatus> initial_status{};
+            EnumVal<Submission::Status> initial_status{};
             stmt = mysql.prepare("SELECT initial_status "
                                  "FROM submissions USE INDEX(initial_final2) "
                                  "WHERE final_candidate=1 AND owner=?"
@@ -180,7 +180,7 @@ static void update_contest_final(
             // score DESC, initial_status, id DESC) is what we need, but MySQL
             // does not support it, so the below workaround is used to select
             // the initial final submission efficiently
-            EnumVal<SubmissionStatus> initial_status{};
+            EnumVal<Submission::Status> initial_status{};
             stmt = mysql.prepare("SELECT initial_status "
                                  "FROM submissions USE INDEX(initial_final3) "
                                  "WHERE final_candidate=1 AND owner=?"

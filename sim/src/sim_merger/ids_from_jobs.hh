@@ -1,15 +1,20 @@
 #pragma once
 
-#include "sim/constants.hh"
+#include "sim/contest_entry_tokens/contest_entry_token.hh"
+#include "sim/contest_files/contest_file.hh"
 #include "sim/contest_problems/contest_problem.hh"
 #include "sim/contest_rounds/contest_round.hh"
 #include "sim/contest_users/contest_user.hh"
 #include "sim/contests/contest.hh"
-#include "sim/jobs/jobs.hh"
+#include "sim/internal_files/internal_file.hh"
+#include "sim/jobs/job.hh"
+#include "sim/jobs/utils.hh"
+#include "sim/problem_tags/problem_tag.hh"
 #include "sim/problems/problem.hh"
 #include "sim/sessions/session.hh"
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
+#include "sim/submissions/submission.hh"
 #include "sim/users/user.hh"
 #include "simlib/ranges.hh"
 #include "simlib/time.hh"
@@ -53,56 +58,50 @@ struct IdsWithTime {
     }
 };
 
-struct ProblemTagId {
-    uintmax_t problem_id;
-    InplaceBuff<sim::PROBLEM_TAG_MAX_LEN> tag;
+struct ProblemTagIdCmp {
+    bool operator()(
+        const decltype(sim::problem_tags::ProblemTag::id)& a,
+        const decltype(sim::problem_tags::ProblemTag::id)& b) const noexcept {
+        return std::pair{a.problem_id, a.tag} < std::pair{b.problem_id, b.tag};
+    }
 };
-
-inline bool operator<(const ProblemTagId& a, const ProblemTagId& b) noexcept {
-    return std::pair(a.problem_id, a.tag) < std::pair(b.problem_id, b.tag);
-}
-
-inline auto stringify(ProblemTagId ptag) {
-    return concat("(problem: ", ptag.problem_id, " tag: ", ptag.tag, ')');
-}
 
 struct ContestUserIdCmp {
     bool operator()(
         const decltype(sim::contest_users::ContestUser::id)& a,
         const decltype(sim::contest_users::ContestUser::id)& b) const noexcept {
-        return std::pair(a.user_id, a.contest_id) < std::pair(b.user_id, b.contest_id);
+        return std::pair{a.user_id, a.contest_id} < std::pair{b.user_id, b.contest_id};
     }
 };
 
 // Loads all information about ids from jobs
 struct IdsFromJobs {
-    IdsWithTime<uintmax_t> internal_files; // TODO: replace with appropriate decltype
+    IdsWithTime<decltype(sim::internal_files::InternalFile::id)> internal_files;
     IdsWithTime<decltype(sim::users::User::id)> users;
     IdsWithTime<decltype(sim::sessions::Session::id)> sessions;
     IdsWithTime<decltype(sim::problems::Problem::id)> problems;
-    IdsWithTime<ProblemTagId> problem_tags; // TODO: replace with appropriate decltype
+    IdsWithTime<decltype(sim::problem_tags::ProblemTag::id), ProblemTagIdCmp> problem_tags;
     IdsWithTime<decltype(sim::contests::Contest::id)> contests;
     IdsWithTime<decltype(sim::contest_rounds::ContestRound::id)> contest_rounds;
     IdsWithTime<decltype(sim::contest_problems::ContestProblem::id)> contest_problems;
     IdsWithTime<decltype(sim::contest_users::ContestUser::id), ContestUserIdCmp> contest_users;
-    IdsWithTime<InplaceBuff<::sim::FILE_ID_LEN>>
-        contest_files; // TODO: replace with appropriate decltype
-    IdsWithTime<InplaceBuff<::sim::CONTEST_ENTRY_TOKEN_LEN>>
-        contest_entry_tokens; // TODO: replace with appropriate decltype
-    IdsWithTime<uintmax_t> submissions; // TODO: replace with appropriate decltype
-    IdsWithTime<uintmax_t> jobs; // TODO: replace with appropriate decltype
+    IdsWithTime<decltype(sim::contest_files::ContestFile::id)> contest_files;
+    IdsWithTime<decltype(sim::contest_entry_tokens::ContestEntryToken::token)>
+        contest_entry_tokens;
+    IdsWithTime<decltype(sim::submissions::Submission::id)> submissions;
+    IdsWithTime<decltype(sim::jobs::Job::id)> jobs;
 
     void initialize(StringView job_table_name) {
         STACK_UNWINDING_MARK;
-        using sim::JobType;
+        using sim::jobs::Job;
 
-        uintmax_t id = 0;
-        mysql::Optional<uintmax_t> creator;
-        EnumVal<JobType> type{};
-        mysql::Optional<uintmax_t> file_id;
-        mysql::Optional<uintmax_t> tmp_file_id;
+        decltype(Job::id) id = 0;
+        mysql::Optional<decltype(Job::creator)::value_type> creator;
+        EnumVal<Job::Type> type{};
+        mysql::Optional<decltype(Job::file_id)::value_type> file_id;
+        mysql::Optional<decltype(Job::tmp_file_id)::value_type> tmp_file_id;
         sim::sql_fields::Datetime added_str;
-        mysql::Optional<uintmax_t> aux_id;
+        mysql::Optional<decltype(Job::aux_id)::value_type> aux_id;
         sim::sql_fields::Blob<32> info;
 
         auto stmt = conn.prepare(
@@ -128,52 +127,54 @@ struct IdsFromJobs {
 
             // Process type-specific ids
             switch (type) {
-            case JobType::DELETE_FILE:
+            case Job::Type::DELETE_FILE:
                 // Id is already processed
                 break;
 
-            case JobType::JUDGE_SUBMISSION:
-            case JobType::REJUDGE_SUBMISSION: submissions.add_id(aux_id.value(), added); break;
+            case Job::Type::JUDGE_SUBMISSION:
+            case Job::Type::REJUDGE_SUBMISSION:
+                submissions.add_id(aux_id.value(), added);
+                break;
 
-            case JobType::DELETE_PROBLEM:
-            case JobType::REUPLOAD_PROBLEM:
-            case JobType::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            case JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-            case JobType::CHANGE_PROBLEM_STATEMENT:
+            case Job::Type::DELETE_PROBLEM:
+            case Job::Type::REUPLOAD_PROBLEM:
+            case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+            case Job::Type::CHANGE_PROBLEM_STATEMENT:
                 problems.add_id(aux_id.value(), added);
                 break;
 
-            case JobType::MERGE_PROBLEMS:
+            case Job::Type::MERGE_PROBLEMS:
                 problems.add_id(aux_id.value(), added);
                 problems.add_id(sim::jobs::MergeProblemsInfo(info).target_problem_id, added);
                 break;
 
-            case JobType::DELETE_USER: users.add_id(aux_id.value(), added); break;
+            case Job::Type::DELETE_USER: users.add_id(aux_id.value(), added); break;
 
-            case JobType::MERGE_USERS:
+            case Job::Type::MERGE_USERS:
                 users.add_id(aux_id.value(), added);
                 users.add_id(sim::jobs::MergeUsersInfo(info).target_user_id, added);
                 break;
 
-            case JobType::DELETE_CONTEST: contests.add_id(aux_id.value(), added); break;
+            case Job::Type::DELETE_CONTEST: contests.add_id(aux_id.value(), added); break;
 
-            case JobType::DELETE_CONTEST_ROUND:
+            case Job::Type::DELETE_CONTEST_ROUND:
                 contest_rounds.add_id(aux_id.value(), added);
                 break;
 
-            case JobType::DELETE_CONTEST_PROBLEM:
-            case JobType::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+            case Job::Type::DELETE_CONTEST_PROBLEM:
+            case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
                 contest_problems.add_id(aux_id.value(), added);
                 break;
 
-            case JobType::ADD_PROBLEM:
-            case JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            case Job::Type::ADD_PROBLEM:
+            case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
                 if (aux_id.has_value()) {
                     problems.add_id(aux_id.value(), added);
                 }
                 break;
 
-            case JobType::EDIT_PROBLEM: THROW("TODO");
+            case Job::Type::EDIT_PROBLEM: THROW("TODO");
             }
         }
     }

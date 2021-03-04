@@ -1,6 +1,5 @@
 #pragma once
 
-#include "sim/constants.hh"
 #include "sim/contests/contest.hh"
 #include "sim/sql_fields/datetime.hh"
 #include "simlib/defer.hh"
@@ -52,7 +51,7 @@ public:
         ProgressBar progress_bar("Contests saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::contests::Contest& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(x.id, x.name, x.is_public);
         }
 

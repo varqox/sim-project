@@ -1,9 +1,8 @@
 #include "src/job_server/job_handlers/delete_contest.hh"
-#include "sim/constants.hh"
+#include "sim/jobs/job.hh"
 #include "src/job_server/main.hh"
 
-using sim::JobStatus;
-using sim::JobType;
+using sim::jobs::Job;
 
 namespace job_server::job_handlers {
 
@@ -32,8 +31,8 @@ void DeleteContest::run() {
                  " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM submissions WHERE contest_id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), mysql_date(), contest_id_);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), mysql_date(), contest_id_);
 
     // Add jobs to delete contest files
     mysql
@@ -42,8 +41,8 @@ void DeleteContest::run() {
                  " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM contest_files WHERE contest_id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), mysql_date(), contest_id_);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), mysql_date(), contest_id_);
 
     // Delete contest (all necessary actions will take place thanks to foreign
     // key constrains)

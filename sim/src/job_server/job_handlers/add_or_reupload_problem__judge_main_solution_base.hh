@@ -10,7 +10,7 @@ class AddOrReuploadProblemJudgeModelSolutionBase
 , public AddOrReuploadProblemBase {
 protected:
     AddOrReuploadProblemJudgeModelSolutionBase(
-        uint64_t job_id, sim::JobType job_type, StringView job_creator,
+        uint64_t job_id, sim::jobs::Job::Type job_type, StringView job_creator,
         const sim::jobs::AddProblemInfo& info, uint64_t job_file_id,
         std::optional<uint64_t> tmp_file_id, std::optional<uint64_t> problem_id)
     : JobHandler(job_id)

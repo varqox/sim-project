@@ -1,12 +1,10 @@
-#include "sim/jobs/jobs.hh"
-#include "sim/constants.hh"
+#include "sim/jobs/utils.hh"
 #include "sim/problems/permissions.hh"
 #include "src/web_server/old/sim.hh"
 
-using sim::JobStatus;
-using sim::JobType;
-using sim::SubmissionType;
+using sim::jobs::Job;
 using sim::problems::Problem;
+using sim::submissions::Submission;
 using sim::users::User;
 using std::optional;
 using std::string;
@@ -31,11 +29,12 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 }
 
 Sim::JobPermissions Sim::jobs_get_permissions(
-    std::optional<StringView> creator_id, JobType job_type, JobStatus job_status) noexcept {
+    std::optional<StringView> creator_id, Job::Type job_type,
+    Job::Status job_status) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
-    using JT = JobType;
-    using JS = JobStatus;
+    using JT = Job::Type;
+    using JS = Job::Status;
 
     JobPermissions overall_perms = jobs_get_overall_permissions();
 
@@ -142,7 +141,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
                               "WHERE s.id=?");
     stmt.bind_and_execute(session_user_id, submission_id);
 
-    EnumVal<SubmissionType> stype{};
+    EnumVal<Submission::Type> stype{};
     mysql::Optional<decltype(Problem::owner)::value_type> problem_owner;
     decltype(Problem::type) problem_type;
     mysql::Optional<decltype(sim::contest_users::ContestUser::mode)> cu_mode;

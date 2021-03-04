@@ -1,16 +1,15 @@
 #include "src/job_server/job_handlers/add_or_reupload_problem_base.hh"
-#include "sim/constants.hh"
+#include "sim/jobs/job.hh"
+#include "sim/judging_config.hh"
 #include "sim/problems/problem.hh"
+#include "sim/submissions/submission.hh"
 #include "simlib/libzip.hh"
 #include "simlib/sim/problem_package.hh"
 #include "src/job_server/main.hh"
 
-using sim::JobStatus;
-using sim::JobType;
-using sim::SubmissionLanguage;
-using sim::SubmissionStatus;
-using sim::SubmissionType;
+using sim::jobs::Job;
 using sim::problems::Problem;
+using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
@@ -42,7 +41,7 @@ void AddOrReuploadProblemBase::build_package() {
 
     replace_db_job_log_ = true;
 
-    auto source_package = sim::internal_file_path(job_file_id_);
+    auto source_package = sim::internal_files::path_of(job_file_id_);
 
     mysql.update("INSERT INTO internal_files VALUES()");
     tmp_file_id_ = mysql.insert_id();
@@ -95,7 +94,7 @@ void AddOrReuploadProblemBase::build_package() {
     // Update job record
     mysql.prepare("UPDATE jobs SET tmp_file_id=? WHERE id=?")
         .bind_and_execute(tmp_file_id_.value(), job_id_);
-    auto tmp_package = sim::internal_file_path(tmp_file_id_.value());
+    auto tmp_package = sim::internal_files::path_of(tmp_file_id_.value());
     // Copy source_package to tmp_package, substituting Simfile in the fly
     {
         ZipFile src_zip(source_package, ZIP_RDONLY);
@@ -132,15 +131,17 @@ void AddOrReuploadProblemBase::job_done(bool& job_was_canceled) {
         return;
     }
 
-    EnumVal<JobStatus> status = JobStatus::DONE;
-    EnumVal<JobType> type = job_type_;
+    EnumVal<Job::Status> status = Job::Status::DONE;
+    EnumVal<Job::Type> type = job_type_;
     if (need_main_solution_judge_report_) {
-        status = JobStatus::PENDING;
+        status = Job::Status::PENDING;
         switch (job_type_) {
-        case JobType::ADD_PROBLEM: type = JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION; break;
+        case Job::Type::ADD_PROBLEM:
+            type = Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION;
+            break;
 
-        case JobType::REUPLOAD_PROBLEM:
-            type = JobType::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION;
+        case Job::Type::REUPLOAD_PROBLEM:
+            type = Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION;
             break;
 
         default: THROW("Unexpected job type");
@@ -148,17 +149,17 @@ void AddOrReuploadProblemBase::job_done(bool& job_was_canceled) {
 
     } else {
         switch (job_type_) {
-        case JobType::ADD_PROBLEM:
-        case JobType::REUPLOAD_PROBLEM: break;
+        case Job::Type::ADD_PROBLEM:
+        case Job::Type::REUPLOAD_PROBLEM: break;
 
-        case JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            status = JobStatus::PENDING;
-            type = JobType::ADD_PROBLEM;
+        case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            status = Job::Status::PENDING;
+            type = Job::Type::ADD_PROBLEM;
             break;
 
-        case JobType::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            status = JobStatus::PENDING;
-            type = JobType::REUPLOAD_PROBLEM;
+        case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            status = Job::Status::PENDING;
+            type = Job::Type::REUPLOAD_PROBLEM;
             break;
 
         default: THROW("Unexpected job type");
@@ -170,21 +171,21 @@ void AddOrReuploadProblemBase::job_done(bool& job_was_canceled) {
                               " status=?, aux_id=?, info=?, data=? "
                               "WHERE id=? AND status!=?");
     stmt.bind_and_execute(
-        tmp_file_id_, type, priority(type), status, problem_id_, info_.dump(), get_log(),
-        job_id_, EnumVal(JobStatus::CANCELED));
+        tmp_file_id_, type, default_priority(type), status, problem_id_, info_.dump(),
+        get_log(), job_id_, EnumVal(Job::Status::CANCELED));
     job_was_canceled = (stmt.affected_rows() == 0);
 }
 
-static SubmissionLanguage filename_to_lang(StringView extension) {
+static Submission::Language filename_to_lang(StringView extension) {
     STACK_UNWINDING_MARK;
 
     auto lang = sim::filename_to_lang(extension);
     switch (lang) {
-    case sim::SolutionLanguage::C11: return SubmissionLanguage::C11;
-    case sim::SolutionLanguage::CPP11: return SubmissionLanguage::CPP11;
-    case sim::SolutionLanguage::CPP14: return SubmissionLanguage::CPP14;
-    case sim::SolutionLanguage::CPP17: return SubmissionLanguage::CPP17;
-    case sim::SolutionLanguage::PASCAL: return SubmissionLanguage::PASCAL;
+    case sim::SolutionLanguage::C11: return Submission::Language::C11;
+    case sim::SolutionLanguage::CPP11: return Submission::Language::CPP11;
+    case sim::SolutionLanguage::CPP14: return Submission::Language::CPP14;
+    case sim::SolutionLanguage::CPP17: return Submission::Language::CPP17;
+    case sim::SolutionLanguage::PASCAL: return Submission::Language::PASCAL;
     case sim::SolutionLanguage::UNKNOWN: THROW("Not supported language");
     }
 
@@ -199,7 +200,7 @@ void AddOrReuploadProblemBase::open_package() {
 
     assert_transaction_is_open();
 
-    zip_ = ZipFile(sim::internal_file_path(tmp_file_id_.value()), ZIP_RDONLY);
+    zip_ = ZipFile(sim::internal_files::path_of(tmp_file_id_.value()), ZIP_RDONLY);
     main_dir_ = sim::zip_package_main_dir(zip_);
     simfile_str_ = zip_.extract_to_str(zip_.get_index(concat(main_dir_, "Simfile")));
 
@@ -245,8 +246,8 @@ void AddOrReuploadProblemBase::replace_problem_in_db() {
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                  "FROM problems WHERE id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), current_date_, problem_id_.value());
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), current_date_, problem_id_.value());
 
     // Update problem
     auto stmt = mysql.prepare("UPDATE problems "
@@ -267,15 +268,15 @@ void AddOrReuploadProblemBase::replace_problem_in_db() {
                  "FROM submissions "
                  "WHERE problem_id=? AND type=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), current_date_, problem_id_,
-            EnumVal(SubmissionType::PROBLEM_SOLUTION));
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), current_date_, problem_id_,
+            EnumVal(Submission::Type::PROBLEM_SOLUTION));
 
     // Delete old solution submissions
     mysql
         .prepare("DELETE FROM submissions "
                  "WHERE problem_id=? AND type=?")
-        .bind_and_execute(problem_id_, EnumVal(SubmissionType::PROBLEM_SOLUTION));
+        .bind_and_execute(problem_id_, EnumVal(Submission::Type::PROBLEM_SOLUTION));
 }
 
 void AddOrReuploadProblemBase::submit_solutions() {
@@ -302,15 +303,15 @@ void AddOrReuploadProblemBase::submit_solutions() {
 
         file_inserter.execute();
         uint64_t file_id = file_inserter.insert_id();
-        EnumVal<SubmissionLanguage> lang = filename_to_lang(solution);
+        EnumVal<Submission::Language> lang = filename_to_lang(solution);
         submission_inserter.bind_and_execute(
-            file_id, problem_id_, EnumVal(SubmissionType::PROBLEM_SOLUTION), lang,
-            EnumVal(SubmissionStatus::PENDING), EnumVal(SubmissionStatus::PENDING),
+            file_id, problem_id_, EnumVal(Submission::Type::PROBLEM_SOLUTION), lang,
+            EnumVal(Submission::Status::PENDING), EnumVal(Submission::Status::PENDING),
             current_date_, zero_date);
 
         // Save the submission source code
         zip_.extract_to_file(
-            zip_.get_index(concat(main_dir_, solution)), sim::internal_file_path(file_id),
+            zip_.get_index(concat(main_dir_, solution)), sim::internal_files::path_of(file_id),
             S_0600);
     }
 
@@ -323,11 +324,12 @@ void AddOrReuploadProblemBase::submit_solutions() {
                  "WHERE problem_id=? AND type=? ORDER BY id")
         // Problem's solutions are more important than the ordinary submissions
         .bind_and_execute(
-            EnumVal(JobType::JUDGE_SUBMISSION), priority(JobType::JUDGE_SUBMISSION) + 1,
-            EnumVal(JobStatus::PENDING), current_date_,
+            EnumVal(Job::Type::JUDGE_SUBMISSION),
+            default_priority(Job::Type::JUDGE_SUBMISSION) + 1, EnumVal(Job::Status::PENDING),
+            current_date_,
             sim::jobs::dump_string(
                 intentional_unsafe_string_view(to_string(problem_id_.value()))),
-            problem_id_.value(), EnumVal(SubmissionType::PROBLEM_SOLUTION));
+            problem_id_.value(), EnumVal(Submission::Type::PROBLEM_SOLUTION));
 
     job_log("Done.");
 }

@@ -1,4 +1,4 @@
-#include "sim/jobs/jobs.hh"
+#include "sim/jobs/utils.hh"
 
 #include <gtest/gtest.h>
 

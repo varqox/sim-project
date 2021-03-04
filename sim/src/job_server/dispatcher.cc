@@ -1,4 +1,4 @@
-#include "sim/constants.hh"
+#include "sim/jobs/job.hh"
 #include "src/job_server/job_handlers/add_problem.hh"
 #include "src/job_server/job_handlers/add_problem__judge_main_solution.hh"
 #include "src/job_server/job_handlers/change_problem_statement.hh"
@@ -20,13 +20,12 @@
 
 #include <thread>
 
-using sim::JobStatus;
-using sim::JobType;
+using sim::jobs::Job;
 
 namespace job_server {
 
 void job_dispatcher(
-    uint64_t job_id, JobType jtype, std::optional<uint64_t> file_id,
+    uint64_t job_id, Job::Type jtype, std::optional<uint64_t> file_id,
     std::optional<uint64_t> tmp_file_id, std::optional<StringView> creator,
     std::optional<uint64_t> aux_id, StringView info, StringView added) {
     STACK_UNWINDING_MARK;
@@ -34,7 +33,7 @@ void job_dispatcher(
     std::unique_ptr<job_handlers::JobHandler> job_handler;
     try {
         using namespace job_handlers; // NOLINT(google-build-using-namespace)
-        using JT = JobType;
+        using JT = Job::Type;
 
         switch (jtype) {
         case JT::ADD_PROBLEM:
@@ -51,7 +50,7 @@ void job_dispatcher(
             // TODO: implement it (editing Simfile for now)
             std::this_thread::sleep_for(std::chrono::seconds(1));
             mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-                .bind_and_execute(EnumVal(JobStatus::CANCELED), job_id);
+                .bind_and_execute(EnumVal(Job::Status::CANCELED), job_id);
             return;
 
         case JT::DELETE_PROBLEM:
@@ -123,7 +122,8 @@ void job_dispatcher(
         job_handler->run();
         if (job_handler->failed()) {
             mysql.prepare("UPDATE jobs SET status=?, data=? WHERE id=?")
-                .bind_and_execute(EnumVal(JobStatus::FAILED), job_handler->get_log(), job_id);
+                .bind_and_execute(
+                    EnumVal(Job::Status::FAILED), job_handler->get_log(), job_id);
         }
 
     } catch (const std::exception& e) {
@@ -137,19 +137,20 @@ void job_dispatcher(
                           "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM jobs"
                           " WHERE id=? AND tmp_file_id IS NOT NULL");
         stmt.bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), mysql_date(), job_id);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), mysql_date(), job_id);
 
         // Fail job
         stmt = mysql.prepare("UPDATE jobs SET tmp_file_id=NULL, status=?, data=? "
                              "WHERE id=?");
         if (job_handler) {
             stmt.bind_and_execute(
-                EnumVal(JobStatus::FAILED),
+                EnumVal(Job::Status::FAILED),
                 concat(job_handler->get_log(), "\nCaught exception: ", e.what()), job_id);
         } else {
             stmt.bind_and_execute(
-                EnumVal(JobStatus::FAILED), concat("\nCaught exception: ", e.what()), job_id);
+                EnumVal(Job::Status::FAILED), concat("\nCaught exception: ", e.what()),
+                job_id);
         }
 
         transaction.commit();

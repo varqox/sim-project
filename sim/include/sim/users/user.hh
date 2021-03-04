@@ -15,8 +15,8 @@ struct User {
     sql_fields::Varchar<60> first_name;
     sql_fields::Varchar<60> last_name;
     sql_fields::Varchar<60> email;
-    sql_fields::Varchar<64> salt;
-    sql_fields::Varchar<128> password;
+    sql_fields::Varchar<64> password_salt;
+    sql_fields::Varchar<128> password_hash;
     EnumVal<Type> type;
 };
 

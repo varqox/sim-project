@@ -1,4 +1,3 @@
-#include "sim/constants.hh"
 #include "sim/is_username.hh"
 #include "sim/users/user.hh"
 #include "simlib/random.hh"
@@ -119,17 +118,17 @@ bool Sim::check_submitted_password(StringView password_field_name) {
         return false;
     }
 
-    auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
+    auto stmt = mysql.prepare("SELECT password_salt, password_hash FROM users WHERE id=?");
     stmt.bind_and_execute(session_user_id);
 
-    decltype(User::salt) salt;
-    decltype(User::password) passwd_hash;
-    stmt.res_bind_all(salt, passwd_hash);
+    decltype(User::password_salt) password_salt;
+    decltype(User::password_hash) passwd_hash;
+    stmt.res_bind_all(password_salt, passwd_hash);
     throw_assert(stmt.next());
 
     return slow_equal(
         intentional_unsafe_string_view(sha3_512(intentional_unsafe_string_view(
-            concat(salt, request.form_fields.get_or(password_field_name, ""))))),
+            concat(password_salt, request.form_fields.get_or(password_field_name, ""))))),
         passwd_hash);
 }
 
@@ -154,19 +153,20 @@ void Sim::login() {
         if (not notifications.size) {
             STACK_UNWINDING_MARK;
 
-            auto stmt = mysql.prepare("SELECT id, salt, password FROM users WHERE username=?");
+            auto stmt = mysql.prepare(
+                "SELECT id, password_salt, password_hash FROM users WHERE username=?");
             stmt.bind_and_execute(username);
 
             InplaceBuff<32> uid;
-            decltype(User::salt) salt;
-            decltype(User::password) passwd_hash;
-            stmt.res_bind_all(uid, salt, passwd_hash);
+            decltype(User::password_salt) password_salt;
+            decltype(User::password_hash) password_hash;
+            stmt.res_bind_all(uid, password_salt, password_hash);
 
             if (stmt.next() and
                 slow_equal(
-                    intentional_unsafe_string_view(
-                        sha3_512(intentional_unsafe_string_view(concat(salt, password)))),
-                    passwd_hash))
+                    intentional_unsafe_string_view(sha3_512(
+                        intentional_unsafe_string_view(concat(password_salt, password)))),
+                    password_hash))
             {
                 // Delete old session
                 if (session_is_open) {
@@ -258,19 +258,19 @@ void Sim::sign_up() {
         if (not notifications.size) {
             STACK_UNWINDING_MARK;
 
-            static_assert(decltype(User::salt)::max_len % 2 == 0);
-            array<char, (decltype(User::salt)::max_len >> 1)> salt_bin{};
+            static_assert(decltype(User::password_salt)::max_len % 2 == 0);
+            array<char, (decltype(User::password_salt)::max_len >> 1)> salt_bin{};
             fill_randomly(salt_bin.data(), salt_bin.size());
-            auto salt = to_hex({salt_bin.data(), salt_bin.size()});
+            auto password_salt = to_hex({salt_bin.data(), salt_bin.size()});
 
             auto stmt = mysql.prepare("INSERT IGNORE `users` (username,"
-                                      " first_name, last_name, email, salt,"
-                                      " password) "
+                                      " first_name, last_name, email, password_salt,"
+                                      " password_hash) "
                                       "VALUES(?, ?, ?, ?, ?, ?)");
 
             stmt.bind_and_execute(
-                username, first_name, last_name, email, salt,
-                sha3_512(intentional_unsafe_string_view(concat(salt, pass1))));
+                username, first_name, last_name, email, password_salt,
+                sha3_512(intentional_unsafe_string_view(concat(password_salt, pass1))));
 
             // User account successfully created
             if (stmt.affected_rows() == 1) {

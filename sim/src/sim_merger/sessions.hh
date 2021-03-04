@@ -71,7 +71,7 @@ public:
         ProgressBar progress_bar("Sessions saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::sessions::Session& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.csrf_token, x.user_id, x.data, x.ip, x.user_agent, x.expires);
         }
@@ -80,7 +80,7 @@ public:
     }
 
     SessionsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs, const UsersMerger& users)
-    : Merger("session", ids_from_both_jobs.main.sessions, ids_from_both_jobs.other.sessions)
+    : Merger("sessions", ids_from_both_jobs.main.sessions, ids_from_both_jobs.other.sessions)
     , users_(users) {
         STACK_UNWINDING_MARK;
         initialize();

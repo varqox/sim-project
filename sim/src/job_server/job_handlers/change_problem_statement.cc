@@ -1,11 +1,9 @@
 #include "src/job_server/job_handlers/change_problem_statement.hh"
-#include "sim/constants.hh"
 #include "simlib/path.hh"
 #include "simlib/sim/problem_package.hh"
 #include "src/job_server/main.hh"
 
-using sim::JobStatus;
-using sim::JobType;
+using sim::jobs::Job;
 
 namespace job_server::job_handlers {
 
@@ -30,11 +28,11 @@ void ChangeProblemStatement::run() {
         simfile.load_all();
     }
 
-    auto pkg_path = sim::internal_file_path(problem_file_id);
+    auto pkg_path = sim::internal_files::path_of(problem_file_id);
 
     mysql.update("INSERT INTO internal_files VALUES()");
     uint64_t new_file_id = mysql.insert_id();
-    auto new_pkg_path = sim::internal_file_path(new_file_id);
+    auto new_pkg_path = sim::internal_files::path_of(new_file_id);
 
     // Replace old statement with new statement
 
@@ -72,7 +70,7 @@ void ChangeProblemStatement::run() {
 
     // Add new statement file entry
     dest_zip.file_add(
-        new_statement_path, dest_zip.source_file(sim::internal_file_path(job_file_id_)));
+        new_statement_path, dest_zip.source_file(sim::internal_files::path_of(job_file_id_)));
 
     dest_zip.close(); // Write all data to the dest_zip
 
@@ -84,8 +82,8 @@ void ChangeProblemStatement::run() {
                  " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems"
                  " WHERE id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), current_date, problem_id_);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), current_date, problem_id_);
 
     // Use new package as problem file
     mysql

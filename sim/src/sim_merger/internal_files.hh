@@ -1,42 +1,33 @@
 #pragma once
 
+#include "sim/internal_files/internal_file.hh"
 #include "simlib/defer.hh"
+#include "simlib/file_info.hh"
 #include "simlib/file_manip.hh"
 #include "simlib/time.hh"
 #include "src/sim_merger/merger.hh"
 
 namespace sim_merger {
 
-static std::chrono::system_clock::time_point file_mtime(FilePath path) {
-    struct stat st {};
-    if (stat(path, &st)) {
-        THROW("stat()", errmsg());
-    }
-
-    return std::chrono::system_clock::time_point(to_duration(st.st_mtim));
-}
-
-struct InternalFile {
-    uintmax_t id;
-};
-
-class InternalFilesMerger : public Merger<InternalFile> {
+class InternalFilesMerger : public Merger<sim::internal_files::InternalFile> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
-        InternalFile file{};
+        sim::internal_files::InternalFile file{};
         auto stmt = conn.prepare("SELECT id FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(file.id);
         while (stmt.next()) {
-            auto mtime =
-                file_mtime(concat(record_set.sim_build(), "internal_files/", file.id));
+            auto mtime = get_modification_time(
+                concat(record_set.sim_build(), "internal_files/", file.id));
             record_set.add_record(file, mtime);
         }
     }
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const InternalFile& /*unused*/) -> NewRecord* { return nullptr; });
+        Merger::merge([&](const sim::internal_files::InternalFile& /*unused*/) -> NewRecord* {
+            return nullptr;
+        });
     }
 
     static auto internal_files_backup_path() {
@@ -89,13 +80,13 @@ public:
             THROW("mkdir()", errmsg());
         }
 
-        decltype(InternalFile::id) id = 0;
+        decltype(sim::internal_files::InternalFile::id) id = 0;
         stmt.bind_all(id);
 
         ProgressBar progress_bar("Internal files saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const InternalFile& x = new_record.data;
+            const auto& x = new_record.data;
             id = x.id;
             stmt.execute();
 
@@ -144,7 +135,7 @@ public:
         initialize();
     }
 
-    auto path_to_file(uintmax_t new_id) const {
+    auto path_to_file(decltype(sim::internal_files::InternalFile::id) new_id) const {
         STACK_UNWINDING_MARK;
         if (new_table_.empty()) {
             THROW("Invalid new_id");

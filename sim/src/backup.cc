@@ -1,4 +1,4 @@
-#include "sim/constants.hh"
+#include "sim/jobs/job.hh"
 #include "sim/mysql/mysql.hh"
 #include "simlib/concat_tostr.hh"
 #include "simlib/debug.hh"
@@ -13,7 +13,7 @@
 
 #include <chrono>
 
-using sim::JobStatus;
+using sim::jobs::Job;
 using std::string;
 using std::vector;
 
@@ -51,8 +51,8 @@ int main2(int argc, char** argv) {
     write_all_throw(
         fd,
         intentional_unsafe_string_view(concat(
-            "[client]\nuser=", conn.impl()->user, "\npassword=", conn.impl()->passwd,
-            "\nuser=", conn.impl()->user, "\n")));
+            "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd,
+            "\"\n")));
 
     auto run_command = [](vector<string> args) {
         auto es = Spawner::run(args[0], args);
@@ -73,15 +73,15 @@ int main2(int argc, char** argv) {
         auto stmt = conn.prepare("SELECT tmp_file_id FROM jobs "
                                  "WHERE tmp_file_id IS NOT NULL AND status IN (?,?,?)");
         stmt.bind_and_execute(
-            EnumVal(JobStatus::DONE), EnumVal(JobStatus::FAILED),
-            EnumVal(JobStatus::CANCELED));
+            EnumVal(Job::Status::DONE), EnumVal(Job::Status::FAILED),
+            EnumVal(Job::Status::CANCELED));
         uint64_t tmp_file_id = 0;
         stmt.res_bind_all(tmp_file_id);
 
         auto deleter = conn.prepare("DELETE FROM internal_files WHERE id=?");
         // Remove jobs temporary internal files
         while (stmt.next()) {
-            auto file_path = sim::internal_file_path(tmp_file_id);
+            auto file_path = sim::internal_files::path_of(tmp_file_id);
             if (access(file_path, F_OK) == 0 and
                 system_clock::now() - get_modification_time(file_path) > 2h)
             {
@@ -92,7 +92,7 @@ int main2(int argc, char** argv) {
 
         // Remove internal files that do not have an entry in internal_files
         sim::PackageContents fc;
-        fc.load_from_directory(sim::INTERNAL_FILES_DIR);
+        fc.load_from_directory(sim::internal_files::dir);
         std::set<std::string, std::less<>> orphaned_files;
         fc.for_each_with_prefix(
             "", [&](StringView file) { orphaned_files.emplace(file.to_string()); });
@@ -109,7 +109,7 @@ int main2(int argc, char** argv) {
         // that are just created but not committed)
         for (const std::string& file : orphaned_files) {
             struct stat64 st {};
-            auto file_path = concat(sim::INTERNAL_FILES_DIR, file);
+            auto file_path = concat(sim::internal_files::dir, file);
             if (stat64(file_path.to_cstr().data(), &st)) {
                 if (errno == ENOENT) {
                     break;

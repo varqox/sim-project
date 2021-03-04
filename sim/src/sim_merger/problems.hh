@@ -1,6 +1,5 @@
 #pragma once
 
-#include "sim/constants.hh"
 #include "sim/problems/problem.hh"
 #include "simlib/concat.hh"
 #include "simlib/libzip.hh"
@@ -36,7 +35,8 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
     const UsersMerger& users_;
     bool reset_new_problems_time_limits_;
 
-    std::map<uintmax_t, uintmax_t> to_merge_; // (new problem id, new target problem id)
+    std::map<decltype(sim::problems::Problem::id), decltype(sim::problems::Problem::id)>
+        to_merge_; // (new problem id, new target problem id)
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
@@ -84,7 +84,9 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
             dsu[find(src_idx)] = find(target_idx);
         };
 
-        std::map<std::invoke_result_t<decltype(package_fingerprint), FilePath>, uintmax_t>
+        std::map<
+            std::invoke_result_t<decltype(package_fingerprint), FilePath>,
+            decltype(sim::problems::Problem::id)>
             pkg_fingerprint_to_problem_idx;
         for (size_t idx = 0; idx < new_table_.size(); ++idx) {
             dsu.emplace(idx, idx);
@@ -136,7 +138,7 @@ public:
         ProgressBar progress_bar("Problems saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
-            const sim::problems::Problem& x = new_record.data;
+            const auto& x = new_record.data;
             stmt.bind_and_execute(
                 x.id, x.file_id, x.type, x.name, x.label, x.simfile, x.owner, x.added,
                 x.last_edit);
@@ -167,8 +169,9 @@ public:
             conn.prepare("INSERT jobs (creator, status, priority, type, added,"
                          " aux_id, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
                 .bind_and_execute(
-                    EnumVal(sim::JobStatus::PENDING), priority(sim::JobType::MERGE_PROBLEMS),
-                    EnumVal(sim::JobType::MERGE_PROBLEMS), mysql_date(), src_id,
+                    EnumVal(sim::jobs::Job::Status::PENDING),
+                    default_priority(sim::jobs::Job::Type::MERGE_PROBLEMS),
+                    EnumVal(sim::jobs::Job::Type::MERGE_PROBLEMS), mysql_date(), src_id,
                     sim::jobs::MergeProblemsInfo(dest_id, false).dump());
         }
 
@@ -185,14 +188,16 @@ public:
     }
 
 private:
-    static void schedule_reseting_problem_time_limits(uintmax_t problem_new_id) {
+    static void schedule_reseting_problem_time_limits(
+        decltype(sim::problems::Problem::id) problem_new_id) {
         conn.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
                      " info, data) "
                      "VALUES(NULL, ?, ?, ?, ?, ?, '', '')")
             .bind_and_execute(
-                EnumVal(sim::JobStatus::PENDING),
-                priority(sim::JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-                EnumVal(sim::JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+                EnumVal(sim::jobs::Job::Status::PENDING),
+                default_priority(
+                    sim::jobs::Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+                EnumVal(sim::jobs::Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
                 mysql_date(), problem_new_id);
     }
 };

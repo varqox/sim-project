@@ -1,11 +1,11 @@
 #pragma once
 
-#include "sim/constants.hh"
+#include "sim/jobs/job.hh"
 #include "sim/problems/problem.hh"
+#include "sim/users/user.hh"
 #include "simlib/mysql/mysql.hh"
 
 #include <utility>
-#include <utime.h>
 
 namespace sim::jobs {
 
@@ -163,12 +163,15 @@ struct AddProblemInfo {
 };
 
 struct MergeProblemsInfo {
-    uint64_t target_problem_id{};
+    decltype(sim::problems::Problem::id) target_problem_id{};
+    static_assert(
+        sizeof(target_problem_id) == 8,
+        "Changing size needs updating column info in jobs table");
     bool rejudge_transferred_submissions{};
 
     MergeProblemsInfo() = default;
 
-    MergeProblemsInfo(uint64_t tpid, bool rts) noexcept
+    MergeProblemsInfo(decltype(sim::problems::Problem::id) tpid, bool rts) noexcept
     : target_problem_id(tpid)
     , rejudge_transferred_submissions(rts) {}
 
@@ -201,11 +204,13 @@ struct ChangeProblemStatementInfo {
 };
 
 struct MergeUsersInfo {
-    uint64_t target_user_id{};
+    decltype(sim::users::User::id) target_user_id{};
+    static_assert(
+        sizeof(target_user_id) == 8, "Changing size needs updating column info in jobs table");
 
     MergeUsersInfo() = default;
 
-    explicit MergeUsersInfo(uint64_t target_uid) noexcept
+    explicit MergeUsersInfo(decltype(sim::users::User::id) target_uid) noexcept
     : target_user_id(target_uid) {}
 
     explicit MergeUsersInfo(StringView str) { extract_dumped(target_user_id, str); }
@@ -218,12 +223,12 @@ struct MergeUsersInfo {
 };
 
 void restart_job(
-    mysql::Connection& mysql, StringView job_id, JobType job_type, StringView job_info,
+    mysql::Connection& mysql, StringView job_id, Job::Type job_type, StringView job_info,
     bool notify_job_server);
 
 void restart_job(mysql::Connection& mysql, StringView job_id, bool notify_job_server);
 
 // Notifies the Job server that there are jobs to do
-inline void notify_job_server() noexcept { utime(JOB_SERVER_NOTIFYING_FILE, nullptr); }
+void notify_job_server() noexcept;
 
 } // namespace sim::jobs

@@ -1,11 +1,10 @@
 #include "src/job_server/job_handlers/reset_problem_time_limits.hh"
-#include "sim/constants.hh"
+#include "sim/jobs/job.hh"
 #include "simlib/sim/problem_package.hh"
 #include "src/job_server/main.hh"
 
-using sim::internal_file_path;
-using sim::JobStatus;
-using sim::JobType;
+using sim::internal_files::path_of;
+using sim::jobs::Job;
 
 namespace job_server::job_handlers {
 
@@ -22,7 +21,7 @@ void ResetProblemTimeLimits::run() {
         }
     }
 
-    auto pkg_path = internal_file_path(problem_file_id);
+    auto pkg_path = sim::internal_files::path_of(problem_file_id);
     reset_package_time_limits(pkg_path);
     if (failed()) {
         return;
@@ -32,7 +31,7 @@ void ResetProblemTimeLimits::run() {
 
     mysql.update("INSERT INTO internal_files VALUES()");
     uint64_t new_file_id = mysql.insert_id();
-    auto new_pkg_path = internal_file_path(new_file_id);
+    auto new_pkg_path = sim::internal_files::path_of(new_file_id);
 
     // Save Simfile to new package file
 
@@ -62,8 +61,8 @@ void ResetProblemTimeLimits::run() {
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems "
                  "WHERE id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), current_date, problem_id_);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), current_date, problem_id_);
 
     // Use new package as problem file
     mysql

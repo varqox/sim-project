@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/contest_rounds/contest_round.hh"
+#include "sim/contests/contest.hh"
 #include "sim/problems/problem.hh"
 #include "sim/sql_fields/varchar.hh"
 #include "sim/web_api/enum.hh"
@@ -24,8 +26,8 @@ struct ContestProblem {
     };
 
     uint64_t id;
-    uint64_t contest_round_id;
-    uint64_t contest_id;
+    decltype(contest_rounds::ContestRound::id) contest_round_id;
+    decltype(contests::Contest::id) contest_id;
 
     constexpr static const char problem_id_var_name[] = "problem_id";
     constexpr static const char problem_id_var_descr[] = "Problem ID";

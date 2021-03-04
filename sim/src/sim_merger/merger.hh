@@ -2,6 +2,7 @@
 
 #include "src/sim_merger/ids_from_jobs.hh"
 #include "src/sim_merger/sim_merger.hh"
+#include "src/sql_tables.hh"
 
 #include <map>
 #include <type_traits>
@@ -267,8 +268,7 @@ protected:
           std::move(other_ids)} {
         STACK_UNWINDING_MARK;
 
-        static_assert(is_sorted(tables));
-        throw_assert(binary_search(tables, orig_sql_table_name));
+        assert(std::find(tables.begin(), tables.end(), orig_sql_table_name) != tables.end());
     }
 
     void initialize() {

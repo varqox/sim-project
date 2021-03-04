@@ -1,9 +1,14 @@
+#include "sim/contest_entry_tokens/contest_entry_token.hh"
 #include "sim/contest_users/contest_user.hh"
 #include "sim/contests/contest.hh"
 #include "sim/random.hh"
 #include "simlib/time.hh"
 #include "src/web_server/old/sim.hh"
 
+#include <chrono>
+#include <cstdlib>
+
+using sim::contest_entry_tokens::ContestEntryToken;
 using sim::contests::Contest;
 
 namespace web_server::old {
@@ -22,7 +27,8 @@ void Sim::api_contest_entry_token() {
     if (next_arg[0] == '=') {
         StringView token = next_arg.substr(1);
         static_assert(
-            sim::CONTEST_ENTRY_TOKEN_LEN != sim::CONTEST_ENTRY_SHORT_TOKEN_LEN,
+            decltype(ContestEntryToken::token)::max_len !=
+                decltype(ContestEntryToken::short_token)::value_type::max_len,
             "These cannot be equal because this would cause conflict "
             "in selecting the token in the below query");
         auto stmt = mysql.prepare("SELECT c.id, c.name "
@@ -94,9 +100,10 @@ void Sim::api_contest_entry_token() {
                                   "FROM contest_entry_tokens WHERE contest_id=?");
         stmt.bind_and_execute(contest_id);
 
-        InplaceBuff<sim::CONTEST_ENTRY_TOKEN_LEN> token;
-        mysql::Optional<InplaceBuff<sim::CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
-        mysql::Optional<InplaceBuff<20>> short_token_expiration;
+        decltype(ContestEntryToken::token) token;
+        mysql::Optional<decltype(ContestEntryToken::short_token)::value_type> short_token;
+        mysql::Optional<decltype(ContestEntryToken::short_token_expiration)::value_type>
+            short_token_expiration;
         stmt.res_bind_all(token, short_token, short_token_expiration);
 
         append("[{\"fields\":["
@@ -142,7 +149,7 @@ void Sim::api_contest_entry_token_add(StringView contest_id) {
                          "short_token_expiration) VALUES(?, ?, NULL, NULL)");
     std::string token;
     do {
-        token = sim::generate_random_token(sim::CONTEST_ENTRY_TOKEN_LEN);
+        token = sim::generate_random_token(decltype(ContestEntryToken::token)::max_len);
         stmt.bind_and_execute(token, contest_id);
     } while (stmt.affected_rows() == 0);
 
@@ -163,7 +170,7 @@ void Sim::api_contest_entry_token_regen(StringView contest_id) {
     stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens SET token=? WHERE contest_id=?");
     std::string new_token;
     do {
-        new_token = sim::generate_random_token(sim::CONTEST_ENTRY_TOKEN_LEN);
+        new_token = sim::generate_random_token(decltype(ContestEntryToken::token)::max_len);
         stmt.bind_and_execute(new_token, contest_id);
     } while (stmt.affected_rows() == 0);
 
@@ -200,9 +207,11 @@ void Sim::api_contest_entry_token_short_add(StringView contest_id) {
     stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens SET short_token=?, "
                          "short_token_expiration=? WHERE contest_id=?");
     std::string new_token;
-    auto exp_date = mysql_date(time(nullptr) + sim::CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME);
+    auto exp_date = mysql_date(
+        std::chrono::system_clock::now() + ContestEntryToken::short_token_max_lifetime);
     do {
-        new_token = sim::generate_random_token(sim::CONTEST_ENTRY_SHORT_TOKEN_LEN);
+        new_token = sim::generate_random_token(
+            decltype(ContestEntryToken::short_token)::value_type::max_len);
         stmt.bind_and_execute(new_token, exp_date, contest_id);
     } while (stmt.affected_rows() == 0);
 
@@ -232,9 +241,11 @@ void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
     stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens SET short_token=?, "
                          "short_token_expiration=? WHERE contest_id=?");
     std::string new_token;
-    auto exp_date = mysql_date(time(nullptr) + sim::CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME);
+    auto exp_date = mysql_date(
+        std::chrono::system_clock::now() + ContestEntryToken::short_token_max_lifetime);
     do {
-        new_token = sim::generate_random_token(sim::CONTEST_ENTRY_SHORT_TOKEN_LEN);
+        new_token = sim::generate_random_token(
+            decltype(ContestEntryToken::short_token)::value_type::max_len);
         stmt.bind_and_execute(new_token, exp_date, contest_id);
     } while (stmt.affected_rows() == 0);
 
@@ -249,7 +260,8 @@ void Sim::api_contest_entry_token_short_delete(StringView contest_id) {
     stmt.bind_and_execute(contest_id);
 }
 
-void Sim::api_contest_entry_token_use_to_enter_contest(uintmax_t contest_id) {
+void Sim::api_contest_entry_token_use_to_enter_contest(
+    decltype(sim::contest_entry_tokens::ContestEntryToken::contest_id) contest_id) {
     STACK_UNWINDING_MARK;
 
     auto stmt = mysql.prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "

@@ -182,7 +182,7 @@ void Sim::api_contest_users() {
     };
 
     // Process restrictions
-    auto rows_limit = sim::API_FIRST_QUERY_ROWS_LIMIT;
+    auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
     CUP overall_perms = CUP::NONE;
     std::optional<ContestUser::Mode> cuser_mode;
     {
@@ -228,7 +228,7 @@ void Sim::api_contest_users() {
                     return api_error400("User ID condition specified more than once");
                 }
 
-                rows_limit = sim::API_OTHER_QUERY_ROWS_LIMIT;
+                rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
                 user_id_condition_occurred = true;
                 qwhere.append(" AND cu.user_id", arg);
 

@@ -1,14 +1,16 @@
-#include "sim/jobs/jobs.hh"
-#include "sim/constants.hh"
+#include "sim/jobs/utils.hh"
 #include "simlib/time.hh"
+#include "src/job_server/notify_file.hh"
+
+#include <utime.h>
 
 namespace sim::jobs {
 
 void restart_job(
-    mysql::Connection& mysql, StringView job_id, JobType job_type, StringView job_info,
+    mysql::Connection& mysql, StringView job_id, Job::Type job_type, StringView job_info,
     bool notify_job_server) {
     STACK_UNWINDING_MARK;
-    using JT = JobType;
+    using JT = Job::Type;
 
     // Restart adding / reuploading problem
     bool adding = is_one_of(job_type, JT::ADD_PROBLEM, JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION);
@@ -29,8 +31,8 @@ void restart_job(
                      "FROM jobs "
                      "WHERE id=? AND tmp_file_id IS NOT NULL")
             .bind_and_execute(
-                EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-                EnumVal(JobStatus::PENDING), mysql_date(), job_id);
+                EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+                EnumVal(Job::Status::PENDING), mysql_date(), job_id);
 
         // Restart job
         mysql
@@ -38,14 +40,14 @@ void restart_job(
                      "WHERE id=?")
             .bind_and_execute(
                 EnumVal(adding ? JT::ADD_PROBLEM : JT::REUPLOAD_PROBLEM),
-                EnumVal(JobStatus::PENDING), info.dump(), job_id);
+                EnumVal(Job::Status::PENDING), info.dump(), job_id);
 
         transaction.commit();
 
     } else {
         // Restart job of other type
         mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-            .bind_and_execute(EnumVal(JobStatus::PENDING), job_id);
+            .bind_and_execute(EnumVal(Job::Status::PENDING), job_id);
     }
 
     if (notify_job_server) {
@@ -60,8 +62,10 @@ void restart_job(mysql::Connection& mysql, StringView job_id, bool notify_job_se
     stmt.res_bind_all(jtype, jinfo);
     stmt.bind_and_execute(job_id);
     if (stmt.next()) {
-        restart_job(mysql, job_id, JobType(jtype), jinfo, notify_job_server);
+        restart_job(mysql, job_id, Job::Type(jtype), jinfo, notify_job_server);
     }
 }
+
+void notify_job_server() noexcept { utime(job_server::notify_file.data(), nullptr); }
 
 } // namespace sim::jobs

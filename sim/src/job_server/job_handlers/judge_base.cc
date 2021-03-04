@@ -1,9 +1,8 @@
 #include "src/job_server/job_handlers/judge_base.hh"
-#include "sim/constants.hh"
+#include "sim/judging_config.hh"
 #include "simlib/enum_val.hh"
 
-using sim::SubmissionLanguage;
-using sim::SubmissionStatus;
+using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
@@ -13,15 +12,15 @@ JudgeBase::JudgeBase() {
     jworker_.score_cut_lambda = sim::SCORE_CUT_LAMBDA;
 }
 
-sim::SolutionLanguage JudgeBase::to_sol_lang(SubmissionLanguage lang) {
+sim::SolutionLanguage JudgeBase::to_sol_lang(Submission::Language lang) {
     STACK_UNWINDING_MARK;
 
     switch (lang) {
-    case SubmissionLanguage::C11: return sim::SolutionLanguage::C11;
-    case SubmissionLanguage::CPP11: return sim::SolutionLanguage::CPP11;
-    case SubmissionLanguage::CPP14: return sim::SolutionLanguage::CPP14;
-    case SubmissionLanguage::CPP17: return sim::SolutionLanguage::CPP17;
-    case SubmissionLanguage::PASCAL: return sim::SolutionLanguage::PASCAL;
+    case Submission::Language::C11: return sim::SolutionLanguage::C11;
+    case Submission::Language::CPP11: return sim::SolutionLanguage::CPP11;
+    case Submission::Language::CPP14: return sim::SolutionLanguage::CPP14;
+    case Submission::Language::CPP17: return sim::SolutionLanguage::CPP17;
+    case Submission::Language::PASCAL: return sim::SolutionLanguage::PASCAL;
     }
 
     THROW("Invalid Language: ", (int)EnumVal(lang).int_val());
@@ -135,7 +134,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
     return report;
 }
 
-SubmissionStatus JudgeBase::calc_status(const sim::JudgeReport& jr) {
+Submission::Status JudgeBase::calc_status(const sim::JudgeReport& jr) {
     STACK_UNWINDING_MARK;
     using sim::JudgeReport;
 
@@ -143,7 +142,7 @@ SubmissionStatus JudgeBase::calc_status(const sim::JudgeReport& jr) {
     for (auto&& group : jr.groups) {
         for (auto&& test : group.tests) {
             if (test.status == JudgeReport::Test::CHECKER_ERROR) {
-                return SubmissionStatus::JUDGE_ERROR;
+                return Submission::Status::JUDGE_ERROR;
             }
         }
     }
@@ -153,17 +152,17 @@ SubmissionStatus JudgeBase::calc_status(const sim::JudgeReport& jr) {
             switch (test.status) {
             case JudgeReport::Test::OK:
             case JudgeReport::Test::SKIPPED: continue;
-            case JudgeReport::Test::WA: return SubmissionStatus::WA;
-            case JudgeReport::Test::TLE: return SubmissionStatus::TLE;
-            case JudgeReport::Test::MLE: return SubmissionStatus::MLE;
-            case JudgeReport::Test::RTE: return SubmissionStatus::RTE;
+            case JudgeReport::Test::WA: return Submission::Status::WA;
+            case JudgeReport::Test::TLE: return Submission::Status::TLE;
+            case JudgeReport::Test::MLE: return Submission::Status::MLE;
+            case JudgeReport::Test::RTE: return Submission::Status::RTE;
             case JudgeReport::Test::CHECKER_ERROR:
                 throw_assert(false); // This should be handled in the above loops
             }
         }
     }
 
-    return SubmissionStatus::OK;
+    return Submission::Status::OK;
 }
 
 void JudgeBase::load_problem_package(FilePath problem_pkg_path) {

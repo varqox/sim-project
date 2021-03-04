@@ -1,13 +1,12 @@
 #include "src/job_server/job_handlers/merge_problems.hh"
-#include "sim/constants.hh"
+#include "sim/submissions/submission.hh"
 #include "sim/submissions/update_final.hh"
 #include "src/job_server/main.hh"
 
 #include <deque>
 
-using sim::JobStatus;
-using sim::JobType;
-using sim::SubmissionType;
+using sim::jobs::Job;
+using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
@@ -67,8 +66,8 @@ void MergeProblems::run_impl() {
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                  "FROM problems WHERE id=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), mysql_date(), donor_problem_id_);
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), mysql_date(), donor_problem_id_);
 
     // Add jobs to delete problem solutions' files
     mysql
@@ -78,15 +77,15 @@ void MergeProblems::run_impl() {
                  "FROM submissions WHERE problem_id=? AND "
                  "type=?")
         .bind_and_execute(
-            EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-            EnumVal(JobStatus::PENDING), mysql_date(), donor_problem_id_,
-            EnumVal(SubmissionType::PROBLEM_SOLUTION));
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), mysql_date(), donor_problem_id_,
+            EnumVal(Submission::Type::PROBLEM_SOLUTION));
 
     // Delete problem solutions
     mysql
         .prepare("DELETE FROM submissions "
                  "WHERE problem_id=? AND type=?")
-        .bind_and_execute(donor_problem_id_, EnumVal(SubmissionType::PROBLEM_SOLUTION));
+        .bind_and_execute(donor_problem_id_, EnumVal(Submission::Type::PROBLEM_SOLUTION));
 
     // Collect update finals
     struct FTU {
@@ -113,8 +112,8 @@ void MergeProblems::run_impl() {
                      "SELECT NULL, ?, ?, ?, ?, id, ?, '' "
                      "FROM submissions WHERE problem_id=? ORDER BY id")
             .bind_and_execute(
-                EnumVal(JobStatus::PENDING), priority(JobType::REJUDGE_SUBMISSION),
-                EnumVal(JobType::REJUDGE_SUBMISSION), mysql_date(),
+                EnumVal(Job::Status::PENDING), default_priority(Job::Type::REJUDGE_SUBMISSION),
+                EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(),
                 sim::jobs::dump_string(
                     intentional_unsafe_string_view(to_string(info_.target_problem_id))),
                 donor_problem_id_);

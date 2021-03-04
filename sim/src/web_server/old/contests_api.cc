@@ -1,4 +1,3 @@
-#include "sim/constants.hh"
 #include "sim/contest_problems/contest_problem.hh"
 #include "sim/contest_problems/iterate.hh"
 #include "sim/contest_rounds/contest_round.hh"
@@ -9,7 +8,8 @@
 #include "sim/contests/permissions.hh"
 #include "sim/inf_datetime.hh"
 #include "sim/is_username.hh"
-#include "sim/jobs/jobs.hh"
+#include "sim/jobs/utils.hh"
+#include "sim/submissions/submission.hh"
 #include "simlib/string_view.hh"
 #include "src/web_server/http/form_validator.hh"
 #include "src/web_server/old/sim.hh"
@@ -22,14 +22,13 @@
 using sim::inf_timestamp_to_InfDatetime;
 using sim::InfDatetime;
 using sim::is_safe_inf_timestamp;
-using sim::JobStatus;
-using sim::JobType;
-using sim::SubmissionStatus;
 using sim::contest_problems::ContestProblem;
 using sim::contest_rounds::ContestRound;
 using sim::contest_users::ContestUser;
 using sim::contests::Contest;
+using sim::jobs::Job;
 using sim::problems::Problem;
+using sim::submissions::Submission;
 using sim::users::User;
 using std::map;
 using std::optional;
@@ -79,8 +78,8 @@ inline bool whether_to_show_score(
 
 inline static InplaceBuff<32> color_class_json(
     sim::contests::Permissions cperms, const InfDatetime& full_results,
-    const decltype(mysql_date())& curr_mysql_date, optional<SubmissionStatus> full_status,
-    optional<SubmissionStatus> initial_status,
+    const decltype(mysql_date())& curr_mysql_date, optional<Submission::Status> full_status,
+    optional<Submission::Status> initial_status,
     ContestProblem::ScoreRevealing score_revealing) {
 
     if (whether_to_show_full_status(cperms, full_results, curr_mysql_date, score_revealing)) {
@@ -292,7 +291,7 @@ void Sim::api_contests() {
     }
 
     // Process restrictions
-    auto rows_limit = sim::API_FIRST_QUERY_ROWS_LIMIT;
+    auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
     StringView next_arg = url_args.extract_next_arg();
     for (uint mask = 0; !next_arg.empty(); next_arg = url_args.extract_next_arg()) {
         constexpr uint ID_COND = 1;
@@ -319,7 +318,7 @@ void Sim::api_contests() {
             return api_error400();
 
         } else if (is_one_of(cond, '=', '<', '>') and ~mask & ID_COND) { // conditional
-            rows_limit = sim::API_OTHER_QUERY_ROWS_LIMIT;
+            rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
             qwhere_append("c.id", arg);
             mask |= ID_COND;
 
@@ -865,8 +864,9 @@ void Sim::api_contest_delete(StringView contest_id, sim::contests::Permissions p
                               " added, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(JobStatus::PENDING), priority(JobType::DELETE_CONTEST),
-        EnumVal(JobType::DELETE_CONTEST), mysql_date(), contest_id);
+        session_user_id, EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::DELETE_CONTEST), EnumVal(Job::Type::DELETE_CONTEST),
+        mysql_date(), contest_id);
 
     sim::jobs::notify_job_server();
     append(stmt.insert_id());
@@ -968,7 +968,8 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     auto& contest_round = contest_round_opt.value();
-    contest_round.contest_id = WONT_THROW(str2num<uintmax_t>(contest_id).value());
+    contest_round.contest_id =
+        WONT_THROW(str2num<decltype(contest_round.contest_id)>(contest_id).value());
     if (not name.empty()) {
         contest_round.name = name;
     }
@@ -1036,7 +1037,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
 }
 
 void Sim::api_contest_round_edit(
-    uintmax_t contest_round_id, sim::contests::Permissions perms) {
+    decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1076,7 +1077,7 @@ void Sim::api_contest_round_edit(
 }
 
 void Sim::api_contest_round_delete(
-    uintmax_t contest_round_id, sim::contests::Permissions perms) {
+    decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1092,8 +1093,9 @@ void Sim::api_contest_round_delete(
                               " added, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(JobStatus::PENDING), priority(JobType::DELETE_CONTEST_ROUND),
-        EnumVal(JobType::DELETE_CONTEST_ROUND), mysql_date(), contest_round_id);
+        session_user_id, EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::DELETE_CONTEST_ROUND),
+        EnumVal(Job::Type::DELETE_CONTEST_ROUND), mysql_date(), contest_round_id);
 
     sim::jobs::notify_job_server();
 
@@ -1101,7 +1103,8 @@ void Sim::api_contest_round_delete(
 }
 
 void Sim::api_contest_problem_add(
-    uintmax_t contest_id, uintmax_t contest_round_id, sim::contests::Permissions perms) {
+    decltype(Contest::id) contest_id, decltype(ContestRound::id) contest_round_id,
+    sim::contests::Permissions perms) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1173,9 +1176,10 @@ void Sim::api_contest_problem_rejudge_all_submissions(
                  "SELECT ?, ?, ?, ?, ?, id, ?, '' "
                  "FROM submissions WHERE contest_problem_id=? ORDER BY id")
         .bind_and_execute(
-            session_user_id, EnumVal(JobStatus::PENDING),
-            priority(JobType::REJUDGE_SUBMISSION), EnumVal(JobType::REJUDGE_SUBMISSION),
-            mysql_date(), sim::jobs::dump_string(problem_id), contest_problem_id);
+            session_user_id, EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::REJUDGE_SUBMISSION),
+            EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(),
+            sim::jobs::dump_string(problem_id), contest_problem_id);
 
     sim::jobs::notify_job_server();
 }
@@ -1227,9 +1231,9 @@ void Sim::api_contest_problem_edit(
                              " aux_id, info, data) "
                              "VALUES(?, ?, ?, ?, ?, ?, '', '')");
         stmt.bind_and_execute(
-            session_user_id, EnumVal(JobStatus::PENDING),
-            priority(JobType::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
-            EnumVal(JobType::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM), mysql_date(),
+            session_user_id, EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
+            EnumVal(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM), mysql_date(),
             contest_problem_id);
 
         append(stmt.insert_id());
@@ -1264,9 +1268,9 @@ void Sim::api_contest_problem_delete(
                               " added, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(JobStatus::PENDING),
-        priority(JobType::DELETE_CONTEST_PROBLEM), EnumVal(JobType::DELETE_CONTEST_PROBLEM),
-        mysql_date(), contest_problem_id);
+        session_user_id, EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::DELETE_CONTEST_PROBLEM),
+        EnumVal(Job::Type::DELETE_CONTEST_PROBLEM), mysql_date(), contest_problem_id);
 
     sim::jobs::notify_job_server();
     append(stmt.insert_id());
@@ -1327,7 +1331,7 @@ void Sim::api_contest_ranking(
         submissions_query_id_name, "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id")));
     stmt.bind_and_execute(query_id);
 
-    uintmax_t u_id = 0;
+    decltype(User::id) u_id = 0;
     decltype(User::first_name) fname;
     decltype(User::last_name) lname;
     stmt.res_bind_all(u_id, fname, lname);
@@ -1342,12 +1346,12 @@ void Sim::api_contest_ranking(
     decltype(ContestRound::full_results) cr_full_results;
     decltype(ContestProblem::id) cp_id = 0;
     decltype(ContestProblem::score_revealing) cp_score_revealing;
-    uintmax_t s_owner = 0;
-    uintmax_t sf_id = 0;
-    EnumVal<SubmissionStatus> sf_full_status{};
+    decltype(Submission::owner)::value_type s_owner = 0;
+    decltype(Submission::id) sf_id = 0;
+    EnumVal<Submission::Status> sf_full_status{};
     int64_t sf_score = 0;
-    uintmax_t si_id = 0;
-    EnumVal<SubmissionStatus> si_initial_status{};
+    decltype(Submission::id) si_id = 0;
+    EnumVal<Submission::Status> si_initial_status{};
 
     // TODO: there is too much logic duplication (not only below) on whether to
     // show full or initial status and show or not show the score
@@ -1402,7 +1406,7 @@ void Sim::api_contest_ranking(
     const uint64_t session_uid = (session_is_open ? session_user_id : 0);
 
     bool first_owner = true;
-    std::optional<uintmax_t> prev_owner;
+    std::optional<decltype(s_owner)> prev_owner;
     bool show_owner_and_submission_id = false;
 
     while (stmt.next()) {

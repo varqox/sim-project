@@ -1,9 +1,11 @@
-#include "sim/constants.hh"
+#include "sim/contest_entry_tokens/contest_entry_token.hh"
+#include "sim/contest_files/contest_file.hh"
 #include "sim/contest_problems/contest_problem.hh"
 #include "sim/contest_rounds/contest_round.hh"
 #include "sim/contest_users/contest_user.hh"
 #include "sim/contests/contest.hh"
 #include "sim/mysql/mysql.hh"
+#include "sim/problem_tags/problem_tag.hh"
 #include "sim/sessions/session.hh"
 #include "sim/users/user.hh"
 #include "simlib/concat.hh"
@@ -16,8 +18,10 @@
 #include "simlib/file_perms.hh"
 #include "simlib/inplace_buff.hh"
 #include "simlib/random.hh"
+#include "simlib/ranges.hh"
 #include "simlib/sha.hh"
 #include "simlib/string_view.hh"
+#include "src/sql_tables.hh"
 
 #include <fcntl.h>
 #include <iostream>
@@ -110,34 +114,20 @@ static void create_db_config(FilePath db_config_path) {
             "\nhost: ", ConfigFile::escape_string(host), '\n')));
 }
 
-constexpr std::array<CStringView, 13> tables = {{
-    "contest_entry_tokens",
-    "contest_files",
-    "contest_problems",
-    "contest_rounds",
-    "contest_users",
-    "contests",
-    "internal_files",
-    "jobs",
-    "problem_tags",
-    "problems",
-    "session",
-    "submissions",
-    "users",
-}};
-
 struct TryToCreateTable {
     bool error = false;
     mysql::Connection& conn_;
+    std::array<CStringView, 13> sorted_tables = tables;
 
     explicit TryToCreateTable(mysql::Connection& conn)
-    : conn_(conn) {}
+    : conn_(conn) {
+        std::sort(sorted_tables.begin(), sorted_tables.end());
+    }
 
     template <class Str, class Func>
     void operator()(const char* table_name, Str&& query, Func&& f) noexcept {
         try {
-            static_assert(is_sorted(tables), "Needed for binary search");
-            if (not binary_search(tables, StringView{table_name})) {
+            if (not binary_search(sorted_tables, StringView{table_name})) {
                 THROW("Table `", table_name, "` not found in the table list");
             }
 
@@ -188,20 +178,17 @@ int main(int argc, char** argv) {
     }
 
     if (cmd_options.drop_tables) {
-        try {
-            conn.update("SET foreign_key_checks=0");
-            for (auto&& table : tables) {
+        for (auto&& table : reverse_view(tables)) {
+            try {
                 conn.update("DROP TABLE IF EXISTS `", table, '`');
+            } catch (const std::exception& e) {
+                errlog("\033[31mFailed to drop table '", table, "'\033[m - ", e.what());
+                return 5;
             }
-            conn.update("SET foreign_key_checks=1");
+        }
 
-            if (cmd_options.only_drop_tables) {
-                return 0;
-            }
-
-        } catch (const std::exception& e) {
-            errlog("\033[31mFailed to drop tables\033[m - ", e.what());
-            return 5;
+        if (cmd_options.only_drop_tables) {
+            return 0;
         }
     }
 
@@ -210,7 +197,7 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("internal_files", concat(
         "CREATE TABLE IF NOT EXISTS `internal_files` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
             "PRIMARY KEY (id)"
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
@@ -219,43 +206,41 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("users", concat(
         "CREATE TABLE IF NOT EXISTS `users` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
             "`username` VARBINARY(", decltype(User::username)::max_len, ") NOT NULL,"
             "`first_name` VARBINARY(", decltype(User::first_name)::max_len, ") NOT NULL,"
             "`last_name` VARBINARY(", decltype(User::last_name)::max_len, ") NOT NULL,"
             "`email` VARBINARY(", decltype(User::email)::max_len, ") NOT NULL,"
-            // TODO: rename to password_salt
-            "`salt` BINARY(", decltype(User::salt)::max_len, ") NOT NULL,"
-            // TODO: rename to password_hash
-            "`password` BINARY(", decltype(User::password)::max_len, ") NOT NULL,"
-            "`type` tinyint(1) unsigned NOT NULL DEFAULT ", EnumVal(User::Type::NORMAL).int_val(), ","
+            "`password_salt` BINARY(", decltype(User::password_salt)::max_len, ") NOT NULL,"
+            "`password_hash` BINARY(", decltype(User::password_hash)::max_len, ") NOT NULL,"
+            "`type` tinyint unsigned NOT NULL DEFAULT ", EnumVal(User::Type::NORMAL).int_val(), ","
             "PRIMARY KEY (id),"
             "UNIQUE KEY (username),"
             "KEY(type, id DESC)"
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
         [&] {
             // Add default user sim with password sim
-            char salt_bin[decltype(sim::users::User::salt)::max_len >> 1];
-            fill_randomly(salt_bin, sizeof(salt_bin));
-            auto salt = to_hex(StringView(salt_bin, sizeof(salt_bin)));
+            char password_salt_bin[decltype(sim::users::User::password_salt)::max_len >> 1];
+            fill_randomly(password_salt_bin, sizeof(password_salt_bin));
+            auto password_salt = to_hex(StringView(password_salt_bin, sizeof(password_salt_bin)));
 
             auto stmt = conn.prepare("INSERT IGNORE users (id, username,"
-                                     " first_name, last_name, email, salt,"
-                                     " password, type) "
+                                     " first_name, last_name, email, password_salt,"
+                                     " password_hash, type) "
                                      "VALUES (", sim::users::SIM_ROOT_UID, ", 'sim', 'sim',"
                                      " 'sim', 'sim@sim', ?, ?, 0)");
             stmt.bind_and_execute(
-               salt, sha3_512(intentional_unsafe_string_view(concat(salt, "sim"))));
+               password_salt, sha3_512(intentional_unsafe_string_view(concat(password_salt, "sim"))));
         });
     // clang-format on
 
     using sim::sessions::Session;
     // clang-format off
-    try_to_create_table("session", concat(
-        "CREATE TABLE IF NOT EXISTS `session` ("
+    try_to_create_table("sessions", concat(
+        "CREATE TABLE IF NOT EXISTS `sessions` ("
             "`id` BINARY(", decltype(Session::id)::max_len, ") NOT NULL,"
             "`csrf_token` BINARY(", decltype(Session::csrf_token)::max_len, ") NOT NULL,"
-            "`user_id` int unsigned NOT NULL,"
+            "`user_id` bigint unsigned NOT NULL,"
             "`data` blob NOT NULL,"
             "`ip` VARBINARY(", decltype(Session::ip)::max_len, ") NOT NULL,"
             "`user_agent` blob NOT NULL,"
@@ -271,13 +256,13 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("problems", concat(
         "CREATE TABLE IF NOT EXISTS `problems` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
-            "`file_id` int unsigned NOT NULL,"
-            "`type` TINYINT NOT NULL,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
+            "`file_id` bigint unsigned NOT NULL,"
+            "`type` tinyint unsigned NOT NULL,"
             "`name` VARBINARY(", decltype(Problem::name)::max_len, ") NOT NULL,"
             "`label` VARBINARY(", decltype(Problem::label)::max_len, ") NOT NULL,"
             "`simfile` mediumblob NOT NULL,"
-            "`owner` int unsigned NULL,"
+            "`owner` bigint unsigned NULL,"
             "`added` datetime NOT NULL,"
             "`last_edit` datetime NOT NULL,"
             "PRIMARY KEY (id),"
@@ -288,11 +273,12 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
+    using sim::problem_tags::ProblemTag;
     // clang-format off
     try_to_create_table("problem_tags", concat(
         "CREATE TABLE IF NOT EXISTS `problem_tags` ("
-            "`problem_id` int unsigned NOT NULL,"
-            "`tag` VARBINARY(", sim::PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
+            "`problem_id` bigint unsigned NOT NULL,"
+            "`tag` VARBINARY(", decltype(ProblemTag::id.tag)::max_len, ") NOT NULL,"
             "`hidden` BOOLEAN NOT NULL,"
             "PRIMARY KEY (problem_id, hidden, tag),"
             "KEY (tag, problem_id),"
@@ -304,7 +290,7 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("contests",
         concat("CREATE TABLE IF NOT EXISTS `contests` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
             "`name` VARBINARY(", decltype(Contest::name)::max_len, ") NOT NULL,"
             "`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
             "PRIMARY KEY (id),"
@@ -316,14 +302,14 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("contest_rounds",
         concat("CREATE TABLE IF NOT EXISTS `contest_rounds` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
-            "`contest_id` int unsigned NOT NULL,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
+            "`contest_id` bigint unsigned NOT NULL,"
             "`name` VARBINARY(", decltype(ContestRound::name)::max_len, ") NOT NULL,"
-            "`item` int unsigned NOT NULL,"
-            "`begins` CHAR(", decltype(ContestRound::begins)::max_len, ") NOT NULL,"
-            "`ends` CHAR(", decltype(ContestRound::ends)::max_len, ") NOT NULL,"
-            "`full_results` CHAR(", decltype(ContestRound::full_results)::max_len, ") NOT NULL,"
-            "`ranking_exposure` CHAR(", decltype(ContestRound::ranking_exposure)::max_len, ") NOT NULL,"
+            "`item` bigint unsigned NOT NULL,"
+            "`begins` BINARY(", decltype(ContestRound::begins)::max_len, ") NOT NULL,"
+            "`ends` BINARY(", decltype(ContestRound::ends)::max_len, ") NOT NULL,"
+            "`full_results` BINARY(", decltype(ContestRound::full_results)::max_len, ") NOT NULL,"
+            "`ranking_exposure` BINARY(", decltype(ContestRound::ranking_exposure)::max_len, ") NOT NULL,"
             "PRIMARY KEY (id),"
             "KEY (contest_id, ranking_exposure),"
             "KEY (contest_id, begins),"
@@ -336,14 +322,14 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("contest_problems",
         concat("CREATE TABLE IF NOT EXISTS `contest_problems` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
-            "`contest_round_id` int unsigned NOT NULL,"
-            "`contest_id` int unsigned NOT NULL,"
-            "`problem_id` int unsigned NOT NULL,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
+            "`contest_round_id` bigint unsigned NOT NULL,"
+            "`contest_id` bigint unsigned NOT NULL,"
+            "`problem_id` bigint unsigned NOT NULL,"
             "`name` VARBINARY(", decltype(ContestProblem::name)::max_len, ") NOT NULL,"
-            "`item` int unsigned NOT NULL,"
-            "`method_of_choosing_final_submission` TINYINT NOT NULL,"
-            "`score_revealing` TINYINT NOT NULL,"
+            "`item` bigint unsigned NOT NULL,"
+            "`method_of_choosing_final_submission` tinyint unsigned NOT NULL,"
+            "`score_revealing` tinyint unsigned NOT NULL,"
             "PRIMARY KEY (id),"
             "UNIQUE (contest_round_id, item),"
             "KEY (contest_id),"
@@ -354,12 +340,13 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
+    using sim::contest_users::ContestUser;
     // clang-format off
     try_to_create_table("contest_users", concat(
         "CREATE TABLE IF NOT EXISTS `contest_users` ("
-            "`user_id` int unsigned NOT NULL,"
-            "`contest_id` int unsigned NOT NULL,"
-            "`mode` tinyint(1) unsigned NOT NULL DEFAULT ", EnumVal(sim::contest_users::ContestUser::Mode::CONTESTANT).int_val(), ","
+            "`user_id` bigint unsigned NOT NULL,"
+            "`contest_id` bigint unsigned NOT NULL,"
+            "`mode` tinyint unsigned NOT NULL DEFAULT ", EnumVal(ContestUser::Mode::CONTESTANT).int_val(), ","
             "PRIMARY KEY (user_id, contest_id),"
             "KEY (contest_id, user_id),"
             "KEY (contest_id, mode, user_id),"
@@ -368,18 +355,18 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
+    using sim::contest_files::ContestFile;
     // clang-format off
     try_to_create_table("contest_files", concat(
         "CREATE TABLE IF NOT EXISTS `contest_files` ("
-            "`id` BINARY(", sim::FILE_ID_LEN, ") NOT NULL,"
-            "`file_id` int unsigned NOT NULL,"
-            "`contest_id` int unsigned NOT NULL,"
-            "`name` VARBINARY(", sim::FILE_NAME_MAX_LEN, ") NOT NULL,"
-            "`description` VARBINARY(", sim::FILE_DESCRIPTION_MAX_LEN, ") "
-                "NOT NULL,"
+            "`id` BINARY(", decltype(ContestFile::id)::max_len, ") NOT NULL,"
+            "`file_id` bigint unsigned NOT NULL,"
+            "`contest_id` bigint unsigned NOT NULL,"
+            "`name` VARBINARY(", decltype(ContestFile::name)::max_len, ") NOT NULL,"
+            "`description` VARBINARY(", decltype(ContestFile::description)::max_len, ") NOT NULL,"
             "`file_size` bigint unsigned NOT NULL,"
             "`modified` datetime NOT NULL,"
-            "`creator` int unsigned NULL,"
+            "`creator` bigint unsigned NULL,"
             "PRIMARY KEY (id),"
             "KEY (contest_id, modified),"
             "FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
@@ -388,12 +375,13 @@ int main(int argc, char** argv) {
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 
+    using sim::contest_entry_tokens::ContestEntryToken;
     // clang-format off
     try_to_create_table("contest_entry_tokens",
         concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
-            "`token` BINARY(", sim::CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
-            "`contest_id` int unsigned NOT NULL,"
-            "`short_token` BINARY(", sim::CONTEST_ENTRY_SHORT_TOKEN_LEN, ") NULL,"
+            "`token` BINARY(", decltype(ContestEntryToken::token)::max_len, ") NOT NULL,"
+            "`contest_id` bigint unsigned NOT NULL,"
+            "`short_token` BINARY(", decltype(ContestEntryToken::short_token)::value_type::max_len, ") NULL,"
             "`short_token_expiration` datetime NULL,"
             "PRIMARY KEY (token),"
             "UNIQUE KEY (contest_id),"
@@ -405,24 +393,24 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("submissions",
         "CREATE TABLE IF NOT EXISTS `submissions` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
-            "`file_id` int unsigned NOT NULL,"
-            "`owner` int unsigned NULL,"
-            "`problem_id` int unsigned NOT NULL,"
-            "`contest_problem_id` int unsigned NULL,"
-            "`contest_round_id` int unsigned NULL,"
-            "`contest_id` int unsigned NULL,"
-            "`type` TINYINT NOT NULL,"
-            "`language` TINYINT NOT NULL,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
+            "`file_id` bigint unsigned NOT NULL,"
+            "`owner` bigint unsigned NULL,"
+            "`problem_id` bigint unsigned NOT NULL,"
+            "`contest_problem_id` bigint unsigned NULL,"
+            "`contest_round_id` bigint unsigned NULL,"
+            "`contest_id` bigint unsigned NULL,"
+            "`type` tinyint unsigned NOT NULL,"
+            "`language` tinyint unsigned NOT NULL,"
             "`final_candidate` BOOLEAN NOT NULL DEFAULT FALSE,"
             "`problem_final` BOOLEAN NOT NULL DEFAULT FALSE,"
             "`contest_final` BOOLEAN NOT NULL DEFAULT FALSE,"
             // Used to color problems in the problem view
             "`contest_initial_final` BOOLEAN NOT NULL DEFAULT FALSE,"
-            "`initial_status` TINYINT NOT NULL,"
-            "`full_status` TINYINT NOT NULL,"
+            "`initial_status` tinyint unsigned NOT NULL,"
+            "`full_status` tinyint unsigned NOT NULL,"
             "`submit_time` datetime NOT NULL,"
-            "`score` int NULL DEFAULT NULL,"
+            "`score` bigint NULL DEFAULT NULL,"
             "`last_judgment` datetime NOT NULL,"
             "`initial_report` mediumblob NOT NULL,"
             "`final_report` mediumblob NOT NULL,"
@@ -455,7 +443,7 @@ int main(int argc, char** argv) {
             "KEY (contest_problem_id, type, id),"
             "KEY (contest_round_id, type, id),"
             "KEY (contest_id, type, id),"
-            // Needed to efficiently change type to/from FINAL
+            // Needed to efficiently select final submission
             "KEY final1 (final_candidate, owner, contest_problem_id, id),"
             "KEY final2 (final_candidate, owner, contest_problem_id, score, full_status, id),"
             "KEY final3 (final_candidate, owner, problem_id, score, full_status, id),"
@@ -480,15 +468,15 @@ int main(int argc, char** argv) {
     // clang-format off
     try_to_create_table("jobs", concat(
         "CREATE TABLE IF NOT EXISTS `jobs` ("
-            "`id` int unsigned NOT NULL AUTO_INCREMENT,"
-            "`file_id` int unsigned NULL DEFAULT NULL,"
-            "`tmp_file_id` int unsigned NULL DEFAULT NULL,"
-            "`creator` int unsigned NULL,"
-            "`type` TINYINT NOT NULL,"
-            "`priority` TINYINT NOT NULL,"
-            "`status` TINYINT NOT NULL,"
+            "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
+            "`file_id` bigint unsigned NULL DEFAULT NULL,"
+            "`tmp_file_id` bigint unsigned NULL DEFAULT NULL,"
+            "`creator` bigint unsigned NULL,"
+            "`type` tinyint unsigned NOT NULL,"
+            "`priority` tinyint unsigned NOT NULL,"
+            "`status` tinyint unsigned NOT NULL,"
             "`added` datetime NOT NULL,"
-            "`aux_id` int unsigned DEFAULT NULL,"
+            "`aux_id` bigint unsigned DEFAULT NULL,"
             "`info` blob NOT NULL,"
             "`data` mediumblob NOT NULL,"
             "PRIMARY KEY (id),"

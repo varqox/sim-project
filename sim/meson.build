@@ -75,7 +75,7 @@ libsim = library('sim',
         'src/sim/contest_files/permissions.cc',
         'src/sim/contests/permissions.cc',
         'src/sim/cpp_syntax_highlighter.cc',
-        'src/sim/jobs/jobs.cc',
+        'src/sim/jobs/utils.cc',
         'src/sim/mysql/mysql.cc',
         'src/sim/problems/permissions.cc',
         'src/sim/random.cc',
@@ -192,6 +192,7 @@ sim_server = executable('sim-server',
         'src/web_server/old/users_api.cc',
         'src/web_server/server/connection.cc',
         'src/web_server/server/server.cc',
+        'src/web_server/ui_template.cc',
         'src/web_server/web_worker/context.cc',
         'src/web_server/web_worker/web_worker.cc',
     ],
@@ -256,7 +257,7 @@ gmock_dep = simlib_proj.get_variable('gmock_dep')
 
 tests = [
     ['test/sim/cpp_syntax_highlighter.cc', [], {}],
-    ['test/sim/jobs/jobs.cc', [], {}],
+    ['test/sim/jobs/utils.cc', [], {}],
 ]
 foreach test : tests
     name = test[0].underscorify()

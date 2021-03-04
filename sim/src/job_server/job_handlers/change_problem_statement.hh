@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sim/jobs/jobs.hh"
+#include "sim/jobs/utils.hh"
 #include "src/job_server/job_handlers/job_handler.hh"
 
 #include <utility>

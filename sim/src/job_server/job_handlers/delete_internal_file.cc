@@ -1,5 +1,5 @@
 #include "src/job_server/job_handlers/delete_internal_file.hh"
-#include "sim/constants.hh"
+#include "sim/internal_files/internal_file.hh"
 #include "src/job_server/main.hh"
 
 namespace job_server::job_handlers {
@@ -8,7 +8,7 @@ void DeleteInternalFile::run() {
     STACK_UNWINDING_MARK;
 
     job_log("Internal file ID: ", internal_file_id_);
-    (void)unlink(sim::internal_file_path(internal_file_id_));
+    (void)unlink(sim::internal_files::path_of(internal_file_id_));
 
     auto transaction = mysql.start_transaction();
     // The internal_file may already be deleted

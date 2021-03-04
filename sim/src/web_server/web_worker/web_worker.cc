@@ -13,8 +13,6 @@ using web_server::http::Response;
 
 namespace web_server::web_worker {
 
-WebWorker::WebWorker(mysql::Connection& mysql)
-: mysql{mysql} {
 #define GET(func, url, ...)                            \
     {                                                  \
         static constexpr char url_var[] = url;         \
@@ -25,13 +23,15 @@ WebWorker::WebWorker(mysql::Connection& mysql)
         static constexpr char url_var[] = url;          \
         add_post_handler<url_var, ##__VA_ARGS__>(func); \
     }
-// Handlers
-#undef POST
-#undef GET
+WebWorker::WebWorker(mysql::Connection& mysql)
+: mysql{mysql} {
+    // Handlers
     // Ensure fast query dispatch
     assert(get_dispatcher.all_potential_collisions().empty());
     assert(post_dispatcher.all_potential_collisions().empty());
 }
+#undef POST
+#undef GET
 
 std::variant<Response, Request> WebWorker::handle(Request req) {
     request = std::move(req);

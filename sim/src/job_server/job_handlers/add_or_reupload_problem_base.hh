@@ -1,6 +1,7 @@
 #pragma once
 
-#include "sim/jobs/jobs.hh"
+#include "sim/jobs/job.hh"
+#include "sim/jobs/utils.hh"
 #include "simlib/libzip.hh"
 #include "src/job_server/job_handlers/job_handler.hh"
 
@@ -10,7 +11,7 @@ namespace job_server::job_handlers {
 
 class AddOrReuploadProblemBase : virtual public JobHandler {
 protected:
-    sim::JobType job_type_;
+    decltype(sim::jobs::Job::type) job_type_;
     StringView job_creator_;
     sim::jobs::AddProblemInfo info_;
     FileRemover package_file_remover_;
@@ -32,9 +33,9 @@ private:
 
 protected:
     AddOrReuploadProblemBase(
-        sim::JobType job_type, StringView job_creator, sim::jobs::AddProblemInfo info,
-        uint64_t job_file_id, std::optional<uint64_t> tmp_file_id,
-        std::optional<uint64_t> problem_id)
+        decltype(sim::jobs::Job::type) job_type, StringView job_creator,
+        sim::jobs::AddProblemInfo info, uint64_t job_file_id,
+        std::optional<uint64_t> tmp_file_id, std::optional<uint64_t> problem_id)
     : job_type_(job_type)
     , job_creator_(job_creator)
     , info_(std::move(info))
