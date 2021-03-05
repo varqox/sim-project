@@ -1,8 +1,10 @@
 #include "simlib/enum_val.hh"
 
+#include <cstdint>
 #include <gtest/gtest.h>
+#include <optional>
 
-enum class IntEnum : int {
+enum class Int32Enum : int32_t {
     A = 1,
     B = 42,
     C = 1337,
@@ -25,7 +27,7 @@ static void test_constructor_from_enum() {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, constructor_from_enum) {
-    test_constructor_from_enum<IntEnum>();
+    test_constructor_from_enum<Int32Enum>();
     test_constructor_from_enum<Uint64Enum>();
 }
 
@@ -42,7 +44,7 @@ static void test_constructor_from_val_type() {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, constructor_value) {
-    test_constructor_from_val_type<IntEnum>();
+    test_constructor_from_val_type<Int32Enum>();
     test_constructor_from_val_type<Uint64Enum>();
 }
 
@@ -56,7 +58,7 @@ static void test_assignment_operator_from_enum() {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, test_assignment_operator_from_enum) {
-    test_assignment_operator_from_enum<IntEnum>();
+    test_assignment_operator_from_enum<Int32Enum>();
     test_assignment_operator_from_enum<Uint64Enum>();
 }
 
@@ -71,7 +73,7 @@ static void test_assignment_operator_from_val_type() {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, assignment_operator_from_val_type) {
-    test_assignment_operator_from_val_type<IntEnum>();
+    test_assignment_operator_from_val_type<Int32Enum>();
     test_assignment_operator_from_val_type<Uint64Enum>();
 }
 
@@ -86,7 +88,7 @@ static void test_int_val() {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, int_val) {
-    test_int_val<IntEnum>();
+    test_int_val<Int32Enum>();
     test_int_val<Uint64Enum>();
 }
 
@@ -105,7 +107,7 @@ static void test_implicit_const_conversion() {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, operator_ValType_const) {
-    test_implicit_const_conversion<IntEnum>();
+    test_implicit_const_conversion<Int32Enum>();
     test_implicit_const_conversion<Uint64Enum>();
 }
 
@@ -124,6 +126,25 @@ static void test_implicit_conversion() {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, operator_ValType) {
-    test_implicit_conversion<IntEnum>();
+    test_implicit_conversion<Int32Enum>();
     test_implicit_conversion<Uint64Enum>();
+}
+
+// NOLINTNEXTLINE
+TEST(EnumVal, from_str) {
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str("-42").value().int_val(), -42);
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str("-664642626824123881385183521863"), std::nullopt);
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str("x"), std::nullopt);
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str(""), std::nullopt);
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str("1"), Int32Enum::A);
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str("42"), Int32Enum::B);
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str("1337"), Int32Enum::C);
+
+    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("-1"), std::nullopt);
+    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("664642626824123881385183521863"), std::nullopt);
+    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("x"), std::nullopt);
+    EXPECT_EQ(EnumVal<Uint64Enum>::from_str(""), std::nullopt);
+    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("1"), Uint64Enum::A);
+    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("42"), Uint64Enum::B);
+    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("1337"), Uint64Enum::C);
 }

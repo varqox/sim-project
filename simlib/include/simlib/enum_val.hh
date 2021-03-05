@@ -1,5 +1,9 @@
 #pragma once
 
+#include "simlib/string_transform.hh"
+#include "simlib/string_view.hh"
+
+#include <optional>
 #include <type_traits>
 
 template <class Enum>
@@ -23,6 +27,14 @@ public:
 
     constexpr explicit EnumVal(ValType val)
     : val_(val) {}
+
+    static std::optional<EnumVal> from_str(StringView str) noexcept {
+        auto opt = str2num<ValType>(str);
+        if (opt) {
+            return EnumVal{*opt};
+        }
+        return std::nullopt;
+    }
 
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr EnumVal(Enum val)
