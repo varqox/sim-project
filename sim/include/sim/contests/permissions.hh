@@ -9,21 +9,6 @@
 
 namespace sim::contests {
 
-enum class OverallPermissions : uint16_t {
-    NONE = 0,
-    VIEW_ALL = 1,
-    VIEW_PUBLIC = 1 << 1,
-    ADD_PRIVATE = 1 << 2,
-    ADD_PUBLIC = 1 << 3,
-};
-
-DECLARE_ENUM_UNARY_OPERATOR(OverallPermissions, ~)
-DECLARE_ENUM_OPERATOR(OverallPermissions, |)
-DECLARE_ENUM_OPERATOR(OverallPermissions, &)
-
-OverallPermissions
-get_overall_permissions(std::optional<users::User::Type> user_type) noexcept;
-
 enum class Permissions : uint16_t {
     NONE = 0,
     VIEW = 1,

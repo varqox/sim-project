@@ -6,24 +6,6 @@ using sim::users::User;
 
 namespace sim::contests {
 
-OverallPermissions get_overall_permissions(std::optional<User::Type> user_type) noexcept {
-    STACK_UNWINDING_MARK;
-    using PERM = OverallPermissions;
-
-    if (not user_type) {
-        return PERM::VIEW_PUBLIC;
-    }
-
-    switch (*user_type) {
-    case User::Type::ADMIN:
-        return PERM::VIEW_ALL | PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE | PERM::ADD_PUBLIC;
-    case User::Type::TEACHER: return PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE;
-    case User::Type::NORMAL: return PERM::VIEW_PUBLIC;
-    }
-
-    __builtin_unreachable();
-}
-
 Permissions get_permissions(
     std::optional<User::Type> user_type, bool contest_is_public,
     std::optional<ContestUser::Mode> cu_mode) noexcept {

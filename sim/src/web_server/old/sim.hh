@@ -13,6 +13,7 @@
 #include "sim/users/user.hh"
 #include "simlib/http/response.hh"
 #include "simlib/request_uri_parser.hh"
+#include "src/web_server/capabilities/contests.hh"
 #include "src/web_server/http/request.hh"
 #include "src/web_server/http/response.hh"
 #include "src/web_server/web_worker/context.hh"
@@ -185,9 +186,9 @@ class Sim final {
 
     void api_contest_problem(StringView contest_problem_id);
 
-    void api_contest_create(sim::contests::OverallPermissions overall_perms);
+    void api_contest_create(capabilities::Contests caps_contests);
 
-    void api_contest_clone(sim::contests::OverallPermissions overall_perms);
+    void api_contest_clone(capabilities::Contests caps_contests);
 
     void
     api_contest_edit(StringView contest_id, sim::contests::Permissions perms, bool is_public);

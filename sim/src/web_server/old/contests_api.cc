@@ -11,6 +11,7 @@
 #include "sim/jobs/utils.hh"
 #include "sim/submissions/submission.hh"
 #include "simlib/string_view.hh"
+#include "src/web_server/capabilities/contests.hh"
 #include "src/web_server/http/form_validator.hh"
 #include "src/web_server/old/sim.hh"
 
@@ -95,14 +96,12 @@ inline static InplaceBuff<32> color_class_json(
 
 template <class T>
 static void append_contest_actions_str(
-    T& str, sim::contests::OverallPermissions overall_perms,
-    sim::contests::Permissions perms) {
+    T& str, capabilities::Contests caps_contests, sim::contests::Permissions perms) {
     STACK_UNWINDING_MARK;
-    using OP = sim::contests::OverallPermissions;
     using P = sim::contests::Permissions;
 
     str.append('"');
-    if (uint(overall_perms & (OP::ADD_PUBLIC | OP::ADD_PRIVATE))) {
+    if (caps_contests.add_public or caps_contests.add_private) {
         str.append('a');
     }
     if (uint(perms & P::MAKE_PUBLIC)) {
@@ -128,17 +127,17 @@ namespace {
 class ContestInfoResponseBuilder {
     using ContentType = decltype(http::Response::content)&;
     ContentType& content_;
-    sim::contests::OverallPermissions contest_overall_perms_;
+    capabilities::Contests caps_contests_;
     sim::contests::Permissions contest_perms_;
     std::string curr_date_;
     std::map<uint64_t, InfDatetime> round_to_full_results_;
 
 public:
     ContestInfoResponseBuilder(
-        ContentType& resp_content, sim::contests::OverallPermissions contest_overall_perms,
+        ContentType& resp_content, capabilities::Contests caps_contests,
         sim::contests::Permissions contest_perms, std::string curr_date)
     : content_(resp_content)
-    , contest_overall_perms_(contest_overall_perms)
+    , caps_contests_(caps_contests)
     , contest_perms_(contest_perms)
     , curr_date_(std::move(curr_date)) {}
 
@@ -181,7 +180,7 @@ public:
         content_.append(
             "\n[", contest.id, ',', json_stringify(contest.name),
             (contest.is_public ? ",true," : ",false,"));
-        append_contest_actions_str(content_, contest_overall_perms_, contest_perms_);
+        append_contest_actions_str(content_, caps_contests_, contest_perms_);
 
         content_.append("],\n["); // TODO: this is ugly...
     }
@@ -270,12 +269,10 @@ void Sim::api_contests() {
     };
 
     // Get the overall permissions to the contests list
-    using CO_PERMS = sim::contests::OverallPermissions;
-    CO_PERMS contest_overall_perms = sim::contests::get_overall_permissions(
-        (session.has_value() ? optional{session->user_type} : std::nullopt));
+    auto caps_contests = capabilities::contests_for(session);
     // Choose contests to select
-    if (uint(~contest_overall_perms & CO_PERMS::VIEW_ALL)) {
-        if (uint(contest_overall_perms & CO_PERMS::VIEW_PUBLIC)) {
+    if (not caps_contests.view_all) {
+        if (caps_contests.view_public) {
             if (session.has_value()) {
                 qwhere_append("(c.is_public=1 OR cu.mode IS NOT NULL)");
             } else {
@@ -363,7 +360,7 @@ void Sim::api_contests() {
         append(is_public ? "true," : "false,");
 
         // Append what buttons to show
-        append_contest_actions_str(resp.content, contest_overall_perms, contest_perms);
+        append_contest_actions_str(resp.content, caps_contests, contest_perms);
         append(']');
     }
 
@@ -373,15 +370,13 @@ void Sim::api_contests() {
 void Sim::api_contest() {
     STACK_UNWINDING_MARK;
 
-    auto contest_overall_perms = sim::contests::get_overall_permissions(
-        (session.has_value() ? optional(session->user_type) : std::nullopt));
-
+    auto caps_contests = capabilities::contests_for(session);
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg == "create") {
-        return api_contest_create(contest_overall_perms);
+        return api_contest_create(caps_contests);
     }
     if (next_arg == "clone") {
-        return api_contest_clone(contest_overall_perms);
+        return api_contest_clone(caps_contests);
     }
     if (next_arg.empty()) {
         return api_error400();
@@ -444,7 +439,7 @@ void Sim::api_contest() {
     }
 
     ContestInfoResponseBuilder resp_builder(
-        resp.content, contest_overall_perms, contest_perms, curr_date);
+        resp.content, caps_contests, contest_perms, curr_date);
     resp_builder.append_field_names();
     resp_builder.append_contest(contest);
 
@@ -519,11 +514,9 @@ void Sim::api_contest_round(StringView contest_round_id) {
         return api_error404();
     }
 
-    auto contest_overall_perms = sim::contests::get_overall_permissions(
-        (session.has_value() ? optional(session->user_type) : std::nullopt));
-
+    auto caps_contests = capabilities::contests_for(session);
     ContestInfoResponseBuilder resp_builder(
-        resp.content, contest_overall_perms, contest_perms, curr_date);
+        resp.content, caps_contests, contest_perms, curr_date);
     resp_builder.append_field_names();
     resp_builder.append_contest(contest);
     resp_builder.append_round(contest_round);
@@ -609,11 +602,9 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
         return api_error404();
     }
 
-    auto contest_overall_perms = sim::contests::get_overall_permissions(
-        (session.has_value() ? optional(session->user_type) : std::nullopt));
-
+    auto caps_contests = capabilities::contests_for(session);
     ContestInfoResponseBuilder resp_builder(
-        resp.content, contest_overall_perms, contest_perms, curr_date);
+        resp.content, caps_contests, contest_perms, curr_date);
     resp_builder.append_field_names();
     resp_builder.append_contest(contest);
 
@@ -627,11 +618,9 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
     resp_builder.stop_appending_problems();
 }
 
-void Sim::api_contest_create(sim::contests::OverallPermissions overall_perms) {
+void Sim::api_contest_create(capabilities::Contests caps_contests) {
     STACK_UNWINDING_MARK;
-    using PERM = sim::contests::OverallPermissions;
-
-    if (uint(~overall_perms & PERM::ADD_PRIVATE) and uint(~overall_perms & PERM::ADD_PUBLIC)) {
+    if (not caps_contests.add_private and not caps_contests.add_public) {
         return api_error403();
     }
 
@@ -640,11 +629,11 @@ void Sim::api_contest_create(sim::contests::OverallPermissions overall_perms) {
     form_validate_not_blank(name, "name", "Contest's name", decltype(Contest::name)::max_len);
 
     bool is_public = request.form_fields.contains("public");
-    if (is_public and uint(~overall_perms & PERM::ADD_PUBLIC)) {
+    if (is_public and !caps_contests.add_public) {
         add_notification("error", "You have no permissions to add a public contest");
     }
 
-    if (not is_public and uint(~overall_perms & PERM::ADD_PRIVATE)) {
+    if (not is_public and !caps_contests.add_private) {
         add_notification("error", "You have no permissions to add a private contest");
     }
 
@@ -669,11 +658,10 @@ void Sim::api_contest_create(sim::contests::OverallPermissions overall_perms) {
     append(contest_id);
 }
 
-void Sim::api_contest_clone(sim::contests::OverallPermissions overall_perms) {
+void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     STACK_UNWINDING_MARK;
-    using PERM = sim::contests::OverallPermissions;
 
-    if (uint(~overall_perms & PERM::ADD_PRIVATE) and uint(~overall_perms & PERM::ADD_PUBLIC)) {
+    if (not caps_contests.add_private and not caps_contests.add_public) {
         return api_error403();
     }
 
@@ -685,11 +673,11 @@ void Sim::api_contest_clone(sim::contests::OverallPermissions overall_perms) {
     form_validate_not_blank(source_contest_id, "source_contest", "ID of the contest to clone");
 
     bool is_public = request.form_fields.contains("public");
-    if (is_public and uint(~overall_perms & PERM::ADD_PUBLIC)) {
+    if (is_public and !caps_contests.add_public) {
         add_notification("error", "You have no permissions to add a public contest");
     }
 
-    if (not is_public and uint(~overall_perms & PERM::ADD_PRIVATE)) {
+    if (not is_public and !caps_contests.add_private) {
         add_notification("error", "You have no permissions to add a private contest");
     }
 
