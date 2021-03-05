@@ -3,6 +3,12 @@
 #include "sim/users/user.hh"
 #include "simlib/file_info.hh"
 #include "simlib/string_view.hh"
+#include "src/web_server/capabilities/contests.hh"
+#include "src/web_server/capabilities/jobs.hh"
+#include "src/web_server/capabilities/logs.hh"
+#include "src/web_server/capabilities/problems.hh"
+#include "src/web_server/capabilities/submissions.hh"
+#include "src/web_server/capabilities/users.hh"
 #include "src/web_server/http/response.hh"
 
 #include <chrono>
@@ -78,44 +84,39 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
         resp.content.append("<style>", params.styles, "</style>");
     }
 
-    // clang-format off
-    resp.content.append("</head>"
-        "<body>"
-            "<div class=\"navbar\">"
-                "<a href=\"/\" class=\"brand\">Sim beta</a>"
-                "<script>"
-                    "var nav = document.querySelector('.navbar');"
-                    "nav.appendChild(a_view_button('/c', 'Contests',"
-                                                  "undefined,"
-                                                  "contest_chooser));"
-                    "nav.querySelector('script').remove()"
-                "</script>"
-                "<a href=\"/p\">Problems</a>");
-    // clang-format on
+    resp.content.append("</head><body><div class=\"navbar\">"
+                        "<a href=\"/\" class=\"brand\">Sim beta</a>");
 
-    if (params.show_users) {
+    if (capabilities::contests_for(params.session).view) {
+        // clang-format off
+        resp.content.append("<script>"
+                "var nav = document.querySelector('.navbar');"
+                "nav.appendChild(a_view_button('/c', 'Contests', undefined, contest_chooser));"
+                "nav.querySelector('script').remove()"
+            "</script>");
+        // clang-format on
+    }
+    if (capabilities::problems_for(params.session).view) {
+        resp.content.append("<a href=\"/p\">Problems</a>");
+    }
+    if (capabilities::users_for(params.session).view) {
         resp.content.append("<a href=\"/u\">Users</a>");
     }
-
-    if (params.show_submissions) {
+    if (capabilities::submissions_for(params.session).view) {
         resp.content.append("<a href=\"/s\">Submissions</a>");
     }
-
-    if (params.show_job_queue) {
+    if (capabilities::jobs_for(params.session).view) {
         resp.content.append("<a href=\"/jobs\">Job queue</a>");
     }
-
-    if (params.show_logs) {
+    if (capabilities::logs_for(params.session).view) {
         resp.content.append("<a href=\"/logs\">Logs</a>");
     }
 
     resp.content.append("<time id=\"clock\">", date("%H:%M:%S"), "<sup>UTC</sup></time>");
 
-    assert(bool(params.session_user_id) == bool(params.session_user_type));
-    assert(bool(params.session_user_id) == bool(params.session_username));
-    if (params.session_user_id) {
+    if (params.session) {
         char utype_c = [&] {
-            switch (*params.session_user_type) {
+            switch (params.session->user_type) {
             case User::Type::NORMAL: return 'N';
             case User::Type::TEACHER: return 'T';
             case User::Type::ADMIN: return 'A';
@@ -125,13 +126,13 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
         // clang-format off
         resp.content.append("<div class=\"dropmenu down\">"
                 "<a class=\"user dropmenu-toggle\" user-type=\"", utype_c, "\">"
-                    "<strong>", html_escape(*params.session_username), "</strong>"
+                    "<strong>", html_escape(params.session->username), "</strong>"
                 "</a>"
                 "<ul>"
-                    "<a href=\"/u/", *params.session_user_id, "\">My profile</a>"
-                    "<a href=\"/u/", *params.session_user_id, "/edit\">"
+                    "<a href=\"/u/", params.session->user_id, "\">My profile</a>"
+                    "<a href=\"/u/", params.session->user_id, "/edit\">"
                         "Edit profile</a>"
-                    "<a href=\"/u/", *params.session_user_id, "/change-password\">"
+                    "<a href=\"/u/", params.session->user_id, "/change-password\">"
                         "Change password</a>"
                     "<a href=\"/logout\">Logout</a>"
                 "</ul>"

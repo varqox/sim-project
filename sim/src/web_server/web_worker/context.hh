@@ -47,6 +47,8 @@ struct Context {
     http::Response response_404(StringView content = "") {
         return response("404 Not Found", content);
     }
+
+    http::Response response_ui(StringView title, StringView styles, StringView body);
 };
 
 } // namespace web_server::web_worker

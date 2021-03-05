@@ -169,6 +169,12 @@ backup = executable('backup',
 
 sim_server = executable('sim-server',
     sources : [
+        'src/web_server/capabilities/contests.cc',
+        'src/web_server/capabilities/jobs.cc',
+        'src/web_server/capabilities/logs.cc',
+        'src/web_server/capabilities/problems.cc',
+        'src/web_server/capabilities/submissions.cc',
+        'src/web_server/capabilities/users.cc',
         'src/web_server/http/cookies.cc',
         'src/web_server/http/request.cc',
         'src/web_server/http/response.cc',

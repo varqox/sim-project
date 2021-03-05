@@ -13,16 +13,7 @@ void Sim::page_template(StringView title, StringView styles) {
         {
             .title = title,
             .styles = styles,
-            .show_users = session.has_value() and
-                uint(users_get_overall_permissions() & UserPermissions::VIEW_ALL),
-            .show_submissions = session.has_value() and
-                uint(submissions_get_overall_permissions() & SubmissionPermissions::VIEW_ALL),
-            .show_job_queue = session.has_value() and
-                uint(jobs_get_overall_permissions() & JobPermissions::VIEW_ALL),
-            .show_logs = session.has_value() and session->user_type == User::Type::ADMIN,
-            .session_user_id = session.has_value() ? &session->user_id : nullptr,
-            .session_user_type = session.has_value() ? &session->user_type : nullptr,
-            .session_username = session.has_value() ? &session->username : nullptr,
+            .session = session,
             .notifications = notifications,
         });
 

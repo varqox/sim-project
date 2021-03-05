@@ -2,6 +2,7 @@
 #include "simlib/string_view.hh"
 #include "simlib/time.hh"
 #include "src/web_server/http/response.hh"
+#include "src/web_server/ui_template.hh"
 
 #include <optional>
 
@@ -44,6 +45,21 @@ Response Context::response(StringView status_code, StringView content) {
     auto resp = Response{Response::TEXT, status_code};
     resp.content = content;
     resp.cookies = std::move(cookie_changes);
+    return resp;
+}
+
+Response Context::response_ui(StringView title, StringView styles, StringView body) {
+    auto resp = response_ok();
+    begin_ui_template(
+        resp,
+        {
+            .title = title,
+            .styles = styles,
+            .session = session,
+            .notifications = "",
+        });
+    resp.content.append(body);
+    end_ui_template(resp);
     return resp;
 }
 
