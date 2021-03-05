@@ -3,7 +3,7 @@
 #include "sim/contest_rounds/contest_round.hh"
 #include "sim/contests/contest.hh"
 #include "sim/problems/problem.hh"
-#include "sim/sql_fields/varchar.hh"
+#include "sim/sql_fields/varbinary.hh"
 #include "sim/web_api/enum.hh"
 #include "sim/web_api/int.hh"
 #include "sim/web_api/string.hh"
@@ -36,7 +36,7 @@ struct ContestProblem {
 
     constexpr static const char name_var_name[] = "name";
     constexpr static const char name_var_descr[] = "Problem's name";
-    web_api::String<sql_fields::Varchar<128>, name_var_name, name_var_descr> name;
+    web_api::String<sql_fields::Varbinary<128>, name_var_name, name_var_descr> name;
 
     uint64_t item;
     web_api::Enum<MethodOfChoosingFinalSubmission> method_of_choosing_final_submission;

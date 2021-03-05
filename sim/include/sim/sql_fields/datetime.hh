@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sim/sql_fields/varchar.hh"
+#include "sim/sql_fields/varbinary.hh"
 #include "simlib/string_view.hh"
 
 #include <string>
@@ -8,7 +8,7 @@
 namespace sim::sql_fields {
 
 // Format: YYYY-mm-dd HH:MM:SS
-class Datetime : public Varchar<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
+class Datetime : public Varbinary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
 public:
     Datetime() = default;
     constexpr Datetime(const Datetime&) = default;
@@ -25,7 +25,7 @@ public:
             int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     constexpr explicit Datetime(T&& str)
-    : Varchar([&]() -> decltype(auto) {
+    : Varbinary([&]() -> decltype(auto) {
         throw_assert(is_datetime(intentional_unsafe_c_string_view(concat(str))));
         return str;
     }()) {}
@@ -38,7 +38,7 @@ public:
             int> = 0>
     Datetime& operator=(T&& str) {
         throw_assert(is_datetime(intentional_unsafe_c_string_view(concat(str))));
-        Varchar::operator=(std::forward<T>(str));
+        Varbinary::operator=(std::forward<T>(str));
         return *this;
     }
 };

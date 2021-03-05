@@ -1,14 +1,14 @@
 #pragma once
 
 #include "sim/inf_datetime.hh"
-#include "sim/sql_fields/varchar.hh"
+#include "sim/sql_fields/varbinary.hh"
 
 #include <string>
 
 namespace sim::sql_fields {
 
 // Format: YYYY-mm-dd HH:MM:SS | # | @
-class InfDatetime : public Varchar<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
+class InfDatetime : public Varbinary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
 public:
     InfDatetime() = default;
     constexpr InfDatetime(const InfDatetime&) = default;
@@ -18,10 +18,10 @@ public:
     ~InfDatetime() override = default;
 
     explicit InfDatetime(const sim::InfDatetime& dt)
-    : Varchar(dt.to_str()) {}
+    : Varbinary(dt.to_str()) {}
 
     explicit InfDatetime(sim::InfDatetime&& dt)
-    : Varchar(dt.to_str()) {}
+    : Varbinary(dt.to_str()) {}
 
     template <
         class T,
@@ -34,12 +34,12 @@ public:
     : InfDatetime(sim::InfDatetime(std::forward<T>(str))) {}
 
     InfDatetime& operator=(const sim::InfDatetime& dt) {
-        Varchar::operator=(dt.to_str());
+        Varbinary::operator=(dt.to_str());
         return *this;
     }
 
     InfDatetime& operator=(sim::InfDatetime&& dt) {
-        Varchar::operator=(dt.to_str());
+        Varbinary::operator=(dt.to_str());
         return *this;
     }
 

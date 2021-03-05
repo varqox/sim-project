@@ -3,7 +3,7 @@
 #include "sim/internal_files/internal_file.hh"
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
-#include "sim/sql_fields/varchar.hh"
+#include "sim/sql_fields/varbinary.hh"
 #include "sim/users/user.hh"
 
 #include <cstdint>
@@ -20,8 +20,8 @@ struct Problem {
     uint64_t id;
     decltype(internal_files::InternalFile::id) file_id;
     EnumVal<Type> type;
-    sql_fields::Varchar<128> name;
-    sql_fields::Varchar<64> label;
+    sql_fields::Varbinary<128> name;
+    sql_fields::Varbinary<64> label;
     sql_fields::Blob<4096> simfile;
     std::optional<decltype(users::User::id)> owner;
     sql_fields::Datetime added;
