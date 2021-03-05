@@ -50,7 +50,8 @@ void Sim::api_problems() {
     qwhere.append(
         " FROM problems p LEFT JOIN users u ON p.owner=u.id "
         "LEFT JOIN submissions s ON s.owner=",
-        (session_is_open ? intentional_unsafe_string_view(to_string(session_user_id)) : "''"),
+        (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id))
+                             : "''"),
         " AND s.problem_id=p.id AND s.problem_final=1 "
         "WHERE TRUE"); // Needed to easily append constraints
 
@@ -67,28 +68,28 @@ void Sim::api_problems() {
     };
 
     auto overall_perms = sim::problems::get_overall_permissions(
-        session_is_open ? std::optional{session_user_type} : std::nullopt);
+        session.has_value() ? std::optional{session->user_type} : std::nullopt);
 
     // Choose problems to select
     if (not uint(overall_perms & OPERMS::VIEW_ALL)) {
-        if (not session_is_open) {
+        if (not session.has_value()) {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
             qwhere.append(" AND p.type=", EnumVal(Problem::Type::PUBLIC).int_val());
 
-        } else if (session_user_type == User::Type::TEACHER) {
+        } else if (session->user_type == User::Type::TEACHER) {
             throw_assert(
                 uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC) and
                 uint(overall_perms & OPERMS::VIEW_WITH_TYPE_CONTEST_ONLY));
             qwhere.append(
                 " AND (p.type=", EnumVal(Problem::Type::PUBLIC).int_val(),
                 " OR p.type=", EnumVal(Problem::Type::CONTEST_ONLY).int_val(),
-                " OR p.owner=", session_user_id, ')');
+                " OR p.owner=", session->user_id, ')');
 
         } else {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
             qwhere.append(
                 " AND (p.type=", EnumVal(Problem::Type::PUBLIC).int_val(),
-                " OR p.owner=", session_user_id, ')');
+                " OR p.owner=", session->user_id, ')');
         }
     }
 
@@ -137,8 +138,8 @@ void Sim::api_problems() {
 
         } else if (cond == 'u' and ~mask & USER_ID_COND) { // User (owner)
             // Prevent bypassing unset VIEW_OWNER permission
-            if (not session_is_open or
-                (str2num<decltype(session_user_id)>(arg_id) != session_user_id and
+            if (not session.has_value() or
+                (str2num<decltype(session->user_id)>(arg_id) != session->user_id and
                  not uint(overall_perms & OPERMS::SELECT_BY_OWNER)))
             {
                 return api_error403("You have no permissions to select others' "
@@ -191,8 +192,8 @@ void Sim::api_problems() {
         EnumVal<Problem::Type> problem_type{
             WONT_THROW(str2num<std::underlying_type_t<Problem::Type>>(res[PTYPE]).value())};
         auto problem_perms = sim::problems::get_permissions(
-            (session_is_open ? std::optional{session_user_id} : std::nullopt),
-            (session_is_open ? std::optional{session_user_type} : std::nullopt),
+            (session.has_value() ? std::optional{session->user_id} : std::nullopt),
+            (session.has_value() ? std::optional{session->user_type} : std::nullopt),
             (res.is_null(OWNER)
                  ? std::nullopt
                  : decltype(Problem::owner)(WONT_THROW(
@@ -356,7 +357,7 @@ void Sim::api_problem() {
     STACK_UNWINDING_MARK;
 
     auto overall_perms = sim::problems::get_overall_permissions(
-        session_is_open ? std::optional{session_user_type} : std::nullopt);
+        session.has_value() ? std::optional{session->user_type} : std::nullopt);
 
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg == "add") {
@@ -383,9 +384,9 @@ void Sim::api_problem() {
     }
 
     auto problem_perms = sim::problems::get_permissions(
-        (session_is_open ? std::optional{session_user_id} : std::nullopt),
-        (session_is_open ? std::optional{session_user_type} : std::nullopt), problem_owner,
-        problem_type);
+        (session.has_value() ? std::optional{session->user_id} : std::nullopt),
+        (session.has_value() ? std::optional{session->user_type} : std::nullopt),
+        problem_owner, problem_type);
 
     next_arg = url_args.extract_next_arg();
     if (next_arg == "statement") {
@@ -504,7 +505,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
                  " aux_id, info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
-            job_file_id, session_user_id, default_priority(jtype), jtype,
+            job_file_id, session->user_id, default_priority(jtype), jtype,
             EnumVal(Job::Status::PENDING), mysql_date(),
             (reuploading ? std::optional(problems_pid) : std::nullopt), ap_info.dump());
 
@@ -592,7 +593,7 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
                  "SELECT ?, ?, ?, ?, ?, id, ?, '' "
                  "FROM submissions WHERE problem_id=? ORDER BY id")
         .bind_and_execute(
-            session_user_id, EnumVal(Job::Status::PENDING),
+            session->user_id, EnumVal(Job::Status::PENDING),
             default_priority(Job::Type::REJUDGE_SUBMISSION),
             EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(),
             sim::jobs::dump_string(problems_pid), problems_pid);
@@ -612,7 +613,7 @@ void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
                  " info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, '', '')")
         .bind_and_execute(
-            session_user_id, EnumVal(Job::Status::PENDING),
+            session->user_id, EnumVal(Job::Status::PENDING),
             default_priority(Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
             EnumVal(Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION), mysql_date(),
             problems_pid);
@@ -638,7 +639,7 @@ void Sim::api_problem_delete(sim::problems::Permissions perms) {
                  " info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, '', '')")
         .bind_and_execute(
-            session_user_id, EnumVal(Job::Status::PENDING),
+            session->user_id, EnumVal(Job::Status::PENDING),
             default_priority(Job::Type::DELETE_PROBLEM), EnumVal(Job::Type::DELETE_PROBLEM),
             mysql_date(), problems_pid);
 
@@ -671,8 +672,8 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
 
     auto tp_perms_opt = sim::problems::get_permissions(
         mysql, target_problem_id,
-        (session_is_open ? std::optional{session_user_id} : std::nullopt),
-        (session_is_open ? std::optional{session_user_type} : std::nullopt));
+        (session.has_value() ? std::optional{session->user_id} : std::nullopt),
+        (session.has_value() ? std::optional{session->user_type} : std::nullopt));
     if (not tp_perms_opt) {
         return api_error400("Target problem does not exist");
     }
@@ -692,7 +693,7 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
                  " info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
-            session_user_id, EnumVal(Job::Status::PENDING),
+            session->user_id, EnumVal(Job::Status::PENDING),
             default_priority(Job::Type::MERGE_PROBLEMS), EnumVal(Job::Type::MERGE_PROBLEMS),
             mysql_date(), problems_pid,
             sim::jobs::MergeProblemsInfo(
@@ -875,7 +876,7 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
                  " added, aux_id, info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
-            job_file_id, session_user_id, EnumVal(Job::Status::PENDING),
+            job_file_id, session->user_id, EnumVal(Job::Status::PENDING),
             default_priority(Job::Type::CHANGE_PROBLEM_STATEMENT),
             EnumVal(Job::Type::CHANGE_PROBLEM_STATEMENT), mysql_date(), problems_pid,
             cps_info.dump());

@@ -24,7 +24,7 @@ void Sim::api_users() {
     STACK_UNWINDING_MARK;
     using PERM = UserPermissions;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -47,10 +47,10 @@ void Sim::api_users() {
         }
     };
 
-    switch (session_user_type) {
+    switch (session->user_type) {
     case User::Type::ADMIN: break;
     case User::Type::TEACHER:
-    case User::Type::NORMAL: query_append("id=", session_user_id); break;
+    case User::Type::NORMAL: query_append("id=", session->user_id); break;
     }
 
     // Process restrictions
@@ -166,7 +166,7 @@ void Sim::api_users() {
 void Sim::api_user() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -360,7 +360,7 @@ void Sim::api_user_edit() {
     stmt.bind_and_execute(username, users_uid);
     if (not stmt.next()) {
         mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
-            .bind_and_execute(users_uid, session_id);
+            .bind_and_execute(users_uid, session->id);
     }
 
     mysql
@@ -410,7 +410,7 @@ void Sim::api_user_change_password() {
 
     // Remove other sessions (for security reasons)
     mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
-        .bind_and_execute(users_uid, session_id);
+        .bind_and_execute(users_uid, session->id);
 
     transaction.commit();
 }
@@ -431,7 +431,7 @@ void Sim::api_user_delete() {
                               " added, aux_id, info, data)"
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(Job::Status::PENDING),
+        session->user_id, EnumVal(Job::Status::PENDING),
         default_priority(Job::Type::DELETE_USER), EnumVal(Job::Type::DELETE_USER),
         mysql_date(), users_uid);
 
@@ -480,7 +480,7 @@ void Sim::api_user_merge_into_another() {
                               " added, aux_id, info, data)"
                               "VALUES(?, ?, ?, ?, ?, ?, ?, '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(Job::Status::PENDING),
+        session->user_id, EnumVal(Job::Status::PENDING),
         default_priority(Job::Type::MERGE_USERS), EnumVal(Job::Type::MERGE_USERS),
         mysql_date(), donor_user_id,
         sim::jobs::MergeUsersInfo(

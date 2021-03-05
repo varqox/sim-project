@@ -11,11 +11,11 @@ namespace web_server::old {
 Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
     using PERM = SubmissionPermissions;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
-    switch (session_user_type) {
+    switch (session->user_type) {
     case User::Type::ADMIN: return PERM::VIEW_ALL;
     case User::Type::TEACHER:
     case User::Type::NORMAL: return PERM::NONE;
@@ -34,7 +34,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
     PERM overall_perms = submissions_get_overall_permissions();
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
@@ -44,7 +44,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
         (is_one_of(stype, STYPE::NORMAL, STYPE::IGNORED) ? PERM::CHANGE_TYPE | PERM::DELETE
                                                          : PERM::NONE);
 
-    if (session_user_type == User::Type::ADMIN or
+    if (session->user_type == User::Type::ADMIN or
         (cu_mode.has_value() and is_one_of(cu_mode.value(), CUM::MODERATOR, CUM::OWNER)))
     {
         return overall_perms | PERM_SUBMISSION_ADMIN;
@@ -52,13 +52,13 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
     // This check has to be done as the last one because it gives the least
     // permissions
-    if (session_is_open and problem_owner and session_user_id == problem_owner.value()) {
+    if (session.has_value() and problem_owner and session->user_id == problem_owner.value()) {
         if (stype == STYPE::PROBLEM_SOLUTION) {
             return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FINAL_REPORT |
                 PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
         }
 
-        if (submission_owner and session_user_id == submission_owner.value()) {
+        if (submission_owner and session->user_id == submission_owner.value()) {
             return overall_perms | PERM_SUBMISSION_ADMIN;
         }
 
@@ -66,7 +66,8 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
             PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
     }
 
-    if (session_is_open and submission_owner and session_user_id == submission_owner.value()) {
+    if (session.has_value() and submission_owner and
+        session->user_id == submission_owner.value()) {
         return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
     }
 

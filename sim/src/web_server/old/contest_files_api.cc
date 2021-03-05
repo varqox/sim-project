@@ -98,7 +98,8 @@ void Sim::api_contest_files() {
                 if (cond_c == '=' and not allow_access) {
                     auto perms_opt = sim::contest_files::get_permissions(
                         mysql, arg_id,
-                        (session_is_open ? std::optional{session_user_id} : std::nullopt));
+                        (session.has_value() ? std::optional{session->user_id}
+                                             : std::nullopt));
                     if (perms_opt) {
                         std::tie(perms, overall_perms) = perms_opt.value();
                     }
@@ -123,7 +124,7 @@ void Sim::api_contest_files() {
 
                 auto cperms = sim::contests::get_permissions(
                     mysql, arg_id,
-                    (session_is_open ? std::optional{session_user_id} : std::nullopt));
+                    (session.has_value() ? std::optional{session->user_id} : std::nullopt));
                 if (not cperms) {
                     return set_empty_response(); // Do allow to query for
                                                  // contest existence (not
@@ -214,7 +215,7 @@ void Sim::api_contest_file() {
     {
         auto perms_opt = sim::contest_files::get_permissions(
             mysql, contest_file_id,
-            (session_is_open ? std::optional{session_user_id} : std::nullopt));
+            (session.has_value() ? std::optional{session->user_id} : std::nullopt));
         if (not perms_opt) {
             return api_error404();
         }
@@ -268,7 +269,8 @@ void Sim::api_contest_file_add() {
     }
 
     auto cperms = sim::contests::get_permissions(
-        mysql, contest_id, (session_is_open ? std::optional{session_user_id} : std::nullopt));
+        mysql, contest_id,
+        (session.has_value() ? std::optional{session->user_id} : std::nullopt));
     if (not cperms) {
         return api_error404(); // TODO: maybe too much information?
     }
@@ -330,13 +332,13 @@ void Sim::api_contest_file_add() {
 
     decltype(ContestFile::id) file_id;
     auto curr_date = mysql_date();
-    throw_assert(session_is_open);
+    throw_assert(session.has_value());
 
     do {
         file_id = sim::generate_random_token(decltype(ContestFile::id)::max_len);
         stmt.bind_and_execute(
             file_id, internal_file_id, contest_id, name, description, file_size, curr_date,
-            session_user_id);
+            session->user_id);
     } while (stmt.affected_rows() == 0);
 
     // Move file

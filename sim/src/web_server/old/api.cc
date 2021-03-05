@@ -108,7 +108,7 @@ void Sim::api_logs() {
     constexpr unsigned LOGS_FIRST_CHUNK_MAX_LEN = 16 << 10; // 16 KiB
     constexpr unsigned LOGS_OTHER_CHUNK_MAX_LEN = 128 << 10; // 128 KiB
 
-    if (not session_is_open || session_user_type != User::Type::ADMIN) {
+    if (not session.has_value() || session->user_type != User::Type::ADMIN) {
         return api_error403();
     }
 

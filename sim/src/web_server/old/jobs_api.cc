@@ -43,7 +43,7 @@ static constexpr const char* job_type_str(Job::Type type) noexcept {
 void Sim::api_jobs() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -152,7 +152,7 @@ void Sim::api_jobs() {
             if (not allow_access) {
                 // If user cannot view all jobs, allow them to view their jobs
                 allow_access = true;
-                qwhere.append(" AND creator=", session_user_id);
+                qwhere.append(" AND creator=", session->user_id);
             }
 
             qfields.append(", SUBSTR(data, 1, ", sim::jobs::job_log_view_max_size + 1, ')');
@@ -189,7 +189,7 @@ void Sim::api_jobs() {
 
         } else if (cond == 'u' and ~mask & USER_ID_COND) { // User (creator)
             qwhere.append(" AND creator=", arg_id);
-            if (str2num<decltype(session_user_id)>(arg_id) == session_user_id) {
+            if (str2num<decltype(session->user_id)>(arg_id) == session->user_id) {
                 allow_access = true;
             }
 
@@ -416,7 +416,7 @@ void Sim::api_job() {
     STACK_UNWINDING_MARK;
     using JT = Job::Type;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 

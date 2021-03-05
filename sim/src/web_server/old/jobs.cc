@@ -15,11 +15,11 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
-    switch (session_user_type) {
+    switch (session->user_type) {
     case User::Type::ADMIN: return PERM::VIEW_ALL;
     case User::Type::TEACHER:
     case User::Type::NORMAL: return PERM::NONE;
@@ -38,7 +38,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(
 
     JobPermissions overall_perms = jobs_get_overall_permissions();
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return overall_perms;
     }
 
@@ -72,7 +72,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(
         return PERM::NONE; // Shouldn't happen
     }();
 
-    if (session_user_type == User::Type::ADMIN) {
+    if (session->user_type == User::Type::ADMIN) {
         switch (job_status) {
         case JS::PENDING:
         case JS::NOTICED_PENDING:
@@ -92,7 +92,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(
     }
 
     if (creator_id.has_value() and
-        session_user_id == str2num<decltype(session_user_id)>(creator_id.value()))
+        session->user_id == str2num<decltype(session->user_id)>(creator_id.value()))
     {
         if (is_one_of(job_status, JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS)) {
             return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
@@ -111,8 +111,9 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
 
     auto problem_perms =
         sim::problems::get_permissions(
-            mysql, problem_id, (session_is_open ? optional{session_user_id} : std::nullopt),
-            (session_is_open ? optional{session_user_type} : std::nullopt))
+            mysql, problem_id,
+            (session.has_value() ? optional{session->user_id} : std::nullopt),
+            (session.has_value() ? optional{session->user_type} : std::nullopt))
             .value_or(P_PERMS::NONE);
 
     if (uint(problem_perms & P_PERMS::VIEW_RELATED_JOBS)) {
@@ -127,7 +128,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
@@ -139,7 +140,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
                               "LEFT JOIN contest_users cu ON cu.user_id=?"
                               " AND cu.contest_id=s.contest_id "
                               "WHERE s.id=?");
-    stmt.bind_and_execute(session_user_id, submission_id);
+    stmt.bind_and_execute(session->user_id, submission_id);
 
     EnumVal<Submission::Type> stype{};
     mysql::Optional<decltype(Problem::owner)::value_type> problem_owner;
@@ -151,7 +152,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
         if (is_public.has_value() and // <-- contest exists
             uint(
                 sim::contests::get_permissions(
-                    (session_is_open ? std::optional{session_user_type} : std::nullopt),
+                    (session.has_value() ? std::optional{session->user_type} : std::nullopt),
                     is_public.value(), cu_mode) &
                 sim::contests::Permissions::ADMIN))
         {
@@ -161,8 +162,8 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
         // The below check has to be done as the last one because it gives the
         // least permissions
         auto problem_perms = sim::problems::get_permissions(
-            (session_is_open ? optional{session_user_id} : std::nullopt),
-            (session_is_open ? optional{session_user_type} : std::nullopt), problem_owner,
+            (session.has_value() ? optional{session->user_id} : std::nullopt),
+            (session.has_value() ? optional{session->user_type} : std::nullopt), problem_owner,
             problem_type);
         // Give access to the problem's submissions' jobs to the problem's admin
         if (bool(uint(problem_perms & sim::problems::Permissions::EDIT))) {
@@ -176,7 +177,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
 void Sim::jobs_handle() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return redirect("/login?" + request.target);
     }
 
@@ -193,7 +194,7 @@ void Sim::jobs_handle() {
 
     InplaceBuff<32> query_suffix{};
     if (next_arg == "my") {
-        query_suffix.append("/u", session_user_id);
+        query_suffix.append("/u", session->user_id);
     } else if (!next_arg.empty()) {
         return error404();
     }

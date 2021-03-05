@@ -16,8 +16,7 @@ namespace web_server::old {
 
 Sim::Sim() { web_worker = std::make_unique<web_worker::WebWorker>(mysql); }
 
-http::Response Sim::handle(CStringView client_ip_addr, http::Request req) {
-    client_ip = client_ip_addr;
+http::Response Sim::handle(http::Request req) {
     request = std::move(req);
     resp = http::Response(http::Response::TEXT);
 
@@ -58,18 +57,15 @@ http::Response Sim::handle(CStringView client_ip_addr, http::Request req) {
             // Reset state
             page_template_began = false;
             notifications.clear();
-            session_is_open = false;
+            session = std::nullopt;
             form_validation_error = false;
 
             // Check CSRF token
             if (request.method == http::Request::POST) {
                 // If no session is open, load value from cookie to pass
                 // verification
-                if (not session_open()) {
-                    session_csrf_token = request.get_cookie("csrf_token");
-                }
-
-                if (request.form_fields.get_or("csrf_token", "") != session_csrf_token) {
+                if (session_open() and
+                    request.form_fields.get_or("csrf_token", "") != session->csrf_token) {
                     error403();
                     goto cleanup;
                 }
@@ -155,13 +151,13 @@ http::Response Sim::handle(CStringView client_ip_addr, http::Request req) {
         ERRLOG_CATCH(e);
         // We cannot use error500() because it will probably throw
         hard_error500();
-        session_is_open = false; // Prevent session from being left open
+        session = std::nullopt; // Prevent session from being left open
 
     } catch (...) {
         ERRLOG_CATCH();
         // We cannot use error500() because it will probably throw
         hard_error500();
-        session_is_open = false; // Prevent session from being left open
+        session = std::nullopt; // Prevent session from being left open
     }
 
     return std::move(resp);
@@ -220,11 +216,11 @@ void Sim::view_logs() {
     STACK_UNWINDING_MARK;
 
     // TODO: convert it to some kind of permissions
-    if (!session_is_open) {
+    if (!session.has_value()) {
         return error403();
     }
 
-    switch (session_user_type) {
+    switch (session->user_type) {
     case User::Type::ADMIN: break;
     case User::Type::TEACHER:
     case User::Type::NORMAL: return error403();

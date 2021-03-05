@@ -60,7 +60,7 @@ void Sim::api_submissions() {
     STACK_UNWINDING_MARK;
     using PERM = SubmissionPermissions;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -87,7 +87,7 @@ void Sim::api_submissions() {
         "LEFT JOIN contests c ON c.id=s.contest_id "
         "LEFT JOIN contest_users cu ON cu.contest_id=s.contest_id"
         " AND cu.user_id=",
-        session_user_id,
+        session->user_id,
         " WHERE TRUE"); // Needed to easily append constraints
 
     enum ColumnIdx {
@@ -123,13 +123,13 @@ void Sim::api_submissions() {
         FINAL_REPORT
     };
 
-    bool allow_access = (session_user_type == User::Type::ADMIN);
+    bool allow_access = (session->user_type == User::Type::ADMIN);
     bool select_one = false;
     bool selecting_problem_submissions = false;
     bool selecting_contest_submissions = false;
 
     bool selecting_finals = false;
-    bool may_see_problem_final = (session_user_type == User::Type::ADMIN);
+    bool may_see_problem_final = (session->user_type == User::Type::ADMIN);
 
     auto append_column_names = [&] {
         // clang-format off
@@ -279,8 +279,8 @@ void Sim::api_submissions() {
 
                 problem_perms = sim::problems::get_permissions(
                     mysql, arg_id,
-                    (session_is_open ? optional{session_user_id} : std::nullopt),
-                    (session_is_open ? optional{session_user_type} : std::nullopt));
+                    (session.has_value() ? optional{session->user_id} : std::nullopt),
+                    (session.has_value() ? optional{session->user_type} : std::nullopt));
                 if (not problem_perms) {
                     return set_empty_response();
                 }
@@ -347,7 +347,7 @@ void Sim::api_submissions() {
                     default: assert(false);
                     }
                     auto stmt = mysql.prepare(query);
-                    stmt.bind_and_execute(session_user_id, arg_id);
+                    stmt.bind_and_execute(session->user_id, arg_id);
 
                     mysql::Optional<decltype(ContestUser::mode)> cu_mode;
                     uint8_t is_public = false;
@@ -357,7 +357,8 @@ void Sim::api_submissions() {
                     }
 
                     contest_perms = sim::contests::get_permissions(
-                        (session_is_open ? std::optional{session_user_type} : std::nullopt),
+                        (session.has_value() ? std::optional{session->user_type}
+                                             : std::nullopt),
                         is_public, cu_mode);
                     if (uint(
                             contest_perms.value() &
@@ -375,7 +376,7 @@ void Sim::api_submissions() {
                 qwhere.append(" AND s.owner=", arg_id);
 
                 // Owner (almost) always has access to theirs submissions
-                if (str2num<decltype(session_user_id)>(arg_id) == session_user_id) {
+                if (str2num<decltype(session->user_id)>(arg_id) == session->user_id) {
                     after_checks.emplace_back([&] {
                         if (allow_access) {
                             return;
@@ -694,7 +695,7 @@ void Sim::api_submissions() {
 void Sim::api_submission() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -720,7 +721,7 @@ void Sim::api_submission() {
                               "LEFT JOIN contest_users cu"
                               " ON cu.contest_id=s.contest_id AND cu.user_id=? "
                               "WHERE s.id=?");
-    stmt.bind_and_execute(session_user_id, submissions_sid);
+    stmt.bind_and_execute(session->user_id, submissions_sid);
     stmt.res_bind_all(submissions_file_id, sowner, stype, slang, cu_mode, p_owner);
     if (not stmt.next()) {
         return api_error404();
@@ -759,7 +760,7 @@ void Sim::api_submission() {
 void Sim::api_submission_add() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -790,8 +791,9 @@ void Sim::api_submission_add() {
     if (not contest_problem_id.has_value()) { // Problem submission
         // Check permissions to the problem
         auto problem_perms_opt = sim::problems::get_permissions(
-            mysql, problem_id, (session_is_open ? optional{session_user_id} : std::nullopt),
-            (session_is_open ? optional{session_user_type} : std::nullopt));
+            mysql, problem_id,
+            (session.has_value() ? optional{session->user_id} : std::nullopt),
+            (session.has_value() ? optional{session->user_type} : std::nullopt));
         if (not problem_perms_opt) {
             return api_error404();
         }
@@ -815,7 +817,7 @@ void Sim::api_submission_add() {
                                   "LEFT JOIN contest_users cu"
                                   " ON cu.contest_id=c.id AND cu.user_id=? "
                                   "WHERE cp.id=? AND cp.problem_id=?");
-        stmt.bind_and_execute(session_user_id, contest_problem_id.value(), problem_id);
+        stmt.bind_and_execute(session->user_id, contest_problem_id.value(), problem_id);
 
         uint8_t is_public = false;
         InplaceBuff<20> cr_begins_str;
@@ -828,8 +830,8 @@ void Sim::api_submission_add() {
         }
 
         auto contest_perms = sim::contests::get_permissions(
-            (session_is_open ? std::optional{session_user_type} : std::nullopt), is_public,
-            umode);
+            (session.has_value() ? std::optional{session->user_type} : std::nullopt),
+            is_public, umode);
         if (uint(~contest_perms & sim::contests::Permissions::PARTICIPATE)) {
             return api_error403(); // Could not participate
         }
@@ -909,7 +911,8 @@ void Sim::api_submission_add() {
                               "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '',"
                               " '')");
     stmt.bind_and_execute(
-        file_id, session_user_id, problem_id, contest_problem_id, contest_round_id, contest_id,
+        file_id, session->user_id, problem_id, contest_problem_id, contest_round_id,
+        contest_id,
         EnumVal(ignored_submission ? Submission::Type::IGNORED : Submission::Type::NORMAL),
         EnumVal(slang), EnumVal(Submission::Status::PENDING),
         EnumVal(Submission::Status::PENDING), mysql_date(), mysql_date(0));
@@ -921,7 +924,7 @@ void Sim::api_submission_add() {
                  " aux_id, info, data) "
                  "VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
-            session_user_id, EnumVal(Job::Status::PENDING),
+            session->user_id, EnumVal(Job::Status::PENDING),
             default_priority(Job::Type::JUDGE_SUBMISSION),
             EnumVal(Job::Type::JUDGE_SUBMISSION), mysql_date(), submission_id,
             sim::jobs::dump_string(problem_id));
@@ -976,7 +979,7 @@ void Sim::api_submission_rejudge() {
                          " type, added, aux_id, info, data) "
                          "VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, '')");
     stmt.bind_and_execute(
-        session_user_id, EnumVal(Job::Status::PENDING),
+        session->user_id, EnumVal(Job::Status::PENDING),
         default_priority(Job::Type::REJUDGE_SUBMISSION),
         EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(), submissions_sid,
         sim::jobs::dump_string(problem_id));

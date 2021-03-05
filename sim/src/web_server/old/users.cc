@@ -14,13 +14,13 @@ namespace web_server::old {
 Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
     using PERM = UserPermissions;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
-    switch (session_user_type) {
+    switch (session->user_type) {
     case User::Type::ADMIN:
-        if (session_user_id == sim::users::SIM_ROOT_UID) {
+        if (session->user_id == sim::users::SIM_ROOT_UID) {
             return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN | PERM::ADD_TEACHER |
                 PERM::ADD_NORMAL;
         } else {
@@ -40,13 +40,13 @@ Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcep
     constexpr UserPermissions PERM_ADMIN = PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS |
         PERM::ADMIN_CHANGE_PASS | PERM::DELETE | PERM::MERGE;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
     auto viewer =
-        EnumVal(session_user_type).int_val() + (session_user_id != sim::users::SIM_ROOT_UID);
-    if (session_user_id == user_id) {
+        EnumVal(session->user_type).int_val() + (session->user_id != sim::users::SIM_ROOT_UID);
+    if (session->user_id == user_id) {
         constexpr UserPermissions perm[4] = {
             // Sim root
             PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN,
@@ -114,12 +114,12 @@ Sim::UserPermissions Sim::users_get_permissions(decltype(User::id) user_id) {
 }
 
 bool Sim::check_submitted_password(StringView password_field_name) {
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return false;
     }
 
     auto stmt = mysql.prepare("SELECT password_salt, password_hash FROM users WHERE id=?");
-    stmt.bind_and_execute(session_user_id);
+    stmt.bind_and_execute(session->user_id);
 
     decltype(User::password_salt) password_salt;
     decltype(User::password_hash) passwd_hash;
@@ -169,12 +169,14 @@ void Sim::login() {
                     password_hash))
             {
                 // Delete old session
-                if (session_is_open) {
+                if (session.has_value()) {
                     session_destroy();
                 }
 
                 // Create new
-                session_create_and_open(uid, not remember);
+                session_create_and_open(
+                    WONT_THROW(str2num<decltype(session->user_id)>(uid).value()),
+                    not remember);
 
                 // If there is a redirection string, redirect to it
                 InplaceBuff<4096> location{url_args.extract_query()};
@@ -225,7 +227,7 @@ void Sim::logout() {
 void Sim::sign_up() {
     STACK_UNWINDING_MARK;
 
-    if (session_is_open) {
+    if (session.has_value()) {
         return redirect("/");
     }
 
@@ -274,7 +276,7 @@ void Sim::sign_up() {
 
             // User account successfully created
             if (stmt.affected_rows() == 1) {
-                auto new_uid = to_string(stmt.insert_id());
+                auto new_uid = stmt.insert_id();
 
                 session_create_and_open(new_uid, true);
                 stdlog("New user: ", new_uid, " -> `", username, '`');
@@ -346,7 +348,7 @@ void Sim::sign_up() {
 void Sim::users_handle() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return redirect(concat_tostr("/login?", request.target));
     }
 

@@ -15,6 +15,7 @@
 #include "simlib/request_uri_parser.hh"
 #include "src/web_server/http/request.hh"
 #include "src/web_server/http/response.hh"
+#include "src/web_server/web_worker/context.hh"
 #include "src/web_server/web_worker/web_worker.hh"
 
 #include <utime.h>
@@ -27,7 +28,6 @@ class Sim final {
     /* ============================== General ============================== */
 
     mysql::Connection mysql = sim::mysql::make_conn_with_credential_file(".db.config");
-    CStringView client_ip; // TODO: put in request?
     http::Request request;
     http::Response resp;
     RequestUriParser url_args{""};
@@ -278,13 +278,7 @@ class Sim final {
 
     /* ============================== Session ============================== */
 
-    bool session_is_open = false;
-    decltype(sim::users::User::type) session_user_type = sim::users::User::Type::NORMAL;
-    decltype(sim::sessions::Session::id) session_id;
-    decltype(sim::sessions::Session::csrf_token) session_csrf_token;
-    decltype(sim::sessions::Session::user_id) session_user_id;
-    decltype(sim::users::User::username) session_username;
-    decltype(sim::sessions::Session::data) session_data;
+    decltype(web_worker::Context::session) session;
 
     /**
      * @brief Creates session and opens it
@@ -295,7 +289,7 @@ class Sim final {
      *
      * @errors Throws an exception in any case of error
      */
-    void session_create_and_open(StringView user_id, bool short_session);
+    void session_create_and_open(decltype(session->user_id) user_id, bool short_session);
 
     /// Destroys session (removes from database, etc.)
     void session_destroy();
@@ -710,14 +704,11 @@ public:
      * @details Takes requests, handle it and returns response.
      *   This function is not thread-safe
      *
-     * @param client_ip_addr IP address of the client
      * @param req request
      *
      * @return response
      */
-    http::Response handle(
-        CStringView client_ip_addr,
-        http::Request req); // TODO: close session
+    http::Response handle(http::Request req); // TODO: close session
 };
 
 } // namespace web_server::old

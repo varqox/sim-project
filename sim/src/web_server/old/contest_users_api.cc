@@ -36,11 +36,11 @@ Sim::ContestUserPermissions Sim::contest_user_get_overall_permissions(
     using PERM = ContestUserPermissions;
     using CUM = ContestUser::Mode;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
-    if (session_user_type == User::Type::ADMIN) {
+    if (session->user_type == User::Type::ADMIN) {
         viewer_mode = CUM::OWNER;
     }
 
@@ -54,11 +54,11 @@ Sim::ContestUserPermissions Sim::contest_user_get_permissions(
     using PERM = ContestUserPermissions;
     using CUM = ContestUser::Mode;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return PERM::NONE;
     }
 
-    if (session_user_type == User::Type::ADMIN) {
+    if (session->user_type == User::Type::ADMIN) {
         viewer_mode = CUM::OWNER;
     }
 
@@ -90,13 +90,13 @@ pair<std::optional<ContestUser::Mode>, Sim::ContestUserPermissions>
 Sim::contest_user_get_overall_permissions(StringView contest_id) {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return {std::nullopt, contest_user_get_overall_permissions(std::nullopt)};
     }
 
     auto stmt = mysql.prepare("SELECT cu.mode FROM contests c LEFT JOIN contest_users "
                               "cu ON cu.user_id=? AND cu.contest_id=c.id WHERE c.id=?");
-    stmt.bind_and_execute(session_user_id, contest_id);
+    stmt.bind_and_execute(session->user_id, contest_id);
 
     mysql::Optional<decltype(ContestUser::mode)> cu_mode;
     stmt.res_bind_all(cu_mode);
@@ -113,7 +113,7 @@ std::tuple<
 Sim::contest_user_get_permissions(StringView contest_id, StringView user_id) {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return {
             std::nullopt, contest_user_get_overall_permissions(std::nullopt), std::nullopt};
     }
@@ -124,7 +124,7 @@ Sim::contest_user_get_permissions(StringView contest_id, StringView user_id) {
                               "LEFT JOIN contest_users u ON u.user_id=?"
                               " AND u.contest_id=c.id "
                               "WHERE c.id=?");
-    stmt.bind_and_execute(session_user_id, user_id, contest_id);
+    stmt.bind_and_execute(session->user_id, user_id, contest_id);
 
     mysql::Optional<decltype(ContestUser::mode)> v_mode;
     mysql::Optional<decltype(ContestUser::mode)> u_mode;
@@ -141,7 +141,7 @@ void Sim::api_contest_users() {
     using CUP = ContestUserPermissions;
     using CUM = ContestUser::Mode;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -321,7 +321,7 @@ void Sim::api_contest_users() {
 void Sim::api_contest_user() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 

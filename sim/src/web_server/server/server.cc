@@ -49,7 +49,7 @@ static void* worker(void* ptr) {
                 using std::chrono::steady_clock;
                 auto beg = steady_clock::now();
 
-                http::Response resp = sim_worker.handle(ip, std::move(req));
+                http::Response resp = sim_worker.handle(std::move(req));
 
                 auto microdur = std::chrono::duration_cast<std::chrono::microseconds>(
                     steady_clock::now() - beg);

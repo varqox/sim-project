@@ -16,7 +16,7 @@ namespace web_server::old {
 void Sim::api_contest_entry_token() {
     STACK_UNWINDING_MARK;
 
-    if (not session_is_open) {
+    if (not session.has_value()) {
         return api_error403();
     }
 
@@ -67,7 +67,7 @@ void Sim::api_contest_entry_token() {
         sim::contests::Permissions cperms =
             sim::contests::get_permissions(
                 mysql, contest_id,
-                (session_is_open ? std::optional{session_user_id} : std::nullopt))
+                (session.has_value() ? std::optional{session->user_id} : std::nullopt))
                 .value_or(sim::contests::Permissions::NONE);
         if (uint(~cperms & sim::contests::Permissions::MANAGE_CONTEST_ENTRY_TOKEN)) {
             return api_error404(); // To not reveal that the contest exists
@@ -267,7 +267,7 @@ void Sim::api_contest_entry_token_use_to_enter_contest(
     auto stmt = mysql.prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "
                               "VALUES(?, ?, ?)");
     stmt.bind_and_execute(
-        session_user_id, contest_id,
+        session->user_id, contest_id,
         EnumVal(sim::contest_users::ContestUser::Mode::CONTESTANT));
     if (stmt.affected_rows() == 0) {
         return api_error400("You already participate in the contest");
