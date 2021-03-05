@@ -277,7 +277,7 @@ std::optional<T> str2num(StringView str) noexcept {
 // represented in @p str is too big, invalid or not in range [@p min_val,
 // @p max_val]
 template <class T>
-constexpr std::optional<T> str2num(StringView str, T min_val, T max_val) {
+constexpr std::optional<T> str2num(StringView str, T min_val, T max_val) noexcept {
     auto res = str2num<T>(str);
     if (not res or *res < min_val or *res > max_val) {
         return std::nullopt;
