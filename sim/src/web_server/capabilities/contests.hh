@@ -5,7 +5,7 @@
 namespace web_server::capabilities {
 
 struct Contests {
-    bool view : 1;
+    bool web_ui_view : 1;
     bool view_all : 1;
     bool view_public : 1;
     bool add_private : 1;

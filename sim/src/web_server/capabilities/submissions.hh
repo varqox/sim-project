@@ -5,7 +5,8 @@
 namespace web_server::capabilities {
 
 struct Submissions {
-    bool view : 1;
+    bool web_ui_view : 1;
+    bool view_my : 1;
     bool view_all : 1;
 };
 

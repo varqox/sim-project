@@ -87,7 +87,7 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
     resp.content.append("</head><body><div class=\"navbar\">"
                         "<a href=\"/\" class=\"brand\">Sim beta</a>");
 
-    if (capabilities::contests_for(params.session).view) {
+    if (capabilities::contests_for(params.session).web_ui_view) {
         // clang-format off
         resp.content.append("<script>"
                 "var nav = document.querySelector('.navbar');"
@@ -96,16 +96,16 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
             "</script>");
         // clang-format on
     }
-    if (capabilities::problems_for(params.session).view) {
+    if (capabilities::problems_for(params.session).web_ui_view) {
         resp.content.append("<a href=\"/p\">Problems</a>");
     }
-    if (capabilities::users_for(params.session).view) {
+    if (capabilities::users_for(params.session).web_ui_view) {
         resp.content.append("<a href=\"/u\">Users</a>");
     }
-    if (capabilities::submissions_for(params.session).view) {
+    if (capabilities::submissions_for(params.session).web_ui_view) {
         resp.content.append("<a href=\"/s\">Submissions</a>");
     }
-    if (capabilities::jobs_for(params.session).view) {
+    if (capabilities::jobs_for(params.session).web_ui_view) {
         resp.content.append("<a href=\"/jobs\">Job queue</a>");
     }
     if (capabilities::logs_for(params.session).view) {

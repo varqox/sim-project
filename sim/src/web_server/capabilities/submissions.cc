@@ -8,7 +8,8 @@ namespace web_server::capabilities {
 Submissions submissions_for(const decltype(web_worker::Context::session)& session) noexcept {
     bool is_admin = session and session->user_type == User::Type::ADMIN;
     return Submissions{
-        .view = is_admin,
+        .web_ui_view = session.has_value(),
+        .view_my = session.has_value(),
         .view_all = is_admin,
     };
 }

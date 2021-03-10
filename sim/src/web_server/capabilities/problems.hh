@@ -5,7 +5,8 @@
 namespace web_server::capabilities {
 
 struct Problems {
-    bool view : 1;
+    bool web_ui_view : 1;
+    bool view_my : 1;
     bool view_all : 1;
     bool view_with_type_contest_only : 1;
     bool view_with_type_public : 1;
