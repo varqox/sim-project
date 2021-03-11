@@ -579,9 +579,11 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 		style: 'display:none',
 		html: $('<span>', {
 			text: "Error: " + response.status + ' ' + response.statusText + err_status
-		}).add(try_again_handler === undefined ? '' : $('<a>', {
-			text: 'Try again',
-			click: try_again_handler
+		}).add(try_again_handler === undefined ? '' : $('<center>', {
+			html: $('<a>', {
+				text: 'Try again',
+				click: try_again_handler
+			})
 		}))
 	}).fadeIn(fade_in_duration));
 

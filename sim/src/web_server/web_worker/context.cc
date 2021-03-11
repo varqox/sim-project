@@ -41,11 +41,49 @@ void Context::close_session() {
     session = std::nullopt;
 }
 
-Response Context::response(StringView status_code, StringView content) {
+bool Context::session_has_expired() noexcept {
+    return !request.get_cookie(Session::id_cookie_name).empty() and !session.has_value();
+}
+
+Response response(
+    StringView status_code, decltype(Context::cookie_changes)&& cookie_changes,
+    StringView content) {
     auto resp = Response{Response::TEXT, status_code};
-    resp.content = content;
     resp.cookies = std::move(cookie_changes);
+    resp.content = content;
     return resp;
+}
+
+Response Context::response_ok(StringView content) {
+    return response("200 OK", std::move(cookie_changes), content);
+}
+
+Response Context::response_400(StringView content) {
+    return response("400 Bad Request", std::move(cookie_changes), content);
+}
+
+Response Context::response_403(StringView content) {
+    // In order not to reveal information (e.g. existence of something) only admins may see
+    // error 403 and the @p content
+    if (session) {
+        using UT = sim::users::User::Type;
+        switch (session->user_type) {
+        case UT::ADMIN: {
+            assert(not session_has_expired());
+            return response("403 Forbidden", std::move(cookie_changes), content);
+        }
+        case UT::TEACHER:
+        case UT::NORMAL: break;
+        }
+    }
+    return response_404();
+}
+
+http::Response Context::response_404() {
+    static constexpr CStringView session_expired_msg =
+        "Your session has expired, please try to sign in and then try again.";
+    auto content = session_has_expired() ? session_expired_msg : "";
+    return response("404 Not Found", std::move(cookie_changes), content);
 }
 
 Response Context::response_ui(StringView title, StringView styles, StringView body) {

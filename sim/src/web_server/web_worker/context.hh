@@ -2,6 +2,7 @@
 
 #include "sim/mysql/mysql.hh"
 #include "sim/sessions/session.hh"
+#include "sim/users/user.hh"
 #include "simlib/string_view.hh"
 #include "src/web_server/http/cookies.hh"
 #include "src/web_server/http/request.hh"
@@ -32,21 +33,15 @@ struct Context {
     // void destroy_session(); // TODO: implement during refactor of log-out
     void close_session();
 
-    http::Response response(StringView status_code, StringView content);
+    bool session_has_expired() noexcept;
 
-    http::Response response_ok(StringView content = "") { return response("200 OK", content); }
+    http::Response response_ok(StringView content = "");
 
-    http::Response response_400(StringView content) {
-        return response("400 Bad Request", content);
-    }
+    http::Response response_400(StringView content);
 
-    http::Response response_403(StringView content = "") {
-        return response("403 Forbidden", content);
-    }
+    http::Response response_403(StringView content = "");
 
-    http::Response response_404(StringView content = "") {
-        return response("404 Not Found", content);
-    }
+    http::Response response_404();
 
     http::Response response_ui(StringView title, StringView styles, StringView body);
 };
