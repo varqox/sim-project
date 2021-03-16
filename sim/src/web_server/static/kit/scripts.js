@@ -595,15 +595,14 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 		var msg = $($.parseHTML(response.responseText)).text();
 
 		if (msg != '')
-			x.text(x.text().concat("\nInfo: ", msg));
+			x.text(x.text().concat("\n", msg));
 
 	} catch (err) {
 		if (response.responseText != '' && // There is a message
 			response.responseText.lastIndexOf('<!DOCTYPE html>', 0) !== 0 && // Message is not a whole HTML page
 			response.responseText.lastIndexOf('<!doctype html>', 0) !== 0) // Message is not a whole HTML page
 		{
-			x.text(x.text().concat("\nInfo: ",
-				response.responseText));
+			x.text(x.text().concat("\n", response.responseText));
 		}
 	}
 }
