@@ -1,4 +1,5 @@
 #include "src/job_server/job_handlers/judge_or_rejudge.hh"
+#include "sim/submissions/submission.hh"
 #include "sim/submissions/update_final.hh"
 #include "src/job_server/main.hh"
 
@@ -49,9 +50,10 @@ void JudgeOrRejudge::run() {
     job_log("Judging submission ", submission_id_, " (problem: ", problem_id, ')');
     load_problem_package(sim::internal_files::path_of(problem_file_id));
 
-    auto update_submission = [&](Submission::Status initial_status,
-                                 Submission::Status full_status, std::optional<int64_t> score,
-                                 auto&& initial_report, auto&& final_report) {
+    auto update_submission = [&](decltype(Submission::initial_status) initial_status,
+                                 decltype(Submission::full_status) full_status,
+                                 std::optional<int64_t> score, auto&& initial_report,
+                                 auto&& final_report) {
         {
             auto transaction = mysql.start_transaction();
             sim::submissions::update_final_lock(mysql, sowner, problem_id);
@@ -75,13 +77,12 @@ void JudgeOrRejudge::run() {
 
             if (is_fatal(full_status)) {
                 stmt.bind_and_execute(
-                    false, static_cast<uint>(initial_status), static_cast<uint>(full_status),
-                    nullptr, judging_began, initial_report, final_report, submission_id_);
+                    false, initial_status, full_status, nullptr, judging_began, initial_report,
+                    final_report, submission_id_);
             } else {
                 stmt.bind_and_execute(
-                    (stype == ST::NORMAL and score.has_value()),
-                    static_cast<uint>(initial_status), static_cast<uint>(full_status), score,
-                    judging_began, initial_report, final_report, submission_id_);
+                    (stype == ST::NORMAL and score.has_value()), initial_status, full_status,
+                    score, judging_began, initial_report, final_report, submission_id_);
             }
 
             sim::submissions::update_final(

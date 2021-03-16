@@ -5,17 +5,19 @@
 #include "sim/sql_fields/datetime.hh"
 #include "sim/sql_fields/varbinary.hh"
 #include "sim/users/user.hh"
+#include "simlib/enum_with_string_conversions.hh"
 
 #include <cstdint>
 
 namespace sim::problems {
 
 struct Problem {
-    enum class Type : uint8_t {
-        PUBLIC = 1,
-        PRIVATE = 2,
-        CONTEST_ONLY = 3,
-    };
+    ENUM_WITH_STRING_CONVERSIONS(
+        Type, uint8_t,
+        (PUBLIC, 1, "public") //
+        (PRIVATE, 2, "private") //
+        (CONTEST_ONLY, 3, "contest_only") //
+    );
 
     uint64_t id;
     decltype(internal_files::InternalFile::id) file_id;

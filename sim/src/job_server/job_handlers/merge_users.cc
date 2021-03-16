@@ -49,11 +49,7 @@ void MergeUsers::run_impl() {
 
         // Logging
         job_log("Merged user's username: ", donor_username);
-        switch (donor_user_type) {
-        case User::Type::ADMIN: job_log("Merged user's type: admin"); break;
-        case User::Type::TEACHER: job_log("Merged user's type: teacher"); break;
-        case User::Type::NORMAL: job_log("Merged user's type: normal"); break;
-        }
+        job_log("Merged user's type: ", donor_user_type.to_enum().to_str());
 
         stmt = mysql.prepare("SELECT 1 FROM users WHERE id=?");
         stmt.bind_and_execute(info_.target_user_id);

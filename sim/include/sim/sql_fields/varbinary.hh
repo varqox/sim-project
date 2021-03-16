@@ -20,4 +20,9 @@ public:
     ~Varbinary() = default;
 };
 
+template <class...>
+constexpr inline bool is_varbinary = false;
+template <size_t N>
+constexpr inline bool is_varbinary<Varbinary<N>> = true;
+
 } // namespace sim::sql_fields

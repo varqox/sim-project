@@ -8,6 +8,7 @@
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
 #include "sim/users/user.hh"
+#include "simlib/enum_with_string_conversions.hh"
 
 #include <cstdint>
 #include <optional>
@@ -15,35 +16,38 @@
 namespace sim::submissions {
 
 struct Submission {
-    enum class Type : uint8_t {
-        NORMAL = 0,
-        IGNORED = 2,
-        PROBLEM_SOLUTION = 3,
-    };
+    ENUM_WITH_STRING_CONVERSIONS(
+        Type, uint8_t,
+        (NORMAL, 0, "normal") //
+        (IGNORED, 2, "ignored") //
+        (PROBLEM_SOLUTION, 3, "problem_solution") //
+    );
 
-    enum class Language : uint8_t {
-        C11 = 0,
-        CPP11 = 1,
-        PASCAL = 2,
-        CPP14 = 3,
-        CPP17 = 4,
-    };
+    ENUM_WITH_STRING_CONVERSIONS(
+        Language, uint8_t,
+        (C11, 0, "c11") //
+        (CPP11, 1, "cpp11") //
+        (PASCAL, 2, "pascal") //
+        (CPP14, 3, "cpp14") //
+        (CPP17, 4, "cpp17") //
+    );
 
     // Initial and final values may be combined, but special not
-    enum class Status : uint8_t {
+    ENUM_WITH_STRING_CONVERSIONS(
+        Status, uint8_t,
         // Final
-        OK = 1,
-        WA = 2,
-        TLE = 3,
-        MLE = 4,
-        RTE = 5,
+        (OK, 1, "ok") //
+        (WA, 2, "wa") //
+        (TLE, 3, "tle") //
+        (MLE, 4, "mle") //
+        (RTE, 5, "rte") //
         // Special
-        PENDING = 8 + 0,
+        (PENDING, 8 + 0, "pending")
         // Fatal
-        COMPILATION_ERROR = 8 + 1,
-        CHECKER_COMPILATION_ERROR = 8 + 2,
-        JUDGE_ERROR = 8 + 3
-    };
+        (COMPILATION_ERROR, 8 + 1, "compilation_error") //
+        (CHECKER_COMPILATION_ERROR, 8 + 2, "checker_compilation_error") //
+        (JUDGE_ERROR, 8 + 3, "judge_error") //
+    );
 
     uint64_t id;
     decltype(internal_files::InternalFile::id) file_id;

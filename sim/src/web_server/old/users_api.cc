@@ -66,11 +66,11 @@ void Sim::api_users() {
 
         if (cond == 't' and ~mask & UTYPE_COND) { // User type
             if (arg_id == "A") {
-                query_append("type=", EnumVal(User::Type::ADMIN).int_val());
+                query_append("type=", EnumVal(User::Type::ADMIN).to_int());
             } else if (arg_id == "T") {
-                query_append("type=", EnumVal(User::Type::TEACHER).int_val());
+                query_append("type=", EnumVal(User::Type::TEACHER).to_int());
             } else if (arg_id == "N") {
-                query_append("type=", EnumVal(User::Type::NORMAL).int_val());
+                query_append("type=", EnumVal(User::Type::NORMAL).to_int());
             } else {
                 return api_error400(
                     intentional_unsafe_string_view(concat("Invalid user type: ", arg_id)));
@@ -117,7 +117,7 @@ void Sim::api_users() {
             json_stringify(res[LNAME]), ',', json_stringify(res[EMAIL]), ',');
 
         EnumVal<User::Type> utype{
-            WONT_THROW(str2num<std::underlying_type_t<User::Type>>(res[UTYPE]).value())};
+            WONT_THROW(str2num<User::Type::UnderlyingType>(res[UTYPE]).value())};
         switch (utype) {
         case User::Type::ADMIN: append("\"Admin\","); break;
         case User::Type::TEACHER: append("\"Teacher\","); break;
@@ -234,7 +234,7 @@ void Sim::api_user_add() {
 
     // Validate user type
     utype_str = request.form_fields.get_or("type", "");
-    User::Type utype = User::Type::NORMAL; // Silence GCC warning
+    decltype(User::type) utype = User::Type::NORMAL; // Silence GCC warning
     if (utype_str == "A") {
         utype = User::Type::ADMIN;
         if (uint(~users_perms & PERM::ADD_ADMIN)) {
@@ -281,7 +281,7 @@ void Sim::api_user_add() {
                               "VALUES(?, ?, ?, ?, ?, ?, ?)");
 
     stmt.bind_and_execute(
-        username, uint(utype), fname, lname, email, password_salt,
+        username, utype, fname, lname, email, password_salt,
         sha3_512(intentional_unsafe_string_view(concat(password_salt, pass))));
 
     // User account successfully created
@@ -314,7 +314,7 @@ void Sim::api_user_edit() {
 
     // Validate user type
     new_utype_str = request.form_fields.get_or("type", "");
-    User::Type new_utype = User::Type::NORMAL;
+    decltype(User::type) new_utype = User::Type::NORMAL;
     if (new_utype_str == "A") {
         new_utype = User::Type::ADMIN;
         if (uint(~users_perms & PERM::MAKE_ADMIN)) {
@@ -367,7 +367,7 @@ void Sim::api_user_edit() {
         .prepare("UPDATE IGNORE users "
                  "SET username=?, first_name=?, last_name=?, email=?, type=? "
                  "WHERE id=?")
-        .bind_and_execute(username, fname, lname, email, uint(new_utype), users_uid);
+        .bind_and_execute(username, fname, lname, email, new_utype, users_uid);
 
     transaction.commit();
 }

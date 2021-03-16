@@ -12,7 +12,7 @@
 #include "sim/submissions/submission.hh"
 #include "simlib/string_view.hh"
 #include "src/web_server/capabilities/contests.hh"
-#include "src/web_server/http/form_validator.hh"
+#include "src/web_server/http/form_validation.hh"
 #include "src/web_server/old/sim.hh"
 
 #include <cstdint>
@@ -220,8 +220,8 @@ public:
             json_stringify(extra_data.problem_label), ',',
             json_stringify(cp.name), ',',
             cp.item, ',',
-            cp.method_of_choosing_final_submission.to_json_value(), ',',
-            cp.score_revealing.to_json_value(), ',',
+            cp.method_of_choosing_final_submission.to_enum().to_quoted_str(), ',',
+            cp.score_revealing.to_enum().to_quoted_str(), ',',
             color_class_json(
                 contest_perms_, round_to_full_results_[cp.contest_round_id],
                 curr_date_, extra_data.final_submission_full_status,
@@ -346,8 +346,7 @@ void Sim::api_contests() {
             (res.is_null(USER_MODE)
                  ? std::nullopt
                  : optional(ContestUser::Mode(WONT_THROW(
-                       str2num<std::underlying_type_t<ContestUser::Mode>>(res[USER_MODE])
-                           .value()))));
+                       str2num<ContestUser::Mode::UnderlyingType>(res[USER_MODE]).value()))));
         auto contest_perms = sim::contests::get_permissions(
             (session.has_value() ? optional(session->user_type) : std::nullopt), is_public,
             cumode);
@@ -1093,6 +1092,33 @@ void Sim::api_contest_round_delete(
     append(stmt.insert_id());
 }
 
+namespace {
+
+constexpr http::ApiParam contest_problem_problem_id{
+    &ContestProblem::problem_id, "problem_id", "Problem ID"};
+constexpr http::ApiParam contest_problem_name{&ContestProblem::name, "name", "Problem's name"};
+constexpr http::ApiParam contest_problem_method_of_choosing_final_submission{
+    &ContestProblem::method_of_choosing_final_submission,
+    "method_of_choosing_final_submission", "Method of choosing final submission"};
+constexpr http::ApiParam contest_problem_score_revealing{
+    &ContestProblem::score_revealing, "score_revealing", "Score revealing"};
+
+} // namespace
+
+#define VALIDATE(var, api_param, form_fields)                                 \
+    auto var##form_validation_opt = http::validate(form_fields, api_param);   \
+    if (auto* validation_error = std::get_if<1>(&var##form_validation_opt)) { \
+        return api_error400(*validation_error);                               \
+    }                                                                         \
+    auto&(var) = std::get<0>(var##form_validation_opt);
+
+#define VALIDATE_ALLOW_BLANK(var, api_param, form_fields)                               \
+    auto var##form_validation_opt = http::validate_allow_blank(form_fields, api_param); \
+    if (auto* validation_error = std::get_if<1>(&var##form_validation_opt)) {           \
+        return api_error400(*validation_error);                                         \
+    }                                                                                   \
+    auto&(var) = std::get<0>(var##form_validation_opt);
+
 void Sim::api_contest_problem_add(
     decltype(Contest::id) contest_id, decltype(ContestRound::id) contest_round_id,
     sim::contests::Permissions perms) {
@@ -1102,16 +1128,12 @@ void Sim::api_contest_problem_add(
         return api_error403();
     }
 
-    // Validate fields
-    auto fv = http::FormValidator{request.form_fields};
-    auto problem_id = fv.validate<&ContestProblem::problem_id>();
-    auto name = fv.validate_allow_blank<&ContestProblem::name>();
-    auto method_of_choosing_final_submission =
-        fv.validate<&ContestProblem::method_of_choosing_final_submission>();
-    auto score_revealing = fv.validate<&ContestProblem::score_revealing>();
-    if (fv.has_errors()) {
-        return api_error400(fv.errors());
-    }
+    VALIDATE(problem_id, contest_problem_problem_id, request.form_fields);
+    VALIDATE_ALLOW_BLANK(name, contest_problem_name, request.form_fields);
+    VALIDATE(
+        method_of_choosing_final_submission,
+        contest_problem_method_of_choosing_final_submission, request.form_fields);
+    VALIDATE(score_revealing, contest_problem_score_revealing, request.form_fields);
 
     auto transaction = mysql.start_transaction();
 
@@ -1183,15 +1205,11 @@ void Sim::api_contest_problem_edit(
         return api_error403();
     }
 
-    // Validate fields
-    auto fv = http::FormValidator{request.form_fields};
-    auto name = fv.validate<&ContestProblem::name>();
-    auto method_of_choosing_final_submission =
-        fv.validate<&ContestProblem::method_of_choosing_final_submission>();
-    auto score_revealing = fv.validate<&ContestProblem::score_revealing>();
-    if (fv.has_errors()) {
-        return api_error400(fv.errors());
-    }
+    VALIDATE(name, contest_problem_name, request.form_fields);
+    VALIDATE(
+        method_of_choosing_final_submission,
+        contest_problem_method_of_choosing_final_submission, request.form_fields);
+    VALIDATE(score_revealing, contest_problem_score_revealing, request.form_fields);
 
     // Have to check if it is necessary to reselect problem final submissions
     auto transaction = mysql.start_transaction();

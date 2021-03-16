@@ -45,7 +45,7 @@ Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcep
     }
 
     auto viewer =
-        EnumVal(session->user_type).int_val() + (session->user_id != sim::users::SIM_ROOT_UID);
+        EnumVal(session->user_type).to_int() + (session->user_id != sim::users::SIM_ROOT_UID);
     if (session->user_id == user_id) {
         constexpr UserPermissions perm[4] = {
             // Sim root
@@ -62,7 +62,7 @@ Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcep
         return perm[viewer] | users_get_overall_permissions();
     }
 
-    auto user = EnumVal(utype).int_val() + (user_id != sim::users::SIM_ROOT_UID);
+    auto user = EnumVal(utype).to_int() + (user_id != sim::users::SIM_ROOT_UID);
     // Permission table [ viewer ][ user ]
     constexpr UserPermissions perm[4][4] = {
         {// Sim root

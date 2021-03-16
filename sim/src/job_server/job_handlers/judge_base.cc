@@ -23,7 +23,7 @@ sim::SolutionLanguage JudgeBase::to_sol_lang(Submission::Language lang) {
     case Submission::Language::PASCAL: return sim::SolutionLanguage::PASCAL;
     }
 
-    THROW("Invalid Language: ", (int)EnumVal(lang).int_val());
+    THROW("Invalid Language: ", (int)EnumVal(lang).to_int());
 }
 
 InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool /*final*/) {

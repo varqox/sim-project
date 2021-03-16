@@ -199,7 +199,7 @@ void Sim::api_submissions() {
                 type_condition_occurred = true;
 
                 if (arg_id == "N") {
-                    qwhere.append(" AND s.type=", EnumVal(Submission::Type::NORMAL).int_val());
+                    qwhere.append(" AND s.type=", EnumVal(Submission::Type::NORMAL).to_int());
                 } else if (arg_id == "F") {
                     selecting_finals = true;
 
@@ -231,11 +231,10 @@ void Sim::api_submissions() {
                         }
                     });
                 } else if (arg_id == "I") {
-                    qwhere.append(
-                        " AND s.type=", EnumVal(Submission::Type::IGNORED).int_val());
+                    qwhere.append(" AND s.type=", EnumVal(Submission::Type::IGNORED).to_int());
                 } else if (arg_id == "S") {
                     qwhere.append(
-                        " AND s.type=", EnumVal(Submission::Type::PROBLEM_SOLUTION).int_val());
+                        " AND s.type=", EnumVal(Submission::Type::PROBLEM_SOLUTION).to_int());
                 } else {
                     return api_error400(intentional_unsafe_string_view(
                         concat("Invalid submission type: ", arg_id)));
@@ -417,7 +416,7 @@ void Sim::api_submissions() {
     auto curr_date = mysql_date();
     while (res.next()) {
         EnumVal<Submission::Type> stype{
-            WONT_THROW(str2num<std::underlying_type_t<Submission::Type>>(res[STYPE]).value())};
+            WONT_THROW(str2num<Submission::Type::UnderlyingType>(res[STYPE]).value())};
         SubmissionPermissions perms = submissions_get_permissions(
             (res.is_null(SOWNER)
                  ? std::nullopt

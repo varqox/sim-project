@@ -141,7 +141,7 @@ struct AddProblemInfo {
         reset_scoring = (mask & 8);
 
         problem_type = EnumVal<sim::problems::Problem::Type>(
-            extract_dumped_int<std::underlying_type_t<sim::problems::Problem::Type>>(str));
+            extract_dumped_int<sim::problems::Problem::Type::UnderlyingType>(str));
         stage = EnumVal<Stage>(extract_dumped_int<std::underlying_type_t<Stage>>(str));
     }
 
@@ -156,7 +156,7 @@ struct AddProblemInfo {
             (int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
         append_dumped(res, mask);
 
-        append_dumped(res, EnumVal(problem_type).int_val());
+        append_dumped(res, EnumVal(problem_type).to_int());
         append_dumped<std::underlying_type_t<Stage>>(res, stage);
         return res;
     }

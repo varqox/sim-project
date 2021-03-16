@@ -205,14 +205,13 @@ void Sim::api_contest_users() {
                 mode_condition_occurred = true;
 
                 if (arg_id == "O") {
-                    qwhere.append(
-                        " AND cu.mode=", EnumVal(ContestUser::Mode::OWNER).int_val());
+                    qwhere.append(" AND cu.mode=", EnumVal(ContestUser::Mode::OWNER).to_int());
                 } else if (arg_id == "M") {
                     qwhere.append(
-                        " AND cu.mode=", EnumVal(ContestUser::Mode::MODERATOR).int_val());
+                        " AND cu.mode=", EnumVal(ContestUser::Mode::MODERATOR).to_int());
                 } else if (arg_id == "C") {
                     qwhere.append(
-                        " AND cu.mode=", EnumVal(ContestUser::Mode::CONTESTANT).int_val());
+                        " AND cu.mode=", EnumVal(ContestUser::Mode::CONTESTANT).to_int());
                 } else {
                     return api_error400(
                         intentional_unsafe_string_view(concat("Invalid user mode: ", arg_id)));
@@ -289,7 +288,7 @@ void Sim::api_contest_users() {
             json_stringify(res[FNAME]), ',', json_stringify(res[LNAME]), ',');
 
         // Mode
-        EnumVal<CUM> mode(WONT_THROW(str2num<std::underlying_type_t<CUM>>(res[MODE]).value()));
+        EnumVal<CUM> mode(WONT_THROW(str2num<CUM::UnderlyingType>(res[MODE]).value()));
         switch (mode) {
         // TODO: change to lower case
         case CUM::CONTESTANT: append("\"Contestant\","); break;

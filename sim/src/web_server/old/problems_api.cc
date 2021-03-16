@@ -4,6 +4,7 @@
 #include "sim/problems/permissions.hh"
 #include "sim/problems/problem.hh"
 #include "simlib/config_file.hh"
+#include "simlib/enum_val.hh"
 #include "simlib/file_info.hh"
 #include "simlib/file_manip.hh"
 #include "simlib/humanize.hh"
@@ -74,21 +75,21 @@ void Sim::api_problems() {
     if (not uint(overall_perms & OPERMS::VIEW_ALL)) {
         if (not session.has_value()) {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
-            qwhere.append(" AND p.type=", EnumVal(Problem::Type::PUBLIC).int_val());
+            qwhere.append(" AND p.type=", EnumVal(Problem::Type::PUBLIC).to_int());
 
         } else if (session->user_type == User::Type::TEACHER) {
             throw_assert(
                 uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC) and
                 uint(overall_perms & OPERMS::VIEW_WITH_TYPE_CONTEST_ONLY));
             qwhere.append(
-                " AND (p.type=", EnumVal(Problem::Type::PUBLIC).int_val(),
-                " OR p.type=", EnumVal(Problem::Type::CONTEST_ONLY).int_val(),
+                " AND (p.type=", EnumVal(Problem::Type::PUBLIC).to_int(),
+                " OR p.type=", EnumVal(Problem::Type::CONTEST_ONLY).to_int(),
                 " OR p.owner=", session->user_id, ')');
 
         } else {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
             qwhere.append(
-                " AND (p.type=", EnumVal(Problem::Type::PUBLIC).int_val(),
+                " AND (p.type=", EnumVal(Problem::Type::PUBLIC).to_int(),
                 " OR p.owner=", session->user_id, ')');
         }
     }
@@ -109,11 +110,11 @@ void Sim::api_problems() {
         // problem type
         if (cond == 't' and ~mask & PTYPE_COND) {
             if (arg_id == "PUB") {
-                qwhere.append(" AND p.type=", EnumVal(Problem::Type::PUBLIC).int_val());
+                qwhere.append(" AND p.type=", EnumVal(Problem::Type::PUBLIC).to_int());
             } else if (arg_id == "PRI") {
-                qwhere.append(" AND p.type=", EnumVal(Problem::Type::PRIVATE).int_val());
+                qwhere.append(" AND p.type=", EnumVal(Problem::Type::PRIVATE).to_int());
             } else if (arg_id == "CON") {
-                qwhere.append(" AND p.type=", EnumVal(Problem::Type::CONTEST_ONLY).int_val());
+                qwhere.append(" AND p.type=", EnumVal(Problem::Type::CONTEST_ONLY).to_int());
             } else {
                 return api_error400(
                     intentional_unsafe_string_view(concat("Invalid problem type: ", arg_id)));
@@ -190,7 +191,7 @@ void Sim::api_problems() {
 
     while (res.next()) {
         EnumVal<Problem::Type> problem_type{
-            WONT_THROW(str2num<std::underlying_type_t<Problem::Type>>(res[PTYPE]).value())};
+            WONT_THROW(str2num<Problem::Type::UnderlyingType>(res[PTYPE]).value())};
         auto problem_perms = sim::problems::get_permissions(
             (session.has_value() ? std::optional{session->user_id} : std::nullopt),
             (session.has_value() ? std::optional{session->user_type} : std::nullopt),
@@ -332,8 +333,7 @@ void Sim::api_problems() {
             append(
                 ",\"",
                 css_color_class(EnumVal<Submission::Status>(WONT_THROW(
-                    str2num<std::underlying_type_t<Submission::Status>>(res[SFULL_STATUS])
-                        .value()))),
+                    str2num<Submission::Status::UnderlyingType>(res[SFULL_STATUS]).value()))),
                 "\"");
         }
 
@@ -499,7 +499,8 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
         THROW("move()", errmsg());
     }
 
-    EnumVal jtype = (reuploading ? Job::Type::REUPLOAD_PROBLEM : Job::Type::ADD_PROBLEM);
+    decltype(Job::type) jtype =
+        (reuploading ? Job::Type::REUPLOAD_PROBLEM : Job::Type::ADD_PROBLEM);
     mysql
         .prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
                  " aux_id, info, data) "

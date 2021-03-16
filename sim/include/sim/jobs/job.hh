@@ -4,6 +4,7 @@
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
 #include "sim/users/user.hh"
+#include "simlib/enum_with_string_conversions.hh"
 #include "simlib/string_view.hh"
 
 #include <cstdint>
@@ -12,35 +13,40 @@
 namespace sim::jobs {
 
 struct Job {
-    enum class Type : uint8_t {
-        JUDGE_SUBMISSION = 1,
-        ADD_PROBLEM = 2,
-        REUPLOAD_PROBLEM = 3,
-        ADD_PROBLEM__JUDGE_MODEL_SOLUTION = 4,
-        REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION = 5,
-        EDIT_PROBLEM = 6,
-        DELETE_PROBLEM = 7,
-        RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM = 8,
-        DELETE_USER = 9,
-        DELETE_CONTEST = 10,
-        DELETE_CONTEST_ROUND = 11,
-        DELETE_CONTEST_PROBLEM = 12,
-        RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION = 13,
-        MERGE_PROBLEMS = 14,
-        REJUDGE_SUBMISSION = 15,
-        DELETE_FILE = 16,
-        CHANGE_PROBLEM_STATEMENT = 17,
-        MERGE_USERS = 18,
-    };
+    ENUM_WITH_STRING_CONVERSIONS(
+        Type, uint8_t,
+        (JUDGE_SUBMISSION, 1, "judge_submission") //
+        (ADD_PROBLEM, 2, "add_problem") //
+        (REUPLOAD_PROBLEM, 3, "reupload_problem") //
+        (ADD_PROBLEM__JUDGE_MODEL_SOLUTION, 4, "add_problem__judge_model_solution") //
+        (REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION, 5,
+         "reupload_problem__judge_model_solution") //
+        (EDIT_PROBLEM, 6, "edit_problem") //
+        (DELETE_PROBLEM, 7, "delete_problem") //
+        (RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM, 8,
+         "reselect_final_submissions_in_contest_problem") //
+        (DELETE_USER, 9, "delete_user") //
+        (DELETE_CONTEST, 10, "delete_contest") //
+        (DELETE_CONTEST_ROUND, 11, "delete_contest_round") //
+        (DELETE_CONTEST_PROBLEM, 12, "delete_contest_problem") //
+        (RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION, 13,
+         "reset_problem_time_limits_using_model_solution") //
+        (MERGE_PROBLEMS, 14, "merge_problems") //
+        (REJUDGE_SUBMISSION, 15, "rejudge_submission") //
+        (DELETE_FILE, 16, "delete_file") //
+        (CHANGE_PROBLEM_STATEMENT, 17, "change_problem_statement") //
+        (MERGE_USERS, 18, "merge_users") //
+    );
 
-    enum class Status : uint8_t {
-        PENDING = 1,
-        NOTICED_PENDING = 2,
-        IN_PROGRESS = 3,
-        DONE = 4,
-        FAILED = 5,
-        CANCELED = 6
-    };
+    ENUM_WITH_STRING_CONVERSIONS(
+        Status, uint8_t,
+        (PENDING, 1, "pending") //
+        (NOTICED_PENDING, 2, "noticed_pending") //
+        (IN_PROGRESS, 3, "in_progress") //
+        (DONE, 4, "done") //
+        (FAILED, 5, "failed") //
+        (CANCELED, 6, "canceled") //
+    );
 
     uint64_t id;
     std::optional<decltype(internal_files::InternalFile::id)> file_id;

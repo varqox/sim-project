@@ -25,11 +25,7 @@ void DeleteUser::run() {
         }
 
         job_log("username: ", username);
-        switch (user_type) {
-        case User::Type::ADMIN: job_log("type: admin"); break;
-        case User::Type::TEACHER: job_log("type: teacher"); break;
-        case User::Type::NORMAL: job_log("type: normal"); break;
-        }
+        job_log("type: ", user_type.to_enum().to_str());
     }
 
     // Add jobs to delete submission files

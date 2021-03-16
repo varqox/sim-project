@@ -166,12 +166,12 @@ void Sim::api_jobs() {
 
             qwhere.append(
                 " AND j.aux_id=", arg_id, " AND j.type IN(",
-                EnumVal(Job::Type::ADD_PROBLEM).int_val(), ',',
-                EnumVal(Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION).int_val(), ',',
-                EnumVal(Job::Type::REUPLOAD_PROBLEM).int_val(), ',',
-                EnumVal(Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION).int_val(), ',',
-                EnumVal(Job::Type::DELETE_PROBLEM).int_val(), ',',
-                EnumVal(Job::Type::EDIT_PROBLEM).int_val(), ')');
+                EnumVal(Job::Type::ADD_PROBLEM).to_int(), ',',
+                EnumVal(Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(), ',',
+                EnumVal(Job::Type::REUPLOAD_PROBLEM).to_int(), ',',
+                EnumVal(Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(), ',',
+                EnumVal(Job::Type::DELETE_PROBLEM).to_int(), ',',
+                EnumVal(Job::Type::EDIT_PROBLEM).to_int(), ')');
 
             mask |= AUX_ID_COND;
 
@@ -182,8 +182,8 @@ void Sim::api_jobs() {
 
             qwhere.append(
                 " AND j.aux_id=", arg_id,
-                " AND (j.type=", EnumVal(Job::Type::JUDGE_SUBMISSION).int_val(),
-                " OR j.type=", EnumVal(Job::Type::REJUDGE_SUBMISSION).int_val(), ')');
+                " AND (j.type=", EnumVal(Job::Type::JUDGE_SUBMISSION).to_int(),
+                " OR j.type=", EnumVal(Job::Type::REJUDGE_SUBMISSION).to_int(), ')');
 
             mask |= AUX_ID_COND;
 
@@ -212,9 +212,9 @@ void Sim::api_jobs() {
 
     while (res.next()) {
         EnumVal<Job::Type> job_type{
-            WONT_THROW(str2num<std::underlying_type_t<Job::Type>>(res[JTYPE]).value())};
+            WONT_THROW(str2num<Job::Type::UnderlyingType>(res[JTYPE]).value())};
         EnumVal<Job::Status> job_status{
-            WONT_THROW(str2num<std::underlying_type_t<Job::Status>>(res[JSTATUS]).value())};
+            WONT_THROW(str2num<Job::Status::UnderlyingType>(res[JSTATUS]).value())};
 
         // clang-format off
         append(",\n[", res[JID], ","
