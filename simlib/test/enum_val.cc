@@ -81,13 +81,13 @@ template <class Enum>
 static void test_int_val() {
     const EnumVal a = Enum::A;
     using UT = typename decltype(a)::ValType;
-    static_assert(std::is_same_v<UT, decltype(a.int_val())>);
-    EXPECT_EQ(a.int_val(), (int)Enum::A);
-    EXPECT_NE(a.int_val(), (int)Enum::C);
+    static_assert(std::is_same_v<UT, decltype(a.to_int())>);
+    EXPECT_EQ(a.to_int(), (int)Enum::A);
+    EXPECT_NE(a.to_int(), (int)Enum::C);
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, int_val) {
+TEST(EnumVal, to_int) {
     test_int_val<Int32Enum>();
     test_int_val<Uint64Enum>();
 }
@@ -132,7 +132,7 @@ TEST(EnumVal, operator_ValType) {
 
 // NOLINTNEXTLINE
 TEST(EnumVal, from_str) {
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str("-42").value().int_val(), -42);
+    EXPECT_EQ(EnumVal<Int32Enum>::from_str("-42").value().to_int(), -42);
     EXPECT_EQ(EnumVal<Int32Enum>::from_str("-664642626824123881385183521863"), std::nullopt);
     EXPECT_EQ(EnumVal<Int32Enum>::from_str("x"), std::nullopt);
     EXPECT_EQ(EnumVal<Int32Enum>::from_str(""), std::nullopt);
