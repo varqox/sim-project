@@ -43,15 +43,15 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
             b_contest_final, b_contest_initial_final, s.initial_status, s.full_status,
             s.submit_time, m_score, s.last_judgment, s.initial_report, s.final_report);
         while (stmt.next()) {
-            s.owner = m_owner.opt();
-            s.contest_problem_id = m_contest_problem_id.opt();
-            s.contest_round_id = m_contest_round_id.opt();
-            s.contest_id = m_contest_id.opt();
+            s.owner = m_owner.to_opt();
+            s.contest_problem_id = m_contest_problem_id.to_opt();
+            s.contest_round_id = m_contest_round_id.to_opt();
+            s.contest_id = m_contest_id.to_opt();
             s.final_candidate = b_final_candidate;
             s.problem_final = b_problem_final;
             s.contest_final = b_contest_final;
             s.contest_initial_final = b_contest_initial_final;
-            s.score = m_score.opt();
+            s.score = m_score.to_opt();
 
             s.file_id = internal_files_.new_id(s.file_id, record_set.kind);
             if (s.owner) {

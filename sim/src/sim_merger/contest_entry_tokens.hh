@@ -41,8 +41,8 @@ class ContestEntryTokensMerger
         stmt.bind_and_execute();
         stmt.res_bind_all(cet.token, cet.contest_id, m_short_token, m_short_token_expiration);
         while (stmt.next()) {
-            cet.short_token = m_short_token.opt();
-            cet.short_token_expiration = m_short_token_expiration.opt();
+            cet.short_token = m_short_token.to_opt();
+            cet.short_token_expiration = m_short_token_expiration.to_opt();
 
             cet.contest_id = contests_.new_id(cet.contest_id, record_set.kind);
 

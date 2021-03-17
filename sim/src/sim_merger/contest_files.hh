@@ -31,7 +31,7 @@ class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
             cf.id, cf.file_id, cf.contest_id, cf.name, cf.description, cf.file_size,
             cf.modified, m_creator);
         while (stmt.next()) {
-            cf.creator = m_creator.opt();
+            cf.creator = m_creator.to_opt();
 
             cf.file_id = internal_files_.new_id(cf.file_id, record_set.kind);
             cf.contest_id = contests_.new_id(cf.contest_id, record_set.kind);

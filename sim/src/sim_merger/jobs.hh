@@ -35,10 +35,10 @@ class JobsMerger : public Merger<sim::jobs::Job> {
             job.id, m_file_id, m_tmp_file_id, m_creator, job.type, job.priority, job.status,
             job.added, m_aux_id, job.info, job.data);
         while (stmt.next()) {
-            job.file_id = m_file_id.opt();
-            job.tmp_file_id = m_tmp_file_id.opt();
-            job.creator = m_creator.opt();
-            job.aux_id = m_aux_id.opt();
+            job.file_id = m_file_id.to_opt();
+            job.tmp_file_id = m_tmp_file_id.to_opt();
+            job.creator = m_creator.to_opt();
+            job.aux_id = m_aux_id.to_opt();
 
             if (job.file_id) {
                 job.file_id = internal_files_.new_id(job.file_id.value(), record_set.kind);

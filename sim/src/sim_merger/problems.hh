@@ -52,7 +52,7 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
             prob.added, prob.last_edit);
         while (stmt.next()) {
             prob.file_id = internal_files_.new_id(prob.file_id, record_set.kind);
-            prob.owner = m_owner.opt();
+            prob.owner = m_owner.to_opt();
             if (prob.owner.has_value()) {
                 prob.owner = users_.new_id(prob.owner.value(), record_set.kind);
             }

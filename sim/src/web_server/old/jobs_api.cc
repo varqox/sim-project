@@ -370,7 +370,7 @@ void Sim::api_jobs() {
         append('"', actions);
 
         auto perms =
-            granted_perms | jobs_get_permissions(res.opt(CREATOR), job_type, job_status);
+            granted_perms | jobs_get_permissions(res.to_opt(CREATOR), job_type, job_status);
         if (uint(perms & PERM::VIEW)) {
             append('v');
         }

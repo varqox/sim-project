@@ -60,7 +60,7 @@ get_permissions(mysql::Connection& mysql, T&& contest_file_id, std::optional<U> 
         return std::nullopt;
     }
 
-    auto cperms = contests::get_permissions(user_type.opt(), is_public, cu_mode.opt());
+    auto cperms = contests::get_permissions(user_type.to_opt(), is_public, cu_mode.to_opt());
     return std::pair{get_permissions(cperms), get_overall_permissions(cperms)};
 }
 
