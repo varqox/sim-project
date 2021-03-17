@@ -65,7 +65,7 @@ public:
     , has_no_value_(false) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    operator std::optional<T>() const { return opt(); }
+    operator std::optional<T>() const { return to_opt(); }
 
     template <class U = T, std::enable_if_t<is_enum_val<U>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
@@ -73,7 +73,7 @@ public:
         return has_no_value_ ? std::optional<T>() : value_;
     }
 
-    [[nodiscard]] std::optional<T> opt() const {
+    [[nodiscard]] std::optional<T> to_opt() const {
         return (has_no_value_ ? std::nullopt : std::optional<T>(value_));
     }
 
@@ -193,7 +193,7 @@ public:
         return {row_[idx], lengths_[idx]};
     }
 
-    Optional<StringView> opt(unsigned idx) NO_DEBUG_MYSQL(noexcept) {
+    Optional<StringView> to_opt(unsigned idx) NO_DEBUG_MYSQL(noexcept) {
         if (is_null(idx)) {
             return {};
         };
@@ -467,7 +467,7 @@ public:
             } else if constexpr (std::is_same_v<TypeNoRef, const std::string>) {
                 return InplaceBuff<inplace_buff_size>(arg);
             } else if constexpr (mysql::is_optional<TypeNoRefNoCV>) {
-                return arg.opt();
+                return arg.to_opt();
             } else if constexpr (std::is_const_v<TypeNoRef>) {
                 return TypeNoRefNoCV(arg); // We need a reference to a non-const
             } else {
