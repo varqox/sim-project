@@ -9,6 +9,7 @@
 
 #include <csignal>
 #include <gtest/gtest.h>
+#include <regex>
 #include <unistd.h>
 
 struct Field {
@@ -38,7 +39,14 @@ TEST(proc_status_file, open_proc_status_and_field_from_proc_status) {
     ASSERT_EQ(syscalls::waitid(P_PID, cpid, nullptr, WSTOPPED, nullptr), 0);
     FileDescriptor fd = open_proc_status(cpid);
     auto contents = get_file_contents(fd);
-    EXPECT_EQ(contents, get_file_contents(concat("/proc/", cpid, "/status")));
+    {
+        auto normalize = [](auto str) {
+            return std::regex_replace(std::move(str), std::regex{"\nSigQ:.*?\n"}, "\n");
+        };
+        EXPECT_EQ(
+            normalize(contents),
+            normalize(get_file_contents(concat("/proc/", cpid, "/status"))));
+    }
 
     constexpr static auto is_newline = [](char c) { return c == '\n'; };
     constexpr static auto not_newline = [](char c) { return c != '\n'; };
