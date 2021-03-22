@@ -138,32 +138,37 @@ inline std::string html_escape(T&& str) {
     return res;
 }
 
-template <
-    size_t N = 512, class... Args,
-    std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
-constexpr InplaceBuff<N> json_stringify(Args&&... args) {
-    InplaceBuff<N> res;
-    auto safe_append = [&res](auto&& arg) {
+template <class... Arg, std::enable_if_t<(is_string_argument<Arg> and ...), int> = 0>
+void append_stringified_json(std::string& str, Arg&&... arg) {
+    auto safe_append = [&str](auto&& arg) {
         auto p = ::data(arg);
         for (size_t i = 0, len = string_length(arg); i < len; ++i) {
             unsigned char c = p[i];
             if (c == '\"') {
-                res.append("\\\"");
+                str += "\\\"";
             } else if (c == '\n') {
-                res.append("\\n");
+                str += "\\n";
             } else if (c == '\\') {
-                res.append("\\\\");
+                str += "\\\\";
             } else if (is_cntrl(c)) {
-                res.append("\\u00", dec2hex(c >> 4), dec2hex(c & 15));
+                str += "\\u00";
+                str += dec2hex(c >> 4);
+                str += dec2hex(c & 15);
             } else {
-                res.append(static_cast<char>(c));
+                str += static_cast<char>(c);
             }
         }
     };
 
-    res.append('"');
-    (safe_append(stringify(std::forward<Args>(args))), ...);
-    res.append('"');
+    str += '"';
+    (safe_append(stringify(std::forward<Arg>(arg))), ...);
+    str += '"';
+}
+
+template <class... Arg, std::enable_if_t<(is_string_argument<Arg> and ...), int> = 0>
+std::string json_stringify(Arg&&... arg) {
+    std::string res;
+    append_stringified_json(res, std::forward<Arg>(arg)...);
     return res;
 }
 
