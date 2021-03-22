@@ -13,25 +13,30 @@ protected:
     char* p_value_when_unallocated_;
 
 public:
+    void make_copy_of(const char* data, size_t len) {
+        if (len > max_size_) {
+            auto new_p = new char[len];
+            deallocate();
+            p_ = new_p;
+            max_size_ = len;
+        }
+        size = len;
+        std::copy(data, data + len, p_);
+    }
+
     /**
      * @brief Changes buffer's size and max_size if needed, but in the latter
-     *   case all the data are lost
+     *   case, or if an exception is thrown all the data are lost
      *
      * @param n new buffer's size
      */
     void lossy_resize(size_t n) {
         if (n > max_size_) {
-            max_size_ = std::max(max_size_ << 1, n);
+            auto new_max_size = std::max(max_size_ << 1, n);
             deallocate();
-            try {
-                p_ = new char[max_size_];
-            } catch (...) {
-                p_ = reinterpret_cast<char*>(&p_) + sizeof(p_);
-                max_size_ = 0;
-                throw;
-            }
+            p_ = new char[new_max_size];
+            max_size_ = new_max_size;
         }
-
         size = n;
     }
 
@@ -42,15 +47,13 @@ public:
      */
     constexpr void resize(size_t n) {
         if (n > max_size_) {
-            size_t new_ms = std::max(max_size_ << 1, n);
-            char* new_p = new char[new_ms];
+            size_t new_max_size = std::max(max_size_ << 1, n);
+            char* new_p = new char[new_max_size];
             std::copy(p_, p_ + size, new_p);
             deallocate();
-
             p_ = new_p;
-            max_size_ = new_ms;
+            max_size_ = new_max_size;
         }
-
         size = n;
     }
 
@@ -129,6 +132,8 @@ protected:
     void deallocate() noexcept {
         if (is_allocated()) {
             delete[] p_;
+            p_ = p_value_when_unallocated_;
+            max_size_ = 0;
         }
     }
 
@@ -149,7 +154,6 @@ public:
             (void)append_impl; // Fix GCC warning
             (append_impl(std::forward<decltype(str)>(str)), ...);
         }(stringify(std::forward<Args>(args))...);
-
         return *this;
     }
 };
@@ -162,21 +166,19 @@ private:
     template <size_t M>
     friend class InplaceBuff;
 
-    static_assert(N > 0, "Needed for accessing the array's 0-th element");
-
 public:
     static constexpr size_t max_static_size = N;
 
     constexpr InplaceBuff() noexcept
     : InplaceBuffBase(0, N, nullptr, nullptr) {
-        p_ = a_.data();
         p_value_when_unallocated_ = a_.data();
+        p_ = p_value_when_unallocated_;
     }
 
     constexpr explicit InplaceBuff(size_t n)
     : InplaceBuffBase(n, std::max(N, n), nullptr, nullptr) {
-        p_ = (n <= N ? a_.data() : new char[n]);
         p_value_when_unallocated_ = a_.data();
+        p_ = (n <= N ? p_value_when_unallocated_ : new char[n]);
     }
 
     constexpr InplaceBuff(const InplaceBuff& ibuff)
@@ -185,18 +187,14 @@ public:
     }
 
     InplaceBuff(InplaceBuff&& ibuff) noexcept
-    : InplaceBuffBase(ibuff.size, std::max(N, ibuff.max_size_), ibuff.p_, nullptr) {
-        p_value_when_unallocated_ = a_.data();
+    : InplaceBuff() {
         if (ibuff.is_allocated()) {
-            p_ = ibuff.p_;
-            ibuff.size = 0;
-            ibuff.max_size_ = N;
-            ibuff.p_ = ibuff.a_.data();
-
+            // Steal the allocated string
+            p_ = std::exchange(ibuff.p_, ibuff.p_value_when_unallocated_);
+            size = std::exchange(ibuff.size, 0);
+            max_size_ = std::exchange(ibuff.max_size_, N);
         } else {
-            p_ = a_.data();
-            std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
-            ibuff.size = 0;
+            make_copy_of(ibuff.data(), ibuff.size);
         }
     }
 
@@ -232,48 +230,25 @@ public:
           std::forward<Args>(args)...) {}
 
     template <size_t M, std::enable_if_t<M != N, int> = 0>
-    constexpr explicit InplaceBuff(const InplaceBuff<M>& ibuff)
-    : InplaceBuff(ibuff.size) {
-        std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
-    }
-
-    template <size_t M, std::enable_if_t<M != N, int> = 0>
     explicit InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
-    : InplaceBuffBase(ibuff.size, N, ibuff.p_, nullptr) {
-        p_value_when_unallocated_ = a_.data();
-        if (ibuff.size <= N) {
-            p_ = a_.data();
-            // max_size_ = N;
-            std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
-            // Deallocate ibuff memory
-            if (ibuff.is_allocated()) {
-                delete[] std::exchange(ibuff.p_, nullptr);
-            }
-
-        } else if (ibuff.is_allocated()) {
-            p_ = ibuff.p_; // Steal the allocated string
-            max_size_ = ibuff.max_size_;
+    : InplaceBuff() {
+        if (ibuff.is_allocated() and ibuff.size > N) {
+            // Steal the allocated string
+            p_ = std::exchange(ibuff.p_, ibuff.p_value_when_unallocated_);
+            size = std::exchange(ibuff.size, 0);
+            max_size_ = std::exchange(ibuff.max_size_, M);
         } else {
-            // N < ibuff.size <= M
-            p_ = new char[ibuff.size];
-            max_size_ = ibuff.size;
-            std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
+            make_copy_of(ibuff.data(), ibuff.size);
         }
-
-        // Take care of the ibuff's state
-        ibuff.size = 0;
-        ibuff.max_size_ = M;
-        ibuff.p_ = ibuff.a_.data();
     }
 
-    ~InplaceBuff() override { assert(p_value_when_unallocated_ == a_.data()); }
+    ~InplaceBuff() override = default;
 
     constexpr InplaceBuff& operator=(const InplaceBuff& ibuff) {
         if (this == &ibuff) {
             return *this;
         }
-        lossy_resize(ibuff.size);
-        std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
+        make_copy_of(ibuff.data(), ibuff.size);
         return *this;
     }
 
@@ -286,16 +261,7 @@ public:
         class T, std::enable_if_t<not std::is_same_v<std::decay_t<T>, InplaceBuff>, int> = 0>
     // NOLINTNEXTLINE(misc-unconventional-assign-operator)
     constexpr InplaceBuff& operator=(T&& str) {
-        auto len = string_length(str);
-        lossy_resize(len);
-        std::copy(::data(str), ::data(str) + len, data());
-        return *this;
-    }
-
-    template <size_t M, std::enable_if_t<M != N, int> = 0>
-    constexpr InplaceBuff& operator=(const InplaceBuff<M>& ibuff) {
-        lossy_resize(ibuff.size);
-        std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
+        make_copy_of(::data(str), string_length(str));
         return *this;
     }
 
@@ -310,26 +276,13 @@ private:
     InplaceBuff& assign_move_impl(InplaceBuff<M>&& ibuff) {
         if (ibuff.is_allocated() and ibuff.max_size() >= max_size()) {
             // Steal the allocated string
-            if (is_allocated()) {
-                delete[] p_;
-            }
-
-            p_ = ibuff.p_;
-            size = ibuff.size;
-            max_size_ = ibuff.max_size_;
-
+            deallocate();
+            p_ = std::exchange(ibuff.p_, ibuff.p_value_when_unallocated_);
+            size = std::exchange(ibuff.size, 0);
+            max_size_ = std::exchange(ibuff.max_size_, M);
         } else {
-            *this = ibuff; // Copy data
-            if (ibuff.is_allocated()) {
-                delete[] ibuff.p_;
-            }
+            make_copy_of(ibuff.data(), ibuff.size);
         }
-
-        // Take care of the ibuff's state
-        ibuff.p_ = ibuff.a_.data();
-        ibuff.size = 0;
-        ibuff.max_size_ = M;
-
         return *this;
     }
 };

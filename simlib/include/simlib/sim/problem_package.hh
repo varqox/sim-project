@@ -13,7 +13,7 @@ class PackageContents {
         size_t begin, end;
     };
 
-    InplaceBuff<1> buff;
+    InplaceBuff<0> buff;
     struct Comparer {
         struct is_transparent;
 
