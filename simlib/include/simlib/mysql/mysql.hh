@@ -14,11 +14,6 @@
 #include <optional>
 #include <type_traits>
 
-#if __has_include(<mysql.h>) && __has_include(<errmsg.h>)
-#define SIMLIB_MYSQL_ENABLED 1
-#include <errmsg.h>
-#include <mysql.h>
-
 #if 0
 #warning "Before committing disable this debug"
 #define DEBUG_MYSQL(...) __VA_ARGS__
@@ -35,7 +30,7 @@ template <class T>
 class Optional {
     using StoredType = std::remove_const_t<T>;
     StoredType value_{}; // This optional always needs to contain value
-    my_bool has_no_value_{true};
+    char has_no_value_{true};
 
     friend class Statement;
 
@@ -45,12 +40,25 @@ public:
     Optional(const Optional&) = default;
     Optional(Optional&&) noexcept = default;
 
-    // As optional may hold InplaceBuff<>, changing its value when it is
-    // bounded is dangerous (may result in buffer overflow, as we store in
-    // MYSQL_BIND its max_size() along with data pointer which may become
-    // invalid after the assignment)
-    Optional& operator=(const Optional&) = delete;
+    Optional& operator=(const Optional& other) {
+        // As optional may hold InplaceBuff<>, changing its value when it is bounded is
+        // dangerous (may result in buffer overflow, as we store in MYSQL_BIND its max_size()
+        // along with data pointer which may become invalid after the assignment). Therefore
+        // only trivially copyable types are allowed to be assigned
+        static_assert(std::is_trivially_copyable_v<T>);
+        value_ = other.value_;
+        has_no_value_ = other.has_no_value_;
+        return *this;
+    }
+
     Optional& operator=(Optional&&) = delete;
+
+    Optional& operator=(std::nullopt_t /*unused*/) noexcept {
+        has_no_value_ = true;
+        return *this;
+    }
+
+    void reset() noexcept { has_no_value_ = true; }
 
     ~Optional() = default;
 
@@ -85,11 +93,8 @@ public:
 
     [[nodiscard]] constexpr bool has_value() const noexcept { return not has_no_value_; }
 
-    [[nodiscard]] constexpr const T& value() const {
-        if (has_no_value_) {
-            THROW("bad optional access");
-        }
-
+    [[nodiscard]] constexpr const T& value() const noexcept {
+        assert(not has_no_value_);
         return value_;
     }
 
@@ -103,6 +108,11 @@ template <class...>
 constexpr inline bool is_optional = false;
 template <class T>
 constexpr inline bool is_optional<Optional<T>> = true;
+
+#if __has_include(<mysql.h>) && __has_include(<errmsg.h>)
+#define SIMLIB_MYSQL_ENABLED 1
+#include <errmsg.h>
+#include <mysql.h>
 
 class Connection;
 
@@ -519,6 +529,8 @@ public:
     template <class T>
     void res_bind(unsigned idx, mysql::Optional<T>& x) NO_DEBUG_MYSQL(noexcept) {
         res_bind(idx, x.value_);
+        static_assert(
+            std::is_same_v<decltype(res_binds_[idx].is_null), decltype(&x.has_no_value_)>);
         res_binds_[idx].is_null = &x.has_no_value_;
     }
 
@@ -919,6 +931,6 @@ inline Transaction::~Transaction() {
     }
 }
 
-} // namespace mysql
+#endif // __has_include(<mysql.h>) && __has_include(<errmsg.h>)
 
-#endif // __has_include(<mysql.h>)
+} // namespace mysql
