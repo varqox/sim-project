@@ -189,6 +189,7 @@ tests = [
     ['test/inotify.cc', [], {}],
     ['test/inplace_array.cc', [], {}],
     ['test/inplace_buff.cc', [], {}],
+    ['test/json_str/json_str.cc', [], {}],
     ['test/libzip.cc', [], {}],
     ['test/logger.cc', [], {}],
     ['test/member_comparator.cc', [], {}],
