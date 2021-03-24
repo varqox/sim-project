@@ -92,13 +92,12 @@ http::Response Context::response_404() {
     return response("404 Not Found", std::move(cookie_changes), content);
 }
 
-Response Context::response_ui(StringView title, StringView styles, StringView body) {
+Response Context::response_ui(StringView title, StringView body) {
     auto resp = response_ok();
     begin_ui_template(
         resp,
         {
             .title = title,
-            .styles = styles,
             .session = session,
             .notifications = "",
         });

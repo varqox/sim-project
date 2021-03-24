@@ -11,7 +11,7 @@ namespace web_server::contest_entry_tokens {
 Response enter_contest(Context& ctx, StringView token_or_short_token) {
     auto body = concat(
         "<script>enter_contest_using_token(false, '", token_or_short_token, "')</script>");
-    return ctx.response_ui("Enter contest", "", body);
+    return ctx.response_ui("Enter contest", body);
 }
 
 } // namespace web_server::contest_entry_tokens

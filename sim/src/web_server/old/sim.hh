@@ -288,7 +288,7 @@ class Sim final {
     InplaceBuff<1024> notifications;
 
     // Appends
-    void page_template(StringView title, StringView styles = {});
+    void page_template(StringView title);
 
     void page_template_end();
 

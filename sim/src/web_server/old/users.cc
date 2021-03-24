@@ -362,7 +362,7 @@ void Sim::users_handle() {
         return users_user();
 
     } else if (next_arg.empty()) { // List users
-        page_template("Users", "body{padding-left:20px}");
+        page_template("Users");
         append("<script>user_chooser(false, window.location.hash);</script>");
 
     } else {
@@ -375,9 +375,7 @@ void Sim::users_user() {
 
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg.empty()) {
-        page_template(
-            intentional_unsafe_string_view(concat("User ", users_uid)),
-            "body{padding-left:20px}");
+        page_template(intentional_unsafe_string_view(concat("User ", users_uid)));
         append("<script>view_user(false, ", users_uid, ", window.location.hash);</script>");
 
     } else if (next_arg == "edit") {

@@ -223,7 +223,7 @@ void Sim::view_logs() {
     case User::Type::NORMAL: return error403();
     }
 
-    page_template("Logs", "body{padding-left:20px}");
+    page_template("Logs");
 
     append("<script>tab_logs_view($('body'))</script>");
 }

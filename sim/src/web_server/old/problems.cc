@@ -16,7 +16,7 @@ void Sim::problems_handle() {
         page_template("Add problem");
         append("<script>add_problem(false);</script>");
     } else if (next_arg.empty()) { // List problems
-        page_template("Problems", "body{padding-left:20px}");
+        page_template("Problems");
         append("<script>problem_chooser(false, window.location.hash"
                ");</script>");
     } else {
@@ -29,9 +29,7 @@ void Sim::problems_problem() {
 
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg.empty()) {
-        page_template(
-            intentional_unsafe_string_view(concat("Problem ", problems_pid)),
-            "body{padding-left:20px}");
+        page_template(intentional_unsafe_string_view(concat("Problem ", problems_pid)));
         append(
             "<script>view_problem(false, ", problems_pid, ", window.location.hash);</script>");
 

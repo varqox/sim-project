@@ -79,14 +79,12 @@ void Sim::submissions_handle() {
 
     StringView next_arg = url_args.extract_next_arg();
     if (is_digit(next_arg)) { // View submission
-        page_template(
-            intentional_unsafe_string_view(concat("Submission ", next_arg)),
-            "body{padding-left:20px}");
+        page_template(intentional_unsafe_string_view(concat("Submission ", next_arg)));
         append(
             "<script>view_submission(false, ", next_arg, ", window.location.hash);</script>");
 
     } else if (next_arg.empty()) { // List submissions
-        page_template("Submissions", "body{padding-left:20px}");
+        page_template("Submissions");
         // clang-format off
         append("<h1>Submissions</h1>"
                "<script>"

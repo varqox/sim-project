@@ -80,10 +80,6 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
                       "href=\"/kit/img/favicon.png\"/>");
     // clang-format on
 
-    if (not params.styles.empty()) {
-        resp.content.append("<style>", params.styles, "</style>");
-    }
-
     resp.content.append("</head><body><div class=\"navbar\">"
                         "<a href=\"/\" class=\"brand\">Sim beta</a>");
 

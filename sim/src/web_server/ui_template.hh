@@ -9,7 +9,6 @@ namespace web_server {
 
 struct UiTemplateParams {
     StringView title;
-    StringView styles;
     const decltype(web_worker::Context::session)& session;
     StringView notifications;
 };

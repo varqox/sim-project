@@ -1,18 +1,15 @@
 #include "src/web_server/old/sim.hh"
 #include "src/web_server/ui_template.hh"
 
-using sim::users::User;
-
 namespace web_server::old {
 
-void Sim::page_template(StringView title, StringView styles) {
+void Sim::page_template(StringView title) {
     STACK_UNWINDING_MARK;
 
     begin_ui_template(
         resp,
         {
             .title = title,
-            .styles = styles,
             .session = session,
             .notifications = notifications,
         });
