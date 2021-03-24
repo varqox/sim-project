@@ -58,17 +58,17 @@ struct Submission {
     std::optional<decltype(sim::contests::Contest::id)> contest_id;
     EnumVal<Type> type;
     EnumVal<Language> language;
-    bool final_candidate;
-    bool problem_final;
-    bool contest_final;
-    bool contest_initial_final;
+    sql_fields::Bool final_candidate;
+    sql_fields::Bool problem_final;
+    sql_fields::Bool contest_final;
+    sql_fields::Bool contest_initial_final;
     EnumVal<Status> initial_status;
     EnumVal<Status> full_status;
     sql_fields::Datetime submit_time;
     std::optional<int64_t> score;
     sql_fields::Datetime last_judgment;
-    sql_fields::Blob<1> initial_report;
-    sql_fields::Blob<1> final_report;
+    sql_fields::Blob<0> initial_report;
+    sql_fields::Blob<0> final_report;
 
     static constexpr uint64_t solution_max_size = 100 << 10; // 100 KiB
 };

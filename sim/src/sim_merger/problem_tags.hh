@@ -15,14 +15,11 @@ class ProblemTagsMerger
         STACK_UNWINDING_MARK;
 
         sim::problem_tags::ProblemTag ptag;
-        uint8_t b_hidden = false;
         auto stmt =
             conn.prepare("SELECT problem_id, tag, hidden FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
-        stmt.res_bind_all(ptag.id.problem_id, ptag.id.tag, b_hidden);
+        stmt.res_bind_all(ptag.id.problem_id, ptag.id.tag, ptag.hidden);
         while (stmt.next()) {
-            ptag.hidden = b_hidden;
-
             ptag.id.problem_id = problems_.new_id(ptag.id.problem_id, record_set.kind);
             // Time does not matter
             record_set.add_record(ptag, std::chrono::system_clock::time_point::min());

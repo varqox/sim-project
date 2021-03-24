@@ -54,9 +54,6 @@ void Sim::api_handle() {
     if (next_arg == "contest") {
         return api_contest();
     }
-    if (next_arg == "contest_entry_token") {
-        return api_contest_entry_token();
-    }
     if (next_arg == "contest_file") {
         return api_contest_file();
     }

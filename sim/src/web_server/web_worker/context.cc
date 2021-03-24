@@ -58,6 +58,12 @@ Response Context::response_ok(StringView content) {
     return response("200 OK", std::move(cookie_changes), content);
 }
 
+Response Context::response_json(StringView content) {
+    auto resp = response("200 OK", std::move(cookie_changes), content);
+    resp.headers["content-type"] = "application/json; charset=utf-8";
+    return resp;
+}
+
 Response Context::response_400(StringView content) {
     return response("400 Bad Request", std::move(cookie_changes), content);
 }

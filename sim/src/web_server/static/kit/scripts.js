@@ -370,6 +370,38 @@ function humanize_file_size(size) {
 	return parseFloat(size / MIN_EIB).toFixed(1) + " EiB";
 }
 
+/* ============================ URLs ============================ */
+function url_enter_contest(contest_entry_token) {
+	return '/enter_contest/' + contest_entry_token;
+}
+function url_api_contest_entry_tokens_view(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/view';
+}
+function url_api_contest_entry_tokens_add(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/add';
+}
+function url_api_contest_entry_tokens_regen(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/regen';
+}
+function url_api_contest_entry_tokens_delete(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/delete';
+}
+function url_api_contest_entry_tokens_add_short(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/add_short';
+}
+function url_api_contest_entry_tokens_regen_short(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/regen_short';
+}
+function url_api_contest_entry_tokens_delete_short(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/delete_short';
+}
+function url_api_contest_name_for_contest_entry_token(contest_entry_token) {
+	return '/api/contest_entry_token/' + contest_entry_token + '/contest_name';
+}
+function url_api_use_contest_entry_token(contest_entry_token) {
+	return '/api/contest_entry_token/' + contest_entry_token + '/use';
+}
+
 /* ============================ URL hash parser ============================ */
 var url_hash_parser = {};
 (function () {
@@ -840,9 +872,8 @@ function parse_api_resp(data) {
 	return transform(names, data.slice(1));
 }
 
-function API_call(ajax_url, success_handler, loader_parent) {
-	var thiss = this;
-	var args = arguments;
+function old_API_call(ajax_url, success_handler, loader_parent) {
+	var self = this;
 	append_loader(loader_parent);
 	$.ajax({
 		url: ajax_url,
@@ -857,7 +888,25 @@ function API_call(ajax_url, success_handler, loader_parent) {
 		},
 		error: function(resp, status) {
 			show_error_via_loader(loader_parent, resp, status,
-				setTimeout.bind(null, API_call.bind(thiss, ajax_url, success_handler, loader_parent))); // Avoid recursion
+				setTimeout.bind(null, old_API_call.bind(self, ajax_url, success_handler, loader_parent))); // Avoid recursion
+		}
+	});
+}
+
+function API_get(url, success_handler, loader_parent) {
+	var self = this;
+	append_loader(loader_parent);
+	$.ajax({
+		url: url,
+		type: 'GET',
+		dataType: 'json',
+		success: function(data, status, jqXHR) {
+			remove_loader(loader_parent);
+			success_handler.call(this, data, status, jqXHR);
+		},
+		error: function(resp, status) {
+			show_error_via_loader(loader_parent, resp, status,
+				setTimeout.bind(null, API_get.bind(self, url, success_handler, loader_parent))); // Avoid recursion
 		}
 	});
 }
@@ -1021,13 +1070,28 @@ function timed_hide_show(elem) {
 			this.show();
 	});
 }
+function old_view_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/, show_on_success /*= true */) {
+	view_base(as_modal, new_window_location, function() {
+		var elem = $(this);
+		var modal = elem.parent().parent();
+		if (as_modal)
+			timed_hide(modal);
+		old_API_call(ajax_url, function() {
+			if (as_modal && (show_on_success !== false))
+				timed_hide_show(modal);
+			success_handler.apply(elem, arguments);
+			if (as_modal)
+				centerize_modal(modal);
+		}, elem);
+	}, no_modal_elem);
+}
 function view_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/, show_on_success /*= true */) {
 	view_base(as_modal, new_window_location, function() {
 		var elem = $(this);
 		var modal = elem.parent().parent();
 		if (as_modal)
 			timed_hide(modal);
-		API_call(ajax_url, function() {
+		API_get(ajax_url, function() {
 			if (as_modal && (show_on_success !== false))
 				timed_hide_show(modal);
 			success_handler.apply(elem, arguments);
@@ -1833,7 +1897,7 @@ function add_user(as_modal) {
 	});
 }
 function view_user(as_modal, user_id, opt_hash /*= ''*/) {
-	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1905,7 +1969,7 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function edit_user(as_modal, user_id) {
-	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1995,7 +2059,7 @@ function edit_user(as_modal, user_id) {
 	}, '/u/' + user_id + '/edit');
 }
 function delete_user(as_modal, user_id) {
-	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -2022,7 +2086,7 @@ function delete_user(as_modal, user_id) {
 	}, '/u/' + user_id + "/delete");
 }
 function merge_user(as_modal, user_id) {
-	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 					status: '404',
@@ -2054,7 +2118,7 @@ function merge_user(as_modal, user_id) {
 	}, '/u/' + user_id + '/merge');
 }
 function change_user_password(as_modal, user_id) {
-	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -2192,7 +2256,7 @@ function user_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 
 /* ================================== Jobs ================================== */
 function view_job(as_modal, job_id, opt_hash /*= ''*/) {
-	view_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
+	old_view_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -2541,7 +2605,7 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 }
 function add_problem_submission(as_modal, problem, no_modal_elem /*= undefined*/) {
 	if (problem.name === undefined) { // Request server for all needed data
-		view_ajax(as_modal, "/api/problems/=" + problem.id, function(data) {
+		old_view_ajax(as_modal, "/api/problems/=" + problem.id, function(data) {
 			if (data.length === 0)
 				return show_error_via_loader(this, {
 					status: '404',
@@ -2564,7 +2628,7 @@ function add_problem_submission(as_modal, problem, no_modal_elem /*= undefined*/
 }
 function add_contest_submission(as_modal, contest, round, problem, no_modal_elem /*= undefined*/) {
 	if (contest === undefined) { // Request server for all needed data
-		view_ajax(as_modal, "/api/contest/p" + problem.id, function(data) {
+		old_view_ajax(as_modal, "/api/contest/p" + problem.id, function(data) {
 			if (as_modal)
 				close_modal($(this).closest('.modal'));
 
@@ -2639,7 +2703,7 @@ function delete_submission(submission_id) {
 		'The submission has been deleted.', 'No, go back');
 }
 function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
-	view_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
+	old_view_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -3144,7 +3208,7 @@ function append_reupload_problem(elem, as_modal, problem) {
 	);
 }
 function reupload_problem(as_modal, problem_id) {
-	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -3369,7 +3433,7 @@ function append_change_problem_statement_form(elem, as_modal, problem_id) {
 		}));
 }
 function change_problem_statement(as_modal, problem_id) {
-	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 					status: '404',
@@ -3388,7 +3452,7 @@ function change_problem_statement(as_modal, problem_id) {
 	}, '/p/' + problem_id + '/change_statement');
 }
 function edit_problem(as_modal, problem_id, opt_hash) {
-	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -3432,7 +3496,7 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 	}, '/p/' + problem_id + '/edit' + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function delete_problem(as_modal, problem_id) {
-	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 					status: '404',
@@ -3456,7 +3520,7 @@ function delete_problem(as_modal, problem_id) {
 	}, '/p/' + problem_id + '/delete');
 }
 function merge_problem(as_modal, problem_id) {
-	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 					status: '404',
@@ -3505,7 +3569,7 @@ function rejudge_problem_submissions(problem_id, problem_name) {
 		'The rejudge jobs has been scheduled.', 'No, go back', true);
 }
 function reset_problem_time_limits(as_modal, problem_id) {
-	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -3559,7 +3623,7 @@ function reset_problem_time_limits(as_modal, problem_id) {
 	}, '/p/' + problem_id + '/reset_time_limits');
 }
 function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
-	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -4132,7 +4196,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 	});
 }
 function edit_contest(as_modal, contest_id) {
-	view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
+	old_view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -4192,7 +4256,7 @@ function edit_contest(as_modal, contest_id) {
 	}, '/c/c' + contest_id + '/edit');
 }
 function edit_contest_round(as_modal, contest_round_id) {
-	view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
 		if (data.contest.actions.indexOf('A') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -4228,7 +4292,7 @@ function edit_contest_round(as_modal, contest_round_id) {
 	}, '/c/r' + contest_round_id + '/edit');
 }
 function edit_contest_problem(as_modal, contest_problem_id) {
-	view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
 		if (data.contest.actions.indexOf('A') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -4310,7 +4374,7 @@ function rejudge_contest_problem_submissions(contest_problem_id, contest_problem
 		'The rejudge jobs has been scheduled.', 'No, go back', true);
 }
 function delete_contest(as_modal, contest_id) {
-	view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
+	old_view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 					status: '404',
@@ -4334,7 +4398,7 @@ function delete_contest(as_modal, contest_id) {
 	}, '/c/c' + contest_id + '/delete');
 }
 function delete_contest_round(as_modal, contest_round_id) {
-	view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
 		var contest = data.contest;
 		var round = data.rounds[0];
 		if (contest.actions.indexOf('A') === -1)
@@ -4353,7 +4417,7 @@ function delete_contest_round(as_modal, contest_round_id) {
 	}, '/c/r' + contest_round_id + '/delete');
 }
 function delete_contest_problem(as_modal, contest_problem_id) {
-	view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
 		var contest = data.contest;
 		var problem = data.problems[0];
 		if (contest.actions.indexOf('A') === -1)
@@ -4372,7 +4436,7 @@ function delete_contest_problem(as_modal, contest_problem_id) {
 	}, '/c/p' + contest_problem_id + '/delete');
 }
 function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
-	view_ajax(as_modal, '/api/contest/' + id_for_api, function(data) {
+	old_view_ajax(as_modal, '/api/contest/' + id_for_api, function(data) {
 		var contest = data.contest;
 		var rounds = data.rounds;
 		var problems = data.problems;
@@ -4666,113 +4730,117 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					var this_ = this;
 					entry_link_elem.empty();
 
-					API_call('/api/contest_entry_token/c' + contest.id, function(data) {
-						if (data.token === null) {
-							entry_link_elem.append(a_view_button(undefined,
-								'Add entry link', 'btn', modal_request.bind(null,
-									'Add entry link', $('<form>'),
-									'/api/contest_entry_token/c' + contest.id + '/add', function(resp, loader_parent) {
-										show_success_via_loader(loader_parent, 'Added');
-										render_entry_link_panel.call(this_);
-									})));
-							return;
+					API_get(url_api_contest_entry_tokens_view(contest.id), function(data) {
+						if (data.token != null) {
+							if (data.token.value === null) {
+								if (data.token.capabilities.create) {
+									entry_link_elem.append(a_view_button(undefined,
+										'Add entry link', 'btn', modal_request.bind(null,
+											'Add entry link', $('<form>'),
+											url_api_contest_entry_tokens_add(contest.id), function(resp, loader_parent) {
+												show_success_via_loader(loader_parent, 'Added');
+												render_entry_link_panel.call(this_);
+											})));
+								}
+							} else {
+								entry_link_elem.append(copy_to_clipboard_btn('Copy link', window.location.origin + url_enter_contest(data.token.value)));
+								if (data.token.capabilities.regen) {
+									entry_link_elem.append(a_view_button(undefined,
+										'Regenerate link', 'btn blue', dialogue_modal_request.bind(null,
+											'Regenerate link', $('<center>', {
+												html: [
+												'Are you sure to regenerate the entry link: ',
+												$('<br>'),
+												a_view_button(url_enter_contest(data.token.value), window.location.origin + url_enter_contest(data.token.value), undefined, enter_contest_using_token.bind(null, true, data.token.value)),
+												$('<br>'),
+												'?'
+												]
+											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen(contest.id),
+											function(resp, loader_parent) {
+												show_success_via_loader(loader_parent, 'Regenerated');
+												render_entry_link_panel.call(this_);
+											}, 'No, take me back', true)));
+								}
+								if (data.token.capabilities.delete) {
+									entry_link_elem.append(a_view_button(undefined,
+										'Delete link', 'btn red', dialogue_modal_request.bind(null,
+											'Delete link', $('<center>', {
+												html: [
+												'Are you sure to delete the entry link: ',
+												$('<br>'),
+												a_view_button(url_enter_contest(data.token.value), window.location.origin + url_enter_contest(data.token.value), undefined, enter_contest_using_token.bind(null, true, data.token.value)),
+												$('<br>'),
+												'?'
+												]
+											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete(contest.id),
+											function(resp, loader_parent) {
+												show_success_via_loader(loader_parent, 'Deleted');
+												render_entry_link_panel.call(this_);
+											}, 'No, take me back', true)));
+								}
+								entry_link_elem.append($('<pre>', {
+									text: window.location.origin + url_enter_contest(data.token.value)
+								}));
+							}
 						}
+						if (data.short_token != null) {
+							if (data.short_token.value === null) {
+								if (data.short_token.capabilities.create && data.token.value != null) {
+									entry_link_elem.append(a_view_button(undefined,
+										'Add short entry link', 'btn', modal_request.bind(null,
+											'Add short entry link', $('<form>'),
+											url_api_contest_entry_tokens_add_short(contest.id), function(resp, loader_parent) {
+												show_success_via_loader(loader_parent, 'Added');
+												render_entry_link_panel.call(this_);
+											})));
+								}
+							} else {
+								entry_link_elem.append(copy_to_clipboard_btn('Copy short link', window.location.origin + url_enter_contest(data.short_token.value)));
+								if (data.short_token.capabilities.regen) {
+									entry_link_elem.append(a_view_button(undefined,
+										'Regenerate short link', 'btn blue', dialogue_modal_request.bind(null,
+											'Regenerate short link', $('<center>', {
+												html: [
+												'Are you sure to regenerate the entry short link: ',
+												$('<br>'),
+												a_view_button(url_enter_contest(data.short_token.value), window.location.origin + url_enter_contest(data.short_token.value), undefined, enter_contest_using_token.bind(null, true, data.short_token.value)),
+												$('<br>'),
+												'?'
+												]
+											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen_short(contest.id),
+											function(resp, loader_parent) {
+												show_success_via_loader(loader_parent, 'Regenerated');
+												render_entry_link_panel.call(this_);
+											}, 'No, take me back', true)));
+								}
+								if (data.short_token.capabilities.delete) {
+									entry_link_elem.append(a_view_button(undefined,
+										'Delete short link', 'btn red', dialogue_modal_request.bind(null,
+											'Delete short link', $('<center>', {
+												html: [
+												'Are you sure to delete the entry short link: ',
+												$('<br>'),
+												a_view_button(url_enter_contest(data.short_token.value), window.location.origin + url_enter_contest(data.short_token.value), undefined, enter_contest_using_token.bind(null, true, data.short_token.value)),
+												$('<br>'),
+												'?'
+												]
+											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete_short(contest.id),
+											function(resp, loader_parent) {
+												show_success_via_loader(loader_parent, 'Deleted');
+												render_entry_link_panel.call(this_);
+											}, 'No, take me back', true)));
+								}
+								var exp_date = utcdt_or_tm_to_Date(data.short_token.expires_at);
+								entry_link_elem.append($('<span>', {
+									style: 'margin-left: 10px; font-size: 12px; color: #777',
+									html: ['Short token will expire in ', countdown_clock(exp_date)]
+								}));
 
-						entry_link_elem.append(copy_to_clipboard_btn('Copy link', window.location.origin + '/enter_contest/' + data.token));
-
-						entry_link_elem.append(a_view_button(undefined,
-							'Regenerate link', 'btn blue', dialogue_modal_request.bind(null,
-								'Regenerate link', $('<center>', {
-									html: [
-									'Are you sure to regenerate the entry link: ',
-									$('<br>'),
-									a_view_button('/enter_contest/' + data.token, window.location.origin + '/enter_contest/' + data.token, undefined, enter_contest_using_token.bind(null, true, data.token)),
-									$('<br>'),
-									'?'
-									]
-								}), 'Yes, regenerate it', 'btn-small blue', '/api/contest_entry_token/c' + contest.id + '/regen',
-								function(resp, loader_parent) {
-									show_success_via_loader(loader_parent, 'Regenerated');
-									render_entry_link_panel.call(this_);
-								}, 'No, take me back', true)));
-
-						entry_link_elem.append(a_view_button(undefined,
-							'Delete link', 'btn red', dialogue_modal_request.bind(null,
-								'Delete link', $('<center>', {
-									html: [
-									'Are you sure to delete the entry link: ',
-									$('<br>'),
-									a_view_button('/enter_contest/' + data.token, window.location.origin + '/enter_contest/' + data.token, undefined, enter_contest_using_token.bind(null, true, data.token)),
-									$('<br>'),
-									'?'
-									]
-								}), 'Yes, I am sure', 'btn-small red', '/api/contest_entry_token/c' + contest.id + '/delete',
-								function(resp, loader_parent) {
-									show_success_via_loader(loader_parent, 'Deleted');
-									render_entry_link_panel.call(this_);
-								}, 'No, take me back', true)));
-
-						if (data.short_token === null) {
-							entry_link_elem.append(a_view_button(undefined,
-								'Add short entry link', 'btn', modal_request.bind(null,
-									'Add short entry link', $('<form>'),
-									'/api/contest_entry_token/c' + contest.id + '/add_short', function(resp, loader_parent) {
-										show_success_via_loader(loader_parent, 'Added');
-										render_entry_link_panel.call(this_);
-									})));
+								entry_link_elem.append($('<pre>', {
+									text: window.location.origin + url_enter_contest(data.short_token.value)
+								}));
+							}
 						}
-
-						entry_link_elem.append($('<pre>', {
-							text: window.location.origin + '/enter_contest/' + data.token
-						}));
-
-						if (data.short_token === null)
-							return;
-
-						entry_link_elem.append(copy_to_clipboard_btn('Copy short link', window.location.origin + '/enter_contest/' + data.short_token));
-
-						entry_link_elem.append(a_view_button(undefined,
-							'Regenerate short link', 'btn blue', dialogue_modal_request.bind(null,
-								'Regenerate short link', $('<center>', {
-									html: [
-									'Are you sure to regenerate the entry short link: ',
-									$('<br>'),
-									a_view_button('/enter_contest/' + data.short_token, window.location.origin + '/enter_contest/' + data.short_token, undefined, enter_contest_using_token.bind(null, true, data.short_token)),
-									$('<br>'),
-									'?'
-									]
-								}), 'Yes, regenerate it', 'btn-small blue', '/api/contest_entry_token/c' + contest.id + '/regen_short',
-								function(resp, loader_parent) {
-									show_success_via_loader(loader_parent, 'Regenerated');
-									render_entry_link_panel.call(this_);
-								}, 'No, take me back', true)));
-
-						entry_link_elem.append(a_view_button(undefined,
-							'Delete short link', 'btn red', dialogue_modal_request.bind(null,
-								'Delete short link', $('<center>', {
-									html: [
-									'Are you sure to delete the entry short link: ',
-									$('<br>'),
-									a_view_button('/enter_contest/' + data.short_token, window.location.origin + '/enter_contest/' + data.short_token, undefined, enter_contest_using_token.bind(null, true, data.short_token)),
-									$('<br>'),
-									'?'
-									]
-								}), 'Yes, I am sure', 'btn-small red', '/api/contest_entry_token/c' + contest.id + '/delete_short',
-								function(resp, loader_parent) {
-									show_success_via_loader(loader_parent, 'Deleted');
-									render_entry_link_panel.call(this_);
-								}, 'No, take me back', true)));
-
-						var exp_date = utcdt_or_tm_to_Date(data.short_token_expiration_date);
-						entry_link_elem.append($('<span>', {
-							style: 'margin-left: 10px; font-size: 12px; color: #777',
-							html: ['Short token will expire in ', countdown_clock(exp_date)]
-						}));
-
-						entry_link_elem.append($('<pre>', {
-							text: window.location.origin + '/enter_contest/' + data.short_token
-						}));
-
 					}, entry_link_elem);
 				};
 
@@ -4812,7 +4880,7 @@ function view_contest_problem(as_modal, contest_problem_id, opt_hash /*= ''*/) {
 }
 function contest_ranking(elem_, id_for_api) {
 	var elem = elem_;
-	API_call('/api/contest/' + id_for_api, function(cdata) {
+	old_API_call('/api/contest/' + id_for_api, function(cdata) {
 		var contest = cdata.contest;
 		var rounds = cdata.rounds;
 		var problems = cdata.problems;
@@ -4860,7 +4928,7 @@ function contest_ranking(elem_, id_for_api) {
 			problem_to_col_id.add(problems[i].id, i);
 		problem_to_col_id.prepare();
 
-		API_call('/api/contest/' + id_for_api + '/ranking', function(data) {
+		old_API_call('/api/contest/' + id_for_api + '/ranking', function(data) {
 			var modal = elem.parents('.modal');
 			if (data.length == 0) {
 				timed_hide_show(modal);
@@ -5198,7 +5266,7 @@ function tab_contest_users_lister(parent_elem, query_suffix /*= ''*/) {
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 function add_contest_user(as_modal, contest_id) {
-	view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/<0', function(data) {
+	old_view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/<0', function(data) {
 		if (data.overall_actions === undefined)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5263,7 +5331,7 @@ function add_contest_user(as_modal, contest_id) {
 	}, '/c/c' + contest_id + '/contest_user/add');
 }
 function change_contest_user_mode(as_modal, contest_id, user_id) {
-	view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5336,7 +5404,7 @@ function change_contest_user_mode(as_modal, contest_id, user_id) {
 	}, '/c/c' + contest_id + '/contest_user/' + user_id + '/change_mode');
 }
 function expel_contest_user(as_modal, contest_id, user_id) {
-	view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5373,7 +5441,7 @@ function expel_contest_user(as_modal, contest_id, user_id) {
 						}),
 						$('<a>', {
 							class: 'btn-small',
-							text: 'No, the user may stay',
+							text: 'Nah, spare the user',
 							click: function() {
 								var modal = $(this).closest('.modal');
 								if (modal.length === 0)
@@ -5471,7 +5539,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 	this.fetch_more();
 }
 function add_contest_file(as_modal, contest_id) {
-	view_ajax(as_modal, '/api/contest_files/c' + contest_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest_files/c' + contest_id, function(data) {
 		if (data.overall_actions === undefined)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5513,7 +5581,7 @@ function add_contest_file(as_modal, contest_id) {
 	}, '/c/c' + contest_id + '/files/add');
 }
 function edit_contest_file(as_modal, contest_file_id) {
-	view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5564,7 +5632,7 @@ function edit_contest_file(as_modal, contest_file_id) {
 	}, '/contest_file/' + contest_file_id + '/edit');
 }
 function delete_contest_file(as_modal, contest_file_id) {
-	view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
+	old_view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5618,14 +5686,14 @@ function delete_contest_file(as_modal, contest_file_id) {
 
 /* ============================ Contest's users ============================ */
 function enter_contest_using_token(as_modal, contest_entry_token) {
-	view_ajax(as_modal, '/api/contest_entry_token/=' + contest_entry_token, function(data) {
-		this.append(ajax_form('Contest entry', '/api/contest_entry_token/=' + contest_entry_token + '/use', $('<center>', {
+	view_ajax(as_modal, url_api_contest_name_for_contest_entry_token(contest_entry_token), function(data) {
+		this.append(ajax_form('Contest entry', url_api_use_contest_entry_token(contest_entry_token), $('<center>', {
 			html: [
 				$('<label>', {
 					html: [
 						'You are about to enter the contest ',
-						a_view_button('/c/' + data.contest_id, data.contest_name,
-							undefined, view_contest.bind(null, true, data.contest_id)),
+						a_view_button('/c/' + data.contest.id, data.contest.name,
+							undefined, view_contest.bind(null, true, data.contest.id)),
 						'. Are you sure?'
 					]
 				}),
@@ -5653,12 +5721,11 @@ function enter_contest_using_token(as_modal, contest_entry_token) {
 			]
 		})));
 
-	}, '/enter_contest/' + contest_entry_token);
+	}, url_enter_contest(contest_entry_token));
 }
 
 function open_calendar_on(time, text_input, hidden_input) {
 	var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-	// var time = new Date();
 	var month_chooser = [];
 
 	var header = $('<span>', {

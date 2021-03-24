@@ -1,3 +1,4 @@
+#include "sim/contests/contest.hh"
 #include "sim/jobs/utils.hh"
 #include "sim/problems/permissions.hh"
 #include "src/web_server/old/sim.hh"
@@ -146,7 +147,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
     mysql::Optional<decltype(Problem::owner)::value_type> problem_owner;
     decltype(Problem::type) problem_type;
     mysql::Optional<decltype(sim::contest_users::ContestUser::mode)> cu_mode;
-    mysql::Optional<unsigned char> is_public;
+    mysql::Optional<decltype(sim::contests::Contest::is_public)> is_public;
     stmt.res_bind_all(stype, problem_owner, problem_type, cu_mode, is_public);
     if (stmt.next()) {
         if (is_public.has_value() and // <-- contest exists

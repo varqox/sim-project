@@ -18,7 +18,7 @@ void ChangeProblemStatement::run() {
         auto stmt = mysql.prepare("SELECT file_id, simfile FROM problems"
                                   " WHERE id=?");
         stmt.bind_and_execute(problem_id_);
-        InplaceBuff<1> simfile_str;
+        InplaceBuff<0> simfile_str;
         stmt.res_bind_all(problem_file_id, simfile_str);
         if (not stmt.next()) {
             return set_failure("Problem with ID = ", problem_id_, " does not exist");

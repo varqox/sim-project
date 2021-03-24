@@ -241,25 +241,6 @@ class Sim final {
 
     void api_contest_user_expel(StringView contest_id, StringView user_id);
 
-    // contest_entry_token_api.cc
-
-    void api_contest_entry_token();
-
-    void api_contest_entry_token_add(StringView contest_id);
-
-    void api_contest_entry_token_regen(StringView contest_id);
-
-    void api_contest_entry_token_delete(StringView contest_id);
-
-    void api_contest_entry_token_short_add(StringView contest_id);
-
-    void api_contest_entry_token_short_regen(StringView contest_id);
-
-    void api_contest_entry_token_short_delete(StringView contest_id);
-
-    void api_contest_entry_token_use_to_enter_contest(
-        decltype(sim::contests::Contest::id) contest_id);
-
     // contest_files_api.cc
 
     void api_contest_files();
@@ -596,8 +577,6 @@ private:
     void contests_contest_round(StringView contest_round_id);
 
     void contests_contest_problem(StringView contest_problem_id);
-
-    void enter_contest();
 
     /* =========================== Contest users =========================== */
 public:

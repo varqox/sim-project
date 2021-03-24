@@ -182,7 +182,7 @@ void Sim::api_problems() {
 
     // Tags selector
     uint64_t pid = 0;
-    uint8_t hidden = false;
+    decltype(ProblemTag::hidden) hidden;
     decltype(ProblemTag::id.tag) tag;
     auto stmt = mysql.prepare("SELECT tag FROM problem_tags "
                               "WHERE problem_id=? AND hidden=? ORDER BY tag");

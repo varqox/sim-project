@@ -192,13 +192,4 @@ void Sim::contests_contest_problem(StringView contest_problem_id) {
     }
 }
 
-void Sim::enter_contest() {
-    STACK_UNWINDING_MARK;
-
-    page_template("Enter contest", "body{padding-left:20px}");
-    append(
-        "<script>enter_contest_using_token(false, '", url_args.extract_next_arg(),
-        "');</script>");
-}
-
 } // namespace web_server::old

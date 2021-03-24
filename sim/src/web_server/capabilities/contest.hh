@@ -45,9 +45,7 @@ struct Contest {
     } users;
 
     struct EntryTokens {
-        bool web_ui_view : 1;
-        bool add_token : 1;
-        bool add_short_token : 1;
+        bool view : 1;
     } entry_tokens;
 };
 

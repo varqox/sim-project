@@ -8,6 +8,8 @@
 #include "src/web_server/http/request.hh"
 #include "src/web_server/http/response.hh"
 
+#include <type_traits>
+
 namespace web_server::web_worker {
 
 struct Context {
@@ -36,6 +38,17 @@ struct Context {
     bool session_has_expired() noexcept;
 
     http::Response response_ok(StringView content = "");
+
+    http::Response response_json(StringView content);
+
+    template <
+        class T,
+        std::enable_if_t<
+            !std::is_convertible_v<T&&, StringView> and std::is_convertible_v<T&, StringView>,
+            int> = 0>
+    http::Response response_json(T&& content) {
+        return response_json(StringView{content});
+    }
 
     http::Response response_400(StringView content);
 

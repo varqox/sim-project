@@ -1,4 +1,5 @@
 #include "sim/contest_problems/contest_problem.hh"
+#include "sim/contests/contest.hh"
 #include "sim/inf_datetime.hh"
 #include "sim/is_username.hh"
 #include "sim/jobs/utils.hh"
@@ -451,12 +452,13 @@ void Sim::api_submissions() {
 
         bool show_full_results =
             (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or full_results <= curr_date);
-        auto is_problem_final =
-            WONT_THROW(str2num<decltype(Submission::problem_final)>(res[PFINAL]).value());
-        auto is_contest_final =
-            WONT_THROW(str2num<decltype(Submission::contest_final)>(res[CFINAL]).value());
+        auto is_problem_final = WONT_THROW(
+            str2num<decltype(Submission::problem_final)::int_type>(res[PFINAL]).value());
+        auto is_contest_final = WONT_THROW(
+            str2num<decltype(Submission::contest_final)::int_type>(res[CFINAL]).value());
         auto is_contest_initial_final = WONT_THROW(
-            str2num<decltype(Submission::contest_initial_final)>(res[CINIFINAL]).value());
+            str2num<decltype(Submission::contest_initial_final)::int_type>(res[CINIFINAL])
+                .value());
 
         // Submission id
         append(",\n[", res[SID], ',');
@@ -818,7 +820,7 @@ void Sim::api_submission_add() {
                                   "WHERE cp.id=? AND cp.problem_id=?");
         stmt.bind_and_execute(session->user_id, contest_problem_id.value(), problem_id);
 
-        uint8_t is_public = false;
+        decltype(sim::contests::Contest::is_public) is_public;
         InplaceBuff<20> cr_begins_str;
         InplaceBuff<20> cr_ends_str;
         mysql::Optional<decltype(ContestUser::mode)> umode;

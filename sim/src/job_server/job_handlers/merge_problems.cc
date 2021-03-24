@@ -40,7 +40,7 @@ void MergeProblems::run_impl() {
     {
         auto stmt = mysql.prepare("SELECT simfile FROM problems WHERE id=?");
         stmt.bind_and_execute(donor_problem_id_);
-        InplaceBuff<1> simfile;
+        InplaceBuff<0> simfile;
         stmt.res_bind_all(simfile);
         if (not stmt.next()) {
             return set_failure("Problem does not exist");

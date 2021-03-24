@@ -13,7 +13,6 @@ class ContestsMerger : public Merger<sim::contests::Contest> {
 
         sim::contests::Contest c;
         mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
-        uint8_t b_is_public = false;
         auto stmt = conn.prepare(
             "SELECT c.id, c.name, c.is_public, MIN(s.submit_time) "
             "FROM ",
@@ -21,11 +20,10 @@ class ContestsMerger : public Merger<sim::contests::Contest> {
             "submissions s "
             "ON s.contest_id=c.id GROUP BY c.id");
         stmt.bind_and_execute();
-        stmt.res_bind_all(c.id, c.name, b_is_public, earliest_submit_time);
+        stmt.res_bind_all(c.id, c.name, c.is_public, earliest_submit_time);
 
         auto curr_time = std::chrono::system_clock::now();
         while (stmt.next()) {
-            c.is_public = b_is_public;
             auto time =
                 (earliest_submit_time.has_value()
                      ? str_to_time_point(

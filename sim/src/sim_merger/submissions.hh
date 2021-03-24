@@ -22,10 +22,6 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
         mysql::Optional<decltype(s.contest_problem_id)::value_type> m_contest_problem_id;
         mysql::Optional<decltype(s.contest_round_id)::value_type> m_contest_round_id;
         mysql::Optional<decltype(s.contest_id)::value_type> m_contest_id;
-        uint8_t b_final_candidate = 0;
-        uint8_t b_problem_final = 0;
-        uint8_t b_contest_final = 0;
-        uint8_t b_contest_initial_final = 0;
         mysql::Optional<decltype(s.score)::value_type> m_score;
         auto stmt = conn.prepare(
             "SELECT id, file_id, owner, problem_id,"
@@ -39,18 +35,14 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
         stmt.bind_and_execute();
         stmt.res_bind_all(
             s.id, s.file_id, m_owner, s.problem_id, m_contest_problem_id, m_contest_round_id,
-            m_contest_id, s.type, s.language, b_final_candidate, b_problem_final,
-            b_contest_final, b_contest_initial_final, s.initial_status, s.full_status,
+            m_contest_id, s.type, s.language, s.final_candidate, s.problem_final,
+            s.contest_final, s.contest_initial_final, s.initial_status, s.full_status,
             s.submit_time, m_score, s.last_judgment, s.initial_report, s.final_report);
         while (stmt.next()) {
             s.owner = m_owner.to_opt();
             s.contest_problem_id = m_contest_problem_id.to_opt();
             s.contest_round_id = m_contest_round_id.to_opt();
             s.contest_id = m_contest_id.to_opt();
-            s.final_candidate = b_final_candidate;
-            s.problem_final = b_problem_final;
-            s.contest_final = b_contest_final;
-            s.contest_initial_final = b_contest_initial_final;
             s.score = m_score.to_opt();
 
             s.file_id = internal_files_.new_id(s.file_id, record_set.kind);

@@ -58,7 +58,7 @@ struct Job {
     sql_fields::Datetime added;
     std::optional<uint64_t> aux_id;
     sql_fields::Blob<128> info;
-    sql_fields::Blob<1> data;
+    sql_fields::Blob<0> data;
 };
 
 constexpr uint64_t job_log_view_max_size = 128 << 10; // 128 KiB

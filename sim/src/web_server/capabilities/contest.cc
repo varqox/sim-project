@@ -52,9 +52,7 @@ Contest contest_for(
         },
         .entry_tokens =
             {
-                .web_ui_view = is_contest_moderator,
-                .add_token = is_contest_moderator,
-                .add_short_token = is_contest_moderator,
+                .view = is_contest_moderator,
             },
     };
 }
@@ -66,7 +64,7 @@ contest_for(
     decltype(sim::contests::Contest::id) contest_id) {
     STACK_UNWINDING_MARK;
 
-    uint8_t is_public = false;
+    decltype(sim::contests::Contest::is_public) is_public;
     mysql::Optional<decltype(ContestUser::mode)> contest_user_mode;
     mysql::Statement stmt;
     if (session) {

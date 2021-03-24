@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/problems/problem.hh"
+#include "sim/sql_fields/bool.hh"
 #include "sim/sql_fields/varbinary.hh"
 
 namespace sim::problem_tags {
@@ -12,7 +13,7 @@ struct ProblemTag {
     };
 
     Id id;
-    bool hidden;
+    sql_fields::Bool hidden;
 };
 
 } // namespace sim::problem_tags

@@ -41,7 +41,6 @@ get(mysql::Connection& mysql, GetIdKind id_kind, T&& id, std::optional<U> user_i
     }
 
     Contest contest;
-    uint8_t is_public = false;
     mysql::Optional<decltype(users::User::type)> user_type;
     mysql::Optional<decltype(contest_users::ContestUser::mode)> cu_mode;
     mysql::Optional<sql_fields::InfDatetime> round_begins;
@@ -59,19 +58,18 @@ get(mysql::Connection& mysql, GetIdKind id_kind, T&& id, std::optional<U> user_i
             id_part_sql);
         stmt.bind_and_execute(user_id.value(), id);
         stmt.res_bind_all(
-            contest.id, contest.name, is_public, round_begins, user_type, cu_mode);
+            contest.id, contest.name, contest.is_public, round_begins, user_type, cu_mode);
 
     } else {
         stmt = mysql.prepare("SELECT ", fields, " FROM contests c ", id_part_sql);
         stmt.bind_and_execute(id);
-        stmt.res_bind_all(contest.id, contest.name, is_public, round_begins);
+        stmt.res_bind_all(contest.id, contest.name, contest.is_public, round_begins);
     }
 
     if (not stmt.next()) {
         return std::nullopt;
     }
 
-    contest.is_public = is_public;
     auto contest_perms = get_permissions(user_type, contest.is_public, cu_mode);
     if (check_round_begins and uint(~contest_perms & Permissions::ADMIN) and
         round_begins.value() > curr_date)
