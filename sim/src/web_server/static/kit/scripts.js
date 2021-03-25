@@ -192,9 +192,9 @@ function countdown_clock(target_date) {
 	setTimeout(update_countdown);
 	return span;
 }
-function copy_to_clipboard(text) {
+function copy_to_clipboard(get_text_to_copy) {
 	var elem = document.createElement('textarea');
-	elem.value = text;
+	elem.value = get_text_to_copy();
 	elem.setAttribute('readonly', '');
 	elem.style.position = 'absolute';
 	elem.style.left = '-9999px';
@@ -203,26 +203,33 @@ function copy_to_clipboard(text) {
 	document.execCommand('copy');
 	document.body.removeChild(elem);
 }
-function copy_to_clipboard_btn(btn_text, text_to_copy) {
+function append_btn_tooltip(elem, text) {
+	var tooltip = $('<span>', {
+		class: 'btn-tooltip',
+		text: text,
+		click: function(e) {
+			e.stopPropagation();
+			tooltip.remove();
+		}
+	});
+	tooltip.appendTo(elem);
+	setTimeout(function() {
+		tooltip.fadeOut('slow', function() {
+			tooltip.remove()
+		});
+	}, 750);
+}
+function copy_to_clipboard_btn(small, btn_text, get_text_to_copy) {
 	if (!document.queryCommandSupported('copy'))
 		return $();
 
 	return $('<a>', {
-		class: 'btn',
+		class: small ? 'btn-small' : 'btn',
 		style: 'position: relative',
 		text: btn_text,
 		click: function() {
-			copy_to_clipboard(text_to_copy);
-			var tooltip = $('<span>', {
-				class: 'btn-tooltip',
-				text: 'Copied to clipboard!'
-			});
-			tooltip.appendTo($(this));
-			setTimeout(function() {
-				tooltip.fadeOut('slow', function() {
-					tooltip.remove()
-				});
-			}, 1000);
+			copy_to_clipboard(get_text_to_copy);
+			append_btn_tooltip($(this), 'Copied to clipboard!');
 		}
 	});
 }
@@ -2833,8 +2840,9 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 			tabs.push('Source', function() {
 				timed_hide_show(elem.parents('.modal'));
 				if (cached_source !== undefined) {
-					elem.append(copy_to_clipboard_btn('Copy to clipboard',
-						$(cached_source).text()));
+					elem.append(copy_to_clipboard_btn(false, 'Copy to clipboard', function() {
+						return $(cached_source).text();
+					}));
 					elem.append(cached_source);
 				} else {
 					append_loader(elem);
@@ -2847,8 +2855,9 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 						dataType: 'html',
 						success: function(data) {
 							cached_source = data;
-							elem.append(copy_to_clipboard_btn('Copy to clipboard',
-								$(cached_source).text()));
+							elem.append(copy_to_clipboard_btn(false, 'Copy to clipboard', function() {
+								return $(cached_source).text();
+							}));
 							elem.append(cached_source);
 							remove_loader(elem);
 							centerize_modal(elem.closest('.modal'), false);
@@ -4036,13 +4045,13 @@ function append_create_contest_round(elem, as_modal, contest_id) {
 			trim_before_send: true,
 			required: true
 		}).add(Form.field_group('Begin time',
-			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
+			dt_chooser_input('begins', true, true, true, undefined, 'The Big Bang', 'Never')
 		)).add(Form.field_group('End time',
-			dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
+			dt_chooser_input('ends', true, true, true, Infinity, 'The Big Bang', 'Never')
 		)).add(Form.field_group('Full results time',
-			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
+			dt_chooser_input('full_results', true, true, true, -Infinity, 'Immediately', 'Never')
 		)).add(Form.field_group('Show ranking since',
-			dt_chooser_input('ranking_expo', true, true, -Infinity, 'The Big Bang', "Don't show")
+			dt_chooser_input('ranking_expo', true, true, true, -Infinity, 'The Big Bang', "Don't show")
 		)).add('<div>', {
 			html: $('<input>', {
 				class: 'btn blue',
@@ -4093,13 +4102,13 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 				}
 			})
 		)).add(Form.field_group('Begin time',
-			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
+			dt_chooser_input('begins', true, true, true, undefined, 'The Big Bang', 'Never')
 		)).add(Form.field_group('End time',
-			dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
+			dt_chooser_input('ends', true, true, true, Infinity, 'The Big Bang', 'Never')
 		)).add(Form.field_group('Full results time',
-			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
+			dt_chooser_input('full_results', true, true, true, -Infinity, 'Immediately', 'Never')
 		)).add(Form.field_group('Show ranking since',
-			dt_chooser_input('ranking_expo', true, true, -Infinity, 'The Big Bang', "Don't show")
+			dt_chooser_input('ranking_expo', true, true, true, -Infinity, 'The Big Bang', "Don't show")
 		)).add('<div>', {
 			html: $('<input>', {
 				class: 'btn blue',
@@ -4274,13 +4283,13 @@ function edit_contest_round(as_modal, contest_round_id) {
 				trim_before_send: true,
 				required: true
 			}).add(Form.field_group('Begin time',
-				dt_chooser_input('begins', true, true, utcdt_or_tm_to_Date(round.begins), 'The Big Bang', 'Never')
+				dt_chooser_input('begins', true, true, true, utcdt_or_tm_to_Date(round.begins), 'The Big Bang', 'Never')
 			)).add(Form.field_group('End time',
-				dt_chooser_input('ends', true, true, utcdt_or_tm_to_Date(round.ends), 'The Big Bang', 'Never')
+				dt_chooser_input('ends', true, true, true, utcdt_or_tm_to_Date(round.ends), 'The Big Bang', 'Never')
 			)).add(Form.field_group('Full results time',
-				dt_chooser_input('full_results', true, true, utcdt_or_tm_to_Date(round.full_results), 'Immediately', 'Never')
+				dt_chooser_input('full_results', true, true, true, utcdt_or_tm_to_Date(round.full_results), 'Immediately', 'Never')
 			)).add(Form.field_group('Show ranking since',
-				dt_chooser_input('ranking_expo', true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'The Big Bang', "Don't show")
+				dt_chooser_input('ranking_expo', true, true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'The Big Bang', "Don't show")
 			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -4743,7 +4752,9 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 											})));
 								}
 							} else {
-								entry_link_elem.append(copy_to_clipboard_btn('Copy link', window.location.origin + url_enter_contest(data.token.value)));
+								entry_link_elem.append(copy_to_clipboard_btn(false, 'Copy link', function() {
+									return window.location.origin + url_enter_contest(data.token.value);
+								}));
 								if (data.token.capabilities.regen) {
 									entry_link_elem.append(a_view_button(undefined,
 										'Regenerate link', 'btn blue', dialogue_modal_request.bind(null,
@@ -4795,7 +4806,9 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 											})));
 								}
 							} else {
-								entry_link_elem.append(copy_to_clipboard_btn('Copy short link', window.location.origin + url_enter_contest(data.short_token.value)));
+								entry_link_elem.append(copy_to_clipboard_btn(false, 'Copy short link', function() {
+									return window.location.origin + url_enter_contest(data.short_token.value);
+								}));
 								if (data.short_token.capabilities.regen) {
 									entry_link_elem.append(a_view_button(undefined,
 										'Regenerate short link', 'btn blue', dialogue_modal_request.bind(null,
@@ -6229,7 +6242,7 @@ function open_calendar_on(time, text_input, hidden_input) {
 
 	datetime_info_input[0].select();
 }
-function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = false */, initial_dt /* = undefined <=> use current time, Infinity <=> inf, -Infinity <=> -inf */, neg_inf_button_text /* = 'Set to -inf' */, inf_button_text /* = 'Set to inf' */) {
+function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = false */, copy_and_paste_buttons /* = false*/, initial_dt /* = undefined <=> use current time, Infinity <=> inf, -Infinity <=> -inf */, neg_inf_button_text /* = 'Set to -inf' */, inf_button_text /* = 'Set to inf' */) {
 	/*const*/ var neg_inf_text_to_show = neg_inf_button_text;
 	/*const*/ var inf_text_to_show = inf_button_text;
 
@@ -6288,19 +6301,46 @@ function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = fals
 
 	update_choosen_dt(initial_dt);
 
-	var inf_buttons = $();
-	if (allow_neg_inf)
-		inf_buttons = inf_buttons.add('<a>', {
+	var buttons = $();
+	if (allow_neg_inf) {
+		buttons = buttons.add('<a>', {
 			class: 'btn-small',
 			text: neg_inf_button_text,
 			click: update_choosen_dt.bind(null, -Infinity)
 		});
-	if (allow_inf)
-		inf_buttons = inf_buttons.add('<a>', {
+	}
+	if (allow_inf) {
+		buttons = buttons.add('<a>', {
 			class: 'btn-small',
 			text: inf_button_text,
 			click: update_choosen_dt.bind(null, Infinity)
 		});
+	}
+	if (copy_and_paste_buttons) {
+		buttons = buttons.add(copy_to_clipboard_btn(true, 'Copy', function() {
+			localStorage.setItem('dt_chooser_clipboard', value_input.val());
+			return chooser_input.val();
+		}));
+		buttons = buttons.add('<a>', {
+			class: 'btn-small',
+			text: 'Paste',
+			style: 'position: relative',
+			click: function() {
+				let val = localStorage.getItem('dt_chooser_clipboard');
+				if (val != null) {
+					val = utcdt_or_tm_to_Date(val);
+					if ((val === Infinity && !allow_inf) || (val == -Infinity && !allow_neg_inf)) {
+						append_btn_tooltip($(this), 'Failed: invalid value in sim clipboard!');
+					} else {
+						update_choosen_dt(val);
+						append_btn_tooltip($(this), 'Pasted!');
+					}
+				} else {
+					append_btn_tooltip($(this), 'Failed: no datetime in sim clipboard!');
+				}
+			}
+		});
+	}
 
-	return chooser_input.add(value_input).add(inf_buttons);
+	return chooser_input.add(value_input).add(buttons);
 }
