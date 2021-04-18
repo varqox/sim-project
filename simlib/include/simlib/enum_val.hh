@@ -124,3 +124,9 @@ template <class...>
 constexpr inline bool is_enum_val = false;
 template <class T>
 constexpr inline bool is_enum_val<EnumVal<T>> = true;
+
+template <class...>
+constexpr inline bool is_enum_val_with_string_conversions = false;
+template <class T>
+constexpr inline bool is_enum_val_with_string_conversions<EnumVal<T>> =
+    is_enum_with_string_conversions<T>;
