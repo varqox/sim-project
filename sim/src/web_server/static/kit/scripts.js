@@ -382,7 +382,7 @@ function url_enter_contest(contest_entry_token) {
 	return '/enter_contest/' + contest_entry_token;
 }
 function url_api_contest_entry_tokens_view(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/view';
+	return '/api/contest/' + contest_id + '/entry_tokens';
 }
 function url_api_contest_entry_tokens_add(contest_id) {
 	return '/api/contest/' + contest_id + '/entry_tokens/add';

@@ -31,7 +31,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
 : mysql{mysql} {
     // Handlers
     // clang-format off
-    GET("/api/contest/{u64}/entry_tokens/view")(contest_entry_tokens::view);
+    GET("/api/contest/{u64}/entry_tokens")(contest_entry_tokens::view);
     GET("/api/contest_entry_token/{string}/contest_name")(contest_entry_tokens::view_contest_name);
     GET("/enter_contest/{string}")(contest_entry_tokens::enter_contest);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::add);
