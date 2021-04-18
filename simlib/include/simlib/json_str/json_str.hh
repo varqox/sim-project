@@ -1,6 +1,8 @@
 #pragma once
 
 #include "simlib/concat_tostr.hh"
+#include "simlib/enum_val.hh"
+#include "simlib/enum_with_string_conversions.hh"
 #include "simlib/mysql/mysql.hh"
 #include "simlib/string_transform.hh"
 #include "simlib/string_view.hh"
@@ -46,6 +48,10 @@ protected:
             } else {
                 append_raw_value("null");
             }
+        } else if constexpr (is_enum_with_string_conversions<DT>) {
+            append_raw_value(val.to_quoted_str());
+        } else if constexpr (is_enum_val_with_string_conversions<DT>) {
+            append_raw_value(val.to_enum().to_quoted_str());
         } else {
             append_stringified_json(str, std::forward<T>(val));
             back_insert(str, ',');
