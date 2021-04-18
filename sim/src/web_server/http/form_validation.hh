@@ -32,12 +32,6 @@ struct ApiParam {
 
 namespace detail {
 
-template <class...>
-constexpr inline bool is_enum_val_with_string_conversions = false;
-template <class T>
-constexpr inline bool is_enum_val_with_string_conversions<EnumVal<T>> =
-    is_enum_with_string_conversions<T>;
-
 template <class T>
 std::variant<T, std::string>
 validate_impl(const FormFields& form_fields, ApiParam<T> api_param, bool allow_blank) {

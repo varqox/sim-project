@@ -277,7 +277,7 @@ void Sim::api_user_add() {
     auto password_salt = to_hex({password_salt_bin.data(), password_salt_bin.size()});
 
     auto stmt = mysql.prepare("INSERT IGNORE users (username, type,"
-                              " first_name, last_name, email, password_salt, password) "
+                              " first_name, last_name, email, password_salt, password_hash) "
                               "VALUES(?, ?, ?, ?, ?, ?, ?)");
 
     stmt.bind_and_execute(
