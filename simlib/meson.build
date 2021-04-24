@@ -32,7 +32,6 @@ if get_option('warning_level') > '0'
 
     extra_gcc_warnings = [
         '-Wno-shadow',
-        '-Wshadow=local',
         '-Wno-pedantic',
     ]
     foreach warning : extra_gcc_warnings

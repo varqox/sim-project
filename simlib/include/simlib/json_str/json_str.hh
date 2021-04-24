@@ -15,6 +15,15 @@
 
 namespace json_str {
 
+namespace detail {
+
+template <class...>
+static constexpr inline bool is_std_optional = false;
+template <class T>
+static constexpr inline bool is_std_optional<std::optional<T>> = true;
+
+} // namespace detail
+
 class Builder {
 protected:
     std::string& str;
@@ -27,11 +36,6 @@ protected:
         back_insert(str, std::forward<Arg>(arg)..., ',');
     }
 
-    template <class...>
-    static constexpr inline bool is_std_optional = false;
-    template <class T>
-    static constexpr inline bool is_std_optional<std::optional<T>> = true;
-
     template <class T>
     void append_value(T&& val) {
         using DT = std::decay_t<T>;
@@ -42,7 +46,7 @@ protected:
             append_raw_value("null");
         } else if constexpr (std::is_integral_v<DT>) {
             append_raw_value(val);
-        } else if constexpr (is_std_optional<DT> or mysql::is_optional<DT>) {
+        } else if constexpr (detail::is_std_optional<DT> or mysql::is_optional<DT>) {
             if (val) {
                 append_value(*val);
             } else {

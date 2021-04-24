@@ -17,6 +17,7 @@
     struct enum_name {                                                                   \
         struct enum_with_string_conversions_marker {};                                   \
         using UnderlyingType = underlying_type;                                          \
+        /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                 \
         enum class Enum : underlying_type {                                              \
             IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS(seq)                         \
         };                                                                               \
@@ -77,7 +78,7 @@
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_2(name, val, str_val) \
     IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_3(name, val)              \
     IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_1
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_3(name, val) name = val,
+#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_3(name, val) name = (val),
 
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS(seq) \
     REV_CAT(_END, IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_1 seq)
@@ -131,7 +132,7 @@
     IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_3(name, str_val)          \
     IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_1
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_3(name, str_val) \
-    if (str == str_val)                                                 \
+    if (str == (str_val))                                               \
         return name;
 
 namespace detail {
