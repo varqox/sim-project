@@ -1,4 +1,5 @@
 #include "simlib/enum_val.hh"
+#include "simlib/enum_with_string_conversions.hh"
 
 #include <cstdint>
 #include <gtest/gtest.h>
@@ -130,21 +131,22 @@ TEST(EnumVal, operator_ValType) {
     test_implicit_conversion<Uint64Enum>();
 }
 
+ENUM_WITH_STRING_CONVERSIONS(Colors, uint8_t,
+    (RED, 1, "red") //
+    (GREEN, 4, "green") //
+    (BLUE, 88, "blue") //
+);
+
 // NOLINTNEXTLINE
 TEST(EnumVal, from_str) {
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str("-42").value().to_int(), -42);
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str("-664642626824123881385183521863"), std::nullopt);
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str("x"), std::nullopt);
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str(""), std::nullopt);
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str("1"), Int32Enum::A);
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str("42"), Int32Enum::B);
-    EXPECT_EQ(EnumVal<Int32Enum>::from_str("1337"), Int32Enum::C);
+    EXPECT_EQ(EnumVal<Colors>::from_str("red"), Colors::RED);
+    EXPECT_EQ(EnumVal<Colors>::from_str("red")->to_int(), 1);
+    EXPECT_EQ(EnumVal<Colors>::from_str("green"), Colors::GREEN);
+    EXPECT_EQ(EnumVal<Colors>::from_str("green")->to_int(), 4);
+    EXPECT_EQ(EnumVal<Colors>::from_str("blue"), Colors::BLUE);
+    EXPECT_EQ(EnumVal<Colors>::from_str("blue")->to_int(), 88);
 
-    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("-1"), std::nullopt);
-    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("664642626824123881385183521863"), std::nullopt);
-    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("x"), std::nullopt);
-    EXPECT_EQ(EnumVal<Uint64Enum>::from_str(""), std::nullopt);
-    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("1"), Uint64Enum::A);
-    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("42"), Uint64Enum::B);
-    EXPECT_EQ(EnumVal<Uint64Enum>::from_str("1337"), Uint64Enum::C);
+    EXPECT_EQ(EnumVal<Colors>::from_str(""), std::nullopt);
+    EXPECT_EQ(EnumVal<Colors>::from_str("bluee"), std::nullopt);
+    EXPECT_EQ(EnumVal<Colors>::from_str("der"), std::nullopt);
 }

@@ -34,14 +34,6 @@ public:
     constexpr explicit EnumVal(ValType val)
     : val_(val) {}
 
-    static std::optional<EnumVal> from_str(StringView str) noexcept {
-        auto opt = str2num<ValType>(str);
-        if (opt) {
-            return EnumVal{*opt};
-        }
-        return std::nullopt;
-    }
-
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr EnumVal(Enum val)
     : val_(static_cast<ValType>(val)) {}
@@ -115,6 +107,10 @@ public:
     constexpr explicit operator ValType&() & noexcept { return val_; }
 
     constexpr explicit operator const ValType&() const& noexcept { return val_; }
+
+    static constexpr std::optional<EnumVal> from_str(StringView str) noexcept {
+        return Enum::from_str(str);
+    }
 };
 
 template <class Enum>
