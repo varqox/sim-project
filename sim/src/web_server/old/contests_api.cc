@@ -1110,14 +1110,14 @@ constexpr http::ApiParam contest_problem_score_revealing{
     if (auto* validation_error = std::get_if<1>(&var##form_validation_opt)) { \
         return api_error400(*validation_error);                               \
     }                                                                         \
-    auto&(var) = std::get<0>(var##form_validation_opt);
+    auto& var = std::get<0>(var##form_validation_opt); // NOLINT(bugprone-macro-parentheses)
 
 #define VALIDATE_ALLOW_BLANK(var, api_param, form_fields)                               \
     auto var##form_validation_opt = http::validate_allow_blank(form_fields, api_param); \
     if (auto* validation_error = std::get_if<1>(&var##form_validation_opt)) {           \
         return api_error400(*validation_error);                                         \
     }                                                                                   \
-    auto&(var) = std::get<0>(var##form_validation_opt);
+    auto& var = std::get<0>(var##form_validation_opt); // NOLINT(bugprone-macro-parentheses)
 
 void Sim::api_contest_problem_add(
     decltype(Contest::id) contest_id, decltype(ContestRound::id) contest_round_id,
