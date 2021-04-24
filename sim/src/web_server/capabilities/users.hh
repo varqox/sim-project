@@ -7,6 +7,7 @@ namespace web_server::capabilities {
 struct Users {
     bool web_ui_view : 1;
     bool view_all : 1;
+    bool view_all_by_type : 1;
     bool add_admin : 1;
     bool add_teacher : 1;
     bool add_normal_user : 1;

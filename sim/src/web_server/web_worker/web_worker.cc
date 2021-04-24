@@ -5,6 +5,7 @@
 #include "src/web_server/contest_entry_tokens/ui.hh"
 #include "src/web_server/http/request.hh"
 #include "src/web_server/http/response.hh"
+#include "src/web_server/users/api.hh"
 #include "src/web_server/web_worker/context.hh"
 
 #include <optional>
@@ -33,6 +34,11 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     // clang-format off
     GET("/api/contest/{u64}/entry_tokens")(contest_entry_tokens::view);
     GET("/api/contest_entry_token/{string}/contest_name")(contest_entry_tokens::view_contest_name);
+    GET("/api/user/{u64}")(users::view);
+    GET("/api/users")(users::list);
+    GET("/api/users/id%3E/{u64}")(users::list_above_id);
+    GET("/api/users/type=/{string}")(users::list_by_type);
+    GET("/api/users/type=/{string}/id%3E/{u64}")(users::list_by_type_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::enter_contest);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::add);
     POST("/api/contest/{u64}/entry_tokens/add_short")(contest_entry_tokens::add_short);

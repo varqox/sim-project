@@ -93,9 +93,6 @@ void Sim::api_handle() {
     if (next_arg == "user") {
         return api_user();
     }
-    if (next_arg == "users") {
-        return api_users();
-    }
     return api_error404();
 }
 

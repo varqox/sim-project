@@ -142,8 +142,6 @@ class Sim final {
     void api_problem_attaching_contest_problems(sim::problems::Permissions perms);
 
     // users_api.cc
-    void api_users();
-
     void api_user();
 
     void api_user_add();

@@ -12,11 +12,22 @@ function elem_with_text(tag, text) {
 	elem.innerText = text;
 	return elem;
 }
+function elem_with_class(tag, classes) {
+	var elem = document.createElement(tag);
+	elem.className = classes;
+	return elem;
+}
+function elem_with_class_and_text(tag, classes, text) {
+	var elem = document.createElement(tag);
+	elem.innerText = text;
+	elem.className = classes;
+	return elem;
+}
 function append_children(elem, elements) {
 	for (var i in elements)
 		elem.appendChild(elements[i]);
 }
-function text_to_safe_html(str) {
+function text_to_safe_html(str) { // TODO: this can be deprecated because DOM elements have innerText property (see elem_with_text() function)
 	var x = document.createElement('span');
 	x.innerText = str;
 	return x.innerHTML;
@@ -408,6 +419,12 @@ function url_api_contest_name_for_contest_entry_token(contest_entry_token) {
 function url_api_use_contest_entry_token(contest_entry_token) {
 	return '/api/contest_entry_token/' + contest_entry_token + '/use';
 }
+function url_api_user(user_id) {
+	return '/api/user/' + user_id;
+}
+function url_api_users(query_suffix) {
+	return '/api/users' + query_suffix;
+}
 
 /* ============================ URL hash parser ============================ */
 var url_hash_parser = {};
@@ -578,31 +595,37 @@ $(document).ready(give_body_egid);
 
 /* ================================= Loader ================================= */
 function remove_loader(elem) {
-	$(elem).children('.loader, .loader-info').remove();
+	elem.removeChild(elem.querySelector('.loader'));
+}
+function try_remove_loader_info(elem) {
+	var child = elem.querySelector('.loader-info');
+	if (child != null) {
+		elem.removeChild(child);
+	}
 }
 function append_loader(elem) {
-	remove_loader(elem);
-	elem = $(elem);
-	if (elem.css('animationName') === undefined &&
-		elem.css('WebkitAnimationName') === undefined)
-	{
-		$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
-	} else
-		$(elem).append($('<span>', {
-			class: 'loader',
-			style: 'display: none',
-			html: $('<div>', {class: 'spinner'})
-		}).delay(loader_show_delay).fadeIn(fade_in_duration));
+	try_remove_loader_info(elem);
+	var loader;
+	if (elem.style.animationName === undefined && elem.style.WebkitAnimationName == undefined) {
+		loader = elem_with_class('img', 'loader');
+		loader.setAttribute('src', '/kit/img/loader.gif');
+	} else {
+		loader = elem_with_class('span', 'loader');
+		loader.style.display = 'none';
+		loader.appendChild(elem_with_class('div', 'spinner'));
+		setTimeout(() => {
+			$(loader).fadeIn(fade_in_duration);
+		}, loader_show_delay);
+	}
+	elem.appendChild(loader);
 }
 function show_success_via_loader(elem, html) {
-	elem = $(elem);
 	remove_loader(elem);
-	elem.append($('<span>', {
-		class: 'loader-info success',
-		style: 'display:none',
-		html: html
-	}).fadeIn(fade_in_duration));
-
+	var loader_info = elem_with_class('span', 'loader-info success');
+	loader_info.style.display = 'none';
+	loader_info.innerHTML = html;
+	$(loader_info).fadeIn(fade_in_duration);
+	elem.appendChild(loader_info);
 	timed_hide_show(elem.closest('.modal'));
 }
 function show_error_via_loader(elem, response, err_status, try_again_handler) {
@@ -612,7 +635,7 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 		err_status = '; ' + err_status;
 
 	elem = $(elem);
-	remove_loader(elem);
+	remove_loader(elem[0]);
 	elem.append($('<span>', {
 		class: 'loader-info error',
 		style: 'display:none',
@@ -694,7 +717,7 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 
 	form = $(form);
 	add_csrf_token_to(form);
-	append_loader(loader_parent);
+	append_loader(loader_parent[0]);
 
 	// Transform data before sending
 	var form_data = new FormData(form[0]);
@@ -714,7 +737,7 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 			if (typeof success_msg_or_handler === "function") {
 				success_msg_or_handler.call(form, resp, loader_parent);
 			} else
-				show_success_via_loader(loader_parent, success_msg_or_handler);
+				show_success_via_loader(loader_parent[0], success_msg_or_handler);
 		},
 		error: function(resp, status) {
 			show_error_via_loader(loader_parent, resp, status);
@@ -881,7 +904,7 @@ function parse_api_resp(data) {
 
 function old_API_call(ajax_url, success_handler, loader_parent) {
 	var self = this;
-	append_loader(loader_parent);
+	append_loader(loader_parent[0]);
 	$.ajax({
 		url: ajax_url,
 		type: 'POST',
@@ -890,7 +913,7 @@ function old_API_call(ajax_url, success_handler, loader_parent) {
 		data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 		dataType: 'json',
 		success: function(data, status, jqXHR) {
-			remove_loader(loader_parent);
+			remove_loader(loader_parent[0]);
 			success_handler.call(this, parse_api_resp(data), status, jqXHR);
 		},
 		error: function(resp, status) {
@@ -902,13 +925,13 @@ function old_API_call(ajax_url, success_handler, loader_parent) {
 
 function API_get(url, success_handler, loader_parent) {
 	var self = this;
-	append_loader(loader_parent);
+	append_loader(loader_parent[0]);
 	$.ajax({
 		url: url,
 		type: 'GET',
 		dataType: 'json',
 		success: function(data, status, jqXHR) {
-			remove_loader(loader_parent);
+			remove_loader(loader_parent[0]);
 			success_handler.call(this, data, status, jqXHR);
 		},
 		error: function(resp, status) {
@@ -1152,7 +1175,7 @@ function api_request_with_password_to_job(elem, title, api_url, message_html, co
 			})
 		}), function(resp, loader_parent) {
 			if (as_modal) {
-				show_success_via_loader(this, success_msg);
+				show_success_via_loader($(this)[0], success_msg);
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -1166,7 +1189,7 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 }
 
 /* ================================= Lister ================================= */
-function Lister(elem) {
+function OldLister(elem) {
 	var this_ = this;
 	this.elem = $(elem);
 	var lock = false;
@@ -1181,7 +1204,7 @@ function Lister(elem) {
 			return;
 
 		lock = true;
-		append_loader(this_.elem.parent());
+		append_loader(this_.elem.parent()[0]);
 
 		$.ajax({
 			url: this_.query_url + this_.query_suffix,
@@ -1195,7 +1218,7 @@ function Lister(elem) {
 				data = parse_api_resp(data);
 				this_.process_api_response(data, modal);
 
-				remove_loader(this_.elem.parent());
+				remove_loader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				centerize_modal(modal, false);
 
@@ -1239,6 +1262,100 @@ function Lister(elem) {
 		elem_to_listen_on_scroll.on('scroll', scres_handler);
 		$(window).on('resize', scres_handler);
 	};
+}
+
+function Lister(elem, query_url, initial_next_query_suffix) {
+	var self = this;
+	self.elem = elem;
+	self.next_query_suffix = initial_next_query_suffix;
+
+	var modal = self.elem.closest('.modal');
+	var fetch_lock = false;
+	var is_first_fetch = true;
+	var shutdown = false;
+
+	var is_lister_detached = function() {
+		return !$.contains(document.documentElement, self.elem);
+	};
+	var do_shutdown;
+
+	// Checks whether scrolling down is (almost) impossible
+	var need_to_fetch_more = function () {
+		return how_much_is_viewport_bottom_above_elem_bottom(self.elem) <= 300;
+	}
+
+	self.fetch_more = function() {
+		if (fetch_lock || shutdown) {
+			return;
+		}
+		if (is_lister_detached()) {
+			do_shutdown();
+			return;
+		}
+
+		fetch_lock = true;
+		append_loader(self.elem.parentNode);
+
+		$.ajax({
+			url: query_url + self.next_query_suffix,
+			type: 'GET',
+			dataType: 'json',
+			success: function(data) {
+				if (is_first_fetch) {
+					is_first_fetch = false;
+					self.process_first_api_response(data.list);
+				} else if (data.list.length != 0) {
+					self.process_api_response(data.list);
+				}
+
+				remove_loader(self.elem.parentNode);
+				timed_hide_show(modal);
+				centerize_modal(modal, false);
+
+				if (!data.may_be_more) {
+					do_shutdown(); // No more data to load
+					fetch_lock = false;
+					return;
+				}
+
+				fetch_lock = false;
+				if (need_to_fetch_more()) {
+					setTimeout(self.fetch_more, 0); // schedule fetching more
+				}
+			},
+			error: function(resp, status) {
+				show_error_via_loader(self.elem.parentNode, resp, status, function() {
+					fetch_lock = false;
+					self.fetch_more();
+				});
+			}
+		});
+	};
+
+	var scroll_or_resize_event_handler = function() {
+		if (is_lister_detached()) {
+			do_shutdown();
+			return;
+		}
+		if (need_to_fetch_more()) {
+			setTimeout(self.fetch_more, 0); // schedule fetching more without blocking
+		}
+	}
+
+	// Start listening for scroll and resize events
+	var elem_to_listen_on_scroll = modal === null ? document : modal_parent;
+	elem_to_listen_on_scroll.addEventListener('scroll', scroll_or_resize_event_handler, {passive: true});
+	window.addEventListener('resize', scroll_or_resize_event_handler, {passive: true});
+
+	do_shutdown = function() {
+		shutdown = true;
+		elem_to_listen_on_scroll.removeEventListener('scroll', scroll_or_resize_event_handler);
+		window.removeEventListener('resize', scroll_or_resize_event_handler);
+	};
+
+	if (need_to_fetch_more()) {
+		self.fetch_more();
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1427,7 +1544,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		var prev_height = content[0].scrollHeight;
 		var bottom_dist = prev_height - content[0].scrollTop;
 
-		remove_loader(this_.elem);
+		remove_loader(this_.elem[0]);
 		var html_data = text_to_safe_html(data);
 		content.html(colorize(html_data + content.html(), html_data.length + 2000));
 		var curr_height = content[0].scrollHeight;
@@ -1448,7 +1565,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		lock = true;
 
-		append_loader(this_.elem);
+		append_loader(this_.elem[0]);
 		$.ajax({
 			url: '/api/logs/' + this_.type +
 				(offset === undefined ? '' : '?' + offset),
@@ -1473,7 +1590,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 			return;
 		lock = true;
 
-		append_loader(this_.elem);
+		append_loader(this_.elem[0]);
 		$.ajax({
 			url: '/api/logs/' + this_.type,
 			type: 'POST',
@@ -1485,7 +1602,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 				if (parseInt(data[0]) !== first_offset)
 					return process_data(data);
 
-				remove_loader(this_.elem);
+				remove_loader(this_.elem[0]);
 				lock = false;
 			},
 			error: function(resp, status) {
@@ -1619,33 +1736,32 @@ ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false
 	return res;
 };
 
-ActionsToHTML.user = function(user_id, actions_str, user_view /*= false*/) {
+ActionsToHTML.user = function(user, user_view /*= false*/) {
 	if (user_view === undefined)
 		user_view = false;
-
 	var res = [];
-	if (!user_view && actions_str.indexOf('v') !== -1)
-		res.push(a_view_button('/u/' + user_id, 'View', 'btn-small',
-			view_user.bind(null, true, user_id)));
-
-	if (actions_str.indexOf('E') !== -1)
-		res.push(a_view_button('/u/' + user_id + '/edit', 'Edit',
-			'btn-small blue', edit_user.bind(null, true, user_id)));
-
-	if (actions_str.indexOf('D') !== -1)
-		res.push(a_view_button('/u/' + user_id + '/delete', 'Delete',
-			'btn-small red', delete_user.bind(null, true, user_id)));
-
-	if (actions_str.indexOf('M') !== -1)
-		res.push(a_view_button('/u/' + user_id + '/merge_into_another',
+	if (!user_view && user.capabilities.view) {
+		res.push(a_view_button('/u/' + user.id, 'View', 'btn-small',
+			view_user.bind(null, true, user.id)));
+	}
+	if (user.capabilities.edit) {
+		res.push(a_view_button('/u/' + user.id + '/edit', 'Edit',
+			'btn-small blue', edit_user.bind(null, true, user.id)));
+	}
+	if (user.capabilities.delete) {
+		res.push(a_view_button('/u/' + user.id + '/delete', 'Delete',
+			'btn-small red', delete_user.bind(null, true, user.id)));
+	}
+	if (user.capabilities.merge) {
+		res.push(a_view_button('/u/' + user.id + '/merge_into_another',
 			'Merge', 'btn-small red',
-			merge_user.bind(null, true, user_id)));
-
-	if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('p') !== -1)
-		res.push(a_view_button('/u/' + user_id + '/change-password',
+			merge_user.bind(null, true, user.id)));
+	}
+	if (user.capabilities.change_password || user.capabilities.change_password_without_old_password) {
+		res.push(a_view_button('/u/' + user.id + '/change-password',
 			'Change password', 'btn-small orange',
-			change_user_password.bind(null, true, user_id)));
-
+			change_user_password.bind(null, true, user.id)));
+	}
 	return res;
 };
 
@@ -1904,26 +2020,18 @@ function add_user(as_modal) {
 	});
 }
 function view_user(as_modal, user_id, opt_hash /*= ''*/) {
-	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
-		if (data.length === 0)
-			return show_error_via_loader(this, {
-				status: '404',
-				statusText: 'Not Found'
-			});
-
-		var user = data[0];
-
+	view_ajax(as_modal, url_api_user(user_id), function(user) {
 		this.append($('<div>', {
 			class: 'header',
 			html: $('<span>', {
 				style: 'margin: auto 0',
 				html: $('<a>', {
-					href: '/u/' + user_id,
+					href: '/u/' + user.id,
 					text: user.username
 				})
 			}).append(text_to_safe_html(' (' + user.first_name + ' ' + user.last_name + ')'))
 			.add('<div>', {
-				html: ActionsToHTML.user(user_id, user.actions, true)
+				html: ActionsToHTML.user(user, true)
 			})
 		})).append($('<center>', {
 			class: 'always_in_view',
@@ -1944,8 +2052,8 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 				.add($('<div>', {
 					class: 'type',
 					html: $('<label>', {text: 'Account type'}).add('<span>', {
-						class: user.type[0].toLowerCase() + user.type.slice(1),
-						text: user.type
+						class: user.type,
+						text: user.type[0].toUpperCase() + user.type.slice(1),
 					})
 				}))
 				.add($('<div>', {
@@ -2170,80 +2278,64 @@ function change_user_password(as_modal, user_id) {
 
 	}, '/u/' + user_id + "/change-password");
 }
-function UsersLister(elem, query_suffix /*= ''*/) {
-	var this_ = this;
-	if (query_suffix === undefined)
-		query_suffix = '';
+function UsersLister(elem, query_url) {
+	var self = this;
+	Lister.call(self, elem, query_url, '');
 
-	Lister.call(this, elem);
-	this.query_url = '/api/users' + query_suffix;
-	this.query_suffix = '';
-
-	this.process_api_response = function(data, modal) {
-		if (this_.elem.children('thead').length === 0) {
-			if (data.length == 0) {
-				this_.elem.parent().append($('<center>', {
-					class: 'users always_in_view',
-					// class: 'users',
-					html: '<p>There are no users to show...</p>'
-				}));
-				remove_loader(this_.elem.parent());
-				timed_hide_show(modal);
-				return;
-			}
-
-			this_.elem.html('<thead><tr>' +
-					'<th>Id</th>' +
-					'<th class="username">Username</th>' +
-					'<th class="first-name">First name</th>' +
-					'<th class="last-name">Last name</th>' +
-					'<th class="email">Email</th>' +
-					'<th class="type">Type</th>' +
-					'<th class="actions">Actions</th>' +
-				'</tr></thead><tbody></tbody>');
+	self.process_first_api_response = function(list) {
+		if (list.length === 0) {
+			self.elem.parentNode.appendChild(elem_with_text('p', 'There are no users to show...'));
+			return;
 		}
 
-		for (var x in data) {
-			x = data[x];
-			this_.query_suffix = '/>' + x.id;
+		var thead = document.createElement('thead');
+		thead.appendChild(elem_with_text('th', 'Id'));
+		thead.appendChild(elem_with_class_and_text('th', 'username', 'Username'));
+		thead.appendChild(elem_with_class_and_text('th', 'first-name', 'First name'));
+		thead.appendChild(elem_with_class_and_text('th', 'last-name', 'Last name'));
+		thead.appendChild(elem_with_class_and_text('th', 'email', 'Email'));
+		thead.appendChild(elem_with_class_and_text('th', 'type', 'Type'));
+		thead.appendChild(elem_with_class_and_text('th', 'actions', 'Actions'));
+		self.elem.appendChild(thead);
+		self.tbody = document.createElement('tbody');
+		self.elem.appendChild(self.tbody);
 
-			var row = $('<tr>');
-			row.append($('<td>', {text: x.id}));
-			row.append($('<td>', {text: x.username}));
-			row.append($('<td>', {text: x.first_name}));
-			row.append($('<td>', {text: x.last_name}));
-			row.append($('<td>', {text: x.email}));
-			row.append($('<td>', {
-				class: x.type[0].toLowerCase() + x.type.slice(1),
-				text: x.type
-			}));
+		self.process_api_response(list);
+	}
 
-			// Actions
-			row.append($('<td>', {
-				html: ActionsToHTML.user(x.id, x.actions)
-			}));
+	self.process_api_response = function(list) {
+		self.next_query_suffix = '/id>/' + list[list.length - 1].id;
 
-			this_.elem.children('tbody').append(row);
+		for (var user of list) {
+			var row = document.createElement('tr');
+			row.appendChild(elem_with_text('td', user.id));
+			row.appendChild(elem_with_text('td', user.username));
+			row.appendChild(elem_with_text('td', user.first_name));
+			row.appendChild(elem_with_text('td', user.last_name));
+			row.appendChild(elem_with_text('td', user.email));
+			row.appendChild(elem_with_class_and_text('td', user.type, user.type[0].toUpperCase() + user.type.slice(1)));
+
+			var td = document.createElement('td');
+			append_children(td, ActionsToHTML.user(user, false));
+			row.appendChild(td);
+
+			self.tbody.appendChild(row);
 		}
 	};
-
-	this.fetch_more();
 }
-function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
-	if (query_suffix === undefined)
-		query_suffix = '';
-
+function tab_users_lister(parent_elem) {
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff) {
-		var table = $('<table class="users stripped"></table>').appendTo(parent_elem);
-		new UsersLister(table, query_suffix + tab_qsuff).monitor_scroll();
+		var table = elem_with_class('table', 'users stripped');
+		$(parent_elem)[0].appendChild(table);
+		new UsersLister(table, url_api_users(tab_qsuff));
 	}
 
 	var tabs = [
 		'All', retab.bind(null, ''),
-		'Admins', retab.bind(null, '/tA'),
-		'Teachers', retab.bind(null, '/tT'),
-		'Normal', retab.bind(null, '/tN')
+		'Admins', retab.bind(null, '/type=/admin'),
+		'Teachers', retab.bind(null, '/type=/teacher'),
+		'Normal', retab.bind(null, '/type=/normal')
 	];
 
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
@@ -2385,7 +2477,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-	Lister.call(this, elem);
+	OldLister.call(this, elem);
 	this.query_url = '/api/jobs' + query_suffix;
 	this.query_suffix = '';
 
@@ -2397,7 +2489,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					// class: 'jobs',
 					html: '<p>There are no jobs to show...</p>'
 				}));
-				remove_loader(this_.elem.parent());
+				remove_loader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -2600,7 +2692,7 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 				})
 			}), function(resp) {
 				if (as_modal) {
-					show_success_via_loader(this, 'Submitted');
+					show_success_via_loader($(this)[0], 'Submitted');
 					view_submission(true, resp);
 				} else {
 					this.parent().remove();
@@ -2845,7 +2937,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 					}));
 					elem.append(cached_source);
 				} else {
-					append_loader(elem);
+					append_loader(elem[0]);
 					$.ajax({
 						url: '/api/submission/' + submission_id + '/source',
 						type: 'POST',
@@ -2859,7 +2951,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 								return $(cached_source).text();
 							}));
 							elem.append(cached_source);
-							remove_loader(elem);
+							remove_loader(elem[0]);
 							centerize_modal(elem.closest('.modal'), false);
 						},
 						error: function(resp, status) {
@@ -2910,7 +3002,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 		query_suffix.indexOf('/R') === -1 &&
 		query_suffix.indexOf('/P') === -1);
 
-	Lister.call(this, elem);
+	OldLister.call(this, elem);
 	this.query_url = '/api/submissions' + query_suffix;
 	this.query_suffix = '';
 
@@ -3122,7 +3214,7 @@ function add_problem(as_modal) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					show_success_via_loader(this, 'Added');
+					show_success_via_loader($(this)[0], 'Added');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -3207,7 +3299,7 @@ function append_reupload_problem(elem, as_modal, problem) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Reuploaded');
+				show_success_via_loader($(this)[0], 'Reuploaded');
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -3280,7 +3372,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 				modal(ajax_form('Add tag',
 					'/api/problem/' + problem_id + '/edit/tags/add_tag',
 					add_form, function() {
-						show_success_via_loader(this, 'The tag has been added.');
+						show_success_via_loader($(this)[0], 'The tag has been added.');
 						// Add tag
 						var input = add_form[0].children('input');
 						tags.push(input.val());
@@ -3355,7 +3447,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 						modal(ajax_form('Edit tag',
 							'/api/problem/' + problem_id + '/edit/tags/edit_tag',
 							edit_form, function() {
-								show_success_via_loader(this, 'done.');
+								show_success_via_loader($(this)[0], 'done.');
 								// Update tag
 								var old_tag = tag;
 								tag = edit_form[0].children('input').val();
@@ -3389,7 +3481,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 							delete_from, 'Yes, delete it', 'btn-small red',
 							'/api/problem/' + problem_id + '/edit/tags/delete_tag',
 							function(_, loader_parent) {
-								show_success_via_loader(loader_parent, 'The tag has been deleted.');
+								show_success_via_loader(loader_parent[0], 'The tag has been deleted.');
 								row.fadeOut(800);
 								setTimeout(function() { row.remove(); }, 800);
 								// Delete tag
@@ -3433,7 +3525,7 @@ function append_change_problem_statement_form(elem, as_modal, problem_id) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Statement change was scheduled');
+				show_success_via_loader($(this)[0], 'Statement change was scheduled');
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -3621,7 +3713,7 @@ function reset_problem_time_limits(as_modal, problem_id) {
 				})
 			}), function(resp, loader_parent) {
 				if (as_modal) {
-					show_success_via_loader(this, 'Reseting time limits has been scheduled.');
+					show_success_via_loader($(this)[0], 'Reseting time limits has been scheduled.');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -3769,7 +3861,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 	this.show_added = logged_user_is_teacher_or_admin() ||
 		(query_suffix.indexOf('/u') !== -1);
 
-	Lister.call(this, elem);
+	OldLister.call(this, elem);
 	this.query_url = '/api/problems' + query_suffix;
 	this.query_suffix = '';
 
@@ -3781,7 +3873,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 					// class: 'problems',
 					html: '<p>There are no problems to show...</p>'
 				}));
-				remove_loader(this_.elem.parent());
+				remove_loader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -3895,7 +3987,7 @@ function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/)
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-	Lister.call(this, elem);
+	OldLister.call(this, elem);
 	this.query_url = '/api/problem/' + problem_id + '/attaching_contest_problems' + query_suffix;
 	this.query_suffix = '';
 
@@ -3907,7 +3999,7 @@ function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/)
 					// class: 'attaching-contest-problems',
 					html: '<p>There are no contest problems using (attaching) this problem...</p>'
 				}));
-				remove_loader(this_.elem.parent());
+				remove_loader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -3962,7 +4054,7 @@ function append_create_contest(elem, as_modal) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Created');
+				show_success_via_loader($(this)[0], 'Created');
 				view_contest(true, resp);
 			} else {
 				this.parent().remove();
@@ -4013,7 +4105,7 @@ function append_clone_contest(elem, as_modal) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Cloned');
+				show_success_via_loader($(this)[0], 'Cloned');
 				view_contest(true, resp);
 			} else {
 				this.parent().remove();
@@ -4060,7 +4152,7 @@ function append_create_contest_round(elem, as_modal, contest_id) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Created');
+				show_success_via_loader($(this)[0], 'Created');
 				view_contest_round(true, resp);
 			} else {
 				this.parent().remove();
@@ -4117,7 +4209,7 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Cloned');
+				show_success_via_loader($(this)[0], 'Cloned');
 				view_contest_round(true, resp);
 			} else {
 				this.parent().remove();
@@ -4194,7 +4286,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					show_success_via_loader(this, 'Added');
+					show_success_via_loader($(this)[0], 'Added');
 					view_contest_problem(true, resp);
 				} else {
 					this.parent().remove();
@@ -4358,9 +4450,9 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 				})
 			}), function(resp, loader_parent) {
 				if (resp === '')
-					show_success_via_loader(this, 'Updated');
+					show_success_via_loader($(this)[0], 'Updated');
 				else if (as_modal) {
-					show_success_via_loader(this, 'Updated');
+					show_success_via_loader($(this)[0], 'Updated');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -4747,7 +4839,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 										'Add entry link', 'btn', modal_request.bind(null,
 											'Add entry link', $('<form>'),
 											url_api_contest_entry_tokens_add(contest.id), function(resp, loader_parent) {
-												show_success_via_loader(loader_parent, 'Added');
+												show_success_via_loader(loader_parent[0], 'Added');
 												render_entry_link_panel.call(this_);
 											})));
 								}
@@ -4768,7 +4860,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												]
 											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen(contest.id),
 											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent, 'Regenerated');
+												show_success_via_loader(loader_parent[0], 'Regenerated');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -4785,7 +4877,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												]
 											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete(contest.id),
 											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent, 'Deleted');
+												show_success_via_loader(loader_parent[0], 'Deleted');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -4801,7 +4893,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 										'Add short entry link', 'btn', modal_request.bind(null,
 											'Add short entry link', $('<form>'),
 											url_api_contest_entry_tokens_add_short(contest.id), function(resp, loader_parent) {
-												show_success_via_loader(loader_parent, 'Added');
+												show_success_via_loader(loader_parent[0], 'Added');
 												render_entry_link_panel.call(this_);
 											})));
 								}
@@ -4822,7 +4914,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												]
 											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen_short(contest.id),
 											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent, 'Regenerated');
+												show_success_via_loader(loader_parent[0], 'Regenerated');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -4839,7 +4931,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												]
 											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete_short(contest.id),
 											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent, 'Deleted');
+												show_success_via_loader(loader_parent[0], 'Deleted');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -5103,7 +5195,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-	Lister.call(this, elem);
+	OldLister.call(this, elem);
 	this.query_url = '/api/contests' + query_suffix;
 	this.query_suffix = '';
 
@@ -5115,7 +5207,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 					// class: 'contests',
 					html: '<p>There are no contests to show...</p>'
 				}));
-				remove_loader(this_.elem.parent());
+				remove_loader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -5197,7 +5289,7 @@ function ContestUsersLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-	Lister.call(this, elem);
+	OldLister.call(this, elem);
 	this.query_url = '/api/contest_users' + query_suffix;
 	this.query_suffix = '';
 
@@ -5217,7 +5309,7 @@ function ContestUsersLister(elem, query_suffix /*= ''*/) {
 					// class: 'contest-users',
 					html: '<p>There are no contest users to show...</p>'
 				}));
-				remove_loader(this_.elem.parent());
+				remove_loader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -5477,7 +5569,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-	Lister.call(this, elem);
+	OldLister.call(this, elem);
 	this.query_url = '/api/contest_files' + query_suffix;
 	this.query_suffix = '';
 
@@ -5497,7 +5589,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 					class: 'contest-files always_in_view',
 					html: '<p>There are no files to show...</p>'
 				}));
-				remove_loader(this_.elem.parent());
+				remove_loader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
