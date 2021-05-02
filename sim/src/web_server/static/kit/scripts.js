@@ -767,6 +767,123 @@ function ajax_form(title, target, html, success_msg_or_handler, classes) {
 	});
 }
 
+/* ================================= AjaxForm ================================= */
+function Select(name, required) {
+	var self = this;
+	var select_elem = document.createElement('select');
+	select_elem.name = name;
+	select_elem.required = required;
+
+	self.attach_to = function(elem) {
+		elem.appendChild(select_elem);
+	}
+
+	self.add_option = function(name, value, selected) {
+		var option = select_elem.appendChild(elem_with_text('option', name));
+		option.value = value;
+		option.selected = selected;
+		return option;
+	}
+}
+
+function AjaxForm(title, destination_api_url, css_classes) {
+	var self = this;
+	var outer_div = elem_with_class('div', 'form-container' + (css_classes == null ? '' : ' ' + css_classes));
+	outer_div.appendChild(elem_with_text('h1', title));
+
+	var form_elem = document.createElement('form');
+	outer_div.appendChild(form_elem);
+
+	self.success_msg = 'Success';
+	self.success_handler = function(loader_parent, response) {
+		show_success_via_loader(loader_parent, self.success_msg);
+	};
+	form_elem.addEventListener('submit', function(event) {
+		event.preventDefault();
+		// Append CSRF token if absent
+		if (form_elem.querySelector('input[name="csrf_token"]') == null) {
+			self.append_input_hidden('csrf_token', get_cookie('csrf_token'))
+		}
+		append_loader(form_elem);
+		// Prepare form for sending
+		var form_data = new FormData(form_elem);
+		for (var elem of form_elem.querySelectorAll('[trim_before_send="true"]')) {
+			if (elem.name != null) {
+				form_data.set(elem.name, form_data.get(elem.name).trim());
+			}
+		}
+		// Send form
+		$.ajax({
+			url: destination_api_url,
+			type: 'post',
+			processData: false,
+			contentType: false,
+			data: form_data,
+			success: function(response) {
+				return self.success_handler.call(null, form_elem, response);
+			},
+			error: function(response, status) {
+				show_error_via_loader(form_elem, response, status);
+			}
+		});
+	});
+
+	self.attach_to = function(elem) {
+		elem.appendChild(outer_div);
+	};
+
+	var append_field_group = function(label) {
+		var div = form_elem.appendChild(elem_with_class('div', 'field-group'));
+		div.appendChild(elem_with_text('label', label));
+		return div;
+	}
+
+	self.append_input = function(type, name, label, value, required) {
+		var fg = append_field_group(label);
+		var input = fg.appendChild(document.createElement('input'));
+		input.type = type;
+		input.name = name;
+		input.value = value;
+		input.required = required;
+		return input;
+	};
+
+	self.append_input_text = function(name, label, value, size, required, trim_before_send) {
+		var input = self.append_input('text', name, label, value, required);
+		input.size = size;
+		input.trim_before_send = trim_before_send;
+		return input;
+	};
+
+	self.append_input_email = function(name, label, value, size, required, trim_before_send) {
+		var input = self.append_input('email', name, label, value, required);
+		input.size = size;
+		input.trim_before_send = trim_before_send;
+		return input;
+	};
+
+	self.append_input_hidden = function(name, value) {
+		var input = form_elem.appendChild(document.createElement('input'));
+		input.type = 'hidden';
+		input.name = name;
+		input.value = value;
+		return input;
+	}
+
+	self.append_select = function(name, label, required) {
+		var fg = append_field_group(label);
+		var select = new Select(name, required);
+		select.attach_to(fg);
+		return select;
+	};
+
+	self.append_submit_button = function(name, css_classes) {
+		var input = form_elem.appendChild(document.createElement('input'));
+		input.type = 'submit';
+		input.className = 'btn' + (css_classes == null ? '' : ' ' + css_classes);
+		input.value = name;
+	};
+}
 /* ================================= Modals ================================= */
 function remove_modals(modal) {
 	$(modal).remove();
@@ -2092,93 +2209,32 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function edit_user(as_modal, user_id) {
-	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
-		if (data.length === 0)
+	view_ajax(as_modal, url_api_user(user_id), function(user) {
+		if (!user.capabilities.edit) {
 			return show_error_via_loader(this, {
-				status: '404',
-				statusText: 'Not Found'
+				status: '403',
+				statusText: 'Not Allowed'
 			});
+		}
+		var form = new AjaxForm('Edit account', '/api/user/' + user.id + '/edit');
+		form.append_input_text('username', 'Username', user.username, 24, true, true).readOnly = !user.capabilities.edit_username;
 
-		var user = data[0];
-		var actions = user.actions;
-		if (actions.indexOf('E') === -1)
-			return show_error_via_loader(this, {
-					status: '403',
-					statusText: 'Not Allowed'
-				});
+		var select = form.append_select('type', 'Type', true);
+		if (user.capabilities.make_admin || user.type === 'admin') {
+			select.add_option('Admin', 'A', user.type === 'admin');
+		}
+		if (user.capabilities.make_teacher || user.type === 'teacher') {
+			select.add_option('Teacher', 'T', user.type === 'teacher');
+		}
+		if (user.capabilities.make_normal || user.type === 'normal') {
+			select.add_option('Normal', 'N', user.type === 'normal');
+		}
 
-		this.append(ajax_form('Edit account', '/api/user/' + user_id + '/edit',
-			Form.field_group('Username', {
-				type: 'text',
-				name: 'username',
-				value: user.username,
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			}).add(Form.field_group('Type',
-				$('<select>', {
-					name: 'type',
-					required: true,
-					html: function() {
-						var res = [];
-						if (actions.indexOf('A') !== -1)
-							res.push($('<option>', {
-								value: 'A',
-								text: 'Admin',
-								selected: ('Admin' === user.type ? true : undefined)
-							}));
-
-						if (actions.indexOf('T') !== -1)
-							res.push($('<option>', {
-								value: 'T',
-								text: 'Teacher',
-								selected: ('Teacher' === user.type ? true : undefined)
-							}));
-
-						if (actions.indexOf('N') !== -1)
-							res.push($('<option>', {
-								value: 'N',
-								text: 'Normal',
-								selected: ('Normal' === user.type ? true : undefined)
-							}));
-
-						return res;
-					}()
-				})
-			)).add(Form.field_group('First name', {
-				type: 'text',
-				name: 'first_name',
-				value: user.first_name,
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			})).add(Form.field_group('Last name', {
-				type: 'text',
-				name: 'last_name',
-				value: user.last_name,
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			})).add(Form.field_group('Email', {
-				type: 'email',
-				name: 'email',
-				value: user.email,
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			})).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Update'
-				})
-			})
-		));
-
+		form.append_input_text('first_name', 'First name', user.first_name, 24, true, true).readOnly = !user.capabilities.edit_first_name;
+		form.append_input_text('last_name', 'Last name', user.last_name, 24, true, true).readOnly = !user.capabilities.edit_last_name;
+		form.append_input_email('email', 'Email', user.email, 24, true, true).readOnly = !user.capabilities.edit_email;
+		form.append_submit_button('Update', 'blue');
+		form.attach_to(this[0]);
 	}, '/u/' + user_id + '/edit');
 }
 function delete_user(as_modal, user_id) {
