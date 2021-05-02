@@ -27,7 +27,7 @@ function append_children(elem, elements) {
 	for (var i in elements)
 		elem.appendChild(elements[i]);
 }
-function text_to_safe_html(str) { // TODO: this can be deprecated because DOM elements have innerText property (see elem_with_text() function)
+function text_to_safe_html(str) { // This is deprecated because DOM elements have innerText property (see elem_with_text() function)
 	var x = document.createElement('span');
 	x.innerText = str;
 	return x.innerHTML;
@@ -39,13 +39,13 @@ function logged_user_id() {
 	var x = document.querySelector('.navbar .user + ul > a:first-child').href;
 	return x.substring(x.lastIndexOf('/') + 1);
 }
-function logged_user_is_admin() {
+function logged_user_is_admin() { // This is deprecated
 	return (document.querySelector('.navbar .user[user-type="A"]') !== null);
 }
-function logged_user_is_teacher() {
+function logged_user_is_teacher() { // This is deprecated
 	return (document.querySelector('.navbar .user[user-type="T"]') !== null);
 }
-function logged_user_is_teacher_or_admin() {
+function logged_user_is_teacher_or_admin() { // This is deprecated
 	return logged_user_is_teacher() || logged_user_is_admin();
 }
 
@@ -83,126 +83,6 @@ function how_much_is_viewport_top_above_elem_top(elem) {
 function how_much_is_viewport_bottom_above_elem_bottom(elem) {
 	return elem.getBoundingClientRect().bottom - get_viewport_dimensions().height;
 }
-
-// Dropdowns
-$(document).ready(function(){
-	$(document).click(function(event) {
-		if ($(event.target).parent('.dropmenu .dropmenu-toggle') !== 0) {
-			var dropmenu = $(event.target).closest('.dropmenu');
-			if (dropmenu.is('.open'))
-				dropmenu.removeClass('open');
-			else {
-				$('.dropmenu.open').removeClass('open');
-				dropmenu.addClass('open');
-			}
-		} else
-			$('.dropmenu.open').removeClass('open');
-	});
-});
-
-function tz_marker() {
-	var tzo = -(new Date()).getTimezoneOffset();
-	return String().concat('<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60,
-		'</sup>');
-}
-function add_tz_marker(elem) {
-	elem = $(elem);
-	elem.children('sup').remove();
-	elem.append(tz_marker);
-}
-function date_to_datetime_str(date, trim_zero_seconds /*= false*/) {
-	var month = date.getMonth() + 1;
-	var day = date.getDate();
-	var hours = date.getHours();
-	var minutes = date.getMinutes();
-	var seconds = date.getSeconds();
-	month = (month < 10 ? '0' : '') + month;
-	day = (day < 10 ? '0' : '') + day;
-	hours = (hours < 10 ? '0' : '') + hours;
-	minutes = (minutes < 10 ? '0' : '') + minutes;
-
-	if (trim_zero_seconds && seconds === 0)
-		return String().concat(date.getFullYear(), '-', month, '-', day, ' ', hours, ':', minutes);
-
-	seconds = (seconds < 10 ? '0' : '') + seconds;
-	return String().concat(date.getFullYear(), '-', month, '-', day, ' ', hours, ':', minutes, ':', seconds);
-}
-function utcdt_or_tm_to_Date(time) {
-	if (isNaN(time)) {
-		// Convert infinities to infinities so they are comparable with other Dates
-		if (time === '-inf')
-			return -Infinity;
-		if (time == '+inf')
-			return Infinity;
-
-		var args = time.split(/[- :]/);
-		--args[1]; // fit month in [0, 11]
-		return new Date(Date.UTC.apply(this, args));
-	}
-
-	return new Date(time * 1000);
-}
-// Converts datetimes to local
-function normalize_datetime(elem, add_tz /*= false*/, trim_zero_seconds /*= false*/) {
-	elem = $(elem);
-	if (elem.attr('datetime') === undefined)
-		return elem;
-
-	// Add the timezone part
-	elem.text(date_to_datetime_str(utcdt_or_tm_to_Date(elem.attr('datetime')), trim_zero_seconds));
-	if (add_tz)
-		elem.append(tz_marker());
-
-	return elem;
-}
-function infdatetime_to(elem, infdt, neg_inf_text, inf_text) {
-	if (infdt[0] == '-')
-		return elem.text(neg_inf_text);
-	else if (infdt[0] == '+')
-		return elem.text(inf_text);
-	else
-		return normalize_datetime(elem.text(infdt)
-			.attr('datetime', infdt));
-}
-// Calculates the actual server time
-function server_time() {
-	if (server_time.time_difference === undefined)
-		server_time.time_difference = window.performance.timing.responseStart - start_time;
-
-	var time = new Date();
-	time.setTime(time.getTime() - server_time.time_difference);
-	return time;
-}
-// Produces a span that will update every second and show remaining time
-function countdown_clock(target_date) {
-	var span = $('<span>');
-	var update_countdown = function() {
-		var diff = target_date - server_time();
-		if (!$.contains(document.documentElement, span[0]))
-			return;
-
-		if (diff < 0)
-			diff = 0;
-		else
-			setTimeout(update_countdown, (diff + 999) % 1000 + 1);
-
-		diff = Math.round(diff / 1000); // To mitigate little latency that may occur
-		var diff_text = '';
-		var make_diff_text = function(n, singular, plural) {
-			return n + (n == 1 ? singular : plural);
-		};
-
-		if (diff >= 3600)
-			diff_text += make_diff_text(Math.floor(diff / 3600), ' hour', ' hours');
-		if (diff >= 60)
-			diff_text += make_diff_text(Math.floor((diff % 3600) / 60), ' minute', ' minutes');
-		diff_text += ' and ' + make_diff_text(diff % 60, ' second', ' seconds');
-		span.text(diff_text);
-	}
-
-	setTimeout(update_countdown);
-	return span;
-}
 function copy_to_clipboard(get_text_to_copy) {
 	var elem = document.createElement('textarea');
 	elem.value = get_text_to_copy();
@@ -214,63 +94,15 @@ function copy_to_clipboard(get_text_to_copy) {
 	document.execCommand('copy');
 	document.body.removeChild(elem);
 }
-function append_btn_tooltip(elem, text) {
-	var tooltip = $('<span>', {
-		class: 'btn-tooltip',
-		text: text,
-		click: function(e) {
-			e.stopPropagation();
-			tooltip.remove();
-		}
-	});
-	tooltip.appendTo(elem);
-	setTimeout(function() {
-		tooltip.fadeOut('slow', function() {
-			tooltip.remove()
-		});
-	}, 750);
+// Calculates the actual server time
+function server_time() {
+	if (server_time.time_difference === undefined)
+		server_time.time_difference = window.performance.timing.responseStart - start_time;
+
+	var time = new Date();
+	time.setTime(time.getTime() - server_time.time_difference);
+	return time;
 }
-function copy_to_clipboard_btn(small, btn_text, get_text_to_copy) {
-	if (!document.queryCommandSupported('copy'))
-		return $();
-
-	return $('<a>', {
-		class: small ? 'btn-small' : 'btn',
-		style: 'position: relative',
-		text: btn_text,
-		click: function() {
-			copy_to_clipboard(get_text_to_copy);
-			append_btn_tooltip($(this), 'Copied to clipboard!');
-		}
-	});
-}
-// Handle navbar correct size
-function normalize_navbar() {
-	var navbar = $('.navbar');
-	navbar.css('position', 'fixed');
-
-	if (navbar.outerWidth() > $(window).width())
-		navbar.css('position', 'absolute');
-}
-$(document).ready(normalize_navbar);
-$(window).resize(normalize_navbar);
-
-// Handle menu correct size
-function normalize_menu() {
-	var menu = $('.menu');
-	menu.css('height', 'auto');
-
-	if (menu.outerHeight() <= $(window).height()) {
-		menu.css('height', '100%');
-		menu.css('position', 'fixed');
-	} else {
-		menu.css('position', 'absolute');
-		menu.outerHeight($(document).height());
-	}
-}
-$(document).ready(normalize_menu);
-$(window).resize(normalize_menu);
-
 // Returns value of cookie @p name or empty string
 function get_cookie(name) {
 	name = name + '=';
@@ -285,20 +117,6 @@ function get_cookie(name) {
 
 	return '';
 }
-
-// Adding csrf token to a form
-function add_csrf_token_to(form) {
-	var x = $(form);
-	x.find('input[name="csrf_token"]').remove(); // Avoid duplication
-	x.append('<input type="hidden" name="csrf_token" value="' +
-		get_cookie('csrf_token') + '">');
-	return x;
-}
-
-// Adding csrf token just before submitting a form
-$(document).ready(function() {
-	$('form').submit(function() { add_csrf_token_to(this); });
-});
 
 function StaticMap() {
 	var this_ = this;
@@ -485,6 +303,190 @@ var url_hash_parser = {};
 	url_hash_parser.parsed_prefix = function() { return args.substring(0, beg); };
 }).call();
 
+
+///////////////////////////////// Below code requires jQuery /////////////////////////////////
+function tz_marker() {
+	var tzo = -(new Date()).getTimezoneOffset();
+	return String().concat('<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60,
+		'</sup>');
+}
+function add_tz_marker(elem) {
+	elem = $(elem);
+	elem.children('sup').remove();
+	elem.append(tz_marker);
+}
+function date_to_datetime_str(date, trim_zero_seconds /*= false*/) {
+	var month = date.getMonth() + 1;
+	var day = date.getDate();
+	var hours = date.getHours();
+	var minutes = date.getMinutes();
+	var seconds = date.getSeconds();
+	month = (month < 10 ? '0' : '') + month;
+	day = (day < 10 ? '0' : '') + day;
+	hours = (hours < 10 ? '0' : '') + hours;
+	minutes = (minutes < 10 ? '0' : '') + minutes;
+
+	if (trim_zero_seconds && seconds === 0)
+		return String().concat(date.getFullYear(), '-', month, '-', day, ' ', hours, ':', minutes);
+
+	seconds = (seconds < 10 ? '0' : '') + seconds;
+	return String().concat(date.getFullYear(), '-', month, '-', day, ' ', hours, ':', minutes, ':', seconds);
+}
+function utcdt_or_tm_to_Date(time) {
+	if (isNaN(time)) {
+		// Convert infinities to infinities so they are comparable with other Dates
+		if (time === '-inf')
+			return -Infinity;
+		if (time == '+inf')
+			return Infinity;
+
+		var args = time.split(/[- :]/);
+		--args[1]; // fit month in [0, 11]
+		return new Date(Date.UTC.apply(this, args));
+	}
+
+	return new Date(time * 1000);
+}
+// Converts datetimes to local
+function normalize_datetime(elem, add_tz /*= false*/, trim_zero_seconds /*= false*/) {
+	elem = $(elem);
+	if (elem.attr('datetime') === undefined)
+		return elem;
+
+	// Add the timezone part
+	elem.text(date_to_datetime_str(utcdt_or_tm_to_Date(elem.attr('datetime')), trim_zero_seconds));
+	if (add_tz)
+		elem.append(tz_marker());
+
+	return elem;
+}
+function infdatetime_to(elem, infdt, neg_inf_text, inf_text) {
+	if (infdt[0] == '-')
+		return elem.text(neg_inf_text);
+	else if (infdt[0] == '+')
+		return elem.text(inf_text);
+	else
+		return normalize_datetime(elem.text(infdt)
+			.attr('datetime', infdt));
+}
+// Produces a span that will update every second and show remaining time
+function countdown_clock(target_date) {
+	var span = $('<span>');
+	var update_countdown = function() {
+		var diff = target_date - server_time();
+		if (!$.contains(document.documentElement, span[0]))
+			return;
+
+		if (diff < 0)
+			diff = 0;
+		else
+			setTimeout(update_countdown, (diff + 999) % 1000 + 1);
+
+		diff = Math.round(diff / 1000); // To mitigate little latency that may occur
+		var diff_text = '';
+		var make_diff_text = function(n, singular, plural) {
+			return n + (n == 1 ? singular : plural);
+		};
+
+		if (diff >= 3600)
+			diff_text += make_diff_text(Math.floor(diff / 3600), ' hour', ' hours');
+		if (diff >= 60)
+			diff_text += make_diff_text(Math.floor((diff % 3600) / 60), ' minute', ' minutes');
+		diff_text += ' and ' + make_diff_text(diff % 60, ' second', ' seconds');
+		span.text(diff_text);
+	}
+
+	setTimeout(update_countdown);
+	return span;
+}
+
+// Dropdowns
+$(document).ready(function(){
+	$(document).click(function(event) {
+		if ($(event.target).parent('.dropmenu .dropmenu-toggle') !== 0) {
+			var dropmenu = $(event.target).closest('.dropmenu');
+			if (dropmenu.is('.open'))
+				dropmenu.removeClass('open');
+			else {
+				$('.dropmenu.open').removeClass('open');
+				dropmenu.addClass('open');
+			}
+		} else
+			$('.dropmenu.open').removeClass('open');
+	});
+});
+function append_btn_tooltip(elem, text) {
+	var tooltip = $('<span>', {
+		class: 'btn-tooltip',
+		text: text,
+		click: function(e) {
+			e.stopPropagation();
+			tooltip.remove();
+		}
+	});
+	tooltip.appendTo(elem);
+	setTimeout(function() {
+		tooltip.fadeOut('slow', function() {
+			tooltip.remove()
+		});
+	}, 750);
+}
+function copy_to_clipboard_btn(small, btn_text, get_text_to_copy) {
+	if (!document.queryCommandSupported('copy'))
+		return $();
+
+	return $('<a>', {
+		class: small ? 'btn-small' : 'btn',
+		style: 'position: relative',
+		text: btn_text,
+		click: function() {
+			copy_to_clipboard(get_text_to_copy);
+			append_btn_tooltip($(this), 'Copied to clipboard!');
+		}
+	});
+}
+// Handle navbar correct size
+function normalize_navbar() {
+	var navbar = $('.navbar');
+	navbar.css('position', 'fixed');
+
+	if (navbar.outerWidth() > $(window).width())
+		navbar.css('position', 'absolute');
+}
+$(document).ready(normalize_navbar);
+$(window).resize(normalize_navbar);
+
+// Handle menu correct size
+function normalize_menu() {
+	var menu = $('.menu');
+	menu.css('height', 'auto');
+
+	if (menu.outerHeight() <= $(window).height()) {
+		menu.css('height', '100%');
+		menu.css('position', 'fixed');
+	} else {
+		menu.css('position', 'absolute');
+		menu.outerHeight($(document).height());
+	}
+}
+$(document).ready(normalize_menu);
+$(window).resize(normalize_menu);
+
+// Adding csrf token to a form; This is deprecated
+function add_csrf_token_to(form) {
+	var x = $(form);
+	x.find('input[name="csrf_token"]').remove(); // Avoid duplication
+	x.append('<input type="hidden" name="csrf_token" value="' +
+		get_cookie('csrf_token') + '">');
+	return x;
+}
+
+// Adding csrf token just before submitting a form
+$(document).ready(function() {
+	$('form').submit(function() { add_csrf_token_to(this); });
+});
+
+
 /* =========================== History management =========================== */
 var History = {};
 (function() {
@@ -597,6 +599,12 @@ $(document).ready(give_body_egid);
 function remove_loader(elem) {
 	elem.removeChild(elem.querySelector('.loader'));
 }
+function try_remove_loader(elem) {
+	var child = elem.querySelector('.loader');
+	if (child != null) {
+		elem.removeChild(child);
+	}
+}
 function try_remove_loader_info(elem) {
 	var child = elem.querySelector('.loader-info');
 	if (child != null) {
@@ -620,7 +628,7 @@ function append_loader(elem) {
 	elem.appendChild(loader);
 }
 function show_success_via_loader(elem, html) {
-	remove_loader(elem);
+	try_remove_loader(elem);
 	var loader_info = elem_with_class('span', 'loader-info success');
 	loader_info.style.display = 'none';
 	loader_info.innerHTML = html;
@@ -635,7 +643,7 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 		err_status = '; ' + err_status;
 
 	elem = $(elem);
-	remove_loader(elem[0]);
+	try_remove_loader(elem[0]);
 	elem.append($('<span>', {
 		class: 'loader-info error',
 		style: 'display:none',
@@ -677,7 +685,7 @@ var get_unique_id = function() {
 }();
 
 /* ================================= Form ================================= */
-var Form = {};
+var Form = {}; // This became deprecated, use AjaxForm
 Form.field_group = function(label_text_or_html_content, input_context_or_html_elem) {
 	var input;
 	if (input_context_or_html_elem instanceof jQuery)
@@ -707,7 +715,7 @@ Form.field_group = function(label_text_or_html_content, input_context_or_html_el
 		]
 	});
 };
-
+// This became deprecated, use AjaxForm
 Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/, loader_parent)
 {
 	if (success_msg_or_handler === undefined)
@@ -745,7 +753,7 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 	});
 	return false;
 };
-
+// This became deprecated, use AjaxForm
 function ajax_form(title, target, html, success_msg_or_handler, classes) {
 	return $('<div>', {
 		class: 'form-container' + (classes === undefined ? '' : ' ' + classes),
