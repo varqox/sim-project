@@ -23,10 +23,10 @@ function elem_with_class_and_text(tag, classes, text) {
 	elem.className = classes;
 	return elem;
 }
-function elem_center_of(elem) {
-	const center = document.createElement('center');
-	center.appendChild(elem);
-	return center;
+function elem_of(tag, ...args) {
+	const elem = document.createElement(tag);
+	elem.append(...args);
+	return elem;
 }
 function elem_request_status_pending() {
 	const elem = elem_with_class('span', 'request-status pending');
@@ -60,7 +60,7 @@ function append_with_fade_in_slide_down(parent, elem, delay = '0s') {
 	elem.style.transitionDelay = delay;
 	elem.style.opacity = 1;
 	// Adjust max-height on subtree changes
-	const mo = new MutationObserver(function (mutation_records) {
+	const mo = new MutationObserver((mutation_records) => {
 		if (mutation_records.length === 1 && mutation_records[0].target === elem && mutation_records[0].type === 'attributes') {
 			return; // ignore changes to elem's attributes, e.g. the below maxHeight
 		}
@@ -106,6 +106,18 @@ function url_api_use_contest_entry_token(contest_entry_token) {
 }
 function url_api_user(user_id) {
 	return '/api/user/' + user_id;
+}
+function url_api_user_change_password(user_id) {
+	return '/api/user/' + user_id + '/change-password';
+}
+function url_api_user_delete(user_id) {
+	return '/api/user/' + user_id + '/delete';
+}
+function url_api_user_edit(user_id) {
+	return '/api/user/' + user_id + '/edit';
+}
+function url_api_user_merge_into_another(user_id) {
+	return '/api/user/' + user_id + '/merge_into_another';
 }
 function url_api_users(query_suffix) {
 	return '/api/users' + query_suffix;
@@ -209,7 +221,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	if (init.do_before_send == null) init.do_before_send = null;
 	if (init.onloadend == null) init.onloadend = null;
 
-	const status_center_elem = elem_center_of(elem_request_status_pending());
+	const status_center_elem = elem_of('center', elem_request_status_pending());
 	const show_error = (msg) => {
 		const new_status = elem_request_status_error();
 		new_status.innerText = msg;
@@ -219,7 +231,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 			status_center_elem.remove();
 			do_xhr_with_status(method, url, init, parent_elem_for_status, process_response);
 		});
-		new_status.appendChild(elem_center_of(try_again_btn));
+		new_status.appendChild(elem_of('center', try_again_btn));
 
 		remove_children(status_center_elem);
 		status_center_elem.appendChild(new_status);
@@ -229,7 +241,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	xhr.onabort = () => {
 		show_error('Request aborted');
 	};
-	xhr.onload = function() {
+	xhr.onload = () => {
 		// Handle errors
 		if (xhr.status != 200) {
 			let msg = 'Error: ' + xhr.status;
@@ -287,10 +299,10 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 			status_center_elem.remove();
 		}
 	};
-	xhr.onerror = function() {
+	xhr.onerror = () => {
 		show_error('Network error');
 	};
-	xhr.ontimeout = function() {
+	xhr.ontimeout = () => {
 		show_error('Request timeout');
 	};
 	if (init.onloadend != null) {
@@ -302,7 +314,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	let progress_elem;
 	let progress_info_elem;
 	if (init.show_upload_progress) {
-		xhr.upload.onprogress = function(e) {
+		xhr.upload.onprogress = (e) => {
 			// e.total can be smaller that e.loaded e.g. when we select /dev/urandom
 			if (e.lengthComputable && e.loaded <= e.total) {
 				unbounded_progress_elem.style.display = 'none';
@@ -343,7 +355,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	});
 	abort_btn.style.display = 'none';
 	setTimeout(() => { abort_btn.style.display = ''; }, init.show_abort_button_after);
-	status_center_elem.appendChild(elem_center_of(abort_btn));
+	status_center_elem.appendChild(elem_of('center', abort_btn));
 
 	if (init.do_before_send != null) {
 		init.do_before_send.call(null);
@@ -359,11 +371,11 @@ function Select(name, required) {
 	select_elem.name = name;
 	select_elem.required = required;
 
-	self.attach_to = function(elem) {
+	self.attach_to = (elem) => {
 		elem.appendChild(select_elem);
 	}
 
-	self.add_option = function(name, value, selected) {
+	self.add_option = (name, value, selected) => {
 		const option = select_elem.appendChild(elem_with_text('option', name));
 		option.value = value;
 		option.selected = selected;
@@ -376,17 +388,20 @@ function AjaxForm(title, destination_api_url, css_classes) {
 	const outer_div = elem_with_class('div', 'form-container' + (css_classes == null ? '' : ' ' + css_classes));
 	outer_div.appendChild(elem_with_text('h1', title));
 
-	const form_elem = document.createElement('form');
-	outer_div.appendChild(form_elem);
+	const form_elem = outer_div.appendChild(document.createElement('form'));
 
 	self.success_msg = 'Success';
-	self.success_handler = function(response, request_status) {
-		request_status.show_success(self.success_msg);
+	self.success_handler = (response, ctx) => {
+		// Available functions:
+		// - ctx.show_status_success(msg)
+		// - ctx.keep_submit_button_disabled()
+		ctx.show_status_success(self.success_msg);
 	};
 
 	let show_upload_progress = false;
+	let leave_submit_button_disabled = false;
 
-	form_elem.addEventListener('submit', function(event) {
+	form_elem.addEventListener('submit', (event) => {
 		event.preventDefault();
 		// Prepare form for sending
 		const form_data = new FormData(form_elem);
@@ -401,21 +416,34 @@ function AjaxForm(title, destination_api_url, css_classes) {
 			body: form_data,
 			show_upload_progress: show_upload_progress,
 			do_before_send: () => { event.submitter.disabled = true; },
-			onloadend: () => { event.submitter.disabled = false; },
-		}, form_elem, self.success_handler);
+			onloadend: () => {
+				if (!leave_submit_button_disabled) {
+					event.submitter.disabled = false;
+				}
+			},
+		}, form_elem, (response, request_status) => {
+			self.success_handler.call(null, response, {
+				show_status_success: request_status.show_success.bind(request_status),
+				keep_submit_button_disabled: () => { leave_submit_button_disabled = true; },
+			});
+		});
 	});
 
-	self.attach_to = function(elem) {
+	self.attach_to = (elem) => {
 		elem.appendChild(outer_div);
 	};
 
-	const append_field_group = function(label) {
+	self.append = (...args) => {
+		form_elem.append(...args);
+	}
+
+	const append_field_group = (label) => {
 		const div = form_elem.appendChild(elem_with_class('div', 'field-group'));
 		div.appendChild(elem_with_text('label', label));
 		return div;
 	}
 
-	self.append_input = function(type, name, label, required) {
+	self.append_input = (type, name, label, required) => {
 		const fg = append_field_group(label);
 		const input = fg.appendChild(document.createElement('input'));
 		input.type = type;
@@ -424,7 +452,7 @@ function AjaxForm(title, destination_api_url, css_classes) {
 		return input;
 	};
 
-	self.append_input_text = function(name, label, value, size, required, trim_before_send) {
+	self.append_input_text = (name, label, value, size, required, trim_before_send) => {
 		const input = self.append_input('text', name, label, required);
 		input.value = value;
 		input.size = size;
@@ -432,7 +460,7 @@ function AjaxForm(title, destination_api_url, css_classes) {
 		return input;
 	};
 
-	self.append_input_email = function(name, label, value, size, required, trim_before_send) {
+	self.append_input_email = (name, label, value, size, required, trim_before_send) => {
 		const input = self.append_input('email', name, label, required);
 		input.value = value;
 		input.size = size;
@@ -440,27 +468,33 @@ function AjaxForm(title, destination_api_url, css_classes) {
 		return input;
 	};
 
-	self.append_input_hidden = function(name, value) {
+	self.append_input_password = (name, label, size, required) => {
+		const input = self.append_input('password', name, label, required);
+		input.size = size;
+		return input;
+	};
+
+	self.append_input_file = (name, label, required) => {
+		show_upload_progress = true;
+		return self.append_input('file', name, label, required);
+	};
+
+	self.append_input_hidden = (name, value) => {
 		const input = form_elem.appendChild(document.createElement('input'));
 		input.type = 'hidden';
 		input.name = name;
 		input.value = value;
 		return input;
-	}
+	};
 
-	self.append_input_file = function(name, label, required) {
-		show_upload_progress = true;
-		return self.append_input('file', name, label, required);
-	}
-
-	self.append_select = function(name, label, required) {
+	self.append_select = (name, label, required) => {
 		const fg = append_field_group(label);
 		const select = new Select(name, required);
 		select.attach_to(fg);
 		return select;
 	};
 
-	self.append_submit_button = function(name, css_classes) {
+	self.append_submit_button = (name, css_classes) => {
 		const input = form_elem.appendChild(document.createElement('input'));
 		input.type = 'submit';
 		input.className = 'btn' + (css_classes == null ? '' : ' ' + css_classes);
@@ -583,6 +617,11 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	}
 }
 
+function logged_user_id() {
+	// TODO: embed a variable in the HTML template with the expected value of this function
+	const x = document.querySelector('.navbar .user + ul > a:first-child').href;
+	return x.substring(x.lastIndexOf('/') + 1);
+}
 ////////////////////////// The above code has gone through refactor //////////////////////////
 
 function text_to_safe_html(str) { // This is deprecated because DOM elements have innerText property (see elem_with_text() function)
@@ -592,10 +631,6 @@ function text_to_safe_html(str) { // This is deprecated because DOM elements hav
 }
 function is_logged_in() {
 	return (document.querySelector('.navbar .user + ul > a:first-child') !== null);
-}
-function logged_user_id() {
-	const x = document.querySelector('.navbar .user + ul > a:first-child').href;
-	return x.substring(x.lastIndexOf('/') + 1);
 }
 function logged_user_is_admin() { // This is deprecated
 	return (document.querySelector('.navbar .user[user-type="A"]') !== null);
@@ -2425,16 +2460,10 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 }
 function edit_user(as_modal, user_id) {
 	view_ajax(as_modal, url_api_user(user_id), function(user) {
-		if (!user.capabilities.edit) {
-			return show_error_via_oldloader(this, {
-				status: '403',
-				statusText: 'Not Allowed'
-			});
-		}
-		var form = new AjaxForm('Edit account', '/api/user/' + user.id + '/edit');
+		const form = new AjaxForm('Edit user', url_api_user_edit(user.id));
 		form.append_input_text('username', 'Username', user.username, 24, true, true).readOnly = !user.capabilities.edit_username;
 
-		var select = form.append_select('type', 'Type', true);
+		const select = form.append_select('type', 'Type', true);
 		if (user.capabilities.make_admin || user.type === 'admin') {
 			select.add_option('Admin', 'A', user.type === 'admin');
 		}
@@ -2453,108 +2482,63 @@ function edit_user(as_modal, user_id) {
 	}, '/u/' + user_id + '/edit');
 }
 function delete_user(as_modal, user_id) {
-	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
-		if (data.length === 0)
-			return show_error_via_oldloader(this, {
-				status: '404',
-				statusText: 'Not Found'
-			});
-
-		var user = data[0];
-		var actions = user.actions;
-		if (actions.indexOf('D') === -1)
-			return show_error_via_oldloader(this, {
-					status: '403',
-					statusText: 'Not Allowed'
-				});
-
-		delete_with_password_to_job(this, 'Delete user ' + user_id,
-			'/api/user/' + user_id + '/delete', [
-				'You are going to delete ', (user_id == logged_user_id() ?
-					'your account' : 'the user '), (user_id == logged_user_id() ?
-					'' : a_view_button('/u/' + user_id, user.username, undefined,
-						view_user.bind(null, true, user_id))),
-					'. As it cannot be undone, you have to confirm it with ',
-					(user_id == logged_user_id() ? 'your' : 'YOUR'), ' password.'
-			], (user_id == logged_user_id() ? 'Delete account' : 'Delete user'));
+	view_ajax(as_modal, url_api_user(user_id), function(user) {
+		const is_me = (user.id == logged_user_id());
+		const title = is_me ? 'Delete account' : 'Delete user ' + user.id;
+		const form = new AjaxForm(title, url_api_user_delete(user.id), 'with-notice');
+		if (is_me) {
+			form.append(elem_of('p', 'You are going to delete your account. As it cannot be undone, you have to confirm it with your password.'));
+		} else {
+			form.append(elem_of('p',
+				'You are going to delete the user ',
+				a_view_button('/u/' + user.id, user.username, undefined, view_user.bind(null, true, user.id)),
+				'. As it cannot be undone, you have to confirm it with YOUR password.'));
+		}
+		form.append_input_password('password', 'Your password', 24, false);
+		const submit_btn = form.append_submit_button(title, 'red');
+		form.success_msg = 'Scheduled deletion';
+		if (!is_me) {
+			form.success_handler = (response, ctx) => {
+				ctx.keep_submit_button_disabled();
+				ctx.show_status_success(form.success_msg);
+				view_job(true, response);
+			};
+		}
+		form.attach_to(this[0]);
 	}, '/u/' + user_id + "/delete");
 }
 function merge_user(as_modal, user_id) {
-	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
-		if (data.length === 0)
-			return show_error_via_oldloader(this, {
-					status: '404',
-					statusText: 'Not Found'
-				});
-
-		var user = data[0];
-		if (user.actions.indexOf('M') === -1)
-			return show_error_via_oldloader(this, {
-					status: '403',
-					statusText: 'Not Allowed'
-				});
-
-		api_request_with_password_to_job(this, 'Merge into another user',
-			'/api/user/' + user_id + '/merge_into_another', [
-				'The user ',
-				a_view_button('/u/' + user.id, user.username,
-					undefined, view_user.bind(null, true, user.id)),
-				' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
-				'<br>',
-				'As this cannot be undone, you have to confirm this with your password.'
-			], 'Merge user', 'Merging has been scheduled.',
-			Form.field_group('Target user ID', {
-				type: 'text',
-				name: 'target_user',
-				size: 6,
-				trim_before_send: true,
-			}));
+	view_ajax(as_modal, url_api_user(user_id), function(user) {
+		const form = new AjaxForm('Merge into another user', url_api_user_merge_into_another(user.id), 'with-notice');
+		form.append(elem_of('p', 'The user ',
+			a_view_button('/u/' + user.id, user.username, undefined, view_user.bind(null, true, user.id)),
+			' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
+			document.createElement('br'),
+			'As this cannot be undone, you have to confirm this with your password.'));
+		form.append_input_text('target_user', 'Target user ID', '', 6, true, true);
+		form.append_input_password('password', 'Your password', 24, false);
+		const submit_btn = form.append_submit_button('Merge user ' + user.id, 'red');
+		form.success_handler = (response, ctx) => {
+			ctx.keep_submit_button_disabled();
+			ctx.show_status_success('Merging has been scheduled');
+			view_job(true, response);
+		};
+		form.attach_to(this[0]);
 	}, '/u/' + user_id + '/merge');
 }
 function change_user_password(as_modal, user_id) {
-	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
-		if (data.length === 0)
-			return show_error_via_oldloader(this, {
-				status: '404',
-				statusText: 'Not Found'
-			});
-
-		var user = data[0];
-		var actions = user.actions;
-		if (actions.indexOf('P') === -1 && actions.indexOf('p') === -1)
-			return show_error_via_oldloader(this, {
-					status: '403',
-					statusText: 'Not Allowed'
-				});
-
-		if (actions.indexOf('P') === -1 && $('.navbar .user > strong').text() != user.username)
-			return show_error_via_oldloader(this, {
-					status: '403',
-					statusText: 'Not Allowed'
-				});
-
-		this.append(ajax_form('Change password',
-			'/api/user/' + user_id + '/change-password',
-			(actions.indexOf('P') !== -1 ? $() : Form.field_group('Old password', {
-				type: 'password',
-				name: 'old_pass',
-				size: 24,
-			})).add(Form.field_group('New password', {
-				type: 'password',
-				name: 'new_pass',
-				size: 24,
-			})).add(Form.field_group('New password (repeat)', {
-				type: 'password',
-				name: 'new_pass1',
-				size: 24,
-			})).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Update'
-				})
-			}), 'Password changed'));
-
+	view_ajax(as_modal, url_api_user(user_id), function(user) {
+		const is_me = (user.id == logged_user_id());
+		const title = is_me ? 'Change my password' : 'Change user password';
+		const form = new AjaxForm(title, url_api_user_change_password(user.id));
+		if (!user.capabilities.change_password_without_old_password) {
+			form.append_input_password('old_pass', 'Old password', 24, false);
+		}
+		form.append_input_password('new_pass', 'New password', 24, false);
+		form.append_input_password('new_pass1', 'New password (repeat)', 24, false);
+		form.append_submit_button(title, 'blue');
+		form.success_msg = 'Password changed';
+		form.attach_to(this[0]);
 	}, '/u/' + user_id + "/change-password");
 }
 function UsersLister(elem, query_url) {
