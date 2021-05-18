@@ -18,7 +18,7 @@ User user_for(
         .edit_last_name = is_self or (is_admin and id != SIM_ROOT_UID),
         .edit_email = is_self or (is_admin and id != SIM_ROOT_UID),
         .change_password = is_self or (is_admin and id != SIM_ROOT_UID),
-        .change_password_without_old_password = is_admin and (id != SIM_ROOT_UID or is_self),
+        .change_password_without_old_password = is_admin and id != SIM_ROOT_UID,
         .make_admin = session and session->user_id == SIM_ROOT_UID,
         .make_teacher = is_admin and (id != SIM_ROOT_UID),
         .make_normal = is_admin and (id != SIM_ROOT_UID),
