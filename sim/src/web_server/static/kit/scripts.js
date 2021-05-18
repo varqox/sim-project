@@ -8,27 +8,585 @@
        refreshing
 */
 function elem_with_text(tag, text) {
-	var elem = document.createElement(tag);
+	const elem = document.createElement(tag);
 	elem.innerText = text;
 	return elem;
 }
 function elem_with_class(tag, classes) {
-	var elem = document.createElement(tag);
+	const elem = document.createElement(tag);
 	elem.className = classes;
 	return elem;
 }
 function elem_with_class_and_text(tag, classes, text) {
-	var elem = document.createElement(tag);
+	const elem = document.createElement(tag);
 	elem.innerText = text;
 	elem.className = classes;
 	return elem;
 }
-function append_children(elem, elements) {
-	for (var i in elements)
-		elem.appendChild(elements[i]);
+function elem_center_of(elem) {
+	const center = document.createElement('center');
+	center.appendChild(elem);
+	return center;
 }
+function elem_request_status_pending() {
+	const elem = elem_with_class('span', 'request-status pending');
+	elem.appendChild(elem_with_class('div', 'spinner'));
+	return elem;
+}
+function elem_request_status_success() {
+	return elem_with_class('span', 'request-status success');
+}
+function elem_request_status_error() {
+	return elem_with_class('span', 'request-status error');
+}
+function remove_centered_request_status(parent) {
+	parent.querySelector('.request-status').parentNode.remove();
+}
+function try_remove_centered_request_status(parent) {
+	const request_status = parent.querySelector('.request-status');
+	if (request_status != null) {
+		request_status.parentNode.remove();
+	}
+}
+// This is very useful when triggering a CSS transition on just appended elements (see: https://stackoverflow.com/a/24195559)
+function trigger_reflow_on(elem) {
+	elem.offsetWidth;
+}
+function append_with_fade_in_slide_down(parent, elem, delay = '0s') {
+	elem.classList.add('fade-in-slide-down');
+	parent.appendChild(elem);
+	trigger_reflow_on(elem);
+	elem.style.maxHeight = elem.scrollHeight + 'px'; // No need for adding borders since .fade-in-slide-down has border: none
+	elem.style.transitionDelay = delay;
+	elem.style.opacity = 1;
+	// Adjust max-height on subtree changes
+	const mo = new MutationObserver(function (mutation_records) {
+		if (mutation_records.length === 1 && mutation_records[0].target === elem && mutation_records[0].type === 'attributes') {
+			return; // ignore changes to elem's attributes, e.g. the below maxHeight
+		}
+		trigger_reflow_on(elem);
+		elem.style.maxHeight = elem.scrollHeight + 'px';
+	});
+	mo.observe(elem, {subtree: true, childList: true, attributes: true, characterData: true});
+}
+function remove_children(elem) {
+	elem.textContent = '';
+}
+
+/* ============================ URLs ============================ */
+function url_enter_contest(contest_entry_token) {
+	return '/enter_contest/' + contest_entry_token;
+}
+function url_api_contest_entry_tokens_view(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens';
+}
+function url_api_contest_entry_tokens_add(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/add';
+}
+function url_api_contest_entry_tokens_regen(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/regen';
+}
+function url_api_contest_entry_tokens_delete(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/delete';
+}
+function url_api_contest_entry_tokens_add_short(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/add_short';
+}
+function url_api_contest_entry_tokens_regen_short(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/regen_short';
+}
+function url_api_contest_entry_tokens_delete_short(contest_id) {
+	return '/api/contest/' + contest_id + '/entry_tokens/delete_short';
+}
+function url_api_contest_name_for_contest_entry_token(contest_entry_token) {
+	return '/api/contest_entry_token/' + contest_entry_token + '/contest_name';
+}
+function url_api_use_contest_entry_token(contest_entry_token) {
+	return '/api/contest_entry_token/' + contest_entry_token + '/use';
+}
+function url_api_user(user_id) {
+	return '/api/user/' + user_id;
+}
+function url_api_users(query_suffix) {
+	return '/api/users' + query_suffix;
+}
+
+/* ================================= Humanize ================================= */
+
+/**
+ * @brief Converts @p size, so that it human readable
+ * @details It adds proper suffixes, for example:
+ *   1 -> "1 byte"
+ *   1023 -> "1023 bytes"
+ *   1024 -> "1.0 KiB"
+ *   129747 -> "127 KiB"
+ *   97379112 -> "92.9 MiB"
+ *
+ * @param size size to humanize
+ *
+ * @return humanized file size
+ */
+function humanize_file_size(size) {
+	const MIN_KIB = 1024;
+	const MIN_MIB = 1048576;
+	const MIN_GIB = 1073741824;
+	const MIN_TIB = 1099511627776;
+	const MIN_PIB = 1125899906842624;
+	const MIN_EIB = 1152921504606846976;
+	const MIN_3DIGIT_KIB = 102349;
+	const MIN_3DIGIT_MIB = 104805172;
+	const MIN_3DIGIT_GIB = 107320495309;
+	const MIN_3DIGIT_TIB = 109896187196212;
+	const MIN_3DIGIT_PIB = 112533595688920269;
+	// Bytes
+	if (size < MIN_KIB) {
+		return (size == 1 ? "1 byte" : size + " bytes");
+	}
+	// KiB
+	if (size < MIN_3DIGIT_KIB) {
+		return parseFloat(size / MIN_KIB).toFixed(1) + " KiB";
+	}
+	if (size < MIN_MIB) {
+		return Math.round(size / MIN_KIB) + " KiB";
+	}
+	// MiB
+	if (size < MIN_3DIGIT_MIB) {
+		return parseFloat(size / MIN_MIB).toFixed(1) + " MiB";
+	}
+	if (size < MIN_GIB) {
+		return Math.round(size / MIN_MIB) + " MiB";
+	}
+	// GiB
+	if (size < MIN_3DIGIT_GIB) {
+		return parseFloat(size / MIN_GIB).toFixed(1) + " GiB";
+	}
+	if (size < MIN_TIB) {
+		return Math.round(size / MIN_GIB) + " GiB";
+	}
+	// TiB
+	if (size < MIN_3DIGIT_TIB) {
+		return parseFloat(size / MIN_TIB).toFixed(1) + " TiB";
+	}
+	if (size < MIN_PIB) {
+		return Math.round(size / MIN_TIB) + " TiB";
+	}
+	// PiB
+	if (size < MIN_3DIGIT_PIB) {
+		return parseFloat(size / MIN_PIB).toFixed(1) + " PiB";
+	}
+	if (size < MIN_EIB) {
+		return Math.round(size / MIN_PIB) + " PiB";
+	}
+	// EiB
+	return parseFloat(size / MIN_EIB).toFixed(1) + " EiB";
+}
+
+/* ================================= Ajax ================================= */
+
+/* Default values in init: {
+ *      body: null,
+ *      timeout: 0, // no timeout
+ *      show_upload_progress: false,
+ *      response_type: 'text', // accepted values: 'text', 'json'
+ *      remove_previous_status: true,
+ *      show_abort_button_after: 1500, // in milliseconds
+ *      onloadend: null, // function to call after the request completes (either by success or error)
+ *      do_before_send: null, // function to call just before sending the request; the advantage
+ *                            // of this over just calling it before calling do_xhr_with_status()
+ *                            // is that it is called after 'Try again' is clicked
+ *  }
+ *
+ * @p process_response is called with parameters response and request_status. Before @p process_response is called,
+ *  the response-status is hidden, @p process_response can show it by calling `request_status.show_success(text_message)`.
+ */
+function do_xhr_with_status(method, url, init, parent_elem_for_status, process_response) {
+	if (init.body == null) init.body = null;
+	if (init.timeout == null) init.timeout = 0;
+	if (init.show_upload_progress == null) init.show_upload_progress = false;
+	if (init.response_type == null) init.response_type = 'text';
+	if (init.remove_previous_status == null) init.remove_previous_status = true;
+	if (init.show_abort_button_after == null) init.show_abort_button_after = 1500;
+	if (init.do_before_send == null) init.do_before_send = null;
+	if (init.onloadend == null) init.onloadend = null;
+
+	const status_center_elem = elem_center_of(elem_request_status_pending());
+	const show_error = (msg) => {
+		const new_status = elem_request_status_error();
+		new_status.innerText = msg;
+
+		const try_again_btn = elem_with_text('a', 'Try again');
+		try_again_btn.addEventListener('click', () => {
+			status_center_elem.remove();
+			do_xhr_with_status(method, url, init, parent_elem_for_status, process_response);
+		});
+		new_status.appendChild(elem_center_of(try_again_btn));
+
+		remove_children(status_center_elem);
+		status_center_elem.appendChild(new_status);
+	};
+
+	const xhr = new XMLHttpRequest();
+	xhr.onabort = () => {
+		show_error('Request aborted');
+	};
+	xhr.onload = function() {
+		// Handle errors
+		if (xhr.status != 200) {
+			let msg = 'Error: ' + xhr.status;
+			// HTTP/2 does not have statusText (on Chrome statusText == '' in such cases but
+			// standard says something about 'OK' being the default value)
+			if (xhr.statusText != '' && xhr.statusText != 'OK') {
+				msg += ' ';
+				msg += xhr.statusText;
+			}
+			// Append message only if it is a non-empty text response
+			const content_type = (xhr.getResponseHeader('content-type') || '').split(' ')[0].split(';')[0];
+			if (xhr.response.length > 0 && content_type == 'text/plain') {
+				msg += '\n';
+				msg += xhr.response;
+			}
+			show_error(msg);
+			return;
+		}
+		// Parse response
+		let invalid_init_response_type = false;
+		let parsed_response;
+		try {
+			parsed_response = (() => {
+				switch (init.response_type) {
+					case 'text': return xhr.response;
+					case 'json': return JSON.parse(xhr.response);
+					default:
+						invalid_init_response_type = true;
+						return null;
+				}
+			})();
+		} catch (e) {
+			console.error(e);
+			show_error('Response parse error');
+			return;
+		}
+		if (invalid_init_response_type) {
+			throw Error("Invalid init.response_type = " + init.response_type);
+		}
+
+		let showed_status_success = false;
+		const request_status = {
+			show_success: (msg) => {
+				showed_status_success = true;
+				const new_status = elem_request_status_success();
+				new_status.innerText = msg;
+				status_center_elem.style.display = ''; // undo setting 'none'
+				remove_children(status_center_elem);
+				status_center_elem.appendChild(new_status);
+			},
+		};
+		status_center_elem.style.display = 'none';
+		process_response.call(null, parsed_response, request_status);
+		if (!showed_status_success) {
+			status_center_elem.remove();
+		}
+	};
+	xhr.onerror = function() {
+		show_error('Network error');
+	};
+	xhr.ontimeout = function() {
+		show_error('Request timeout');
+	};
+	if (init.onloadend != null) {
+		xhr.onloadend = init.onloadend.bind(null);
+	}
+
+	let bounded_progress_elem;
+	let unbounded_progress_elem;
+	let progress_elem;
+	let progress_info_elem;
+	if (init.show_upload_progress) {
+		xhr.upload.onprogress = function(e) {
+			// e.total can be smaller that e.loaded e.g. when we select /dev/urandom
+			if (e.lengthComputable && e.loaded <= e.total) {
+				unbounded_progress_elem.style.display = 'none';
+				bounded_progress_elem.style.display = '';
+				bounded_progress_elem.value = e.loaded;
+				bounded_progress_elem.max = e.total;
+				progress_info_elem.innerText =
+					'Sent ' + humanize_file_size(e.loaded) + ' out of ' + humanize_file_size(e.total) +
+					' = ' + (100 * e.loaded / e.total).toFixed(2) + '%';
+			} else {
+				bounded_progress_elem.style.display = 'none';
+				unbounded_progress_elem.style.display = '';
+				progress_info_elem.innerText = 'Sent ' + humanize_file_size(e.loaded);
+			}
+		}
+	}
+
+	xhr.open(method, url);
+	xhr.timeout = init.timeout;
+	xhr.responseType = 'text';
+	// Append request-status element
+	if (init.remove_previous_status) {
+		try_remove_centered_request_status(parent_elem_for_status);
+	}
+	append_with_fade_in_slide_down(parent_elem_for_status, status_center_elem);
+	if (init.show_upload_progress) {
+		const request_progress = elem_with_class('div', 'request-progress');
+		bounded_progress_elem = request_progress.appendChild(document.createElement('progress'));
+		unbounded_progress_elem = request_progress.appendChild(document.createElement('progress'));
+		progress_info_elem = request_progress.appendChild(document.createElement('div'));
+		xhr.upload.onprogress({lengthComputable: false, loaded: 0, total: 0});
+		status_center_elem.appendChild(request_progress);
+	}
+	// Abort button
+	const abort_btn = elem_with_text('a', 'Abort request');
+	abort_btn.addEventListener('click', () => {
+		xhr.abort();
+	});
+	abort_btn.style.display = 'none';
+	setTimeout(() => { abort_btn.style.display = ''; }, init.show_abort_button_after);
+	status_center_elem.appendChild(elem_center_of(abort_btn));
+
+	if (init.do_before_send != null) {
+		init.do_before_send.call(null);
+	}
+	xhr.send(init.body);
+}
+
+/* ================================= AjaxForm ================================= */
+
+function Select(name, required) {
+	const self = this;
+	const select_elem = document.createElement('select');
+	select_elem.name = name;
+	select_elem.required = required;
+
+	self.attach_to = function(elem) {
+		elem.appendChild(select_elem);
+	}
+
+	self.add_option = function(name, value, selected) {
+		const option = select_elem.appendChild(elem_with_text('option', name));
+		option.value = value;
+		option.selected = selected;
+		return option;
+	}
+}
+
+function AjaxForm(title, destination_api_url, css_classes) {
+	const self = this;
+	const outer_div = elem_with_class('div', 'form-container' + (css_classes == null ? '' : ' ' + css_classes));
+	outer_div.appendChild(elem_with_text('h1', title));
+
+	const form_elem = document.createElement('form');
+	outer_div.appendChild(form_elem);
+
+	self.success_msg = 'Success';
+	self.success_handler = function(response, request_status) {
+		request_status.show_success(self.success_msg);
+	};
+
+	let show_upload_progress = false;
+
+	form_elem.addEventListener('submit', function(event) {
+		event.preventDefault();
+		// Prepare form for sending
+		const form_data = new FormData(form_elem);
+		for (const elem of form_elem.querySelectorAll('[trim_before_send="true"]')) {
+			if (elem.name != null) {
+				form_data.set(elem.name, form_data.get(elem.name).trim());
+			}
+		}
+		form_data.set('csrf_token', get_cookie('csrf_token'));
+		// Send form
+		do_xhr_with_status('post', destination_api_url, {
+			body: form_data,
+			show_upload_progress: show_upload_progress,
+			do_before_send: () => { event.submitter.disabled = true; },
+			onloadend: () => { event.submitter.disabled = false; },
+		}, form_elem, self.success_handler);
+	});
+
+	self.attach_to = function(elem) {
+		elem.appendChild(outer_div);
+	};
+
+	const append_field_group = function(label) {
+		const div = form_elem.appendChild(elem_with_class('div', 'field-group'));
+		div.appendChild(elem_with_text('label', label));
+		return div;
+	}
+
+	self.append_input = function(type, name, label, required) {
+		const fg = append_field_group(label);
+		const input = fg.appendChild(document.createElement('input'));
+		input.type = type;
+		input.name = name;
+		input.required = required;
+		return input;
+	};
+
+	self.append_input_text = function(name, label, value, size, required, trim_before_send) {
+		const input = self.append_input('text', name, label, required);
+		input.value = value;
+		input.size = size;
+		input.trim_before_send = trim_before_send;
+		return input;
+	};
+
+	self.append_input_email = function(name, label, value, size, required, trim_before_send) {
+		const input = self.append_input('email', name, label, required);
+		input.value = value;
+		input.size = size;
+		input.trim_before_send = trim_before_send;
+		return input;
+	};
+
+	self.append_input_hidden = function(name, value) {
+		const input = form_elem.appendChild(document.createElement('input'));
+		input.type = 'hidden';
+		input.name = name;
+		input.value = value;
+		return input;
+	}
+
+	self.append_input_file = function(name, label, required) {
+		show_upload_progress = true;
+		return self.append_input('file', name, label, required);
+	}
+
+	self.append_select = function(name, label, required) {
+		const fg = append_field_group(label);
+		const select = new Select(name, required);
+		select.attach_to(fg);
+		return select;
+	};
+
+	self.append_submit_button = function(name, css_classes) {
+		const input = form_elem.appendChild(document.createElement('input'));
+		input.type = 'submit';
+		input.className = 'btn' + (css_classes == null ? '' : ' ' + css_classes);
+		input.value = name;
+	};
+}
+
+/* ================================= Lister ================================= */
+
+// Viewport
+const get_viewport_height = (() => {
+	// window.inner(Height|Width) include scrollbars, but scrollbars reduce the viewport;
+	// document.documentElement.client(Height|Width) is not enough, because at least on
+	// Chrome on Android and Firefox on Andorid it is not updated when the browser controls
+	// get hidden e.g. because you scroll down:
+	//   Controls visible:                                        Controls hidden:
+	//     +----------+                                             +----------+
+	//     | URL, etc.|                                             | webpage  |
+	//     +----------+  -                                       -  |   ...    |
+	//     | webpage  |  |                                       |  |   ...    |
+	//     |   ...    |  | document.documentElement.clientHeight |  |   ...    |
+	//     |   ...    |  |      (has the same value as when      |  |   ...    |
+	//     +----------+  v       the controls were visible)      v  +----------+
+	const viewport_prober = document.createElement('span');
+	viewport_prober.style.visibility = 'hidden';
+	viewport_prober.style.position = 'fixed';
+	viewport_prober.style.top = 0;
+	viewport_prober.style.bottom = 0;
+	// document.documentElement is always valid (even for scripts inside <head>)
+	document.documentElement.appendChild(viewport_prober);
+	// For width set .style.left = 0, .style.right = 0 and use .clientWidth
+	return () => viewport_prober.clientHeight;
+})();
+// Scroll: overflowed elements
+function is_overflowed_elem_scrolled_down(elem) {
+	const scroll_distance_to_bottom = elem.scrollHeight - elem.scrollTop - elem.clientHeight;
+	return scroll_distance_to_bottom <= 1; // As of March 2020, I managed to get value 1 in firefox with 80% zoom
+}
+// Scroll: relative to viewport
+function how_much_is_viewport_bottom_above_elem_bottom(elem) {
+	return elem.getBoundingClientRect().bottom - get_viewport_height();
+}
+
+function Lister(elem, query_url, initial_next_query_suffix) {
+	const self = this;
+	self.elem = elem;
+	self.next_query_suffix = initial_next_query_suffix;
+	const modal = self.elem.closest('.modal');
+	let fetch_lock = false;
+	let is_first_fetch = true;
+	let shutdown = false;
+
+	const is_lister_detached = () => {
+		return !document.body.contains(self.elem);
+	};
+	let do_shutdown;
+
+	// Checks whether scrolling down is (almost) impossible
+	const need_to_fetch_more = () => {
+		return how_much_is_viewport_bottom_above_elem_bottom(self.elem) <= 300;
+	}
+
+	self.fetch_more = () => {
+		if (fetch_lock || shutdown) {
+			return;
+		}
+		if (is_lister_detached()) {
+			do_shutdown();
+			return;
+		}
+
+		fetch_lock = true;
+
+		do_xhr_with_status('get', query_url + self.next_query_suffix, {
+			response_type: 'json',
+		}, self.elem.parentNode, (data) => {
+				if (is_first_fetch) {
+					is_first_fetch = false;
+					self.process_first_api_response(data.list);
+				} else if (data.list.length != 0) {
+					self.process_api_response(data.list);
+				}
+
+				if (!data.may_be_more) {
+					do_shutdown(); // No more data to load
+					fetch_lock = false;
+					return;
+				}
+
+				fetch_lock = false;
+				if (need_to_fetch_more()) {
+					self.fetch_more();
+				}
+		});
+	};
+
+	const scroll_or_resize_event_handler = () => {
+		if (is_lister_detached()) {
+			do_shutdown();
+			return;
+		}
+		if (need_to_fetch_more()) {
+			setTimeout(self.fetch_more, 0); // schedule fetching more without blocking
+		}
+	}
+
+	// Start listening for scroll and resize events
+	const elem_to_listen_on_scroll = modal === null ? document : modal_parent;
+	elem_to_listen_on_scroll.addEventListener('scroll', scroll_or_resize_event_handler, {passive: true});
+	window.addEventListener('resize', scroll_or_resize_event_handler, {passive: true});
+
+	do_shutdown = () => {
+		shutdown = true;
+		elem_to_listen_on_scroll.removeEventListener('scroll', scroll_or_resize_event_handler);
+		window.removeEventListener('resize', scroll_or_resize_event_handler);
+	};
+
+	if (need_to_fetch_more()) {
+		self.fetch_more();
+	}
+}
+
+////////////////////////// The above code has gone through refactor //////////////////////////
+
 function text_to_safe_html(str) { // This is deprecated because DOM elements have innerText property (see elem_with_text() function)
-	var x = document.createElement('span');
+	const x = document.createElement('span');
 	x.innerText = str;
 	return x.innerHTML;
 }
@@ -36,7 +594,7 @@ function is_logged_in() {
 	return (document.querySelector('.navbar .user + ul > a:first-child') !== null);
 }
 function logged_user_id() {
-	var x = document.querySelector('.navbar .user + ul > a:first-child').href;
+	const x = document.querySelector('.navbar .user + ul > a:first-child').href;
 	return x.substring(x.lastIndexOf('/') + 1);
 }
 function logged_user_is_admin() { // This is deprecated
@@ -49,40 +607,6 @@ function logged_user_is_teacher_or_admin() { // This is deprecated
 	return logged_user_is_teacher() || logged_user_is_admin();
 }
 
-// Viewport
-function get_viewport_dimensions() {
-	// document.documentElement.client(Height|Width) is not enough -- see: https://stackoverflow.com/a/37113430
-	// window.inner(Height|Width) includes scrollbars, but they reduce viewport
-	var viewport_prober = document.createElement('span');
-	viewport_prober.style.visibility = 'hidden';
-	viewport_prober.style.position = 'fixed';
-	viewport_prober.style.top = '0';
-	viewport_prober.style.bottom = '0';
-	viewport_prober.style.left = '0';
-	viewport_prober.style.right = '0';
-	document.documentElement.appendChild(viewport_prober);
-	var res = {
-		height: viewport_prober.clientHeight,
-		width: viewport_prober.clientWidth,
-	};
-	viewport_prober.remove();
-	return res;
-}
-// Scroll: overflowed elements
-function is_overflowed_elem_scrolled_down(elem) {
-	var scroll_distance_to_bottom = elem.scrollHeight - elem.scrollTop - elem.clientHeight;
-	return scroll_distance_to_bottom <= 1; // As of time of writing I managed to get value 1 in firefox with 80% zoom
-}
-function is_overflowed_elem_scrolled_up(elem) {
-	return elem.scrollTop === 0;
-}
-// Scroll: relative to viewport
-function how_much_is_viewport_top_above_elem_top(elem) {
-	return elem.getBoundingClientRect().top;
-}
-function how_much_is_viewport_bottom_above_elem_bottom(elem) {
-	return elem.getBoundingClientRect().bottom - get_viewport_dimensions().height;
-}
 function copy_to_clipboard(get_text_to_copy) {
 	var elem = document.createElement('textarea');
 	elem.value = get_text_to_copy();
@@ -92,7 +616,7 @@ function copy_to_clipboard(get_text_to_copy) {
 	document.body.appendChild(elem);
 	elem.select();
 	document.execCommand('copy');
-	document.body.removeChild(elem);
+	elem.remove();
 }
 // Calculates the actual server time
 function server_time() {
@@ -145,103 +669,6 @@ function StaticMap() {
 
 		return (this_.data[l][0] == key ? this_.data[l][1] : null);
 	};
-}
-
-/**
- * @brief Converts @p size, so that it human readable
- * @details It adds proper suffixes, for example:
- *   1 -> "1 byte"
- *   1023 -> "1023 bytes"
- *   1024 -> "1.0 KiB"
- *   129747 -> "127 KiB"
- *   97379112 -> "92.9 MiB"
- *
- * @param size size to humanize
- *
- * @return humanized file size
- */
-function humanize_file_size(size) {
-	var MIN_KIB = 1024;
-	var MIN_MIB = 1048576;
-	var MIN_GIB = 1073741824;
-	var MIN_TIB = 1099511627776;
-	var MIN_PIB = 1125899906842624;
-	var MIN_EIB = 1152921504606846976;
-	var MIN_3DIGIT_KIB = 102349;
-	var MIN_3DIGIT_MIB = 104805172;
-	var MIN_3DIGIT_GIB = 107320495309;
-	var MIN_3DIGIT_TIB = 109896187196212;
-	var MIN_3DIGIT_PIB = 112533595688920269;
-
-	// Bytes
-	if (size < MIN_KIB)
-		return (size == 1 ? "1 byte" : size + " bytes");
-
-	// KiB
-	if (size < MIN_3DIGIT_KIB)
-		return parseFloat(size / MIN_KIB).toFixed(1) + " KiB";
-	if (size < MIN_MIB)
-		return Math.round(size / MIN_KIB) + " KiB";
-	// MiB
-	if (size < MIN_3DIGIT_MIB)
-		return parseFloat(size / MIN_MIB).toFixed(1) + " MiB";
-	if (size < MIN_GIB)
-		return Math.round(size / MIN_MIB) + " MiB";
-	// GiB
-	if (size < MIN_3DIGIT_GIB)
-		return parseFloat(size / MIN_GIB).toFixed(1) + " GiB";
-	if (size < MIN_TIB)
-		return Math.round(size / MIN_GIB) + " GiB";
-	// TiB
-	if (size < MIN_3DIGIT_TIB)
-		return parseFloat(size / MIN_TIB).toFixed(1) + " TiB";
-	if (size < MIN_PIB)
-		return Math.round(size / MIN_TIB) + " TiB";
-	// PiB
-	if (size < MIN_3DIGIT_PIB)
-		return parseFloat(size / MIN_PIB).toFixed(1) + " PiB";
-	if (size < MIN_EIB)
-		return Math.round(size / MIN_PIB) + " PiB";
-	// EiB
-	return parseFloat(size / MIN_EIB).toFixed(1) + " EiB";
-}
-
-/* ============================ URLs ============================ */
-function url_enter_contest(contest_entry_token) {
-	return '/enter_contest/' + contest_entry_token;
-}
-function url_api_contest_entry_tokens_view(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens';
-}
-function url_api_contest_entry_tokens_add(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/add';
-}
-function url_api_contest_entry_tokens_regen(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/regen';
-}
-function url_api_contest_entry_tokens_delete(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/delete';
-}
-function url_api_contest_entry_tokens_add_short(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/add_short';
-}
-function url_api_contest_entry_tokens_regen_short(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/regen_short';
-}
-function url_api_contest_entry_tokens_delete_short(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/delete_short';
-}
-function url_api_contest_name_for_contest_entry_token(contest_entry_token) {
-	return '/api/contest_entry_token/' + contest_entry_token + '/contest_name';
-}
-function url_api_use_contest_entry_token(contest_entry_token) {
-	return '/api/contest_entry_token/' + contest_entry_token + '/use';
-}
-function url_api_user(user_id) {
-	return '/api/user/' + user_id;
-}
-function url_api_users(query_suffix) {
-	return '/api/users' + query_suffix;
 }
 
 /* ============================ URL hash parser ============================ */
@@ -592,60 +1019,60 @@ $(document).ready(give_body_egid);
 /* const */ var fade_in_duration = 50; // milliseconds
 
 // For best effect, the values below should be the same
-/* const */ var loader_show_delay = 400; // milliseconds
+/* const */ var oldloader_show_delay = 400; // milliseconds
 /* const */ var timed_hide_delay = 400; // milliseconds
 
-/* ================================= Loader ================================= */
-function remove_loader(elem) {
-	elem.removeChild(elem.querySelector('.loader'));
+/* ================================= Oldloader ================================= */
+function remove_oldloader(elem) {
+	elem.removeChild(elem.querySelector('.oldloader'));
 }
-function try_remove_loader(elem) {
-	var child = elem.querySelector('.loader');
+function try_remove_oldloader(elem) {
+	var child = elem.querySelector('.oldloader');
 	if (child != null) {
 		elem.removeChild(child);
 	}
 }
-function try_remove_loader_info(elem) {
-	var child = elem.querySelector('.loader-info');
+function try_remove_oldloader_info(elem) {
+	var child = elem.querySelector('.oldloader-info');
 	if (child != null) {
 		elem.removeChild(child);
 	}
 }
-function append_loader(elem) {
-	try_remove_loader_info(elem);
-	var loader;
+function append_oldloader(elem) {
+	try_remove_oldloader_info(elem);
+	var oldloader;
 	if (elem.style.animationName === undefined && elem.style.WebkitAnimationName == undefined) {
-		loader = elem_with_class('img', 'loader');
-		loader.setAttribute('src', '/kit/img/loader.gif');
+		oldloader = elem_with_class('img', 'oldloader');
+		oldloader.setAttribute('src', '/kit/img/oldloader.gif');
 	} else {
-		loader = elem_with_class('span', 'loader');
-		loader.style.display = 'none';
-		loader.appendChild(elem_with_class('div', 'spinner'));
+		oldloader = elem_with_class('span', 'oldloader');
+		oldloader.style.display = 'none';
+		oldloader.appendChild(elem_with_class('div', 'spinner'));
 		setTimeout(() => {
-			$(loader).fadeIn(fade_in_duration);
-		}, loader_show_delay);
+			$(oldloader).fadeIn(fade_in_duration);
+		}, oldloader_show_delay);
 	}
-	elem.appendChild(loader);
+	elem.appendChild(oldloader);
 }
-function show_success_via_loader(elem, html) {
-	try_remove_loader(elem);
-	var loader_info = elem_with_class('span', 'loader-info success');
-	loader_info.style.display = 'none';
-	loader_info.innerHTML = html;
-	$(loader_info).fadeIn(fade_in_duration);
-	elem.appendChild(loader_info);
+function show_success_via_oldloader(elem, html) {
+	try_remove_oldloader(elem);
+	var oldloader_info = elem_with_class('span', 'oldloader-info success');
+	oldloader_info.style.display = 'none';
+	oldloader_info.innerHTML = html;
+	$(oldloader_info).fadeIn(fade_in_duration);
+	elem.appendChild(oldloader_info);
 	timed_hide_show(elem.closest('.modal'));
 }
-function show_error_via_loader(elem, response, err_status, try_again_handler) {
+function show_error_via_oldloader(elem, response, err_status, try_again_handler) {
 	if (err_status == 'success' || err_status == 'error' || err_status === undefined)
 		err_status = '';
 	else
 		err_status = '; ' + err_status;
 
 	elem = $(elem);
-	try_remove_loader(elem[0]);
+	try_remove_oldloader(elem[0]);
 	elem.append($('<span>', {
-		class: 'loader-info error',
+		class: 'oldloader-info error',
 		style: 'display:none',
 		html: $('<span>', {
 			text: "Error: " + response.status + ' ' + response.statusText + err_status
@@ -660,7 +1087,7 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 	timed_hide_show(elem.closest('.modal'));
 
 	// Additional message
-	var x = elem.find('.loader-info > span');
+	var x = elem.find('.oldloader-info > span');
 	try {
 		var msg = $($.parseHTML(response.responseText)).text();
 
@@ -716,16 +1143,16 @@ Form.field_group = function(label_text_or_html_content, input_context_or_html_el
 	});
 };
 // This became deprecated, use AjaxForm
-Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/, loader_parent)
+Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/, oldloader_parent)
 {
 	if (success_msg_or_handler === undefined)
 		success_msg_or_handler = 'Success';
-	if (loader_parent === undefined)
-		loader_parent = $(form);
+	if (oldloader_parent === undefined)
+		oldloader_parent = $(form);
 
 	form = $(form);
 	add_csrf_token_to(form);
-	append_loader(loader_parent[0]);
+	append_oldloader(oldloader_parent[0]);
 
 	// Transform data before sending
 	var form_data = new FormData(form[0]);
@@ -743,12 +1170,12 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 		data: form_data,
 		success: function(resp) {
 			if (typeof success_msg_or_handler === "function") {
-				success_msg_or_handler.call(form, resp, loader_parent);
+				success_msg_or_handler.call(form, resp, oldloader_parent);
 			} else
-				show_success_via_loader(loader_parent[0], success_msg_or_handler);
+				show_success_via_oldloader(oldloader_parent[0], success_msg_or_handler);
 		},
 		error: function(resp, status) {
-			show_error_via_loader(loader_parent, resp, status);
+			show_error_via_oldloader(oldloader_parent, resp, status);
 		}
 	});
 	return false;
@@ -767,123 +1194,7 @@ function ajax_form(title, target, html, success_msg_or_handler, classes) {
 	});
 }
 
-/* ================================= AjaxForm ================================= */
-function Select(name, required) {
-	var self = this;
-	var select_elem = document.createElement('select');
-	select_elem.name = name;
-	select_elem.required = required;
 
-	self.attach_to = function(elem) {
-		elem.appendChild(select_elem);
-	}
-
-	self.add_option = function(name, value, selected) {
-		var option = select_elem.appendChild(elem_with_text('option', name));
-		option.value = value;
-		option.selected = selected;
-		return option;
-	}
-}
-
-function AjaxForm(title, destination_api_url, css_classes) {
-	var self = this;
-	var outer_div = elem_with_class('div', 'form-container' + (css_classes == null ? '' : ' ' + css_classes));
-	outer_div.appendChild(elem_with_text('h1', title));
-
-	var form_elem = document.createElement('form');
-	outer_div.appendChild(form_elem);
-
-	self.success_msg = 'Success';
-	self.success_handler = function(loader_parent, response) {
-		show_success_via_loader(loader_parent, self.success_msg);
-	};
-	form_elem.addEventListener('submit', function(event) {
-		event.preventDefault();
-		// Append CSRF token if absent
-		if (form_elem.querySelector('input[name="csrf_token"]') == null) {
-			self.append_input_hidden('csrf_token', get_cookie('csrf_token'))
-		}
-		append_loader(form_elem);
-		// Prepare form for sending
-		var form_data = new FormData(form_elem);
-		for (var elem of form_elem.querySelectorAll('[trim_before_send="true"]')) {
-			if (elem.name != null) {
-				form_data.set(elem.name, form_data.get(elem.name).trim());
-			}
-		}
-		// Send form
-		$.ajax({
-			url: destination_api_url,
-			type: 'post',
-			processData: false,
-			contentType: false,
-			data: form_data,
-			success: function(response) {
-				return self.success_handler.call(null, form_elem, response);
-			},
-			error: function(response, status) {
-				show_error_via_loader(form_elem, response, status);
-			}
-		});
-	});
-
-	self.attach_to = function(elem) {
-		elem.appendChild(outer_div);
-	};
-
-	var append_field_group = function(label) {
-		var div = form_elem.appendChild(elem_with_class('div', 'field-group'));
-		div.appendChild(elem_with_text('label', label));
-		return div;
-	}
-
-	self.append_input = function(type, name, label, value, required) {
-		var fg = append_field_group(label);
-		var input = fg.appendChild(document.createElement('input'));
-		input.type = type;
-		input.name = name;
-		input.value = value;
-		input.required = required;
-		return input;
-	};
-
-	self.append_input_text = function(name, label, value, size, required, trim_before_send) {
-		var input = self.append_input('text', name, label, value, required);
-		input.size = size;
-		input.trim_before_send = trim_before_send;
-		return input;
-	};
-
-	self.append_input_email = function(name, label, value, size, required, trim_before_send) {
-		var input = self.append_input('email', name, label, value, required);
-		input.size = size;
-		input.trim_before_send = trim_before_send;
-		return input;
-	};
-
-	self.append_input_hidden = function(name, value) {
-		var input = form_elem.appendChild(document.createElement('input'));
-		input.type = 'hidden';
-		input.name = name;
-		input.value = value;
-		return input;
-	}
-
-	self.append_select = function(name, label, required) {
-		var fg = append_field_group(label);
-		var select = new Select(name, required);
-		select.attach_to(fg);
-		return select;
-	};
-
-	self.append_submit_button = function(name, css_classes) {
-		var input = form_elem.appendChild(document.createElement('input'));
-		input.type = 'submit';
-		input.className = 'btn' + (css_classes == null ? '' : ' ' + css_classes);
-		input.value = name;
-	};
-}
 /* ================================= Modals ================================= */
 function remove_modals(modal) {
 	$(modal).remove();
@@ -972,8 +1283,8 @@ function dialogue_modal_request(title, info_html, go_text, go_classes, target_ur
 				class: go_classes,
 				text: go_text,
 				click: function() {
-					var loader_parent = $(this).parent().parent();
-					var form = loader_parent.find('form');
+					var oldloader_parent = $(this).parent().parent();
+					var form = oldloader_parent.find('form');
 					if (form.length === 0)
 						form = $('<form>');
 
@@ -981,7 +1292,7 @@ function dialogue_modal_request(title, info_html, go_text, go_classes, target_ur
 						$(this).parent().remove();
 
 					Form.send_via_ajax(form, target_url, success_msg,
-						loader_parent);
+						oldloader_parent);
 				}
 			}).add((cancel_text === undefined ? '' : $('<a>', {
 				class: 'btn-small',
@@ -1027,9 +1338,9 @@ function parse_api_resp(data) {
 	return transform(names, data.slice(1));
 }
 
-function old_API_call(ajax_url, success_handler, loader_parent) {
+function old_API_call(ajax_url, success_handler, oldloader_parent) {
 	var self = this;
-	append_loader(loader_parent[0]);
+	append_oldloader(oldloader_parent[0]);
 	$.ajax({
 		url: ajax_url,
 		type: 'POST',
@@ -1038,30 +1349,30 @@ function old_API_call(ajax_url, success_handler, loader_parent) {
 		data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 		dataType: 'json',
 		success: function(data, status, jqXHR) {
-			remove_loader(loader_parent[0]);
+			remove_oldloader(oldloader_parent[0]);
 			success_handler.call(this, parse_api_resp(data), status, jqXHR);
 		},
 		error: function(resp, status) {
-			show_error_via_loader(loader_parent, resp, status,
-				setTimeout.bind(null, old_API_call.bind(self, ajax_url, success_handler, loader_parent))); // Avoid recursion
+			show_error_via_oldloader(oldloader_parent, resp, status,
+				setTimeout.bind(null, old_API_call.bind(self, ajax_url, success_handler, oldloader_parent))); // Avoid recursion
 		}
 	});
 }
 
-function API_get(url, success_handler, loader_parent) {
+function API_get(url, success_handler, oldloader_parent) {
 	var self = this;
-	append_loader(loader_parent[0]);
+	append_oldloader(oldloader_parent[0]);
 	$.ajax({
 		url: url,
 		type: 'GET',
 		dataType: 'json',
 		success: function(data, status, jqXHR) {
-			remove_loader(loader_parent[0]);
+			remove_oldloader(oldloader_parent[0]);
 			success_handler.call(this, data, status, jqXHR);
 		},
 		error: function(resp, status) {
-			show_error_via_loader(loader_parent, resp, status,
-				setTimeout.bind(null, API_get.bind(self, url, success_handler, loader_parent))); // Avoid recursion
+			show_error_via_oldloader(oldloader_parent, resp, status,
+				setTimeout.bind(null, API_get.bind(self, url, success_handler, oldloader_parent))); // Avoid recursion
 		}
 	});
 }
@@ -1298,9 +1609,9 @@ function api_request_with_password_to_job(elem, title, api_url, message_html, co
 						close_modal(modal);
 				}
 			})
-		}), function(resp, loader_parent) {
+		}), function(resp, oldloader_parent) {
 			if (as_modal) {
-				show_success_via_loader($(this)[0], success_msg);
+				show_success_via_oldloader($(this)[0], success_msg);
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -1313,7 +1624,7 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 	return api_request_with_password_to_job(elem, title, api_url, message_html, confirm_text, 'Deletion has been scheduled.');
 }
 
-/* ================================= Lister ================================= */
+/* ================================= OldLister ================================= */
 function OldLister(elem) {
 	var this_ = this;
 	this.elem = $(elem);
@@ -1329,7 +1640,7 @@ function OldLister(elem) {
 			return;
 
 		lock = true;
-		append_loader(this_.elem.parent()[0]);
+		append_oldloader(this_.elem.parent()[0]);
 
 		$.ajax({
 			url: this_.query_url + this_.query_suffix,
@@ -1343,7 +1654,7 @@ function OldLister(elem) {
 				data = parse_api_resp(data);
 				this_.process_api_response(data, modal);
 
-				remove_loader(this_.elem.parent()[0]);
+				remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				centerize_modal(modal, false);
 
@@ -1356,7 +1667,7 @@ function OldLister(elem) {
 				}
 			},
 			error: function(resp, status) {
-				show_error_via_loader(this_.elem.parent(), resp, status,
+				show_error_via_oldloader(this_.elem.parent(), resp, status,
 					function () {
 						lock = false;
 						this_.fetch_more();
@@ -1388,102 +1699,6 @@ function OldLister(elem) {
 		$(window).on('resize', scres_handler);
 	};
 }
-
-function Lister(elem, query_url, initial_next_query_suffix) {
-	var self = this;
-	self.elem = elem;
-	self.next_query_suffix = initial_next_query_suffix;
-
-	var modal = self.elem.closest('.modal');
-	var fetch_lock = false;
-	var is_first_fetch = true;
-	var shutdown = false;
-
-	var is_lister_detached = function() {
-		return !$.contains(document.documentElement, self.elem);
-	};
-	var do_shutdown;
-
-	// Checks whether scrolling down is (almost) impossible
-	var need_to_fetch_more = function () {
-		return how_much_is_viewport_bottom_above_elem_bottom(self.elem) <= 300;
-	}
-
-	self.fetch_more = function() {
-		if (fetch_lock || shutdown) {
-			return;
-		}
-		if (is_lister_detached()) {
-			do_shutdown();
-			return;
-		}
-
-		fetch_lock = true;
-		append_loader(self.elem.parentNode);
-
-		$.ajax({
-			url: query_url + self.next_query_suffix,
-			type: 'GET',
-			dataType: 'json',
-			success: function(data) {
-				if (is_first_fetch) {
-					is_first_fetch = false;
-					self.process_first_api_response(data.list);
-				} else if (data.list.length != 0) {
-					self.process_api_response(data.list);
-				}
-
-				remove_loader(self.elem.parentNode);
-				timed_hide_show(modal);
-				centerize_modal(modal, false);
-
-				if (!data.may_be_more) {
-					do_shutdown(); // No more data to load
-					fetch_lock = false;
-					return;
-				}
-
-				fetch_lock = false;
-				if (need_to_fetch_more()) {
-					setTimeout(self.fetch_more, 0); // schedule fetching more
-				}
-			},
-			error: function(resp, status) {
-				show_error_via_loader(self.elem.parentNode, resp, status, function() {
-					fetch_lock = false;
-					self.fetch_more();
-				});
-			}
-		});
-	};
-
-	var scroll_or_resize_event_handler = function() {
-		if (is_lister_detached()) {
-			do_shutdown();
-			return;
-		}
-		if (need_to_fetch_more()) {
-			setTimeout(self.fetch_more, 0); // schedule fetching more without blocking
-		}
-	}
-
-	// Start listening for scroll and resize events
-	var elem_to_listen_on_scroll = modal === null ? document : modal_parent;
-	elem_to_listen_on_scroll.addEventListener('scroll', scroll_or_resize_event_handler, {passive: true});
-	window.addEventListener('resize', scroll_or_resize_event_handler, {passive: true});
-
-	do_shutdown = function() {
-		shutdown = true;
-		elem_to_listen_on_scroll.removeEventListener('scroll', scroll_or_resize_event_handler);
-		window.removeEventListener('resize', scroll_or_resize_event_handler);
-	};
-
-	if (need_to_fetch_more()) {
-		self.fetch_more();
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////
 
 /* ================================== Logs ================================== */
 function HexToUtf8Parser() {
@@ -1669,7 +1884,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		var prev_height = content[0].scrollHeight;
 		var bottom_dist = prev_height - content[0].scrollTop;
 
-		remove_loader(this_.elem[0]);
+		remove_oldloader(this_.elem[0]);
 		var html_data = text_to_safe_html(data);
 		content.html(colorize(html_data + content.html(), html_data.length + 2000));
 		var curr_height = content[0].scrollHeight;
@@ -1690,7 +1905,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		lock = true;
 
-		append_loader(this_.elem[0]);
+		append_oldloader(this_.elem[0]);
 		$.ajax({
 			url: '/api/logs/' + this_.type +
 				(offset === undefined ? '' : '?' + offset),
@@ -1702,7 +1917,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 				process_data(String(data).split('\n'));
 			},
 			error: function(resp, status) {
-				show_error_via_loader(this_.elem, resp, status, function () {
+				show_error_via_oldloader(this_.elem, resp, status, function () {
 					lock = false; // allow only manual unlocking
 					this_.fetch_more();
 				});
@@ -1715,7 +1930,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 			return;
 		lock = true;
 
-		append_loader(this_.elem[0]);
+		append_oldloader(this_.elem[0]);
 		$.ajax({
 			url: '/api/logs/' + this_.type,
 			type: 'POST',
@@ -1727,11 +1942,11 @@ function Logs(type, elem, auto_refresh_checkbox) {
 				if (parseInt(data[0]) !== first_offset)
 					return process_data(data);
 
-				remove_loader(this_.elem[0]);
+				remove_oldloader(this_.elem[0]);
 				lock = false;
 			},
 			error: function(resp, status) {
-				show_error_via_loader(this_.elem, resp, status, function () {
+				show_error_via_oldloader(this_.elem, resp, status, function () {
 					lock = false; // allow only manual unlocking
 					this_.fetch_more();
 				});
@@ -2211,7 +2426,7 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 function edit_user(as_modal, user_id) {
 	view_ajax(as_modal, url_api_user(user_id), function(user) {
 		if (!user.capabilities.edit) {
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '403',
 				statusText: 'Not Allowed'
 			});
@@ -2240,7 +2455,7 @@ function edit_user(as_modal, user_id) {
 function delete_user(as_modal, user_id) {
 	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -2248,7 +2463,7 @@ function delete_user(as_modal, user_id) {
 		var user = data[0];
 		var actions = user.actions;
 		if (actions.indexOf('D') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -2267,14 +2482,14 @@ function delete_user(as_modal, user_id) {
 function merge_user(as_modal, user_id) {
 	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '404',
 					statusText: 'Not Found'
 				});
 
 		var user = data[0];
 		if (user.actions.indexOf('M') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -2299,7 +2514,7 @@ function merge_user(as_modal, user_id) {
 function change_user_password(as_modal, user_id) {
 	old_view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -2307,13 +2522,13 @@ function change_user_password(as_modal, user_id) {
 		var user = data[0];
 		var actions = user.actions;
 		if (actions.indexOf('P') === -1 && actions.indexOf('p') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
 
 		if (actions.indexOf('P') === -1 && $('.navbar .user > strong').text() != user.username)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -2380,7 +2595,7 @@ function UsersLister(elem, query_url) {
 			row.appendChild(elem_with_class_and_text('td', user.type, user.type[0].toUpperCase() + user.type.slice(1)));
 
 			var td = document.createElement('td');
-			append_children(td, ActionsToHTML.user(user, false));
+			td.append.apply(td, ActionsToHTML.user(user, false));
 			row.appendChild(td);
 
 			self.tbody.appendChild(row);
@@ -2421,7 +2636,7 @@ function user_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 	old_view_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -2553,7 +2768,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					// class: 'jobs',
 					html: '<p>There are no jobs to show...</p>'
 				}));
-				remove_loader(this_.elem.parent()[0]);
+				remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -2756,7 +2971,7 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 				})
 			}), function(resp) {
 				if (as_modal) {
-					show_success_via_loader($(this)[0], 'Submitted');
+					show_success_via_oldloader($(this)[0], 'Submitted');
 					view_submission(true, resp);
 				} else {
 					this.parent().remove();
@@ -2770,7 +2985,7 @@ function add_problem_submission(as_modal, problem, no_modal_elem /*= undefined*/
 	if (problem.name === undefined) { // Request server for all needed data
 		old_view_ajax(as_modal, "/api/problems/=" + problem.id, function(data) {
 			if (data.length === 0)
-				return show_error_via_loader(this, {
+				return show_error_via_oldloader(this, {
 					status: '404',
 					statusText: 'Not Found'
 				});
@@ -2868,7 +3083,7 @@ function delete_submission(submission_id) {
 function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 	old_view_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -3001,7 +3216,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 					}));
 					elem.append(cached_source);
 				} else {
-					append_loader(elem[0]);
+					append_oldloader(elem[0]);
 					$.ajax({
 						url: '/api/submission/' + submission_id + '/source',
 						type: 'POST',
@@ -3015,11 +3230,11 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 								return $(cached_source).text();
 							}));
 							elem.append(cached_source);
-							remove_loader(elem[0]);
+							remove_oldloader(elem[0]);
 							centerize_modal(elem.closest('.modal'), false);
 						},
 						error: function(resp, status) {
-							show_error_via_loader(elem, resp, status);
+							show_error_via_oldloader(elem, resp, status);
 						}
 					});
 				}
@@ -3171,7 +3386,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 
 			// Actions
 			td = document.createElement('td');
-			append_children(td, ActionsToHTML.submission(x.id, x.actions, x.type));
+			td.append.apply(td, ActionsToHTML.submission(x.id, x.actions, x.type));
 			row.appendChild(td);
 
 			this_.elem[0].querySelector('tbody').appendChild(row);
@@ -3278,7 +3493,7 @@ function add_problem(as_modal) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					show_success_via_loader($(this)[0], 'Added');
+					show_success_via_oldloader($(this)[0], 'Added');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -3363,7 +3578,7 @@ function append_reupload_problem(elem, as_modal, problem) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader($(this)[0], 'Reuploaded');
+				show_success_via_oldloader($(this)[0], 'Reuploaded');
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -3375,7 +3590,7 @@ function append_reupload_problem(elem, as_modal, problem) {
 function reupload_problem(as_modal, problem_id) {
 	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -3383,7 +3598,7 @@ function reupload_problem(as_modal, problem_id) {
 		problem = data[0];
 		var actions = problem.actions;
 		if (actions.indexOf('R') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -3436,7 +3651,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 				modal(ajax_form('Add tag',
 					'/api/problem/' + problem_id + '/edit/tags/add_tag',
 					add_form, function() {
-						show_success_via_loader($(this)[0], 'The tag has been added.');
+						show_success_via_oldloader($(this)[0], 'The tag has been added.');
 						// Add tag
 						var input = add_form[0].children('input');
 						tags.push(input.val());
@@ -3511,7 +3726,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 						modal(ajax_form('Edit tag',
 							'/api/problem/' + problem_id + '/edit/tags/edit_tag',
 							edit_form, function() {
-								show_success_via_loader($(this)[0], 'done.');
+								show_success_via_oldloader($(this)[0], 'done.');
 								// Update tag
 								var old_tag = tag;
 								tag = edit_form[0].children('input').val();
@@ -3544,8 +3759,8 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 						dialogue_modal_request.bind(null, 'Delete tag',
 							delete_from, 'Yes, delete it', 'btn-small red',
 							'/api/problem/' + problem_id + '/edit/tags/delete_tag',
-							function(_, loader_parent) {
-								show_success_via_loader(loader_parent[0], 'The tag has been deleted.');
+							function(_, oldloader_parent) {
+								show_success_via_oldloader(oldloader_parent[0], 'The tag has been deleted.');
 								row.fadeOut(800);
 								setTimeout(function() { row.remove(); }, 800);
 								// Delete tag
@@ -3589,7 +3804,7 @@ function append_change_problem_statement_form(elem, as_modal, problem_id) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader($(this)[0], 'Statement change was scheduled');
+				show_success_via_oldloader($(this)[0], 'Statement change was scheduled');
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -3600,14 +3815,14 @@ function append_change_problem_statement_form(elem, as_modal, problem_id) {
 function change_problem_statement(as_modal, problem_id) {
 	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '404',
 					statusText: 'Not Found'
 				});
 
 		var problem = data[0];
 		if (problem.actions.indexOf('C') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -3619,7 +3834,7 @@ function change_problem_statement(as_modal, problem_id) {
 function edit_problem(as_modal, problem_id, opt_hash) {
 	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -3628,7 +3843,7 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 		var actions = problem.actions;
 
 		if (actions.indexOf('E') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -3663,14 +3878,14 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 function delete_problem(as_modal, problem_id) {
 	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '404',
 					statusText: 'Not Found'
 				});
 
 		var problem = data[0];
 		if (problem.actions.indexOf('D') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -3687,14 +3902,14 @@ function delete_problem(as_modal, problem_id) {
 function merge_problem(as_modal, problem_id) {
 	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '404',
 					statusText: 'Not Found'
 				});
 
 		var problem = data[0];
 		if (problem.actions.indexOf('M') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -3736,7 +3951,7 @@ function rejudge_problem_submissions(problem_id, problem_name) {
 function reset_problem_time_limits(as_modal, problem_id) {
 	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -3744,7 +3959,7 @@ function reset_problem_time_limits(as_modal, problem_id) {
 		var problem = data[0];
 		var actions = problem.actions;
 		if (actions.indexOf('L') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -3775,9 +3990,9 @@ function reset_problem_time_limits(as_modal, problem_id) {
 							close_modal(modal);
 					}
 				})
-			}), function(resp, loader_parent) {
+			}), function(resp, oldloader_parent) {
 				if (as_modal) {
-					show_success_via_loader($(this)[0], 'Reseting time limits has been scheduled.');
+					show_success_via_oldloader($(this)[0], 'Reseting time limits has been scheduled.');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -3790,7 +4005,7 @@ function reset_problem_time_limits(as_modal, problem_id) {
 function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 	old_view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -3937,7 +4152,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 					// class: 'problems',
 					html: '<p>There are no problems to show...</p>'
 				}));
-				remove_loader(this_.elem.parent()[0]);
+				remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -4063,7 +4278,7 @@ function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/)
 					// class: 'attaching-contest-problems',
 					html: '<p>There are no contest problems using (attaching) this problem...</p>'
 				}));
-				remove_loader(this_.elem.parent()[0]);
+				remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -4118,7 +4333,7 @@ function append_create_contest(elem, as_modal) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader($(this)[0], 'Created');
+				show_success_via_oldloader($(this)[0], 'Created');
 				view_contest(true, resp);
 			} else {
 				this.parent().remove();
@@ -4169,7 +4384,7 @@ function append_clone_contest(elem, as_modal) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader($(this)[0], 'Cloned');
+				show_success_via_oldloader($(this)[0], 'Cloned');
 				view_contest(true, resp);
 			} else {
 				this.parent().remove();
@@ -4216,7 +4431,7 @@ function append_create_contest_round(elem, as_modal, contest_id) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader($(this)[0], 'Created');
+				show_success_via_oldloader($(this)[0], 'Created');
 				view_contest_round(true, resp);
 			} else {
 				this.parent().remove();
@@ -4273,7 +4488,7 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 			})
 		}), function(resp) {
 			if (as_modal) {
-				show_success_via_loader($(this)[0], 'Cloned');
+				show_success_via_oldloader($(this)[0], 'Cloned');
 				view_contest_round(true, resp);
 			} else {
 				this.parent().remove();
@@ -4350,7 +4565,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					show_success_via_loader($(this)[0], 'Added');
+					show_success_via_oldloader($(this)[0], 'Added');
 					view_contest_problem(true, resp);
 				} else {
 					this.parent().remove();
@@ -4363,7 +4578,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 function edit_contest(as_modal, contest_id) {
 	old_view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -4372,7 +4587,7 @@ function edit_contest(as_modal, contest_id) {
 
 		var actions = data.actions;
 		if (actions.indexOf('A') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -4423,7 +4638,7 @@ function edit_contest(as_modal, contest_id) {
 function edit_contest_round(as_modal, contest_round_id) {
 	old_view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
 		if (data.contest.actions.indexOf('A') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -4459,7 +4674,7 @@ function edit_contest_round(as_modal, contest_round_id) {
 function edit_contest_problem(as_modal, contest_problem_id) {
 	old_view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
 		if (data.contest.actions.indexOf('A') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -4512,11 +4727,11 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 					type: 'submit',
 					value: 'Update'
 				})
-			}), function(resp, loader_parent) {
+			}), function(resp, oldloader_parent) {
 				if (resp === '')
-					show_success_via_loader($(this)[0], 'Updated');
+					show_success_via_oldloader($(this)[0], 'Updated');
 				else if (as_modal) {
-					show_success_via_loader($(this)[0], 'Updated');
+					show_success_via_oldloader($(this)[0], 'Updated');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -4541,14 +4756,14 @@ function rejudge_contest_problem_submissions(contest_problem_id, contest_problem
 function delete_contest(as_modal, contest_id) {
 	old_view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
 		if (data.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '404',
 					statusText: 'Not Found'
 				});
 
 		var contest = data[0];
 		if (contest.actions.indexOf('D') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -4567,7 +4782,7 @@ function delete_contest_round(as_modal, contest_round_id) {
 		var contest = data.contest;
 		var round = data.rounds[0];
 		if (contest.actions.indexOf('A') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -4586,7 +4801,7 @@ function delete_contest_problem(as_modal, contest_problem_id) {
 		var contest = data.contest;
 		var problem = data.problems[0];
 		if (contest.actions.indexOf('A') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -4902,8 +5117,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 									entry_link_elem.append(a_view_button(undefined,
 										'Add entry link', 'btn', modal_request.bind(null,
 											'Add entry link', $('<form>'),
-											url_api_contest_entry_tokens_add(contest.id), function(resp, loader_parent) {
-												show_success_via_loader(loader_parent[0], 'Added');
+											url_api_contest_entry_tokens_add(contest.id), function(resp, oldloader_parent) {
+												show_success_via_oldloader(oldloader_parent[0], 'Added');
 												render_entry_link_panel.call(this_);
 											})));
 								}
@@ -4923,8 +5138,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												'?'
 												]
 											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen(contest.id),
-											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent[0], 'Regenerated');
+											function(resp, oldloader_parent) {
+												show_success_via_oldloader(oldloader_parent[0], 'Regenerated');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -4940,8 +5155,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												'?'
 												]
 											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete(contest.id),
-											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent[0], 'Deleted');
+											function(resp, oldloader_parent) {
+												show_success_via_oldloader(oldloader_parent[0], 'Deleted');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -4956,8 +5171,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 									entry_link_elem.append(a_view_button(undefined,
 										'Add short entry link', 'btn', modal_request.bind(null,
 											'Add short entry link', $('<form>'),
-											url_api_contest_entry_tokens_add_short(contest.id), function(resp, loader_parent) {
-												show_success_via_loader(loader_parent[0], 'Added');
+											url_api_contest_entry_tokens_add_short(contest.id), function(resp, oldloader_parent) {
+												show_success_via_oldloader(oldloader_parent[0], 'Added');
 												render_entry_link_panel.call(this_);
 											})));
 								}
@@ -4977,8 +5192,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												'?'
 												]
 											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen_short(contest.id),
-											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent[0], 'Regenerated');
+											function(resp, oldloader_parent) {
+												show_success_via_oldloader(oldloader_parent[0], 'Regenerated');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -4994,8 +5209,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												'?'
 												]
 											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete_short(contest.id),
-											function(resp, loader_parent) {
-												show_success_via_loader(loader_parent[0], 'Deleted');
+											function(resp, oldloader_parent) {
+												show_success_via_oldloader(oldloader_parent[0], 'Deleted');
 												render_entry_link_panel.call(this_);
 											}, 'No, take me back', true)));
 								}
@@ -5271,7 +5486,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 					// class: 'contests',
 					html: '<p>There are no contests to show...</p>'
 				}));
-				remove_loader(this_.elem.parent()[0]);
+				remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -5373,7 +5588,7 @@ function ContestUsersLister(elem, query_suffix /*= ''*/) {
 					// class: 'contest-users',
 					html: '<p>There are no contest users to show...</p>'
 				}));
-				remove_loader(this_.elem.parent()[0]);
+				remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -5437,7 +5652,7 @@ function tab_contest_users_lister(parent_elem, query_suffix /*= ''*/) {
 function add_contest_user(as_modal, contest_id) {
 	old_view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/<0', function(data) {
 		if (data.overall_actions === undefined)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -5447,7 +5662,7 @@ function add_contest_user(as_modal, contest_id) {
 		var add_moderator = (actions.indexOf('Am') !== -1);
 		var add_owner = (actions.indexOf('Ao') !== -1);
 		if (add_contestant + add_moderator + add_owner < 1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -5502,7 +5717,7 @@ function add_contest_user(as_modal, contest_id) {
 function change_contest_user_mode(as_modal, contest_id, user_id) {
 	old_view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -5515,7 +5730,7 @@ function change_contest_user_mode(as_modal, contest_id, user_id) {
 		var make_moderator = (actions.indexOf('Mm') !== -1);
 		var make_owner = (actions.indexOf('Mo') !== -1);
 		if (make_contestant + make_moderator + make_owner < 2)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -5575,7 +5790,7 @@ function change_contest_user_mode(as_modal, contest_id, user_id) {
 function expel_contest_user(as_modal, contest_id, user_id) {
 	old_view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
@@ -5585,7 +5800,7 @@ function expel_contest_user(as_modal, contest_id, user_id) {
 		var actions = data.actions;
 
 		if (actions.indexOf('E') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -5653,7 +5868,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 					class: 'contest-files always_in_view',
 					html: '<p>There are no files to show...</p>'
 				}));
-				remove_loader(this_.elem.parent()[0]);
+				remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(modal);
 				return;
 			}
@@ -5710,13 +5925,13 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 function add_contest_file(as_modal, contest_id) {
 	old_view_ajax(as_modal, '/api/contest_files/c' + contest_id, function(data) {
 		if (data.overall_actions === undefined)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
 
 		if (data.overall_actions.indexOf('A') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -5752,14 +5967,14 @@ function add_contest_file(as_modal, contest_id) {
 function edit_contest_file(as_modal, contest_file_id) {
 	old_view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
 
 		file = data.rows[0];
 		if (file.actions.indexOf('E') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
@@ -5803,14 +6018,14 @@ function edit_contest_file(as_modal, contest_file_id) {
 function delete_contest_file(as_modal, contest_file_id) {
 	old_view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 				status: '404',
 				statusText: 'Not Found'
 			});
 
 		file = data.rows[0];
 		if (file.actions.indexOf('D') === -1)
-			return show_error_via_loader(this, {
+			return show_error_via_oldloader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});

@@ -351,31 +351,22 @@ template {
 }
 
 /* ================================ Sim CSS ================================ */
-@keyframes spin {
-	0% {
-		 webkit-transform: rotate(0deg);
-		transform: rotate(0deg);
-	}
-	100% {
-		-webkit-transform: rotate(360deg);
-		transform: rotate(360deg);
-	}
-}
-
-#clock > sup,
-*[datetime] > sup/*,
-.submissions th.time > sup,
-.problems th.added > sup,
-.jobs th.added > sup,
-.contest-files th.time > sup */{
-	width: 3.5em;
-	display: inline-block;
-	text-align: left;
-}
-* {
+html {
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;
+}
+*, *:before, *:after {
+	-webkit-box-sizing: inherit;
+	-moz-box-sizing: inherit;
+	box-sizing: inherit;
+}
+
+#clock > sup,
+*[datetime] > sup{
+	width: 3.5em;
+	display: inline-block;
+	text-align: left;
 }
 html {
 	font-family: Ubuntu,"Helvetica Neue",Helvetica,"Segoe UI",Arial,freesans,sans-serif;
@@ -421,6 +412,288 @@ table {
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 }
 
+/********************************** Buttons **********************************/
+
+.btn,
+.btn-small,
+.btn-tiny {
+	cursor: pointer;
+	color: #000000;
+	text-decoration: none !important;
+	background-color: #ededed;
+	background-image: linear-gradient(#f9f9f9, #d8d8d8);
+	border: 1px solid #bbbbbb;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+    transition: opacity 0.05s ease-out; /* see .btn:disabled */
+}
+.btn {
+	min-height: 30px;
+	padding: 4px 11px;
+	margin: 0 3px;
+	-webkit-align-self: flex-start;
+	align-self: flex-start;
+}
+.btn-small {
+	display: inline-block;
+	height: 26px;
+	margin: 0 2px;
+	padding: 2px 10px;
+	white-space: pre;
+	font-size: 14px;
+	line-height: 20px;
+}
+.btn-tiny {
+	display: inline-block;
+	height: 24px;
+	margin: 0 1.5px;
+	padding: 2px 8px;
+	white-space: pre;
+	font-size: 14px;
+	line-height: 18px;
+}
+.btn:hover,
+.btn:focus,
+.btn:active,
+.btn-small:hover,
+.btn-small:focus,
+.btn-small:active,
+.btn-tiny:hover,
+.btn-tiny:focus,
+.btn-tiny:active {
+	color: #000000;
+}
+.btn:not(:disabled):hover,
+.btn:not(:disabled):focus,
+.btn-small:not(:disabled):hover,
+.btn-small:not(:disabled):focus,
+.btn-tiny:not(:disabled):hover,
+.btn-tiny:not(:disabled):focus {
+	background-color: #e2e2e2;
+	background-image: none;
+	outline: none;
+}
+.btn:focus,
+.btn-small:focus,
+.btn-tiny:focus {
+	border-color: #51a7e8;
+	box-shadow: 0 0 8px 1px #52a8ec;
+}
+.btn:not(:disabled):active,
+.btn-small:not(:disabled):active,
+.btn-tiny:not(:disabled):active {
+	background-color: #d3d3d3;
+	background-image: none;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Blue button */
+.btn.blue,
+.btn-small.blue,
+.btn-tiny.blue {
+	color: #ffffff;
+	background-color: #0074cc;
+	background-image: linear-gradient(#1088cc, #0044cc);
+	border: 1px solid #0055cc;
+}
+.btn.blue:not(:disabled):hover,
+.btn.blue:not(:disabled):focus,
+.btn-small.blue:not(:disabled):hover,
+.btn-small.blue:not(:disabled):focus,
+.btn-tiny.blue:not(:disabled):hover,
+.btn-tiny.blue:not(:disabled):focus {
+	background-color: #0063cc;
+	background-image: none;
+}
+.btn.blue:focus,
+.btn-small.blue:focus,
+.btn-tiny.blue:focus {
+	box-shadow: 0 0 8px 1px #0055cc;
+}
+.btn.blue:not(:disabled):active,
+.btn-small.blue:not(:disabled):active,
+.btn-tiny.blue:not(:disabled):active {
+	background-color: #0053cc;
+	background-image: none;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Red button */
+.btn.red,
+.btn-small.red,
+.btn-tiny.red {
+	color: #ffffff;
+	background-color: #df524d;
+	background-image: linear-gradient(#ee5f5b, #c73e38);
+	border: 1px solid #d43c33;
+}
+.btn.red:not(:disabled):hover,
+.btn.red:not(:disabled):focus,
+.btn-small.red:not(:disabled):hover,
+.btn-small.red:not(:disabled):focus,
+.btn-tiny.red:not(:disabled):hover,
+.btn-tiny.red:not(:disabled):focus {
+	background-color: #d94d48;
+	background-image: none;
+}
+.btn.red:focus,
+.btn-small.red:focus,
+.btn-tiny.red:focus {
+	box-shadow: 0 0 8px 1px #cc3d37;
+}
+.btn.red:not(:disabled):active,
+.btn-small.red:not(:disabled):active,
+.btn-tiny.red:not(:disabled):active {
+	background-color: #ca4741;
+	background-image: none;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Orange button */
+.btn.orange,
+.btn-small.orange,
+.btn-tiny.orange {
+	color: #ffffff;
+	background-color: #f6a839;
+	background-image: linear-gradient(#fbba5d, #f19615);
+	border: 1px solid #e29b35;
+}
+.btn.orange:not(:disabled):hover,
+.btn.orange:not(:disabled):focus,
+.btn-small.orange:not(:disabled):hover,
+.btn-small.orange:not(:disabled):focus,
+.btn-tiny.orange:not(:disabled):hover,
+.btn-tiny.orange:not(:disabled):focus {
+	background-color: #ef9d2a;
+	background-image: none;
+}
+.btn.orange:focus,
+.btn-small.orange:focus,
+.btn-tiny.orange:focus {
+	box-shadow: 0 0 8px 1px #f59b1a;
+}
+.btn.orange:not(:disabled):active,
+.btn-small.orange:not(:disabled):active,
+.btn-tiny.orange:not(:disabled):active {
+	background-color: #e8941c;
+	background-image: none;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Green button */
+.btn.green,
+.btn-small.green,
+.btn-tiny.green {
+	color: #ffffff;
+	background-color: #48a848;
+	background-image: linear-gradient(#4fba4f, #429442);
+	border: 1px solid #3e8e3e;
+}
+.btn.green:not(:disabled):hover,
+.btn.green:not(:disabled):focus,
+.btn-small.green:not(:disabled):hover,
+.btn-small.green:not(:disabled):focus,
+.btn-tiny.green:not(:disabled):hover,
+.btn-tiny.green:not(:disabled):focus {
+	background-color: #449d44;
+	background-image: none;
+}
+.btn.green:focus,
+.btn-small.green:focus,
+.btn-tiny.green:focus {
+	box-shadow: 0 0 8px 1px #359735;
+}
+.btn.green:not(:disabled):active,
+.btn-small.green:not(:disabled):active,
+.btn-tiny.green:not(:disabled):active {
+	background-color: #398439;
+	background-image: none;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Disabled button */
+.btn:disabled,
+.btn-small:disabled,
+.btn-tiny:disabled {
+	opacity: 0.5;
+}
+
+/********************************** Fade in + slide down animations **********************************/
+
+.fade-in-slide-down {
+	padding: 0; /* has to be done on the inner element because of https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
+	border: none; /* has to be done on the inner element for consistency */
+	margin: 0; /* has to be done on the inner element for consistency */
+	/* initial transition state */
+	opacity: 0;
+	max-height: 0;
+	overflow: hidden;
+	transition: max-height 0.05s ease-out, opacity 0.05s ease-out;
+	/* TODO: remove the below line */
+	/*transition: max-height 0.5s ease-out, opacity 0.5s ease-out;*/
+	/* triggering and setting target values are done in JS */
+}
+.fade-in-slide-down.cancel-delay {
+	transition-delay: 0s !important;
+}
+
+/********************************** Request status **********************************/
+
+/* Request status */
+@keyframes spin {
+	0% {
+		 webkit-transform: rotate(0deg);
+		transform: rotate(0deg);
+	}
+	100% {
+		-webkit-transform: rotate(360deg);
+		transform: rotate(360deg);
+	}
+}
+
+span.request-status {
+	display: inline-block;
+	margin: 4px 0;
+	border: 1px solid #bbb;
+}
+span.request-status.pending {
+	border-radius: 50%;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+span.request-status.pending > div.spinner {
+	margin: 4px;
+	height: 26px;
+	width: 26px;
+	border: 3px solid #5454ff;
+	border-top-color: transparent;
+	border-radius: 50%;
+	-webkit-animation: spin 0.8s infinite linear;
+	animation: spin 0.8s infinite linear;
+}
+span.request-status.error,
+span.request-status.success {
+	border-radius: 6px;
+	color: #222;
+	padding: 2px 5px;
+	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
+	text-align: left;
+	white-space: pre;
+}
+span.request-status.error {
+	background: #ffa5a5;
+}
+span.request-status.success {
+	background: #a3ffa3;
+}
+div.request-progress {
+	font-size: 0.9rem;
+}
+
+/**********************************  **********************************/
 /* Modal (background) */
 .modal {
 	position: fixed;
@@ -491,194 +764,6 @@ table {
 .modal .header,
 .modal .always_in_view {
 	max-width: calc(100vw - 60px);
-}
-
-.btn,
-.btn-small,
-.btn-tiny {
-	cursor: pointer;
-	color: #000000;
-	text-decoration: none !important;
-	background-color: #ededed;
-	background-image: linear-gradient(#f9f9f9, #d8d8d8);
-	border: 1px solid #bbbbbb;
-	-webkit-border-radius: 3px;
-	-moz-border-radius: 3px;
-	border-radius: 3px;
-}
-.btn {
-	min-height: 30px;
-	padding: 4px 11px;
-	margin: 2px;
-	-webkit-align-self: flex-start;
-	align-self: flex-start;
-}
-.btn-small {
-	display: inline-block;
-	height: 26px;
-	margin: 2px 3px;
-	padding: 2px 10px;
-	white-space: pre;
-	font-size: 14px;
-	line-height: 20px;
-}
-.btn-tiny {
-	display: inline-block;
-	height: 24px;
-	margin: 1px 3px;
-	padding: 2px 8px;
-	white-space: pre;
-	font-size: 14px;
-	line-height: 18px;
-}
-.btn:hover,
-.btn:focus,
-.btn-small:hover,
-.btn-small:focus,
-.btn-tiny:hover,
-.btn-tiny:focus {
-	color: #000000;
-	background-color: #e2e2e2;
-	background-image: none;
-	outline: none;
-}
-.btn:focus,
-.btn-small:focus,
-.btn-tiny:focus {
-	border-color: #51a7e8;
-	box-shadow: 0 0 8px 1px #52a8ec;
-}
-.btn:active,
-.btn-small:active,
-.btn-tiny:active {
-	color: #000000;
-	background-color: #d3d3d3;
-	background-image: none;
-	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
-}
-
-/* Blue button */
-.btn.blue,
-.btn-small.blue,
-.btn-tiny.blue {
-	color: #ffffff;
-	background-color: #0074cc;
-	background-image: linear-gradient(#1088cc, #0044cc);
-	border: 1px solid #0055cc;
-}
-.btn.blue:hover,
-.btn.blue:focus,
-.btn-small.blue:hover,
-.btn-small.blue:focus,
-.btn-tiny.blue:hover,
-.btn-tiny.blue:focus {
-	background-color: #0063cc;
-	background-image: none;
-}
-.btn.blue:focus,
-.btn-small.blue:focus,
-.btn-tiny.blue:focus {
-	box-shadow: 0 0 8px 1px #0055cc;
-}
-.btn.blue:active,
-.btn-small.blue:active,
-.btn-tiny.blue:active {
-	background-color: #0053cc;
-	background-image: none;
-	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
-}
-
-/* Red button */
-.btn.red,
-.btn-small.red,
-.btn-tiny.red {
-	color: #ffffff;
-	background-color: #df524d;
-	background-image: linear-gradient(#ee5f5b, #c73e38);
-	border: 1px solid #d43c33;
-}
-.btn.red:hover,
-.btn.red:focus,
-.btn-small.red:hover,
-.btn-small.red:focus,
-.btn-tinyl.red:hover,
-.btn-tiny.red:focus {
-	background-color: #d94d48;
-	background-image: none;
-}
-.btn.red:focus,
-.btn-small.red:focus,
-.btn-tinyl.red:focus {
-	box-shadow: 0 0 8px 1px #cc3d37;
-}
-.btn.red:active,
-.btn-small.red:active,
-.btn-tiny.red:active {
-	background-color: #ca4741;
-	background-image: none;
-	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
-}
-
-/* Orange button */
-.btn.orange,
-.btn-small.orange,
-.btn-tiny.orange {
-	color: #ffffff;
-	background-color: #f6a839;
-	background-image: linear-gradient(#fbba5d, #f19615);
-	border: 1px solid #e29b35;
-}
-.btn.orange:hover,
-.btn.orange:focus,
-.btn-small.orange:hover,
-.btn-small.orange:focus,
-.btn.btn-tinyrange:hover,
-.btn.btn-tinynge:focus {
-	background-color: #ef9d2a;
-	background-image: none;
-}
-.btn.orange:focus,
-.btn-small.orange:focus,
-.btn-tiny.orange:focus {
-	box-shadow: 0 0 8px 1px #f59b1a;
-}
-.btn.orange:active,
-.btn-small.orange:active,
-.btn-tiny.orange:active {
-	background-color: #e8941c;
-	background-image: none;
-	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
-}
-
-/* Green button */
-.btn.green,
-.btn-small.green,
-.btn-tiny.green {
-	color: #ffffff;
-	background-color: #48a848;
-	background-image: linear-gradient(#4fba4f, #429442);
-	border: 1px solid #3e8e3e;
-}
-.btn.green:hover,
-.btn.green:focus,
-.btn-small.green:hover,
-.btn-small.green:focus,
-.btn-tiny.green:hover,
-.btn-tiny.green:focus {
-	background-color: #449d44;
-	background-image: none;
-}
-.btn.green:focus,
-.btn-small.green:focus,
-.btn-tiny.green:focus {
-	box-shadow: 0 0 8px 1px #359735;
-}
-.btn.green:active,
-.btn-small.green:active,
-.btn-tiny.green:active {
-	background-color: #398439;
-	background-image: none;
-	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
 }
 
 textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"] {
@@ -822,14 +907,14 @@ a.btn.red {
 	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* Loader */
-.loader,
-.loader-info {
+/* Oldloader */
+.oldloader,
+.oldloader-info {
 	display: table;
 	margin: 4px auto;
 	border: 1px solid #bbb;
 }
-.loader {
+.oldloader {
 	padding: 2px;
 	background: white;
 	border-radius: 50%;
@@ -838,23 +923,23 @@ a.btn.red {
 	-moz-user-select: none;
 	-ms-user-select: none;
 }
-.loader-info {
+.oldloader-info {
 	padding: 2px 5px;
 	color: #222;
 	white-space: pre;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	border-radius: 6px;
 }
-.loader-info.error {
+.oldloader-info.error {
 	background: #ffa5a5;
 }
-.loader-info.success {
+.oldloader-info.success {
 	background: #a3ffa3;
 }
-.loader-info a {
+.oldloader-info a {
 	margin-left: 5px;
 }
-.loader .spinner {
+.oldloader .spinner {
 	margin: 2px;
 	height: 26px;
 	width: 26px;
@@ -1501,9 +1586,6 @@ table.submissions td.status {
 	padding-right: 20px;
 	text-align: center;
 }
-table.submissions td .btn-small {
-	margin: 0 2px;
-}
 table.submissions tr > td:last-child {
 	/*white-space: pre;*/
 }
@@ -1536,9 +1618,6 @@ table.problems td {
 	padding: 4px 16px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
-}
-table.problems td .btn-small {
-	margin: 0 2px;
 }
 table.problems tr > td:last-child {
 	/*white-space: pre;*/
@@ -1615,9 +1694,6 @@ table.jobs td div.info {
 	display: flex;
 	flex-flow: row wrap;
 }
-table.jobs td .btn-small {
-	margin: 0 2px;
-}
 table.jobs tr > td:first-child {
 	text-align: right;
 }
@@ -1682,9 +1758,6 @@ table.tags-edit td {
 	padding: 4px 16px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
-}
-table.tags-edit td .btn-small {
-	margin: 0 2px;
 }
 table.tags-edit tr > td:last-child {
 	/*white-space: pre;*/
@@ -1813,9 +1886,6 @@ table.contests td {
 	line-height: 20px;
 	border-top: 1px solid #bbb;
 }
-table.contests td .btn-small {
-	margin: 0 2px;
-}
 table.contests tr > td:last-child {
 	/*white-space: pre;*/
 }
@@ -1887,22 +1957,22 @@ pre.logs > span::-webkit-scrollbar-thumb {
     background: #ddd;
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
 }
-pre.logs .loader,
-pre.logs .loader-info {
+pre.logs .oldloader,
+pre.logs .oldloader-info {
 	position: absolute;
 	top: 0;
 	bottom: auto;
 	left: 50%;
 }
-pre.logs img.loader {
+pre.logs img.oldloader {
 	margin-left: -15.5px;
 }
-pre.logs .loader-info,
-pre.logs span.loader {
-	-webkit-transform: perspective(1px) translateX(-50%);
-	-moz-transform: perspective(1px) translateX(-50%);
-	-ms-transform: perspective(1px) translateX(-50%);
-	transform: perspective(1px) translateX(-50%);
+pre.logs .oldloader-info,
+pre.logs span.oldloader {
+	-webkit-transform: translateX(-50%);
+	-moz-transform: translateX(-50%);
+	-ms-transform: translateX(-50%);
+	transform: translateX(-50%);
 }
 
 pre.logs .gray {
@@ -1992,8 +2062,11 @@ form .field-group > textarea {
 .form-container form div.button-row > .btn {
 	margin-right: 10px;
 }
-.form-container form .loader,
-.form-container form .loader-info {
+.form-container form .oldloader,
+.form-container form .oldloader-info {
+	margin-top: 16px;
+}
+.form-container form .request-status {
 	margin-top: 16px;
 }
 .form-container.add-problem form .field-group > :first-child,
