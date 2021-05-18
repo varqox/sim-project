@@ -390,7 +390,6 @@ void Connection::error400() {
 
 void Connection::error403() {
     send("HTTP/1.1 403 Forbidden\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 112\r\n"
@@ -406,7 +405,6 @@ void Connection::error403() {
 
 void Connection::error404() {
     send("HTTP/1.1 404 Not Found\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 112\r\n"
@@ -422,7 +420,6 @@ void Connection::error404() {
 
 void Connection::error408() {
     send("HTTP/1.1 408 Request Timeout\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 124\r\n"
@@ -438,7 +435,6 @@ void Connection::error408() {
 
 void Connection::error413() {
     send("HTTP/1.1 413 Request Entity Too Large\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 142\r\n"
@@ -454,7 +450,6 @@ void Connection::error413() {
 
 void Connection::error415() {
     send("HTTP/1.1 415 Unsupported Media Type\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 138\r\n"
@@ -470,7 +465,6 @@ void Connection::error415() {
 
 void Connection::error431() {
     send("HTTP/1.1 431 Request Header Fields Too Large\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 156\r\n"
@@ -486,7 +480,6 @@ void Connection::error431() {
 
 void Connection::error500() {
     send("HTTP/1.1 500 Internal Server Error\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 136\r\n"
@@ -502,7 +495,6 @@ void Connection::error500() {
 
 void Connection::error501() {
     send("HTTP/1.1 501 Not Implemented\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 124\r\n"
@@ -518,7 +510,6 @@ void Connection::error501() {
 
 void Connection::error504() {
     send("HTTP/1.1 504 Gateway Timeout\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 124\r\n"
@@ -534,7 +525,6 @@ void Connection::error504() {
 
 void Connection::error507() {
     send("HTTP/1.1 507 Insufficient Storage\r\n"
-         "Server: sim-server\r\n"
          "Connection: close\r\n"
          "Content-Type: text/html; charset=utf-8\r\n"
          "Content-Length: 134\r\n"
@@ -704,7 +694,6 @@ void Connection::send_response(const http::Response& res) {
     string str = "HTTP/1.1 ";
     str.reserve(res.content.size + 500);
     str.append(res.status_code.data(), res.status_code.size).append("\r\n");
-    str += "Server: sim-server\r\n";
     str += "Connection: close\r\n";
 
     for (auto&& [name, val] : res.headers) {
