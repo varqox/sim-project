@@ -5,6 +5,7 @@
 #include "sim/sql_fields/varbinary.hh"
 
 #include <chrono>
+#include <optional>
 
 namespace sim::contest_entry_tokens {
 

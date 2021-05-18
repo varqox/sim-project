@@ -3,6 +3,7 @@
 #include "simlib/string_view.hh"
 
 #include <map>
+#include <optional>
 #include <string>
 
 namespace web_server::http {

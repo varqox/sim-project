@@ -22,6 +22,7 @@
 #include <set>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
+#include <thread>
 #include <unistd.h>
 
 #if 0
