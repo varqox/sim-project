@@ -47,28 +47,28 @@ bool Context::session_has_expired() noexcept {
 
 Response response(
     StringView status_code, decltype(Context::cookie_changes)&& cookie_changes,
-    StringView content) {
+    StringView content, StringView content_type) {
     auto resp = Response{Response::TEXT, status_code};
+    resp.headers["content-type"] = content_type.to_string();
     resp.cookies = std::move(cookie_changes);
     resp.content = content;
     return resp;
 }
 
-Response Context::response_ok(StringView content) {
-    return response("200 OK", std::move(cookie_changes), content);
+Response Context::response_ok(StringView content, StringView content_type) {
+    return response("200 OK", std::move(cookie_changes), content, content_type);
 }
 
 Response Context::response_json(StringView content) {
-    auto resp = response("200 OK", std::move(cookie_changes), content);
-    resp.headers["content-type"] = "application/json; charset=utf-8";
-    return resp;
+    return response(
+        "200 OK", std::move(cookie_changes), content, "application/json; charset=utf-8");
 }
 
-Response Context::response_400(StringView content) {
-    return response("400 Bad Request", std::move(cookie_changes), content);
+Response Context::response_400(StringView content, StringView content_type) {
+    return response("400 Bad Request", std::move(cookie_changes), content, content_type);
 }
 
-Response Context::response_403(StringView content) {
+Response Context::response_403(StringView content, StringView content_type) {
     // In order not to reveal information (e.g. existence of something) only admins may see
     // error 403 and the @p content
     if (session) {
@@ -76,7 +76,7 @@ Response Context::response_403(StringView content) {
         switch (session->user_type) {
         case UT::ADMIN: {
             assert(not session_has_expired());
-            return response("403 Forbidden", std::move(cookie_changes), content);
+            return response("403 Forbidden", std::move(cookie_changes), content, content_type);
         }
         case UT::TEACHER:
         case UT::NORMAL: break;
@@ -89,11 +89,12 @@ http::Response Context::response_404() {
     static constexpr CStringView session_expired_msg =
         "Your session has expired, please try to sign in and then try again.";
     auto content = session_has_expired() ? session_expired_msg : "";
-    return response("404 Not Found", std::move(cookie_changes), content);
+    return response(
+        "404 Not Found", std::move(cookie_changes), content, "text/plain; charset=utf-8");
 }
 
 Response Context::response_ui(StringView title, StringView body) {
-    auto resp = response_ok();
+    auto resp = response_ok("", "text/html; charset=utf-8");
     begin_ui_template(
         resp,
         {

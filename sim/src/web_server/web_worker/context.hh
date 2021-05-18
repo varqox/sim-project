@@ -37,7 +37,8 @@ struct Context {
 
     bool session_has_expired() noexcept;
 
-    http::Response response_ok(StringView content = "");
+    http::Response response_ok(
+        StringView content = "", StringView content_type = "text/plain; charset=utf-8");
 
     http::Response response_json(StringView content);
 
@@ -50,9 +51,11 @@ struct Context {
         return response_json(StringView{content});
     }
 
-    http::Response response_400(StringView content);
+    http::Response
+    response_400(StringView content, StringView content_type = "text/plain; charset=utf-8");
 
-    http::Response response_403(StringView content = "");
+    http::Response response_403(
+        StringView content = "", StringView content_type = "text/plain; charset=utf-8");
 
     http::Response response_404();
 
