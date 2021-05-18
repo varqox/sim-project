@@ -5,6 +5,7 @@
 #include "simlib/string_traits.hh"
 
 #include <fcntl.h>
+#include <optional>
 #include <unistd.h>
 
 class TemporaryFile {

@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <charconv>
+#include <limits>
 #include <string>
 
 template <size_t N>
