@@ -72,6 +72,10 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
                 "<link rel=\"stylesheet\" type=\"text/css\" "
                       "href=\"/kit/styles.css?",
                           get_hash_of<STYLES_CSS>(), "\">"
+                "<script>",
+                    "const logged_user_id = ",
+                        params.session ? to_string(params.session->user_id) : StaticCStringBuff{"null"}, ";"
+                "</script>"
                 "<script src=\"/kit/jquery.js?",
                     get_hash_of<JQUERY_JS>(), "\"></script>"
                 "<script src=\"/kit/scripts.js?",

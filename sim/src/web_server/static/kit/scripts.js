@@ -617,10 +617,8 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	}
 }
 
-function logged_user_id() {
-	// TODO: embed a variable in the HTML template with the expected value of this function
-	const x = document.querySelector('.navbar .user + ul > a:first-child').href;
-	return x.substring(x.lastIndexOf('/') + 1);
+function is_logged_in() {
+	return logged_user_id != null;
 }
 ////////////////////////// The above code has gone through refactor //////////////////////////
 
@@ -628,9 +626,6 @@ function text_to_safe_html(str) { // This is deprecated because DOM elements hav
 	const x = document.createElement('span');
 	x.innerText = str;
 	return x.innerHTML;
-}
-function is_logged_in() {
-	return (document.querySelector('.navbar .user + ul > a:first-child') !== null);
 }
 function logged_user_is_admin() { // This is deprecated
 	return (document.querySelector('.navbar .user[user-type="A"]') !== null);
@@ -2483,7 +2478,7 @@ function edit_user(as_modal, user_id) {
 }
 function delete_user(as_modal, user_id) {
 	view_ajax(as_modal, url_api_user(user_id), function(user) {
-		const is_me = (user.id == logged_user_id());
+		const is_me = (user.id == logged_user_id);
 		const title = is_me ? 'Delete account' : 'Delete user ' + user.id;
 		const form = new AjaxForm(title, url_api_user_delete(user.id), 'with-notice');
 		if (is_me) {
@@ -2528,7 +2523,7 @@ function merge_user(as_modal, user_id) {
 }
 function change_user_password(as_modal, user_id) {
 	view_ajax(as_modal, url_api_user(user_id), function(user) {
-		const is_me = (user.id == logged_user_id());
+		const is_me = (user.id == logged_user_id);
 		const title = is_me ? 'Change my password' : 'Change user password';
 		const form = new AjaxForm(title, url_api_user_change_password(user.id));
 		if (!user.capabilities.change_password_without_old_password) {
@@ -2900,7 +2895,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 
 	var tabs = [
 		'All', retab.bind(null, ''),
-		'My', retab.bind(null, '/u' + logged_user_id())
+		'My', retab.bind(null, '/u' + logged_user_id)
 	];
 
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
@@ -3231,12 +3226,12 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 			});
 
 		if (s.owner_id !== null) {
-			tabs.push((s.owner_id == logged_user_id() ? 'My' : "User's") + ' submissions to this problem', function() {
+			tabs.push((s.owner_id == logged_user_id ? 'My' : "User's") + ' submissions to this problem', function() {
 				elem.append($('<div>'));
 				tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + (s.contest_id === null ? '/p' + s.problem_id : '/P' + s.contest_problem_id));
 			});
 
-			if (s.contest_id !== null && s.owner_id != logged_user_id()) {
+			if (s.contest_id !== null && s.owner_id != logged_user_id) {
 				tabs.push("User's submissions to this round", function() {
 					elem.append($('<div>'));
 					tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + '/R' + s.contest_round_id);
@@ -4076,7 +4071,7 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 		if (is_logged_in())
 			tabs.push('My submissions', function() {
 					elem.append($('<div>'));
-					tab_submissions_lister(elem.children().last(), '/p' + problem_id + '/u' + logged_user_id());
+					tab_submissions_lister(elem.children().last(), '/p' + problem_id + '/u' + logged_user_id);
 				});
 
 		if (actions.indexOf('f') !== -1)
@@ -4229,7 +4224,7 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 	];
 
 	if (is_logged_in())
-		tabs.push('My', retab.bind(null, '/u' + logged_user_id()));
+		tabs.push('My', retab.bind(null, '/u' + logged_user_id));
 
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
@@ -5079,7 +5074,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('p') !== -1)
 			tabs.push('My submissions', function() {
-				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + logged_user_id(), false, (actions.indexOf('A') === -1));
+				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + logged_user_id, false, (actions.indexOf('A') === -1));
 			});
 
 		if (actions.indexOf('v') !== -1)
@@ -5529,7 +5524,7 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 
 	// TODO: implement it
 	// if (is_logged_in())
-		// tabs.push('My', retab.bind(null, '/u' + logged_user_id()));
+		// tabs.push('My', retab.bind(null, '/u' + logged_user_id));
 
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
