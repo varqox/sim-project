@@ -187,7 +187,7 @@ void Sim::jobs_handle() {
         jobs_jid = next_arg;
 
         page_template(intentional_unsafe_string_view(concat("Job ", jobs_jid)));
-        append("<script>view_job(false, ", jobs_jid, ", window.location.hash);</script>");
+        append("view_job(false, ", jobs_jid, ", window.location.hash);");
         return;
     }
 
@@ -201,8 +201,8 @@ void Sim::jobs_handle() {
     /* List jobs */
     page_template("Job queue");
 
-    append("<h1>Jobs</h1>"
-           "<script>tab_jobs_lister($('body'));</script>");
+    append("document.body.appendChild(elem_with_text('h1', 'Jobs'));"
+           "tab_jobs_lister($('body'));");
 }
 
 } // namespace web_server::old

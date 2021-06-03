@@ -293,7 +293,7 @@ class Sim final {
     template <class... Args>
     void add_notification(StringView css_classes, Args&&... message) {
         notifications.append(
-            "<pre class=\"", css_classes, "\">", std::forward<Args>(message)..., "</pre>\n");
+            "<pre class=\"", css_classes, "\">", std::forward<Args>(message)..., "</pre>");
     }
 
     template <class... Args>

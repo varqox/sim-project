@@ -93,8 +93,10 @@ http::Response Context::response_404() {
         "404 Not Found", std::move(cookie_changes), content, "text/plain; charset=utf-8");
 }
 
-Response Context::response_ui(StringView title, StringView body) {
+Response Context::response_ui(StringView title, StringView javascript_code) {
     auto resp = response_ok("", "text/html; charset=utf-8");
+    // TODO: merge *_ui_template into one function after getting rid of the old code requiring
+    // split form
     begin_ui_template(
         resp,
         {
@@ -102,7 +104,7 @@ Response Context::response_ui(StringView title, StringView body) {
             .session = session,
             .notifications = "",
         });
-    resp.content.append(body);
+    resp.content.append(javascript_code);
     end_ui_template(resp);
     return resp;
 }

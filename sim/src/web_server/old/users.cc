@@ -189,7 +189,7 @@ void Sim::login() {
 
     page_template("Login");
     // clang-format off
-    append("<div class=\"form-container\">"
+    append("document.body.insertAdjacentHTML('beforeend', `<div class=\"form-container\">"
                "<h1>Log in</h1>"
                "<form method=\"post\">"
                    // Username
@@ -213,7 +213,7 @@ void Sim::login() {
                    "</div>"
                    "<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
                "</form>"
-           "</div>");
+           "</div>`);");
     // clang-format on
 }
 
@@ -290,7 +290,7 @@ void Sim::sign_up() {
 
     page_template("Sign up");
     // clang-format off
-    append("<div class=\"form-container\">"
+    append("document.body.insertAdjacentHTML('beforeend', `<div class=\"form-container\">"
                "<h1>Sign up</h1>"
                "<form method=\"post\">"
                    // Username
@@ -341,7 +341,7 @@ void Sim::sign_up() {
                    "<input class=\"btn blue\" type=\"submit\" "
                           "value=\"Sign up\">"
                "</form>"
-           "</div>");
+           "</div>`);");
     // clang-format on
 }
 
@@ -355,7 +355,7 @@ void Sim::users_handle() {
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg == "add") { // Add user
         page_template("Add user");
-        append("<script>add_user(false);</script>");
+        append("add_user(false);");
 
     } else if (auto uid = str2num<decltype(users_uid)>(next_arg)) { // View user
         users_uid = *uid;
@@ -363,7 +363,7 @@ void Sim::users_handle() {
 
     } else if (next_arg.empty()) { // List users
         page_template("Users");
-        append("<script>user_chooser(false, window.location.hash);</script>");
+        append("user_chooser(false, window.location.hash);");
 
     } else {
         return error404();
@@ -376,24 +376,24 @@ void Sim::users_user() {
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg.empty()) {
         page_template(intentional_unsafe_string_view(concat("User ", users_uid)));
-        append("<script>view_user(false, ", users_uid, ", window.location.hash);</script>");
+        append("view_user(false, ", users_uid, ", window.location.hash);");
 
     } else if (next_arg == "edit") {
         page_template(intentional_unsafe_string_view(concat("Edit user ", users_uid)));
-        append("<script>edit_user(false, ", users_uid, ");</script>");
+        append("edit_user(false, ", users_uid, ");");
 
     } else if (next_arg == "delete") {
         page_template(intentional_unsafe_string_view(concat("Delete user ", users_uid)));
-        append("<script>delete_user(false, ", users_uid, ");</script>");
+        append("delete_user(false, ", users_uid, ");");
 
     } else if (next_arg == "merge") {
         page_template(intentional_unsafe_string_view(concat("Merge user ", users_uid)));
-        append("<script>merge_user(false, ", users_uid, ");</script>");
+        append("merge_user(false, ", users_uid, ");");
 
     } else if (next_arg == "change-password") {
         page_template(
             intentional_unsafe_string_view(concat("Change password of the user ", users_uid)));
-        append("<script>change_user_password(false, ", users_uid, ");</script>");
+        append("change_user_password(false, ", users_uid, ");");
 
     } else {
         return error404();

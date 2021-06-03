@@ -59,7 +59,7 @@ struct Context {
 
     http::Response response_404();
 
-    http::Response response_ui(StringView title, StringView body);
+    http::Response response_ui(StringView title, StringView javascript_code);
 };
 
 } // namespace web_server::web_worker

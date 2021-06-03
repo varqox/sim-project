@@ -23,6 +23,11 @@ function elem_with_class_and_text(tag, classes, text) {
 	elem.className = classes;
 	return elem;
 }
+function elem_with_id(tag, id) {
+	const elem = document.createElement(tag);
+	elem.id = id;
+	return elem;
+}
 function elem_of(tag, ...args) {
 	const elem = document.createElement(tag);
 	elem.append(...args);
@@ -74,54 +79,36 @@ function remove_children(elem) {
 }
 
 /* ============================ URLs ============================ */
-function url_enter_contest(contest_entry_token) {
-	return '/enter_contest/' + contest_entry_token;
-}
-function url_api_contest_entry_tokens_view(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens';
-}
-function url_api_contest_entry_tokens_add(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/add';
-}
-function url_api_contest_entry_tokens_regen(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/regen';
-}
-function url_api_contest_entry_tokens_delete(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/delete';
-}
-function url_api_contest_entry_tokens_add_short(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/add_short';
-}
-function url_api_contest_entry_tokens_regen_short(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/regen_short';
-}
-function url_api_contest_entry_tokens_delete_short(contest_id) {
-	return '/api/contest/' + contest_id + '/entry_tokens/delete_short';
-}
-function url_api_contest_name_for_contest_entry_token(contest_entry_token) {
-	return '/api/contest_entry_token/' + contest_entry_token + '/contest_name';
-}
-function url_api_use_contest_entry_token(contest_entry_token) {
-	return '/api/contest_entry_token/' + contest_entry_token + '/use';
-}
-function url_api_user(user_id) {
-	return '/api/user/' + user_id;
-}
-function url_api_user_change_password(user_id) {
-	return '/api/user/' + user_id + '/change-password';
-}
-function url_api_user_delete(user_id) {
-	return '/api/user/' + user_id + '/delete';
-}
-function url_api_user_edit(user_id) {
-	return '/api/user/' + user_id + '/edit';
-}
-function url_api_user_merge_into_another(user_id) {
-	return '/api/user/' + user_id + '/merge_into_another';
-}
-function url_api_users(query_suffix) {
-	return '/api/users' + query_suffix;
-}
+function url_api_contest_entry_tokens_add(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add'; }
+function url_api_contest_entry_tokens_add_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add_short'; }
+function url_api_contest_entry_tokens_delete(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete'; }
+function url_api_contest_entry_tokens_delete_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete_short'; }
+function url_api_contest_entry_tokens_regen(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regen'; }
+function url_api_contest_entry_tokens_regen_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regen_short'; }
+function url_api_contest_entry_tokens_view(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens'; }
+function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/contest_name'; }
+function url_api_use_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/use'; }
+function url_api_user(user_id) { return '/api/user/' + user_id; }
+function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change-password'; }
+function url_api_user_delete(user_id) { return '/api/user/' + user_id + '/delete'; }
+function url_api_user_edit(user_id) { return '/api/user/' + user_id + '/edit'; }
+function url_api_user_merge_into_another(user_id) { return '/api/user/' + user_id + '/merge_into_another'; }
+function url_api_users(query_suffix) { return '/api/users' + query_suffix; }
+function url_contests() { return '/c'; }
+function url_enter_contest(contest_entry_token) { return '/enter_contest/' + contest_entry_token; }
+function url_jobs() { return '/jobs'; }
+function url_log_in() { return '/login'; }
+function url_log_out() { return '/logout'; }
+function url_logs() { return '/logs'; }
+function url_main_page() { return '/'; }
+function url_problems() { return '/p'; }
+function url_sign_up() { return '/signup'; }
+function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
+function url_submissions() { return '/s'; }
+function url_user(user_id) { return '/u/' + user_id; }
+function url_user_change_password(user_id) { return '/u/' + user_id + '/change-password'; }
+function url_user_edit(user_id) { return '/u/' + user_id + '/edit'; }
+function url_users() { return '/u'; }
 
 /* ================================= Humanize ================================= */
 
@@ -195,7 +182,8 @@ function humanize_file_size(size) {
 
 /* ================================= Ajax ================================= */
 
-/* Default values in init: {
+/**
+ * Default values in init: {
  *      body: null,
  *      timeout: 0, // no timeout
  *      show_upload_progress: false,
@@ -620,6 +608,100 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 function is_logged_in() {
 	return logged_user_id != null;
 }
+
+function sim_template(capabilities, server_response_end_ts) {
+	const navbar = elem_with_class('div', 'navbar');
+	navbar.appendChild(elem_with_class_and_text('a', 'brand', 'Sim beta')).href = url_main_page();
+	if (capabilities.contests) {
+		// TODO: this requires jQuery
+		$(navbar).append(a_view_button(url_contests(), 'Contests', undefined, contest_chooser));
+	}
+	if (capabilities.problems) {
+		navbar.appendChild(elem_with_text('a', 'Problems')).href = url_problems();
+	}
+	if (capabilities.users) {
+		navbar.appendChild(elem_with_text('a', 'Users')).href = url_users();
+	}
+	if (capabilities.submissions) {
+		navbar.appendChild(elem_with_text('a', 'Submissions')).href = url_submissions();
+	}
+	if (capabilities.jobs) {
+		navbar.appendChild(elem_with_text('a', 'Jobs')).href = url_jobs();
+	}
+	if (capabilities.logs) {
+		navbar.appendChild(elem_with_text('a', 'Logs')).href = url_logs();
+	}
+
+	// TODO: manage server_response_end_ts with history
+
+	// Initialize window.current_server_time
+	const entries = window.performance.getEntriesByType('navigation');
+	if (entries.length == 0) {
+		// For Safari and other unsupporting browsers...
+		const offset = server_response_end_ts - window.performance.timing.responseStart;
+		window.current_server_time = () => {
+			const time = new Date();
+			time.setTime(time.getTime() + offset);
+			return time;
+		};
+	} else {
+		const offset = server_response_end_ts - entries[0].responseStart;
+		window.current_server_time = () => {
+			const time = new Date();
+			time.setTime(Math.floor(offset + performance.now())); // floor() in order not to never report slightly future time
+			return time;
+		};
+	}
+
+	// Clock
+	const clock = elem_with_id('time', 'clock');
+	const update_clock = () => {
+		const server_time = current_server_time();
+		let h = server_time.getHours();
+		let m = server_time.getMinutes();
+		let s = server_time.getSeconds();
+		h = (h < 10 ? '0' : '') + h;
+		m = (m < 10 ? '0' : '') + m;
+		s = (s < 10 ? '0' : '') + s;
+		const tzo = -server_time.getTimezoneOffset();
+		remove_children(clock);
+		clock.append(h, ':', m, ':', s, elem_with_text('sup', 'UTC' + (tzo >= 0 ? '+' : '') + tzo / 60));
+		setTimeout(update_clock, 1000 - server_time.getMilliseconds());
+	};
+	update_clock();
+	navbar.appendChild(clock);
+
+	if (is_logged_in()) {
+		const dropdown_menu = navbar.appendChild(elem_with_class('div', 'dropmenu down'));
+		const toggler = dropdown_menu.appendChild(elem_with_class('a', 'user dropmenu-toggle'));
+		toggler.appendChild(elem_with_text('strong', logged_user_username));
+
+		const ul = dropdown_menu.appendChild(document.createElement('ul'));
+		ul.appendChild(elem_with_text('a', 'My profile')).href = url_user(logged_user_id);
+		ul.appendChild(elem_with_text('a', 'Edit profile')).href = url_user_edit(logged_user_id);
+		ul.appendChild(elem_with_text('a', 'Change password')).href = url_user_change_password(logged_user_id);
+		ul.appendChild(elem_with_text('a', 'Log out')).href = url_log_out(logged_user_id);
+	} else {
+		navbar.appendChild(elem_of('a', elem_with_text('strong', 'Log in'))).href = url_log_in();
+		navbar.appendChild(elem_with_text('a', 'Sign up')).href = url_sign_up();
+	}
+
+	document.body.appendChild(navbar);
+}
+
+function main_page() {
+	const img = document.createElement('img');
+	img.src = url_sim_logo_img();
+	img.width = 260;
+	img.height = 336;
+	img.alt = '';
+
+	const welcome_p = elem_with_text('p', 'Welcome to Sim');
+	welcome_p.style.fontSize = '30px'
+
+	document.body.appendChild(elem_of('center', img, welcome_p, document.createElement('hr'), elem_with_text('p', 'Sim is an open source platform for carrying out algorithmic contests')));
+}
+
 ////////////////////////// The above code has gone through refactor //////////////////////////
 
 function text_to_safe_html(str) { // This is deprecated because DOM elements have innerText property (see elem_with_text() function)
@@ -628,10 +710,10 @@ function text_to_safe_html(str) { // This is deprecated because DOM elements hav
 	return x.innerHTML;
 }
 function logged_user_is_admin() { // This is deprecated
-	return (document.querySelector('.navbar .user[user-type="A"]') !== null);
+	return logged_user_type == 'admin';
 }
 function logged_user_is_teacher() { // This is deprecated
-	return (document.querySelector('.navbar .user[user-type="T"]') !== null);
+	return logged_user_type == 'teacher';
 }
 function logged_user_is_teacher_or_admin() { // This is deprecated
 	return logged_user_is_teacher() || logged_user_is_admin();
@@ -647,15 +729,6 @@ function copy_to_clipboard(get_text_to_copy) {
 	elem.select();
 	document.execCommand('copy');
 	elem.remove();
-}
-// Calculates the actual server time
-function server_time() {
-	if (server_time.time_difference === undefined)
-		server_time.time_difference = window.performance.timing.responseStart - start_time;
-
-	var time = new Date();
-	time.setTime(time.getTime() - server_time.time_difference);
-	return time;
 }
 // Returns value of cookie @p name or empty string
 function get_cookie(name) {
@@ -830,7 +903,7 @@ function infdatetime_to(elem, infdt, neg_inf_text, inf_text) {
 function countdown_clock(target_date) {
 	var span = $('<span>');
 	var update_countdown = function() {
-		var diff = target_date - server_time();
+		var diff = target_date - current_server_time();
 		if (!$.contains(document.documentElement, span[0]))
 			return;
 
@@ -977,13 +1050,6 @@ var History = {};
 		History.deferUntilFullyUpdated(function() {
 			History.waiting_for_popstate = true;
 			window.history.back();
-		});
-	}
-
-	History.forth = function(egid, new_location) {
-		History.deferUntilFullyUpdated(function() {
-			History.waiting_for_popstate = true;
-			window.history.go(1);
 		});
 	}
 

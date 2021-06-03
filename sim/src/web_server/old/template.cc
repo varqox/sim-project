@@ -43,11 +43,11 @@ void Sim::error_page_template(StringView status, StringView code, StringView mes
 
     page_template(status);
     // clang-format off
-    append("<center>"
+    append("document.body.insertAdjacentHTML('beforeend', `<center>"
            "<h1 style=\"font-size:25px;font-weight:normal;\">",
               code, " &mdash; ", message, "</h1>"
            "<a class=\"btn\" href=\"", prev, "\">Go back</a>"
-           "</center>");
+           "</center>`);");
     // clang-format on
 }
 

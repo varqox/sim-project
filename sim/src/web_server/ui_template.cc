@@ -2,6 +2,7 @@
 #include "sim/sessions/session.hh"
 #include "sim/users/user.hh"
 #include "simlib/file_info.hh"
+#include "simlib/string_transform.hh"
 #include "simlib/string_view.hh"
 #include "src/web_server/capabilities/contests.hh"
 #include "src/web_server/capabilities/jobs.hh"
@@ -75,104 +76,30 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
                 "<script>",
                     "const logged_user_id = ",
                         params.session ? to_string(params.session->user_id) : StaticCStringBuff{"null"}, ";"
+                    "const logged_user_type = ", params.session ? params.session->user_type.to_enum().to_quoted_str() : "null", ";"
+                    "const logged_user_username = ", params.session ? json_stringify(params.session->username) : "null", ";"
                 "</script>"
                 "<script src=\"/kit/jquery.js?",
                     get_hash_of<JQUERY_JS>(), "\"></script>"
                 "<script src=\"/kit/scripts.js?",
                     get_hash_of<SCRIPTS_JS>(), "\"></script>"
                 "<link rel=\"shortcut icon\" type=\"image/png\" "
-                      "href=\"/kit/img/favicon.png\"/>");
-    // clang-format on
-
-    resp.content.append("</head><body><div class=\"navbar\">"
-                        "<a href=\"/\" class=\"brand\">Sim beta</a>");
-
-    if (capabilities::contests_for(params.session).web_ui_view) {
-        // clang-format off
-        resp.content.append("<script>"
-                "var nav = document.querySelector('.navbar');"
-                "nav.appendChild(a_view_button('/c', 'Contests', undefined, contest_chooser));"
-                "nav.querySelector('script').remove()"
-            "</script>");
-        // clang-format on
-    }
-    if (capabilities::problems_for(params.session).web_ui_view) {
-        resp.content.append("<a href=\"/p\">Problems</a>");
-    }
-    if (capabilities::users_for(params.session).web_ui_view) {
-        resp.content.append("<a href=\"/u\">Users</a>");
-    }
-    if (capabilities::submissions_for(params.session).web_ui_view) {
-        resp.content.append("<a href=\"/s\">Submissions</a>");
-    }
-    if (capabilities::jobs_for(params.session).web_ui_view) {
-        resp.content.append("<a href=\"/jobs\">Job queue</a>");
-    }
-    if (capabilities::logs_for(params.session).view) {
-        resp.content.append("<a href=\"/logs\">Logs</a>");
-    }
-
-    resp.content.append("<time id=\"clock\">", date("%H:%M:%S"), "<sup>UTC</sup></time>");
-
-    if (params.session) {
-        char utype_c = [&] {
-            switch (params.session->user_type) {
-            case User::Type::NORMAL: return 'N';
-            case User::Type::TEACHER: return 'T';
-            case User::Type::ADMIN: return 'A';
-            }
-            __builtin_unreachable();
-        }();
-        // clang-format off
-        resp.content.append("<div class=\"dropmenu down\">"
-                "<a class=\"user dropmenu-toggle\" user-type=\"", utype_c, "\">"
-                    "<strong>", html_escape(params.session->username), "</strong>"
-                "</a>"
-                "<ul>"
-                    "<a href=\"/u/", params.session->user_id, "\">My profile</a>"
-                    "<a href=\"/u/", params.session->user_id, "/edit\">"
-                        "Edit profile</a>"
-                    "<a href=\"/u/", params.session->user_id, "/change-password\">"
-                        "Change password</a>"
-                    "<a href=\"/logout\">Logout</a>"
-                "</ul>"
-                "</div>");
-        // clang-format on
-    } else {
-        resp.content.append("<a href=\"/login\"><strong>Log in</strong></a>"
-                            "<a href=\"/signup\">Sign up</a>");
-    }
-
-    // clang-format off
-    resp.content.append("</div>"
-           "<div class=\"notifications\">", params.notifications, "</div>");
+                      "href=\"/kit/img/favicon.png\"/>"
+            "</head>"
+        "<body>"
+            "<script>"
+                "sim_template({"
+                    "contests:", capabilities::contests_for(params.session).web_ui_view, ","
+                    "jobs:", capabilities::jobs_for(params.session).web_ui_view, ","
+                    "logs:", capabilities::logs_for(params.session).view, ","
+                    "problems:", capabilities::problems_for(params.session).web_ui_view, ","
+                    "submissions:", capabilities::submissions_for(params.session).web_ui_view, ","
+                    "users:", capabilities::users_for(params.session).web_ui_view, ","
+                "},", microtime() / 1000, ");"
+                "document.body.appendChild(elem_with_class('div', 'notifications')).innerHTML = '", params.notifications, "';");
     // clang-format on
 }
 
-void end_ui_template(Response& resp) {
-    // clang-format off
-    resp.content.append("<script>"
-            "var start_time=", microtime() / 1000, ";"
-            "function update_clock() {"
-                "var t = new Date();"
-                "t.setTime(t.getTime() -"
-                             "window.performance.timing.responseStart +"
-                             "start_time);"
-                "var h = t.getHours();"
-                "var m = t.getMinutes();"
-                "var s = t.getSeconds();"
-                "h = (h < 10 ? '0' : '') + h;"
-                "m = (m < 10 ? '0' : '') + m;"
-                "s = (s < 10 ? '0' : '') + s;"
-               // Update the displayed time
-                "var tzo = -t.getTimezoneOffset();"
-                "document.getElementById('clock').innerHTML = "
-                   "String().concat(h, ':', m, ':', s, '<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>');"
-                "setTimeout(update_clock, 1000 - t.getMilliseconds());"
-            "}"
-            "update_clock();"
-        "</script></body></html>");
-    // clang-format on
-}
+void end_ui_template(Response& resp) { resp.content.append("</script></body></html>"); }
 
 } // namespace web_server

@@ -98,6 +98,9 @@ http::Response Sim::handle(http::Request req) {
                 } else if (next_arg == "p") {
                     problems_handle();
 
+                } else if (next_arg == "contest_file") {
+                    contest_file_handle();
+
                 } else if (next_arg == "login") {
                     login();
 
@@ -164,14 +167,7 @@ void Sim::main_page() {
     STACK_UNWINDING_MARK;
 
     page_template("Main page");
-    append("<div style=\"text-align: center\">"
-           "<img src=\"/kit/img/sim-logo.png\" width=\"260\" height=\"336\" "
-           "alt=\"\">"
-           "<p style=\"font-size: 30px\">Welcome to Sim</p>"
-           "<hr>"
-           "<p>Sim is an open source platform for carrying out algorithmic "
-           "contests</p>"
-           "</div>");
+    append("main_page();");
 }
 
 void Sim::static_file() {
@@ -225,7 +221,7 @@ void Sim::view_logs() {
 
     page_template("Logs");
 
-    append("<script>tab_logs_view($('body'))</script>");
+    append("tab_logs_view($('body'));");
 }
 
 } // namespace web_server::old

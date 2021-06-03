@@ -80,14 +80,12 @@ void Sim::submissions_handle() {
     StringView next_arg = url_args.extract_next_arg();
     if (is_digit(next_arg)) { // View submission
         page_template(intentional_unsafe_string_view(concat("Submission ", next_arg)));
-        append(
-            "<script>view_submission(false, ", next_arg, ", window.location.hash);</script>");
+        append("view_submission(false, ", next_arg, ", window.location.hash);");
 
     } else if (next_arg.empty()) { // List submissions
         page_template("Submissions");
         // clang-format off
-        append("<h1>Submissions</h1>"
-               "<script>"
+        append("document.body.appendChild(elem_with_text('h1', 'Submissions'));"
                "$(document).ready(function(){"
                    "var main = $('body');"
                    "var tabs = [];"
@@ -101,12 +99,12 @@ void Sim::submissions_handle() {
                        "tabs.push('My submissions', function() {"
                            "main.children('.tabmenu + div, .loader,.loader-info').remove();"
                            "tab_submissions_lister($('<div>').appendTo(main),"
-                               "'/u' + logged_user_id());"
+                               "'/u' + logged_user_id);"
                        "});"
                    "}"
                    "tabmenu(function(x) { x.appendTo(main); }, tabs);"
                "});"
-               "</script>");
+        );
         // clang-format on
 
     } else {

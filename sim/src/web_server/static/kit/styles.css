@@ -630,8 +630,6 @@ table {
 	max-height: 0;
 	overflow: hidden;
 	transition: max-height 0.05s ease-out, opacity 0.05s ease-out;
-	/* TODO: remove the below line */
-	/*transition: max-height 0.5s ease-out, opacity 0.5s ease-out;*/
 	/* triggering and setting target values are done in JS */
 }
 .fade-in-slide-down.cancel-delay {

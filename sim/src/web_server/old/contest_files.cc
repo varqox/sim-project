@@ -14,16 +14,12 @@ void Sim::contest_file_handle() {
     if (next_arg == "edit") {
         page_template(
             intentional_unsafe_string_view(concat("Edit contest file ", contest_file_id)));
-        append(
-            "<script>edit_contest_file(false, '", contest_file_id,
-            "', window.location.hash);</script>");
+        append("edit_contest_file(false, '", contest_file_id, "', window.location.hash);");
 
     } else if (next_arg == "delete") {
         page_template(
             intentional_unsafe_string_view(concat("Delete contest file ", contest_file_id)));
-        append(
-            "<script>delete_contest_file(false, '", contest_file_id,
-            "', window.location.hash);</script>");
+        append("delete_contest_file(false, '", contest_file_id, "', window.location.hash);");
 
     } else {
         error404();
