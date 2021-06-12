@@ -193,8 +193,8 @@ public:
                             str2num<int8_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{u8}") {
                     using NextComponent =
@@ -202,8 +202,8 @@ public:
                             str2num<uint8_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{i16}") {
                     using NextComponent =
@@ -211,8 +211,8 @@ public:
                             str2num<int16_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{u16}") {
                     using NextComponent =
@@ -220,8 +220,8 @@ public:
                             str2num<uint16_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{i32}") {
                     using NextComponent =
@@ -229,8 +229,8 @@ public:
                             str2num<int32_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{u32}") {
                     using NextComponent =
@@ -238,8 +238,8 @@ public:
                             str2num<uint32_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{i64}") {
                     using NextComponent =
@@ -247,8 +247,8 @@ public:
                             str2num<int64_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{u64}") {
                     using NextComponent =
@@ -256,15 +256,15 @@ public:
                             str2num<uint64_t>)>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{string}") {
                     using NextComponent = VariableComponent<str_component_parser>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx, CustomParsers...>();
                 } else if constexpr (component == "{custom}") {
                     static_assert(
@@ -273,8 +273,8 @@ public:
                         VariableComponent<get_arg<cp_idx, CustomParsers...>()>;
                     return parse_url<
                         url, new_url_idx,
-                        decltype(
-                            tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        decltype(tuple_cat(
+                            ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
                         cp_idx + 1, CustomParsers...>();
                 } else {
                     static_assert(
