@@ -95,8 +95,8 @@ public:
         for (auto const& user : new_table_) {
             if (user.main_ids.size() > 1 or user.other_ids.size() > 1) {
                 decltype(sim::submissions::Submission::problem_id) problem_id = 0;
-                mysql::Optional<decltype(
-                    sim::submissions::Submission::contest_problem_id)::value_type>
+                mysql::Optional<
+                    decltype(sim::submissions::Submission::contest_problem_id)::value_type>
                     contest_problem_id;
 
                 auto stmt = conn.prepare("SELECT problem_id, contest_problem_id "

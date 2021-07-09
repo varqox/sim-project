@@ -27,11 +27,11 @@ class ContestEntryTokensMerger
         STACK_UNWINDING_MARK;
 
         sim::contest_entry_tokens::ContestEntryToken cet;
-        mysql::Optional<decltype(
-            sim::contest_entry_tokens::ContestEntryToken::short_token)::value_type>
+        mysql::Optional<
+            decltype(sim::contest_entry_tokens::ContestEntryToken::short_token)::value_type>
             m_short_token;
-        mysql::Optional<decltype(
-            sim::contest_entry_tokens::ContestEntryToken::short_token_expiration)::value_type>
+        mysql::Optional<decltype(sim::contest_entry_tokens::ContestEntryToken::
+                                     short_token_expiration)::value_type>
             m_short_token_expiration;
         auto stmt = conn.prepare(
             "SELECT token, contest_id, short_token,"
@@ -70,8 +70,9 @@ class ContestEntryTokensMerger
     }
 
     decltype(sim::contest_entry_tokens::ContestEntryToken::token)
-    pre_merge_record_id_to_post_merge_record_id(const decltype(
-        sim::contest_entry_tokens::ContestEntryToken::token)& record_id) override {
+    pre_merge_record_id_to_post_merge_record_id(
+        const decltype(sim::contest_entry_tokens::ContestEntryToken::token)& record_id)
+        override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_tokens_.emplace(new_id).second) {

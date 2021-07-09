@@ -660,8 +660,8 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
         request.form_fields.contains("rejudge_transferred_submissions");
     form_validate_not_blank(
         target_problem_id, "target_problem", "Target problem ID",
-        is_digit_not_greater_than<std::numeric_limits<decltype(
-            sim::jobs::MergeProblemsInfo::target_problem_id)>::max()>);
+        is_digit_not_greater_than<std::numeric_limits<
+            decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>::max()>);
 
     if (notifications.size) {
         return api_error400(notifications);
