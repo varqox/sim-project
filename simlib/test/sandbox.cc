@@ -199,13 +199,12 @@ public:
     }
 
     void test_8() {
-        // Testing the use of readlink() as the marking of the end of
-        // initialization of glibc
+        // Testing uname
         compile_test_case("8.c", "-m32");
         auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
-        EXPECT_EQ(es.si.code, CLD_KILLED);
-        EXPECT_EQ(es.si.status, SIGKILL);
-        EXPECT_EQ(es.message, concat_tostr("forbidden syscall: uname"));
+        EXPECT_EQ(es.si.code, CLD_EXITED);
+        EXPECT_EQ(es.si.status, 0);
+        EXPECT_EQ(es.message, "");
         EXPECT_LT(0s, es.cpu_runtime);
         EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
         EXPECT_LT(0s, es.runtime);
@@ -215,9 +214,9 @@ public:
 
         compile_test_case("8.c", "-m64");
         es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
-        EXPECT_EQ(es.si.code, CLD_KILLED);
-        EXPECT_EQ(es.si.status, SIGKILL);
-        EXPECT_EQ(es.message, concat_tostr("forbidden syscall: uname"));
+        EXPECT_EQ(es.si.code, CLD_EXITED);
+        EXPECT_EQ(es.si.status, 0);
+        EXPECT_EQ(es.message, "");
         EXPECT_LT(0s, es.cpu_runtime);
         EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
         EXPECT_LT(0s, es.runtime);
@@ -227,11 +226,12 @@ public:
     }
 
     void test_9() {
+        // Testing set_thread_area
         compile_test_case("9.c", "-m32");
         auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
-        EXPECT_EQ(es.si.code, CLD_KILLED);
-        EXPECT_EQ(es.si.status, SIGKILL);
-        EXPECT_EQ(es.message, concat_tostr("forbidden syscall: set_thread_area"));
+        EXPECT_EQ(es.si.code, CLD_EXITED);
+        EXPECT_EQ(es.si.status, 0);
+        EXPECT_EQ(es.message, "");
         EXPECT_LT(0s, es.cpu_runtime);
         EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
         EXPECT_LT(0s, es.runtime);
@@ -241,9 +241,9 @@ public:
 
         compile_test_case("9.c", "-m64");
         es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
-        EXPECT_EQ(es.si.code, CLD_KILLED);
-        EXPECT_EQ(es.si.status, SIGKILL);
-        EXPECT_EQ(es.message, concat_tostr("forbidden syscall: set_thread_area"));
+        EXPECT_EQ(es.si.code, CLD_EXITED);
+        EXPECT_EQ(es.si.status, 0);
+        EXPECT_EQ(es.message, "");
         EXPECT_LT(0s, es.cpu_runtime);
         EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
         EXPECT_LT(0s, es.runtime);
@@ -253,14 +253,14 @@ public:
     }
 
     void test_10() {
-
+        // Testing arch_prctl
         if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)) {
             compile_test_case("10.c", "-m32");
 
             auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
-            EXPECT_EQ(es.si.code, CLD_KILLED);
-            EXPECT_EQ(es.si.status, SIGKILL);
-            EXPECT_EQ(es.message, concat_tostr("forbidden syscall: arch_prctl"));
+            EXPECT_EQ(es.si.code, CLD_EXITED);
+            EXPECT_EQ(es.si.status, 0);
+            EXPECT_EQ(es.message, "");
             EXPECT_LT(0s, es.cpu_runtime);
             EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
             EXPECT_LT(0s, es.runtime);
@@ -271,9 +271,9 @@ public:
 
         compile_test_case("10.c", "-m64");
         auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
-        EXPECT_EQ(es.si.code, CLD_KILLED);
-        EXPECT_EQ(es.si.status, SIGKILL);
-        EXPECT_EQ(es.message, concat_tostr("forbidden syscall: arch_prctl"));
+        EXPECT_EQ(es.si.code, CLD_EXITED);
+        EXPECT_EQ(es.si.status, 0);
+        EXPECT_EQ(es.message, "");
         EXPECT_LT(0s, es.cpu_runtime);
         EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
         EXPECT_LT(0s, es.runtime);

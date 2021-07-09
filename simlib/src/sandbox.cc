@@ -392,77 +392,14 @@ Sandbox::Sandbox() {
     seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(stat), 0);
     // statx
     seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(statx), 0);
-
-    // readlink(2) is a threshold for the insecure syscalls that are called
-    // during the initialization of glibc - they are allwed before the first
-    // call of readlink(2)
-    {
-        // uname
-        seccomp_rule_add_both_ctx(
-            SCMP_ACT_TRACE(add_callback(
-                [&] {
-                    if (has_the_readlink_syscall_occurred)
-                        return set_message_callback("forbidden syscall: uname");
-
-                    return false;
-                },
-                "uname")),
-            SCMP_SYS(uname), 0);
-
-        // set_thread_area
-        seccomp_rule_add_both_ctx(
-            SCMP_ACT_TRACE(add_callback(
-                [&] {
-                    if (has_the_readlink_syscall_occurred)
-                        return set_message_callback("forbidden syscall: set_thread_area");
-
-                    return false;
-                },
-                "set_thread_area")),
-            SCMP_SYS(set_thread_area), 0);
-
-        // arch_prctl
-        seccomp_rule_add_both_ctx(
-            SCMP_ACT_TRACE(add_callback(
-                [&] {
-                    if (has_the_readlink_syscall_occurred)
-                        return set_message_callback("forbidden syscall: arch_prctl");
-
-                    return false;
-                },
-                "arch_prctl")),
-            SCMP_SYS(arch_prctl), 0);
-
-        // readlink - x86
-        seccomp_rule_add_throw(
-            x86_ctx_,
-            SCMP_ACT_TRACE(add_callback(
-                [&] {
-                    has_the_readlink_syscall_occurred = true;
-                    X86SyscallRegisters regs(tracee_pid_);
-                    regs.syscall() = -1;
-                    regs.res() = -ENOENT;
-                    regs.set_regs(tracee_pid_);
-                    return false;
-                },
-                "readlink")),
-            SCMP_SYS(readlink), 0);
-
-        // readlink - x86_64
-        seccomp_rule_add_throw(
-            x86_64_ctx_,
-            SCMP_ACT_TRACE(add_callback(
-                [&] {
-                    has_the_readlink_syscall_occurred = true;
-                    X86_64SyscallRegisters regs(tracee_pid_);
-                    regs.syscall() = -1;
-                    regs.res() = -ENOENT;
-                    regs.set_regs(tracee_pid_);
-                    return false;
-                },
-                "readlink")),
-            SCMP_SYS(readlink), 0);
-    }
+    // uname
+    seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(uname), 0);
+    // set_thread_area
+    seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(set_thread_area), 0);
+    // arch_prctl
+    seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(arch_prctl), 0);
+    // readlink
+    seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(readlink), 0);
 
     // Monitor memory for changes of tracee's virtual memory size
     {
@@ -836,7 +773,6 @@ Sandbox::ExitStat Sandbox::run(
 
     // Reset the state
     reset_callbacks();
-    has_the_readlink_syscall_occurred = false;
     tracee_vm_peak_ = 0;
     message_to_set_in_exit_stat_.clear();
     allowed_files_ = &allowed_files;
@@ -1352,20 +1288,6 @@ Sandbox::ExitStat Sandbox::run(
     }
 
 tracee_died:
-    // tracee_vm_peak_ == 0 means that the process did not execve(2)
-    if (not has_the_readlink_syscall_occurred and tracee_vm_peak_ > 0) {
-        bool tle =
-            (si.si_code == CLD_KILLED and si.si_status == SIGKILL and
-             ((opts.real_time_limit.has_value() and runtime >= opts.real_time_limit.value()) or
-              (opts.cpu_time_limit.has_value() and
-               cpu_runtime >= opts.cpu_time_limit.value())));
-        if (not tle) {
-            THROW("The sandbox is somewhat insecure - readlink() as the mark of"
-                  " the end of the initialization of glibc in the traced process"
-                  " is not reliable now");
-        }
-    }
-
     // Message was set
     if (not message_to_set_in_exit_stat_.empty()) {
         return ExitStat(
