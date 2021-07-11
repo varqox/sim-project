@@ -17,6 +17,7 @@
 #include "src/sim_merger/problem_tags.hh"
 #include "src/sim_merger/problems.hh"
 #include "src/sim_merger/sessions.hh"
+#include "src/sim_merger/sim_merger.hh"
 #include "src/sim_merger/submissions.hh"
 #include "src/sim_merger/users.hh"
 
@@ -163,20 +164,14 @@ static int true_main(int argc, char** argv) {
     }
 
     // Stop server and job server
-    // TODO: what about bin/manage???
-    kill_processes_by_exec(
-        {concat_tostr(main_sim_build, "sim-server"),
-         concat_tostr(main_sim_build, "job-server")});
+    Spawner::run(concat(main_sim_build, "manage"), {"manage", "stop"});
     Defer servers_restorer([] {
         try {
             stdlog("Restoring servers");
         } catch (...) {
         }
 
-        Spawner::run(
-            "sh", {"sh", "-c", concat_tostr('"', main_sim_build, "sim-server\"& disown")});
-        Spawner::run(
-            "sh", {"sh", "-c", concat_tostr('"', main_sim_build, "job-server\"& disown")});
+        Spawner::run(concat(main_sim_build, "manage"), {"manage", "start", "-b"});
     });
 
     STACK_UNWINDING_MARK;
