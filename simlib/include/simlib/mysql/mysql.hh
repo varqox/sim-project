@@ -374,7 +374,7 @@ private:
         auto len = std::char_traits<char>::length(str);
         clear_bind(idx);
         binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
-        binds_[idx].buffer = str;
+        binds_[idx].buffer = (len == 0 ? const_cast<char*>("") : str);
         binds_[idx].buffer_length = len;
         binds_[idx].length = nullptr;
         binds_[idx].length_value = len;
@@ -385,7 +385,7 @@ public:
         DEBUG_MYSQL(throw_assert(idx < binds_size_);)
         clear_bind(idx);
         binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
-        binds_[idx].buffer = str.data();
+        binds_[idx].buffer = (str.size() == 0 ? const_cast<char*>("") : str.data());
         binds_[idx].buffer_length = str.size();
         binds_[idx].length = nullptr;
         binds_[idx].length_value = str.size();
