@@ -223,7 +223,7 @@ public:
 };
 
 class ConverTestCaseRunner {
-    static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT{5};
+    static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT{30};
     static constexpr size_t COMPILATION_ERRORS_MAX_LENGTH = 4096;
 
     const string& tests_dir_;
