@@ -1,5 +1,9 @@
 #pragma once
 
-#include <simlib/mysql.hh>
+#include "simlib/mysql/mysql.hh"
 
-extern thread_local MySQL::Connection mysql;
+namespace job_server {
+
+extern thread_local mysql::Connection mysql;
+
+} // namespace job_server

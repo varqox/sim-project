@@ -5,15 +5,12 @@ import sys
 
 def sim_sources(srcdir):
     return list(filter_subdirs(srcdir, [
+        'include/',
         'src/',
-        'src/include/sim/',
-        'src/job_server/',
-        'src/job_server/job_handlers/',
-        'src/lib/',
-        'src/sim_merger/',
-        'src/web_interface/',
-        'test/'
+        'test/',
     ], ['c', 'cc', 'h', 'hh'], [
+        'src/web_server/static/.*',
+        'test/sim/cpp_syntax_highlighter_test_cases/.*',
     ]))
 
 if __name__ == '__main__':

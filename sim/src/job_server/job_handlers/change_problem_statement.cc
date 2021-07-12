@@ -1,105 +1,100 @@
-#include "change_problem_statement.hh"
-#include "../main.hh"
+#include "src/job_server/job_handlers/change_problem_statement.hh"
+#include "simlib/path.hh"
+#include "simlib/sim/problem_package.hh"
+#include "src/job_server/main.hh"
 
-#include <sim/constants.hh>
-#include <simlib/path.hh>
-#include <simlib/sim/problem_package.hh>
+using sim::jobs::Job;
 
-namespace job_handlers {
+namespace job_server::job_handlers {
 
 void ChangeProblemStatement::run() {
-	STACK_UNWINDING_MARK;
+    STACK_UNWINDING_MARK;
 
-	auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_transaction();
 
-	uint64_t problem_file_id = 0;
-	sim::Simfile simfile;
-	{
-		auto stmt = mysql.prepare("SELECT file_id, simfile FROM problems"
-		                          " WHERE id=?");
-		stmt.bind_and_execute(problem_id_);
-		InplaceBuff<1> simfile_str;
-		stmt.res_bind_all(problem_file_id, simfile_str);
-		if (not stmt.next()) {
-			return set_failure("Problem with ID = ", problem_id_,
-			                   " does not exist");
-		}
+    uint64_t problem_file_id = 0;
+    sim::Simfile simfile;
+    {
+        auto stmt = mysql.prepare("SELECT file_id, simfile FROM problems"
+                                  " WHERE id=?");
+        stmt.bind_and_execute(problem_id_);
+        InplaceBuff<0> simfile_str;
+        stmt.res_bind_all(problem_file_id, simfile_str);
+        if (not stmt.next()) {
+            return set_failure("Problem with ID = ", problem_id_, " does not exist");
+        }
 
-		simfile = sim::Simfile(simfile_str.to_string());
-		simfile.load_all();
-	}
+        simfile = sim::Simfile(simfile_str.to_string());
+        simfile.load_all();
+    }
 
-	auto pkg_path = internal_file_path(problem_file_id);
+    auto pkg_path = sim::internal_files::path_of(problem_file_id);
 
-	mysql.update("INSERT INTO internal_files VALUES()");
-	uint64_t new_file_id = mysql.insert_id();
-	auto new_pkg_path = internal_file_path(new_file_id);
+    mysql.update("INSERT INTO internal_files VALUES()");
+    uint64_t new_file_id = mysql.insert_id();
+    auto new_pkg_path = sim::internal_files::path_of(new_file_id);
 
-	// Replace old statement with new statement
+    // Replace old statement with new statement
 
-	// Escape info.new_statement_path
-	if (info_.new_statement_path.empty()) {
-		info_.new_statement_path = WONT_THROW(simfile.statement.value());
-	} else {
-		info_.new_statement_path =
-		   path_absolute(info_.new_statement_path).erase(0, 1);
-	}
+    // Escape info.new_statement_path
+    if (info_.new_statement_path.empty()) {
+        info_.new_statement_path = WONT_THROW(simfile.statement.value());
+    } else {
+        info_.new_statement_path = path_absolute(info_.new_statement_path).erase(0, 1);
+    }
 
-	ZipFile src_zip(pkg_path, ZIP_RDONLY);
-	auto main_dir = sim::zip_package_main_dir(src_zip);
-	auto old_statement_path =
-	   concat(main_dir, WONT_THROW(simfile.statement.value()));
-	auto new_statement_path = concat(main_dir, info_.new_statement_path);
-	auto simfile_path = concat(main_dir, "Simfile");
-	if (new_statement_path == simfile_path) {
-		return set_failure(
-		   "Invalid new statement path - it would overwrite Simfile");
-	}
+    ZipFile src_zip(pkg_path, ZIP_RDONLY);
+    auto main_dir = sim::zip_package_main_dir(src_zip);
+    auto old_statement_path = concat(main_dir, WONT_THROW(simfile.statement.value()));
+    auto new_statement_path = concat(main_dir, info_.new_statement_path);
+    auto simfile_path = concat(main_dir, "Simfile");
+    if (new_statement_path == simfile_path) {
+        return set_failure("Invalid new statement path - it would overwrite Simfile");
+    }
 
-	simfile.statement = info_.new_statement_path;
-	auto simfile_str = simfile.dump();
+    simfile.statement = info_.new_statement_path;
+    auto simfile_str = simfile.dump();
 
-	FileRemover new_pkg_remover(new_pkg_path);
-	ZipFile dest_zip(new_pkg_path, ZIP_CREATE | ZIP_TRUNCATE);
+    FileRemover new_pkg_remover(new_pkg_path);
+    ZipFile dest_zip(new_pkg_path, ZIP_CREATE | ZIP_TRUNCATE);
 
-	auto eno = src_zip.entries_no();
-	for (decltype(eno) i = 0; i < eno; ++i) {
-		auto entry_name = src_zip.get_name(i);
-		if (entry_name == simfile_path) {
-			dest_zip.file_add(simfile_path,
-			                  dest_zip.source_buffer(simfile_str));
-		} else if (entry_name != old_statement_path) {
-			dest_zip.file_add(entry_name, dest_zip.source_zip(src_zip, i));
-		}
-	}
+    auto eno = src_zip.entries_no();
+    for (decltype(eno) i = 0; i < eno; ++i) {
+        auto entry_name = src_zip.get_name(i);
+        if (entry_name == simfile_path) {
+            dest_zip.file_add(simfile_path, dest_zip.source_buffer(simfile_str));
+        } else if (entry_name != old_statement_path) {
+            dest_zip.file_add(entry_name, dest_zip.source_zip(src_zip, i));
+        }
+    }
 
-	// Add new statement file entry
-	dest_zip.file_add(new_statement_path,
-	                  dest_zip.source_file(internal_file_path(job_file_id_)));
+    // Add new statement file entry
+    dest_zip.file_add(
+        new_statement_path, dest_zip.source_file(sim::internal_files::path_of(job_file_id_)));
 
-	dest_zip.close(); // Write all data to the dest_zip
+    dest_zip.close(); // Write all data to the dest_zip
 
-	const auto current_date = mysql_date();
-	// Add job to delete old problem file
-	mysql
-	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-	            " added, aux_id, info, data)"
-	            " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems"
-	            " WHERE id=?")
-	   .bind_and_execute(
-	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-	      EnumVal(JobStatus::PENDING), current_date, problem_id_);
+    const auto current_date = mysql_date();
+    // Add job to delete old problem file
+    mysql
+        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+                 " added, aux_id, info, data)"
+                 " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems"
+                 " WHERE id=?")
+        .bind_and_execute(
+            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING), current_date, problem_id_);
 
-	// Use new package as problem file
-	mysql
-	   .prepare("UPDATE problems SET file_id=?, simfile=?, last_edit=?"
-	            " WHERE id=?")
-	   .bind_and_execute(new_file_id, simfile_str, current_date, problem_id_);
+    // Use new package as problem file
+    mysql
+        .prepare("UPDATE problems SET file_id=?, simfile=?, last_edit=?"
+                 " WHERE id=?")
+        .bind_and_execute(new_file_id, simfile_str, current_date, problem_id_);
 
-	job_done(intentional_unsafe_string_view(info_.dump()));
+    job_done(intentional_unsafe_string_view(info_.dump()));
 
-	transaction.commit();
-	new_pkg_remover.cancel();
+    transaction.commit();
+    new_pkg_remover.cancel();
 }
 
-} // namespace job_handlers
+} // namespace job_server::job_handlers

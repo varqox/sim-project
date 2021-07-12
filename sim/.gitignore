@@ -21,14 +21,19 @@
 # Python
 __pycache__/
 
-# Others
-.clangd/
-*build/
-compile_commands.json
-*.sublime-project
-*.sublime-workspace
-sim/
+# Build
+/*build/
+
+# Installation
+/sim/
+
+# Development
+/.cache/
+/.clangd/
+/compile_commands.json
+/*.sublime-project
+/*.sublime-workspace
 
 # Coverity
-cov-int/
-sim-cov-build.xz
+/cov-int/
+/sim-cov-build.xz
