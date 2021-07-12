@@ -22,7 +22,7 @@ class SandboxTests {
     static constexpr size_t MEM_LIMIT = 16 << 20; // 16 MiB (in bytes)
     // Big RT limit is needed for tests where memory dump is created - it is
     // really slow)
-    static constexpr std::chrono::nanoseconds REAL_TIME_LIMIT = 3s;
+    static constexpr std::chrono::nanoseconds REAL_TIME_LIMIT = 16s;
     static constexpr std::chrono::nanoseconds CPU_TIME_LIMIT = 200ms;
     static constexpr Sandbox::Options SANDBOX_OPTIONS{
         -1, -1, -1, REAL_TIME_LIMIT, MEM_LIMIT, CPU_TIME_LIMIT};
