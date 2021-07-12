@@ -100,13 +100,8 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
             }
 
             size_t other_idx = find(it->second);
-            auto const& other = new_table_[other_idx].data;
-            // Newer problem will be the target problem
-            if (other.last_edit <= p.last_edit) {
-                merge_into(other_idx, idx);
-            } else {
-                merge_into(idx, other_idx);
-            }
+            // Problem with lower new id will be the target problem
+            merge_into(idx, other_idx);
         }
 
         for (auto [src_idx, dest_idx] : dsu) {

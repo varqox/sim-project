@@ -1,3 +1,4 @@
+#include "src/sim_merger/sim_merger.hh"
 #include "sim/mysql/mysql.hh"
 #include "simlib/config_file.hh"
 #include "simlib/defer.hh"
@@ -17,7 +18,6 @@
 #include "src/sim_merger/problem_tags.hh"
 #include "src/sim_merger/problems.hh"
 #include "src/sim_merger/sessions.hh"
-#include "src/sim_merger/sim_merger.hh"
 #include "src/sim_merger/submissions.hh"
 #include "src/sim_merger/users.hh"
 
