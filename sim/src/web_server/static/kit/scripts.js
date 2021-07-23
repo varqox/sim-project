@@ -702,6 +702,22 @@ function main_page() {
 	document.body.appendChild(elem_of('center', img, welcome_p, document.createElement('hr'), elem_with_text('p', 'Sim is an open source platform for carrying out algorithmic contests')));
 }
 
+async function copy_to_clipboard(make_text_to_copy) {
+	if (navigator.clipboard) {
+		return navigator.clipboard.writeText(make_text_to_copy());
+	}
+
+	const elem = document.createElement('textarea');
+	elem.style.position = 'absolute';
+	elem.style.left = '-9999px';
+	elem.value = make_text_to_copy();
+	elem.setAttribute('readonly', '');
+	document.body.appendChild(elem);
+	elem.select();
+	document.execCommand('copy');
+	elem.remove();
+}
+
 ////////////////////////// The above code has gone through refactor //////////////////////////
 
 function text_to_safe_html(str) { // This is deprecated because DOM elements have innerText property (see elem_with_text() function)
@@ -717,18 +733,6 @@ function logged_user_is_teacher() { // This is deprecated
 }
 function logged_user_is_teacher_or_admin() { // This is deprecated
 	return logged_user_is_teacher() || logged_user_is_admin();
-}
-
-function copy_to_clipboard(get_text_to_copy) {
-	var elem = document.createElement('textarea');
-	elem.value = get_text_to_copy();
-	elem.setAttribute('readonly', '');
-	elem.style.position = 'absolute';
-	elem.style.left = '-9999px';
-	document.body.appendChild(elem);
-	elem.select();
-	document.execCommand('copy');
-	elem.remove();
 }
 // Returns value of cookie @p name or empty string
 function get_cookie(name) {
@@ -970,8 +974,9 @@ function copy_to_clipboard_btn(small, btn_text, get_text_to_copy) {
 		style: 'position: relative',
 		text: btn_text,
 		click: function() {
-			copy_to_clipboard(get_text_to_copy);
-			append_btn_tooltip($(this), 'Copied to clipboard!');
+			copy_to_clipboard(get_text_to_copy).then(() => {
+				append_btn_tooltip($(this), 'Copied to clipboard!');
+			});
 		}
 	});
 }
