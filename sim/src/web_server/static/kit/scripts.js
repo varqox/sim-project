@@ -609,6 +609,108 @@ function is_logged_in() {
 	return logged_user_id != null;
 }
 
+const History = (() => {
+	let persistent_state;
+	const view_id_prefix = performance.timing.responseStart + '-';
+	let view_id_num = 0;
+	const get_next_view_id = () => {
+		const id = view_id_prefix + view_id_num;
+		++view_id_num;
+		return id;
+	};
+
+	const get_view_elem = (view_id) => document.querySelector('*[view_id="' + view_id + '"');
+	const get_current_view_elem = () => get_view_elem(history.state.view_id);
+
+	const hide_views_covering_elem = (view_elem) => {
+		let elem = view_elem.nextElementSibling;
+		while (elem != null) {
+			const next_elem = elem.nextElementSibling;
+			if (elem.hasAttribute('view_id')) {
+				if (elem.classList.contains('display-none')) {
+					break; // All views above are hidden
+				}
+				elem.classList.add('display-none');
+			}
+			elem = next_elem;
+		}
+	};
+	const show_views_covered_by = (view_elem) => {
+		let elem = view_elem.previousElementSibling;
+		while (elem != null) {
+			const next_elem = elem.previousElementSibling;
+			if (elem.hasAttribute('view_id')) {
+				if (!elem.classList.contains('display-none')) {
+					break; // All views below are visible
+				}
+				elem.classList.remove('display-none');
+			}
+			elem = next_elem;
+		}
+	};
+
+	const delete_hidden_views_forward_in_history = () => {
+		const curr_view_elem = get_current_view_elem();
+		if (curr_view_elem != null) {
+			let elem = curr_view_elem.nextElementSibling;
+			while (elem != null) {
+				const next_elem = elem.nextElementSibling;
+				if (elem.hasAttribute('view_id')) {
+					elem.remove();
+				}
+				elem = next_elem;
+			}
+		}
+	};
+
+	window.onpopstate = (event) => {
+		console.log(event);
+		const view_elem_to_focus = get_view_elem(event.state.view_id);
+		if (view_elem_to_focus == null) {
+			// TODO: dispatch url in js and present appropriate view instead of reloading
+			// (this will be possible after refactoring UI in such a way that url dispatching is done in UI i.e. in js)
+			return location.reload();
+		}
+		view_elem_to_focus.classList.remove('display-none');
+		hide_views_covering_elem(view_elem_to_focus);
+		show_views_covered_by(view_elem_to_focus); // important if e.g. somebody goes forward by 2 entries: history.go(2);
+	};
+
+	return {
+		init: (make_default_persistent_state) => {
+			if (history.state != null) {
+				persistent_state = history.state.persistent_state;
+				return persistent_state;
+			}
+			persistent_state = make_default_persistent_state();
+			history.replaceState({
+				persistent_state: persistent_state,
+			}, '', document.URL);
+			return persistent_state;
+		},
+		push: (view_elem, new_location) => {
+			delete_hidden_views_forward_in_history();
+			let view_id = get_next_view_id();
+			view_elem.setAttribute('view_id', view_id);
+			history.pushState({
+				persistent_state: persistent_state,
+				view_id: view_id,
+			}, '', new_location);
+			url_hash_parser.assign(window.location.hash);
+		},
+		replace_current: (view_elem, new_location) => {
+			let view_id = get_next_view_id();
+			view_elem.setAttribute('view_id', view_id);
+			history.replaceState({
+				persistent_state: persistent_state,
+				view_id: view_id,
+			}, '', new_location);
+			url_hash_parser.assign(window.location.hash);
+		},
+		get_current_view_elem: get_current_view_elem,
+	};
+})();
+
 function sim_template(capabilities, server_response_end_ts) {
 	const navbar = elem_with_class('div', 'navbar');
 	navbar.appendChild(elem_with_class_and_text('a', 'brand', 'Sim beta')).href = url_main_page();
@@ -632,30 +734,78 @@ function sim_template(capabilities, server_response_end_ts) {
 		navbar.appendChild(elem_with_text('a', 'Logs')).href = url_logs();
 	}
 
-	// TODO: manage server_response_end_ts with history
-
-	// Initialize window.current_server_time
-	const entries = window.performance.getEntriesByType('navigation');
-	if (entries.length == 0) {
-		// For Safari and other unsupporting browsers...
-		const offset = server_response_end_ts - window.performance.timing.responseStart;
-		window.current_server_time = () => {
-			const time = new Date();
-			time.setTime(time.getTime() + offset);
-			return time;
+	const history_persistent_state = History.init(() => {
+		let server_time_offset;
+		const entries = window.performance.getEntriesByType('navigation');
+		if (entries.length == 0) {
+			// For Safari and other unsupporting browsers
+			server_time_offset = server_response_end_ts - window.performance.timing.responseStart;
+		} else {
+			const curr_time = Date.now();
+			// floor() in order to never report slightly future time
+			const current_server_time = Math.floor(server_response_end_ts - entries[0].responseStart + performance.now());
+			server_time_offset = current_server_time - curr_time;
+		}
+		return {
+			server_time_offset: server_time_offset,
 		};
-	} else {
-		const offset = server_response_end_ts - entries[0].responseStart;
-		window.current_server_time = () => {
-			const time = new Date();
-			time.setTime(Math.floor(offset + performance.now())); // floor() in order not to never report slightly future time
-			return time;
+	});
+	let body_view_elem = document.body.appendChild(elem_with_class('span', 'body_view_elem'));
+	body_view_elem.style.height = 0;
+	body_view_elem.style.width = 0;
+	History.replace_current(body_view_elem, window.location.href);
+	window.current_server_time = () => {
+		return new Date(Date.now() + history_persistent_state.server_time_offset);
+	};
+	window.ServerClock = (() => {
+		const listeners = new Array();
+		function run_listeners() {
+			for (listener of listeners) {
+				listener();
+			}
 		};
-	}
+		function run_listeners_every_second() {
+			run_listeners();
+			setTimeout(run_listeners_every_second, 1001 - current_server_time().getMilliseconds()); // 1001 because of possible rounding error
+			                                                                                        // that would make the handler run e.g. on 37.999
+			                                                                                        // instead of 38.000 (at least in Firefox 89)
+		}
+		run_listeners_every_second();
+		// When going back and forth in history (e.g. using Alt+arrow), some browsers (e.g. firefox) reuse the old document
+		// (sim_template() will not be called) and generate only pageshow event. The below event handler makes sure that
+		// the clock listeners are updated with actual time when the old document is rendered.
+		window.addEventListener('pageshow', function(event) {
+			// Make sure the listeners are updated with actual time
+			run_listeners();
+			// setTimeout() from run_listeners_every_second() may not happen just after the next second starts, because
+			// timers (set up using setTimeout) seem to be duration based instead of time-point based i.e. this could happen:
+			// 1. 37.845 (server time's seconds): 'pageshow' is handled and run_listeners() is called
+			// 2. 38.367 (server time's seconds): timeout set by run_listeners_every_second() elapsed and run_listeners() is called
+			// In the above scenario, there is no run_listeners() call just after 38.000 (server time's second) passes,
+			// so to ensure there will be such call, we schedule it here
+			setTimeout(run_listeners, 1001 - current_server_time().getMilliseconds()); // 1001 because of possible rounding error
+			                                                                           // that would make the handler run e.g. on 37.999
+			                                                                           // instead of 38.000 (at least in Firefox 89)
+		});
 
-	// Clock
+		return {
+			add_listener: (listener) => {
+				listeners.push(listener);
+				listener();
+
+			},
+			remove_listener: (listener) => {
+				const pos = listeners.indexOf(listener);
+				if (pos != -1) {
+					listeners.splice(pos, 1);
+				}
+			},
+		}
+	})();
+
+	// Navigation bar clock
 	const clock = elem_with_id('time', 'clock');
-	const update_clock = () => {
+	ServerClock.add_listener(() => {
 		const server_time = current_server_time();
 		let h = server_time.getHours();
 		let m = server_time.getMinutes();
@@ -666,9 +816,7 @@ function sim_template(capabilities, server_response_end_ts) {
 		const tzo = -server_time.getTimezoneOffset();
 		remove_children(clock);
 		clock.append(h, ':', m, ':', s, elem_with_text('sup', 'UTC' + (tzo >= 0 ? '+' : '') + tzo / 60));
-		setTimeout(update_clock, 1000 - server_time.getMilliseconds());
-	};
-	update_clock();
+	});
 	navbar.appendChild(clock);
 
 	if (is_logged_in()) {
@@ -1021,102 +1169,6 @@ $(document).ready(function() {
 	$('form').submit(function() { add_csrf_token_to(this); });
 });
 
-
-/* =========================== History management =========================== */
-var History = {};
-(function() {
-	History.waiting_for_popstate = false;
-
-	var queue = new Array();
-	History.process_queue = function() {
-		if (queue.length === 0)
-			return;
-
-		if (!History.waiting_for_popstate)
-			queue.shift()();
-
-		setTimeout(History.process_queue);
-	};
-
-	History.deferUntilFullyUpdated = function(func) {
-		queue.push(func);
-		if (queue.length === 1) // No one is processing
-			History.process_queue();
-	};
-
-	History.pushState = function(egid, new_location) {
-		History.deferUntilFullyUpdated(function() {
-			window.history.pushState({egid: egid}, '', new_location);
-			url_hash_parser.assign(window.location.hash);
-		});
-	};
-
-	History.back = function(egid, new_location) {
-		History.deferUntilFullyUpdated(function() {
-			History.waiting_for_popstate = true;
-			window.history.back();
-		});
-	}
-
-	History.replaceState = function(egid, new_location) {
-		History.deferUntilFullyUpdated(function() {
-			window.history.replaceState({egid: egid}, '', new_location);
-			url_hash_parser.assign(window.location.hash);
-		});
-	};
-}).call();
-
-window.onpopstate = function(event) {
-	History.waiting_for_popstate = false;
-
-	if (event.state === null)
-		return window.location.reload();
-
-	var elem = $('*[egid="' + event.state.egid + '"]');
-	if (elem.length === 0)
-		return window.location.reload();
-
-	var modals;
-	if (elem.is('body'))
-		modals = elem.children('.modal');
-	else
-		modals = elem.nextAll('.modal');
-
-	// Remove other modals that cover the elem
-	var view_element_removed = false;
-	modals.each(function() {
-		var elem = $(this);
-		if (elem.hasClass('view') || view_element_removed) {
-			view_element_removed = true;
-			remove_modals(elem);
-		}
-	});
-};
-
-var egid = {};
-(function () {
-	var id = 0;
-	egid.next_from = function(egid) {
-		var egid_id = String(egid).replace(/.*-/, '');
-		return String(egid).replace(/[^-]*$/, ++egid_id);
-	};
-
-	egid.get_next = function() {
-		return ''.concat(window.performance.timing.responseStart, '-', id++);
-	};
-}).call();
-
-function give_body_egid() {
-	if ($('body').attr('egid') !== undefined)
-		return;
-
-	var body_egid = egid.get_next();
-	$('body').attr('egid', body_egid);
-
-	History.replaceState(body_egid, document.URL);
-}
-$(document).ready(give_body_egid);
-
 /* const */ var fade_in_duration = 50; // milliseconds
 
 // For best effect, the values below should be the same
@@ -1308,7 +1360,7 @@ function close_modal(modal) {
 			return;
 
 		if ($(this).is('.view'))
-			History.back();
+			window.history.back();
 		else
 			remove_modals(this);
 	});
@@ -1326,7 +1378,6 @@ $(document).keydown(function(event) {
 function modal(modal_body, before_callback /*= undefined*/) {
 	var mod = $('<div>', {
 		class: 'modal',
-		egid: egid.get_next(),
 		style: 'display: none',
 		html: $('<div>', {
 			html: $('<span>', { class: 'close' }).add(modal_body)
@@ -1540,14 +1591,12 @@ function tabmenu(attacher, tabs) {
 				$(this).addClass('active');
 
 				var elem = this;
-				History.deferUntilFullyUpdated(function(){
-					window.history.replaceState(window.history.state, '',
+				History.replace_current(History.get_current_view_elem(),
 						document.URL.substring(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(elem).text()));
-					url_hash_parser.assign_as_parsed(window.location.hash);
-					res.trigger('tabmenuTabHasChanged', elem);
-					handler.call(elem);
-					centerize_modal($(elem).parents('.modal'), false);
-				});
+				url_hash_parser.assign_as_parsed(window.location.hash);
+				res.trigger('tabmenuTabHasChanged', elem);
+				handler.call(elem);
+				centerize_modal($(elem).parents('.modal'), false);
 			}
 			e.preventDefault();
 		};
@@ -1581,12 +1630,9 @@ function tabmenu(attacher, tabs) {
 
 /* ================================== View ================================== */
 function view_base(as_modal, new_window_location, func, no_modal_elem) {
-	var next_egid;
 	if (as_modal) {
-		next_egid = egid.get_next();
 		var elem = $('<div>', {
 			class: 'modal view',
-			egid: next_egid,
 			style: 'display: none',
 			html: $('<div>', {
 				html: $('<span>', { class: 'close'})
@@ -1594,8 +1640,7 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 			})
 		});
 
-		$(elem).attr('egid', next_egid);
-		History.pushState(next_egid, new_window_location);
+		History.push(elem[0], new_window_location);
 
 		elem.appendTo('body').fadeIn(fade_in_duration);
 		func.call(elem.find('div > div'));
@@ -1603,17 +1648,12 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 
 	// Use body as the parent element
 	} else if (no_modal_elem === undefined || $(no_modal_elem).is('body')) {
-		give_body_egid();
-		History.replaceState($('body').attr('egid'), new_window_location);
-
+		History.replace_current(document.querySelector('.body_view_elem'), new_window_location);
 		func.call($('body'));
 
 	// Use @p no_modal_elem as the parent element
 	} else {
-		next_egid = egid.get_next();
-		$(no_modal_elem).attr('egid', next_egid);
-		History.pushState(next_egid, new_window_location);
-
+		History.push($(no_modal_elem)[0], new_window_location);
 		func.call($(no_modal_elem));
 	}
 }

@@ -411,6 +411,9 @@ table {
 .monospace {
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 }
+.display-none {
+	display: none !important;
+}
 
 /********************************** Buttons **********************************/
 
