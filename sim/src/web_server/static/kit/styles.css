@@ -426,8 +426,6 @@ table {
 	background-color: #ededed;
 	background-image: linear-gradient(#f9f9f9, #d8d8d8);
 	border: 1px solid #bbbbbb;
-	-webkit-border-radius: 3px;
-	-moz-border-radius: 3px;
 	border-radius: 3px;
     transition: opacity 0.05s ease-out; /* see .btn:disabled */
 }
@@ -718,8 +716,6 @@ div.request-progress {
 	margin: 4px 1px 64px;
 	padding: 20px;
 	border: 1px solid #888;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .modal:not(.view) > div > h2 {
@@ -772,8 +768,6 @@ textarea, input[type="text"], input[type="password"], input[type="datetime"], in
 	line-height: 20px;
 	color: #555555;
 	border: 1px solid #cccccc;
-	-webkit-border-radius: 3px;
-	-moz-border-radius: 3px;
 	border-radius: 3px;
 	outline: none;
 }
@@ -842,8 +836,6 @@ a.btn.red {
 	color: #222;
 	text-decoration: none;
 	border: 1px solid rgba(0, 0, 0, 0);
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
 	border-radius: 8px;
 	white-space: pre;
 }
@@ -877,8 +869,6 @@ a.btn.red {
 	list-style: none;
 	background: #fcfcfc;
 	border: 1px solid #cccccc;
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
 	border-radius: 8px;
 	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
@@ -902,8 +892,6 @@ a.btn.red {
 	margin: -1px 0 0;
 	background: #f5f5f5;
 	border: 1px solid #cccccc;
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
 	border-radius: 8px;
 	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
@@ -1023,8 +1011,6 @@ body {
 	/*display: inline-table;*/
 	margin: 6px auto;
 	border: 1px solid #a2a2a2;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .table td {
@@ -1113,13 +1099,9 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	background: #e7e7e7;
 }
 .menu .dropmenu.right > ul {
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .menu .dropmenu.right.open > ul > a {
-	-webkit-border-radius: 0;
-	-moz-border-radius: 0;
 	border-radius: 0;
 }
 .menu .dropmenu.right.open > ul > a:first-child {
@@ -1226,8 +1208,6 @@ div.header > div:last-child{
 }
 .contest-dashboard .contest {
 	margin-bottom: -1px;
-	-webkit-border-radius: 4px 4px 0 0;
-	-moz-border-radius: 4px 4px 0 0;
 	border-radius: 4px 4px 0 0;
 }
 .contest-dashboard .rounds {
@@ -1386,8 +1366,6 @@ div.right-flow {
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	background: #f5f5f5;
 	border: 1px solid #afafaf;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 pre.compilation-errors .green,
@@ -1505,8 +1483,6 @@ table.code-view {
 	font-size: 16px;
 	background: #f5f5f5;
 	border: 1px solid #afafaf;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 	-moz-tab-size: 4;
 	tab-size: 4;
@@ -1817,8 +1793,6 @@ table.contest-users tr > td:last-child {
 	padding: 4px 10px;
 	background: #fdfdfd;
 	border: 1px solid #dddddd;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .user-info > div,
@@ -1938,8 +1912,6 @@ pre.logs {
 	background: #131926;
 	color: #b3b3b3;
 	border: 1px solid #afafaf;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 	position: relative;
 }
@@ -1949,11 +1921,9 @@ pre.logs > span::-webkit-scrollbar {
 }
 pre.logs > span::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
-    -webkit-border-radius: 10px;
     border-radius: 10px;
 }
 pre.logs > span::-webkit-scrollbar-thumb {
-    -webkit-border-radius: 10px;
     border-radius: 10px;
     background: #ddd;
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
@@ -2005,8 +1975,6 @@ pre.logs .turquoise {
 	margin: 20px auto 0;
 	background: #fdfdfd;
 	border: 1px solid #dddddd;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .form-container h1 {
@@ -2097,8 +2065,6 @@ form .field-group > textarea {
 	background: #f6d7d7;
 	color: #ba4b49;
 	border: 1px solid #ecc1c7;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 
@@ -2161,8 +2127,6 @@ form .field-group > textarea {
 	color: #000;
 	text-align: center;
 	vertical-align: middle;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .calendar td.gray > a {
