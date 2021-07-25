@@ -590,7 +590,7 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	}
 
 	// Start listening for scroll and resize events
-	const elem_to_listen_on_scroll = modal === null ? document : modal_parent;
+	const elem_to_listen_on_scroll = modal === null ? document : modal;
 	elem_to_listen_on_scroll.addEventListener('scroll', scroll_or_resize_event_handler, {passive: true});
 	window.addEventListener('resize', scroll_or_resize_event_handler, {passive: true});
 
