@@ -79,6 +79,7 @@ function remove_children(elem) {
 }
 
 /* ============================ URLs ============================ */
+
 function url_api_contest_entry_tokens_add(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add'; }
 function url_api_contest_entry_tokens_add_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add_short'; }
 function url_api_contest_entry_tokens_delete(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete'; }
@@ -351,8 +352,6 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	xhr.send(init.body);
 }
 
-/* ================================= AjaxForm ================================= */
-
 function Select(name, required) {
 	const self = this;
 	const select_elem = document.createElement('select');
@@ -545,6 +544,13 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 		return how_much_is_viewport_bottom_above_elem_bottom(self.elem) <= 300;
 	}
 
+	if (self.process_first_api_response == null) {
+		throw new Error('Unset self.process_first_api_response');
+	}
+	if (self.process_api_response == null) {
+		throw new Error('Unset self.process_api_response');
+	}
+
 	self.fetch_more = () => {
 		if (fetch_lock || shutdown) {
 			return;
@@ -608,6 +614,8 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 function is_logged_in() {
 	return logged_user_id != null;
 }
+
+/* ================================= History ================================= */
 
 const History = (() => {
 	let persistent_state;
@@ -2648,16 +2656,14 @@ function change_user_password(as_modal, user_id) {
 	}, '/u/' + user_id + "/change-password");
 }
 function UsersLister(elem, query_url) {
-	var self = this;
-	Lister.call(self, elem, query_url, '');
-
-	self.process_first_api_response = function(list) {
+	const self = this;
+	self.process_first_api_response = (list) => {
 		if (list.length === 0) {
 			self.elem.parentNode.appendChild(elem_with_text('p', 'There are no users to show...'));
 			return;
 		}
 
-		var thead = document.createElement('thead');
+		const thead = document.createElement('thead');
 		thead.appendChild(elem_with_text('th', 'Id'));
 		thead.appendChild(elem_with_class_and_text('th', 'username', 'Username'));
 		thead.appendChild(elem_with_class_and_text('th', 'first-name', 'First name'));
@@ -2670,13 +2676,12 @@ function UsersLister(elem, query_url) {
 		self.elem.appendChild(self.tbody);
 
 		self.process_api_response(list);
-	}
-
-	self.process_api_response = function(list) {
+	};
+	self.process_api_response = (list) => {
 		self.next_query_suffix = '/id>/' + list[list.length - 1].id;
 
-		for (var user of list) {
-			var row = document.createElement('tr');
+		for (const user of list) {
+			const row = document.createElement('tr');
 			row.appendChild(elem_with_text('td', user.id));
 			row.appendChild(elem_with_text('td', user.username));
 			row.appendChild(elem_with_text('td', user.first_name));
@@ -2684,13 +2689,15 @@ function UsersLister(elem, query_url) {
 			row.appendChild(elem_with_text('td', user.email));
 			row.appendChild(elem_with_class_and_text('td', user.type, user.type[0].toUpperCase() + user.type.slice(1)));
 
-			var td = document.createElement('td');
+			const td = document.createElement('td');
 			td.append.apply(td, ActionsToHTML.user(user, false));
 			row.appendChild(td);
 
 			self.tbody.appendChild(row);
 		}
 	};
+
+	Lister.call(self, elem, query_url, '');
 }
 function tab_users_lister(parent_elem) {
 	parent_elem = $(parent_elem);
