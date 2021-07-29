@@ -57,6 +57,13 @@ function try_remove_centered_request_status(parent) {
 function trigger_reflow_on(elem) {
 	elem.offsetWidth;
 }
+function append_with_fade_in(parent, elem, delay = '0s') {
+	elem.classList.add('fade-in');
+	parent.appendChild(elem);
+	trigger_reflow_on(elem);
+	elem.style.transitionDelay = delay;
+	elem.style.opacity = 1;
+}
 function append_with_fade_in_slide_down(parent, elem, delay = '0s') {
 	elem.classList.add('fade-in-slide-down');
 	parent.appendChild(elem);

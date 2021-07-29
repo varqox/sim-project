@@ -622,6 +622,12 @@ table {
 
 /********************************** Fade in + slide down animations **********************************/
 
+.fade-in {
+	opacity: 0;
+	transition: opacity 0.05s ease-out;
+	/* triggering and setting target value is done in JS */
+}
+
 .fade-in-slide-down {
 	padding: 0; /* has to be done on the inner element because of https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
 	border: none; /* has to be done on the inner element for consistency */
@@ -633,6 +639,7 @@ table {
 	transition: max-height 0.05s ease-out, opacity 0.05s ease-out;
 	/* triggering and setting target values are done in JS */
 }
+.fade-in.cancel-delay,
 .fade-in-slide-down.cancel-delay {
 	transition-delay: 0s !important;
 }
