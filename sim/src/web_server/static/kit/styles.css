@@ -699,11 +699,66 @@ div.request-progress {
 	font-size: 0.9rem;
 }
 
-/**********************************  **********************************/
+/********************************** Modal **********************************/
 /* Modal (background) */
 .modal {
+    position: fixed;
+    z-index: 5;
+    text-align: center;
+    /*padding-top: 88px;*/
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+/* Modal centering div */
+.modal > .centering {
+    display: inline-flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
+    min-width: 100%;
+}
+/* Modal window div */
+.modal > .centering > .window {
+    display: inline-flex;
+    text-align: initial;
+    flex-flow: column nowrap;
+    background-color: #fff;
+    margin: 4px 1px;
+    padding: 16px;
+    border: 1px solid #888;
+    border-radius: 4px;
+}
+/* Modal close button */
+.modal .close {
+    color: #aaaaaa;
+    margin: -15px -12px -6px 0;
+    padding: 2px;
+    font-size: 28px;
+    font-weight: bold;
+    align-self: flex-end;
+    z-index: 2;
+    overflow: hidden;
+}
+.modal .close::after {
+    content: "×";
+}
+.modal .close:hover,
+.modal .close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/********************************** OldModal **********************************/
+/* OldModal (background) */
+.oldmodal {
 	position: fixed;
-	z-index: 100;
+	z-index: 5;
 	text-align: center;
 	padding-top: 20vh;
 	top: 0;
@@ -711,31 +766,30 @@ div.request-progress {
 	width: 100%;
 	height: 100%;
 	overflow: auto;
-	background-color: #999; /* Fallback color */
 	background-color: rgba(0,0,0,0.4);
 }
-/* Modal content */
-.modal > div {
+/* OldModal content */
+.oldmodal > div.window {
 	display: inline-flex;
 	text-align: initial;
 	flex-flow: column nowrap;
-	background-color: #fefefe;
-	margin: 4px 1px 64px;
-	padding: 20px;
+	background-color: #fff;
+	margin: 4px 1px;
+	padding: 16px;
 	border: 1px solid #888;
 	border-radius: 4px;
 }
-.modal:not(.view) > div > h2 {
+.oldmodal:not(.view) > div.window > h2 {
 	margin: 5px 0 12px;
 	font-size: 24px;
 	font-weight: normal;
 	line-height: 28px;
 	text-align: center;
 }
-/* The Close Button */
-.modal .close {
+/* OldModal close button */
+.oldmodal .close {
 	color: #aaaaaa;
-	margin: -14px -10px -6px 0;
+	margin: -15px -12px -6px 0;
 	padding: 2px;
 	font-size: 28px;
 	font-weight: bold;
@@ -743,21 +797,14 @@ div.request-progress {
     z-index: 2;
     overflow: hidden;
 }
-.modal .close::after {
+.oldmodal .close::after {
 	content: "×";
 }
-.modal .close:hover,
-.modal .close:focus {
+.oldmodal .close:hover,
+.oldmodal .close:focus {
 	color: #000;
 	text-decoration: none;
 	cursor: pointer;
-}
-/* Modal forms */
-.modal form .field-group {
-	margin-bottom: 8px;
-}
-.modal #modal_req_status {
-	padding: 1px 4px;
 }
 
 /* Always in view */
@@ -765,8 +812,8 @@ div.request-progress {
 .always_in_view {
 	max-width: calc(100vw - 50px);
 }
-.modal .header,
-.modal .always_in_view {
+.oldmodal .header,
+.oldmodal .always_in_view {
 	max-width: calc(100vw - 60px);
 }
 
@@ -1336,8 +1383,8 @@ table.stripped > tbody > tr:nth-child(3n+1).status.yellow,
 	/*width: 85%;*/
 	margin: 5px 8px;
 }
-.modal .submission-info,
-.modal .job-info {
+.oldmodal .submission-info,
+.oldmodal .job-info {
 	width: initial;
 }
 /*.submission-info h2 {
@@ -2006,7 +2053,7 @@ pre.logs .turquoise {
 form .field-group {
 	display: flex;
 	min-height: 30px;
-	margin-bottom: 15px;
+	margin-bottom: 8px;
 	-webkit-flex-flow: row nowrap;
 	flex-flow: row nowrap;
 	-webkit-align-items: center;
