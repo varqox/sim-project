@@ -168,6 +168,7 @@ tests = [
     ['test/concat_common.cc', [], {}],
     ['test/concat_tostr.cc', [], {}],
     ['test/config_file.cc', [], {'priority': 10}],
+    ['test/constructor_traits.cc', [], {}],
     ['test/conver.cc', [], {'priority': 10}],
     ['test/ctype.cc', [], {}],
     ['test/debug.cc', [], {}],
