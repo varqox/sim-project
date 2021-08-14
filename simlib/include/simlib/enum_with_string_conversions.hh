@@ -1,15 +1,12 @@
 #pragma once
 
+#include "simlib/macros.hh"
 #include "simlib/string_transform.hh"
 #include "simlib/string_view.hh"
 
 #include <cstdlib>
 #include <optional>
 #include <type_traits>
-
-// Evaluates b and other arguments and concatenates b to the last one
-#define REV_CAT(b, ...) REV_CAT_I(b, __VA_ARGS__)
-#define REV_CAT_I(b, ...) __VA_ARGS__##b
 
 // Example usage: ENUM_WITH_STRING_CONVERSIONS(Color, uint8_t, (GREEN, 1, "green")(RED, 2,
 // "red")(BLUE, 42, "blue"));
@@ -19,10 +16,10 @@
         using UnderlyingType = underlying_type;                                          \
         /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                 \
         enum class Enum : underlying_type {                                              \
-            IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS(seq)                         \
+            MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS, seq)                    \
         };                                                                               \
                                                                                          \
-        IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS(seq)                           \
+        MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS, seq)                      \
                                                                                          \
         /* NOLINTNEXTLINE */                                                             \
         constexpr enum_name(Enum x = {})                                                 \
@@ -41,7 +38,7 @@
                                                                                          \
         constexpr CStringView to_str() const noexcept {                                  \
             switch (val) {                                                               \
-                IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES(seq)                      \
+                MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES, seq)                 \
             }                                                                            \
             std::abort(); /* invalid enum variant */                                     \
         }                                                                                \
@@ -50,7 +47,7 @@
                                                                                          \
         constexpr CStringView to_quoted_str() const noexcept {                           \
             switch (val) {                                                               \
-                IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES(seq)               \
+                MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES, seq)          \
             }                                                                            \
             std::abort(); /* invalid enum variant */                                     \
         }                                                                                \
@@ -60,7 +57,7 @@
         }                                                                                \
                                                                                          \
         static constexpr std::optional<enum_name> from_str(StringView str) noexcept {    \
-            IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS(seq)                          \
+            MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS, seq)                     \
             return std::nullopt;                                                         \
         }                                                                                \
                                                                                          \
@@ -68,71 +65,21 @@
         Enum val;                                                                        \
     }
 
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS(seq) \
-    REV_CAT(_END, IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_1 seq)
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_1_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_2_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_1(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_3(name, val)              \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_2
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_2(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_3(name, val)              \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_1
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS_3(name, val) name = (val),
+#define IMPL_ENUM_WITH_STRING_CONVERSIONS_ENUM_VARIANTS(name, val, str_val) name = (val),
 
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS(seq) \
-    REV_CAT(_END, IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_1 seq)
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_1_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_2_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_1(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_3(name)                   \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_2
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_2(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_3(name)                   \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_1
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS_3(name) \
+#define IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS(name, val, str_val) \
     static constexpr Enum name = Enum::name;
 
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES(seq) \
-    REV_CAT(_END, IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_1 seq)
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_1_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_2_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_1(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_3(name, str_val)          \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_2
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_2(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_3(name, str_val)          \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_1
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES_3(name, str_val) \
-    case name:                                                          \
+#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES(name, val, str_val) \
+    case name:                                                             \
         return str_val;
 
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES(seq) \
-    REV_CAT(_END, IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_1 seq)
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_1_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_2_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_1(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_3(name, str_val)          \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_2
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_2(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_3(name, str_val)          \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_1
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES_3(name, str_val) \
-    case name:                                                                 \
+#define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES(name, val, str_val) \
+    case name:                                                                    \
         return "\"" str_val "\"";
 
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS(seq) \
-    REV_CAT(_END, IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_1 seq)
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_1_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_2_END
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_1(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_3(name, str_val)          \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_2
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_2(name, val, str_val) \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_3(name, str_val)          \
-    IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_1
-#define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS_3(name, str_val) \
-    if (str == (str_val))                                               \
+#define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS(name, val, str_val) \
+    if (str == (str_val))                                                  \
         return name;
 
 namespace detail {

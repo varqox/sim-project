@@ -191,6 +191,7 @@ tests = [
     ['test/json_str/json_str.cc', [], {}],
     ['test/libzip.cc', [], {}],
     ['test/logger.cc', [], {}],
+    ['test/macros.cc', [], {}],
     ['test/member_comparator.cc', [], {}],
     ['test/memory.cc', [], {}],
     ['test/mysql/mysql.cc', [], {}],

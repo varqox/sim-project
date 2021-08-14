@@ -131,11 +131,10 @@ TEST(EnumVal, operator_ValType) {
     test_implicit_conversion<Uint64Enum>();
 }
 
-ENUM_WITH_STRING_CONVERSIONS(
-    Colors, uint8_t,
-    (RED, 1, "red") //
-    (GREEN, 4, "green") //
-    (BLUE, 88, "blue") //
+ENUM_WITH_STRING_CONVERSIONS(Colors, uint8_t,
+    (RED, 1, "red")
+    (GREEN, 4, "green")
+    (BLUE, 88, "blue")
 );
 
 // NOLINTNEXTLINE

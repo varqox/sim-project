@@ -122,6 +122,6 @@ StatementMacros:
   - QT_REQUIRE_VERSION
 TabWidth:        4
 UseTab:          Never
-WhitespaceSensitiveMacros: ['STRINGIZE', 'STRINGIZE2']
+WhitespaceSensitiveMacros: ['STRINGIZE', 'STRINGIZE2', 'ENUM_WITH_STRING_CONVERSIONS']
 ...
 
