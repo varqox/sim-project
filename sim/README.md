@@ -8,23 +8,23 @@ Sim is an open source platform for carrying out algorithmic contests
 
 ## How to build
 
-> **_NOTE:_**  There is a script `scripts/setup-sim-for-camp-on-debian10.sh` that setups sim and a ngnix https proxy for an offline camp on Debian 10. So if you need to look at very precise instructions that setup sim, you can check out that script.
+> **_NOTE:_**  There is a script `scripts/setup-sim-for-camp-on-debian11.sh` that setups sim and a ngnix https proxy for an offline camp on Debian 11 (there is a similar one for Debian 10). So if you need to look at very precise instructions that setup sim, you can check out that script.
 
 You will need `meson` build system to be installed (on most platforms it is in the _meson_ package).
 
 ### Dependencies:
 
-- Meson build system (Debian package: _meson_)
-- gcc/g++ (with 32 bit support &ndash; for compiling submissions) with C++17 support (Debian package: _g++-multilib_)
-- MariaDB (Debian package: _mariadb-server_)
-- MariaDB client library (Debian packages: _libmariadbclient-dev_)
-- libseccomp (Debian package: _libseccomp-dev_)
-- libzip  (Debian package: _libzip-dev_)
+- Meson build system
+- gcc/g++ (with 32 bit support &ndash; for compiling submissions) with C++17 support
+- MariaDB server
+- MariaDB client library
+- libseccomp
+- libzip
 
 #### Debian
 
 ```sh
-sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libzip-dev meson libssl-dev
+sudo apt install g++-multilib mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev pkgconf meson
 ```
 
 Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ versions of some of the above packages are needed to build sim successfully.
@@ -147,7 +147,7 @@ meson install -C release-build
 ```
 
 ## Managing the Sim instance i.e. starting / stopping servers
-For this, there is `manage` program in the instance`s main directory.
+For this, there is `manage` program in the instance's main directory.
 To start servers type:
 ```sh
 sim/manage start # or other instance's directory

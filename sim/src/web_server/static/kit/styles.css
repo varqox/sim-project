@@ -411,6 +411,9 @@ table {
 .monospace {
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 }
+.display-none {
+	display: none !important;
+}
 
 /********************************** Buttons **********************************/
 
@@ -423,8 +426,6 @@ table {
 	background-color: #ededed;
 	background-image: linear-gradient(#f9f9f9, #d8d8d8);
 	border: 1px solid #bbbbbb;
-	-webkit-border-radius: 3px;
-	-moz-border-radius: 3px;
 	border-radius: 3px;
     transition: opacity 0.05s ease-out; /* see .btn:disabled */
 }
@@ -621,6 +622,12 @@ table {
 
 /********************************** Fade in + slide down animations **********************************/
 
+.fade-in {
+	opacity: 0;
+	transition: opacity 0.05s ease-out;
+	/* triggering and setting target value is done in JS */
+}
+
 .fade-in-slide-down {
 	padding: 0; /* has to be done on the inner element because of https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
 	border: none; /* has to be done on the inner element for consistency */
@@ -632,6 +639,7 @@ table {
 	transition: max-height 0.05s ease-out, opacity 0.05s ease-out;
 	/* triggering and setting target values are done in JS */
 }
+.fade-in.cancel-delay,
 .fade-in-slide-down.cancel-delay {
 	transition-delay: 0s !important;
 }
@@ -691,11 +699,66 @@ div.request-progress {
 	font-size: 0.9rem;
 }
 
-/**********************************  **********************************/
+/********************************** Modal **********************************/
 /* Modal (background) */
 .modal {
+    position: fixed;
+    z-index: 5;
+    text-align: center;
+    /*padding-top: 88px;*/
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+/* Modal centering div */
+.modal > .centering {
+    display: inline-flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
+    min-width: 100%;
+}
+/* Modal window div */
+.modal > .centering > .window {
+    display: inline-flex;
+    text-align: initial;
+    flex-flow: column nowrap;
+    background-color: #fff;
+    margin: 4px 1px;
+    padding: 16px;
+    border: 1px solid #888;
+    border-radius: 4px;
+}
+/* Modal close button */
+.modal .close {
+    color: #aaaaaa;
+    margin: -15px -12px -6px 0;
+    padding: 2px;
+    font-size: 28px;
+    font-weight: bold;
+    align-self: flex-end;
+    z-index: 2;
+    overflow: hidden;
+}
+.modal .close::after {
+    content: "×";
+}
+.modal .close:hover,
+.modal .close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/********************************** OldModal **********************************/
+/* OldModal (background) */
+.oldmodal {
 	position: fixed;
-	z-index: 100;
+	z-index: 5;
 	text-align: center;
 	padding-top: 20vh;
 	top: 0;
@@ -703,33 +766,30 @@ div.request-progress {
 	width: 100%;
 	height: 100%;
 	overflow: auto;
-	background-color: #999; /* Fallback color */
 	background-color: rgba(0,0,0,0.4);
 }
-/* Modal content */
-.modal > div {
+/* OldModal content */
+.oldmodal > div.window {
 	display: inline-flex;
 	text-align: initial;
 	flex-flow: column nowrap;
-	background-color: #fefefe;
-	margin: 4px 1px 64px;
-	padding: 20px;
+	background-color: #fff;
+	margin: 4px 1px;
+	padding: 16px;
 	border: 1px solid #888;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
-.modal:not(.view) > div > h2 {
+.oldmodal:not(.view) > div.window > h2 {
 	margin: 5px 0 12px;
 	font-size: 24px;
 	font-weight: normal;
 	line-height: 28px;
 	text-align: center;
 }
-/* The Close Button */
-.modal .close {
+/* OldModal close button */
+.oldmodal .close {
 	color: #aaaaaa;
-	margin: -14px -10px -6px 0;
+	margin: -15px -12px -6px 0;
 	padding: 2px;
 	font-size: 28px;
 	font-weight: bold;
@@ -737,21 +797,14 @@ div.request-progress {
     z-index: 2;
     overflow: hidden;
 }
-.modal .close::after {
+.oldmodal .close::after {
 	content: "×";
 }
-.modal .close:hover,
-.modal .close:focus {
+.oldmodal .close:hover,
+.oldmodal .close:focus {
 	color: #000;
 	text-decoration: none;
 	cursor: pointer;
-}
-/* Modal forms */
-.modal form .field-group {
-	margin-bottom: 8px;
-}
-.modal #modal_req_status {
-	padding: 1px 4px;
 }
 
 /* Always in view */
@@ -759,8 +812,8 @@ div.request-progress {
 .always_in_view {
 	max-width: calc(100vw - 50px);
 }
-.modal .header,
-.modal .always_in_view {
+.oldmodal .header,
+.oldmodal .always_in_view {
 	max-width: calc(100vw - 60px);
 }
 
@@ -769,8 +822,6 @@ textarea, input[type="text"], input[type="password"], input[type="datetime"], in
 	line-height: 20px;
 	color: #555555;
 	border: 1px solid #cccccc;
-	-webkit-border-radius: 3px;
-	-moz-border-radius: 3px;
 	border-radius: 3px;
 	outline: none;
 }
@@ -839,8 +890,6 @@ a.btn.red {
 	color: #222;
 	text-decoration: none;
 	border: 1px solid rgba(0, 0, 0, 0);
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
 	border-radius: 8px;
 	white-space: pre;
 }
@@ -874,8 +923,6 @@ a.btn.red {
 	list-style: none;
 	background: #fcfcfc;
 	border: 1px solid #cccccc;
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
 	border-radius: 8px;
 	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
@@ -899,8 +946,6 @@ a.btn.red {
 	margin: -1px 0 0;
 	background: #f5f5f5;
 	border: 1px solid #cccccc;
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
 	border-radius: 8px;
 	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
@@ -1020,8 +1065,6 @@ body {
 	/*display: inline-table;*/
 	margin: 6px auto;
 	border: 1px solid #a2a2a2;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .table td {
@@ -1110,13 +1153,9 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	background: #e7e7e7;
 }
 .menu .dropmenu.right > ul {
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .menu .dropmenu.right.open > ul > a {
-	-webkit-border-radius: 0;
-	-moz-border-radius: 0;
 	border-radius: 0;
 }
 .menu .dropmenu.right.open > ul > a:first-child {
@@ -1223,8 +1262,6 @@ div.header > div:last-child{
 }
 .contest-dashboard .contest {
 	margin-bottom: -1px;
-	-webkit-border-radius: 4px 4px 0 0;
-	-moz-border-radius: 4px 4px 0 0;
 	border-radius: 4px 4px 0 0;
 }
 .contest-dashboard .rounds {
@@ -1346,8 +1383,8 @@ table.stripped > tbody > tr:nth-child(3n+1).status.yellow,
 	/*width: 85%;*/
 	margin: 5px 8px;
 }
-.modal .submission-info,
-.modal .job-info {
+.oldmodal .submission-info,
+.oldmodal .job-info {
 	width: initial;
 }
 /*.submission-info h2 {
@@ -1383,8 +1420,6 @@ div.right-flow {
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	background: #f5f5f5;
 	border: 1px solid #afafaf;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 pre.compilation-errors .green,
@@ -1502,8 +1537,6 @@ table.code-view {
 	font-size: 16px;
 	background: #f5f5f5;
 	border: 1px solid #afafaf;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 	-moz-tab-size: 4;
 	tab-size: 4;
@@ -1814,8 +1847,6 @@ table.contest-users tr > td:last-child {
 	padding: 4px 10px;
 	background: #fdfdfd;
 	border: 1px solid #dddddd;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .user-info > div,
@@ -1935,8 +1966,6 @@ pre.logs {
 	background: #131926;
 	color: #b3b3b3;
 	border: 1px solid #afafaf;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 	position: relative;
 }
@@ -1946,11 +1975,9 @@ pre.logs > span::-webkit-scrollbar {
 }
 pre.logs > span::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
-    -webkit-border-radius: 10px;
     border-radius: 10px;
 }
 pre.logs > span::-webkit-scrollbar-thumb {
-    -webkit-border-radius: 10px;
     border-radius: 10px;
     background: #ddd;
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
@@ -2002,8 +2029,6 @@ pre.logs .turquoise {
 	margin: 20px auto 0;
 	background: #fdfdfd;
 	border: 1px solid #dddddd;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .form-container h1 {
@@ -2028,7 +2053,7 @@ pre.logs .turquoise {
 form .field-group {
 	display: flex;
 	min-height: 30px;
-	margin-bottom: 15px;
+	margin-bottom: 8px;
 	-webkit-flex-flow: row nowrap;
 	flex-flow: row nowrap;
 	-webkit-align-items: center;
@@ -2094,8 +2119,6 @@ form .field-group > textarea {
 	background: #f6d7d7;
 	color: #ba4b49;
 	border: 1px solid #ecc1c7;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 
@@ -2158,8 +2181,6 @@ form .field-group > textarea {
 	color: #000;
 	text-align: center;
 	vertical-align: middle;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
 .calendar td.gray > a {

@@ -380,20 +380,20 @@ void Sim::users_user() {
 
     } else if (next_arg == "edit") {
         page_template(intentional_unsafe_string_view(concat("Edit user ", users_uid)));
-        append("edit_user(false, ", users_uid, ");");
+        append("edit_user(", users_uid, ");");
 
     } else if (next_arg == "delete") {
         page_template(intentional_unsafe_string_view(concat("Delete user ", users_uid)));
-        append("delete_user(false, ", users_uid, ");");
+        append("delete_user(", users_uid, ");");
 
     } else if (next_arg == "merge") {
         page_template(intentional_unsafe_string_view(concat("Merge user ", users_uid)));
-        append("merge_user(false, ", users_uid, ");");
+        append("merge_user(", users_uid, ");");
 
     } else if (next_arg == "change-password") {
         page_template(
             intentional_unsafe_string_view(concat("Change password of the user ", users_uid)));
-        append("change_user_password(false, ", users_uid, ");");
+        append("change_user_password(", users_uid, ");");
 
     } else {
         return error404();
