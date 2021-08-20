@@ -9,11 +9,10 @@
 namespace sim::users {
 
 struct User {
-    ENUM_WITH_STRING_CONVERSIONS(
-        Type, uint8_t,
-        (ADMIN, 0, "admin") //
-        (TEACHER, 1, "teacher") //
-        (NORMAL, 2, "normal") //
+    ENUM_WITH_STRING_CONVERSIONS(Type, uint8_t,
+        (ADMIN, 0, "admin")
+        (TEACHER, 1, "teacher")
+        (NORMAL, 2, "normal")
     );
 
     uint64_t id;
