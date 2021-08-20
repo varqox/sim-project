@@ -137,7 +137,7 @@ auto random_short_token() {
 
 } // namespace
 
-namespace web_server::contest_entry_tokens {
+namespace web_server::contest_entry_tokens::api {
 
 Response view(Context& ctx, decltype(Contest::id) contest_id) {
     return with_tokens_info(ctx, contest_id, [&](TokensInfo&& ti) {
@@ -326,4 +326,4 @@ Response use(Context& ctx, StringView token_or_short_token) {
     });
 }
 
-} // namespace web_server::contest_entry_tokens
+} // namespace web_server::contest_entry_tokens::api

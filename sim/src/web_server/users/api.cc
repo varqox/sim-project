@@ -64,7 +64,7 @@ Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
 
 } // namespace
 
-namespace web_server::users {
+namespace web_server::users::api {
 
 constexpr inline uint32_t FIRST_QUERY_LIMIT = 64;
 constexpr inline uint32_t NEXT_QUERY_LIMIT = 200;
@@ -153,4 +153,4 @@ Response view(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_json(std::move(obj).into_str());
 }
 
-} // namespace web_server::users
+} // namespace web_server::users::api
