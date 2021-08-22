@@ -1,5 +1,7 @@
 #include "src/web_server/http/cookies.hh"
+#include "simlib/concat_tostr.hh"
 #include "simlib/debug.hh"
+#include "simlib/string_view.hh"
 
 #include <ctime>
 
@@ -8,36 +10,28 @@ using std::string;
 namespace web_server::http {
 
 void Cookies::set(
-    StringView name, const string& val, time_t expire, const string& path,
-    const string& domain, bool http_only, bool secure) {
-    STACK_UNWINDING_MARK;
-
-    string value = val;
-
-    if (expire != -1) {
-        char buff[35];
-        tm* ptm = gmtime(&expire);
-        if (strftime(buff, 35, "%a, %d %b %Y %H:%M:%S GMT", ptm)) {
-            value.append("; Expires=").append(buff);
-        }
+    StringView name, StringView val, std::optional<time_t> expire,
+    std::optional<StringView> path, bool http_only, bool secure) {
+    string value = concat_tostr(val, "; SameSite=Lax");
+    if (expire) {
+        std::array<char, 64> buff{{}};
+        tm expire_tm = {};
+        tm* rc1 = gmtime_r(&*expire, &expire_tm);
+        assert(rc1 != nullptr);
+        size_t rc2 =
+            strftime(buff.data(), buff.size(), "%a, %d %b %Y %H:%M:%S GMT", &expire_tm);
+        assert(rc2 > 0);
+        back_insert(value, "; Expires=", buff.data());
     }
-
-    if (!path.empty()) {
-        back_insert(value, "; Path=", path);
+    if (path) {
+        back_insert(value, "; Path=", *path);
     }
-
-    if (!domain.empty()) {
-        back_insert(value, "; Domain=", domain);
-    }
-
     if (http_only) {
         value.append("; HttpOnly");
     }
-
     if (secure) {
         value.append("; Secure");
     }
-
     cookies_as_headers[name] = value;
 }
 

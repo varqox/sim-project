@@ -37,7 +37,7 @@ void Sim::error_page_template(StringView status, StringView code, StringView mes
     resp.headers.clear();
 
     auto prev = request.headers.get("Referer");
-    if (prev.empty()) {
+    if (prev.value_or("").empty()) {
         prev = "/";
     }
 
@@ -46,7 +46,7 @@ void Sim::error_page_template(StringView status, StringView code, StringView mes
     append("document.body.insertAdjacentHTML('beforeend', `<center>"
            "<h1 style=\"font-size:25px;font-weight:normal;\">",
               code, " &mdash; ", message, "</h1>"
-           "<a class=\"btn\" href=\"", prev, "\">Go back</a>"
+           "<a class=\"btn\" href=\"", *prev, "\">Go back</a>"
            "</center>`);");
     // clang-format on
 }

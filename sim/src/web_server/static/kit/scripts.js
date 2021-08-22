@@ -111,6 +111,9 @@ function url_api_contest_entry_tokens_regen(contest_id) { return '/api/contest/'
 function url_api_contest_entry_tokens_regen_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regen_short'; }
 function url_api_contest_entry_tokens_view(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens'; }
 function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/contest_name'; }
+function url_api_sign_in() { return '/api/sign_in'; }
+function url_api_sign_out() { return '/api/sign_out'; }
+function url_api_sign_up() { return '/api/sign_up'; }
 function url_api_use_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/use'; }
 function url_api_user(user_id) { return '/api/user/' + user_id; }
 function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change-password'; }
@@ -121,12 +124,12 @@ function url_api_users(query_suffix) { return '/api/users' + query_suffix; }
 function url_contests() { return '/c'; }
 function url_enter_contest(contest_entry_token) { return '/enter_contest/' + contest_entry_token; }
 function url_jobs() { return '/jobs'; }
-function url_log_in() { return '/login'; }
-function url_log_out() { return '/logout'; }
 function url_logs() { return '/logs'; }
 function url_main_page() { return '/'; }
 function url_problems() { return '/p'; }
-function url_sign_up() { return '/signup'; }
+function url_sign_in() { return '/sign_in'; }
+function url_sign_out() { return '/sign_out'; }
+function url_sign_up() { return '/sign_up'; }
 function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
 function url_submissions() { return '/s'; }
 function url_user(user_id) { return '/u/' + user_id; }
@@ -216,10 +219,15 @@ function humanize_file_size(size) {
  *      response_type: 'text', // accepted values: 'text', 'json'
  *      remove_previous_status: true,
  *      show_abort_button_after: 1500, // in milliseconds
- *      onloadend: null, // function to call after the request completes (either by success or error)
  *      do_before_send: null, // function to call just before sending the request; the advantage
  *                            // of this over just calling it before calling do_xhr_with_status()
  *                            // is that it is called after 'Try again' is clicked
+ *      onloadend: null, // function to call after the request completes (either by success or error)
+ *      extra_http_headers: {}, // additional HTTP headers to set before sending request, format:
+ *                              // extra_https_headers: {
+ *                              //    'some-header': 'some value',
+ *                              //    'another-header': 'another value',
+ *                              // }
  *  }
  *
  * @p process_response is called with parameters response and request_status. Before @p process_response is called,
@@ -234,6 +242,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	if (init.show_abort_button_after == null) init.show_abort_button_after = 1500;
 	if (init.do_before_send == null) init.do_before_send = null;
 	if (init.onloadend == null) init.onloadend = null;
+	if (init.extra_http_headers == null) init.extra_http_headers = [];
 
 	const status_center_elem = elem_of('center', elem_request_status_pending());
 	const show_error = (msg) => {
@@ -258,17 +267,24 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	xhr.onload = () => {
 		// Handle errors
 		if (xhr.status != 200) {
-			let msg = 'Error: ' + xhr.status;
-			// HTTP/2 does not have statusText (on Chrome statusText == '' in such case but
-			// standard says something about 'OK' being the default value)
-			if (xhr.statusText != '' && xhr.statusText != 'OK') {
-				msg += ' ';
-				msg += xhr.statusText;
+			let msg = '';
+			// Status 400 is used for reporting request errors
+			if (xhr.status != 400) {
+				msg += 'Error: ';
+				msg += xhr.status;
+				// HTTP/2 does not have statusText (on Chrome statusText == '' in such case but
+				// standard says something about 'OK' being the default value)
+				if (xhr.statusText != '' && xhr.statusText != 'OK') {
+					msg += ' ';
+					msg += xhr.statusText;
+				}
 			}
 			// Append message only if it is a non-empty text response
 			const content_type = (xhr.getResponseHeader('content-type') || '').split(' ')[0].split(';')[0];
 			if (xhr.response.length > 0 && content_type == 'text/plain') {
-				msg += '\n';
+				if (msg != '') {
+					msg += '\n';
+				}
 				msg += xhr.response;
 			}
 			show_error(msg);
@@ -281,7 +297,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 			parsed_response = (() => {
 				switch (init.response_type) {
 					case 'text': return xhr.response;
-					case 'json': return JSON.parse(xhr.response);
+					case 'json': return xhr.response.length == 0 ? undefined : JSON.parse(xhr.response);
 					default:
 						invalid_init_response_type = true;
 						return null;
@@ -296,20 +312,25 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 			throw Error("Invalid init.response_type = " + init.response_type);
 		}
 
-		let showed_status_success = false;
+		status_center_elem.style.display = 'none';
+		let showed_status = false;
+		const show_status = (msg, new_status) => {
+			showed_status = true;
+			new_status.innerText = msg;
+			status_center_elem.style.display = ''; // undo setting 'none'
+			remove_children(status_center_elem);
+			status_center_elem.appendChild(new_status);
+		};
 		const request_status = {
 			show_success: (msg) => {
-				showed_status_success = true;
-				const new_status = elem_request_status_success();
-				new_status.innerText = msg;
-				status_center_elem.style.display = ''; // undo setting 'none'
-				remove_children(status_center_elem);
-				status_center_elem.appendChild(new_status);
+				show_status(msg, elem_request_status_success());
+			},
+			show_error: (msg) => {
+				show_status(msg, elem_request_status_error());
 			},
 		};
-		status_center_elem.style.display = 'none';
 		process_response.call(null, parsed_response, request_status);
-		if (!showed_status_success) {
+		if (!showed_status) {
 			status_center_elem.remove();
 		}
 	};
@@ -349,6 +370,9 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	xhr.open(method, url);
 	xhr.timeout = init.timeout;
 	xhr.responseType = 'text';
+	for (const name in init.extra_http_headers) {
+		xhr.setRequestHeader(name, init.extra_http_headers[name]);
+	}
 	// Append request-status element
 	if (init.remove_previous_status) {
 		try_remove_centered_request_status(parent_elem_for_status);
@@ -398,12 +422,21 @@ function Select(name, required) {
 	}
 }
 
-function AjaxForm(title, destination_api_url, css_classes) {
+/**
+ * Default values in init: {
+ *     css_classes: null, // no additional CSS classes
+ *     response_type: 'json', // the same accepted values as in do_xhr_with_status()
+ * }
+ */
+function AjaxForm(title, destination_api_url, init) {
+	if (init == null) init = {};
+	if (init.css_classes == null) init.css_classes = null;
+	if (init.response_type == null) init.response_type = 'json';
 	if (this == window) {
 		throw new Error('Call as "new AjaxForm()", not "AjaxForm()"');
 	}
 	const self = this;
-	const outer_div = elem_with_class('div', 'form-container' + (css_classes == null ? '' : ' ' + css_classes));
+	const outer_div = elem_with_class('div', 'form-container' + (init.css_classes == null ? '' : ' ' + init.css_classes));
 	outer_div.appendChild(elem_with_text('h1', title));
 
 	const form_elem = outer_div.appendChild(document.createElement('form'));
@@ -418,6 +451,7 @@ function AjaxForm(title, destination_api_url, css_classes) {
 
 	let show_upload_progress = false;
 	let leave_submit_button_disabled = false;
+	const password_inputs = [];
 
 	form_elem.addEventListener('submit', (event) => {
 		event.preventDefault();
@@ -428,20 +462,30 @@ function AjaxForm(title, destination_api_url, css_classes) {
 				form_data.set(elem.name, form_data.get(elem.name).trim());
 			}
 		}
-		form_data.set('csrf_token', get_cookie('csrf_token'));
+		form_data.set('csrf_token', get_cookie('csrf_token')); // TODO: remove after backend refactor
 		// Send form
 		do_xhr_with_status('post', destination_api_url, {
 			body: form_data,
 			show_upload_progress: show_upload_progress,
+			response_type: init.response_type,
 			do_before_send: () => { event.submitter.disabled = true; },
 			onloadend: () => {
-				if (!leave_submit_button_disabled) {
+				if (leave_submit_button_disabled) {
+					// Clear all password inputs
+					for (const input of password_inputs) {
+						input.value = '';
+					}
+				} else {
 					event.submitter.disabled = false;
 				}
+			},
+			extra_http_headers: {
+				'x-csrf-token': get_cookie('csrf_token'),
 			},
 		}, form_elem, (response, request_status) => {
 			self.success_handler.call(null, response, {
 				show_status_success: request_status.show_success.bind(request_status),
+				show_status_error: request_status.show_error.bind(request_status),
 				keep_submit_button_disabled: () => { leave_submit_button_disabled = true; },
 			});
 		});
@@ -489,6 +533,7 @@ function AjaxForm(title, destination_api_url, css_classes) {
 	self.append_input_password = (name, label, size, required) => {
 		const input = self.append_input('password', name, label, required);
 		input.size = size;
+		password_inputs.push(input);
 		return input;
 	};
 
@@ -510,6 +555,10 @@ function AjaxForm(title, destination_api_url, css_classes) {
 		const select = new Select(name, required);
 		select.attach_to(fg);
 		return select;
+	};
+
+	self.append_checkbox = (name, label) => {
+		return self.append_input('checkbox', name, label, false);
 	};
 
 	self.append_submit_button = (name, css_classes) => {
@@ -645,10 +694,6 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	}
 }
 
-function is_logged_in() {
-	return logged_user_id != null;
-}
-
 /* ================================= History ================================= */
 
 const History = (() => {
@@ -753,29 +798,7 @@ const History = (() => {
 	};
 })();
 
-function sim_template(capabilities, server_response_end_ts) {
-	const navbar = elem_with_class('div', 'navbar');
-	navbar.appendChild(elem_with_class_and_text('a', 'brand', 'Sim beta')).href = url_main_page();
-	if (capabilities.contests) {
-		// TODO: this requires jQuery
-		$(navbar).append(a_view_button(url_contests(), 'Contests', undefined, contest_chooser));
-	}
-	if (capabilities.problems) {
-		navbar.appendChild(elem_with_text('a', 'Problems')).href = url_problems();
-	}
-	if (capabilities.users) {
-		navbar.appendChild(elem_with_text('a', 'Users')).href = url_users();
-	}
-	if (capabilities.submissions) {
-		navbar.appendChild(elem_with_text('a', 'Submissions')).href = url_submissions();
-	}
-	if (capabilities.jobs) {
-		navbar.appendChild(elem_with_text('a', 'Jobs')).href = url_jobs();
-	}
-	if (capabilities.logs) {
-		navbar.appendChild(elem_with_text('a', 'Logs')).href = url_logs();
-	}
-
+function sim_template(params, server_response_end_ts) {
 	const history_persistent_state = History.init(() => {
 		let server_time_offset;
 		const entries = window.performance.getEntriesByType('navigation');
@@ -817,7 +840,7 @@ function sim_template(capabilities, server_response_end_ts) {
 	window.ServerClock = (() => {
 		const listeners = new Array();
 		function run_listeners() {
-			for (listener of listeners) {
+			for (const listener of listeners) {
 				listener();
 			}
 		};
@@ -860,6 +883,44 @@ function sim_template(capabilities, server_response_end_ts) {
 		}
 	})();
 
+	handle_session_change(params);
+}
+
+function handle_session_change(params) {
+	window.is_signed_in = () => signed_user_id != null;
+
+	window.signed_user_id = params.session != null ? params.session.user_id : null;
+	window.signed_user_type = params.session != null ? params.session.user_type : null; // TODO: remove after refactor or when it becomes unnecessary (also remove it from @p params on the server side)
+
+	const navbar = (() => {
+		const navbar = document.querySelector('.navbar');
+		if (navbar != null) {
+			remove_children(navbar);
+			return navbar;
+		}
+		return document.body.appendChild(elem_with_class('div', 'navbar'));
+	})();
+	navbar.appendChild(elem_with_class_and_text('a', 'brand', 'Sim beta')).href = url_main_page();
+	if (params.capabilities.contests) {
+		// TODO: this requires jQuery
+		$(navbar).append(a_view_button(url_contests(), 'Contests', undefined, contest_chooser));
+	}
+	if (params.capabilities.problems) {
+		navbar.appendChild(elem_with_text('a', 'Problems')).href = url_problems();
+	}
+	if (params.capabilities.users) {
+		navbar.appendChild(elem_with_text('a', 'Users')).href = url_users();
+	}
+	if (params.capabilities.submissions) {
+		navbar.appendChild(elem_with_text('a', 'Submissions')).href = url_submissions();
+	}
+	if (params.capabilities.jobs) {
+		navbar.appendChild(elem_with_text('a', 'Jobs')).href = url_jobs();
+	}
+	if (params.capabilities.logs) {
+		navbar.appendChild(elem_with_text('a', 'Logs')).href = url_logs();
+	}
+
 	// Navigation bar clock
 	const clock = elem_with_id('time', 'clock');
 	ServerClock.add_listener(() => {
@@ -876,22 +937,20 @@ function sim_template(capabilities, server_response_end_ts) {
 	});
 	navbar.appendChild(clock);
 
-	if (is_logged_in()) {
+	if (params.session) {
 		const dropdown_menu = navbar.appendChild(elem_with_class('div', 'dropmenu down'));
 		const toggler = dropdown_menu.appendChild(elem_with_class('a', 'user dropmenu-toggle'));
-		toggler.appendChild(elem_with_text('strong', logged_user_username));
+		toggler.appendChild(elem_with_text('strong', params.session.username));
 
 		const ul = dropdown_menu.appendChild(document.createElement('ul'));
-		ul.appendChild(elem_with_text('a', 'My profile')).href = url_user(logged_user_id);
-		ul.appendChild(elem_with_text('a', 'Edit profile')).href = url_user_edit(logged_user_id);
-		ul.appendChild(elem_with_text('a', 'Change password')).href = url_user_change_password(logged_user_id);
-		ul.appendChild(elem_with_text('a', 'Log out')).href = url_log_out(logged_user_id);
+		ul.appendChild(elem_with_text('a', 'My profile')).href = url_user(params.session.user_id);
+		ul.appendChild(elem_with_text('a', 'Edit profile')).href = url_user_edit(params.session.user_id);
+		ul.appendChild(elem_with_text('a', 'Change password')).href = url_user_change_password(params.session.user_id);
+		ul.appendChild(elem_link_to_view('Sign out', sign_out, url_sign_out));
 	} else {
-		navbar.appendChild(elem_of('a', elem_with_text('strong', 'Log in'))).href = url_log_in();
-		navbar.appendChild(elem_with_text('a', 'Sign up')).href = url_sign_up();
+		navbar.appendChild(elem_link_to_view(elem_with_text('strong', 'Sign in'), sign_in, url_sign_in));
+		navbar.appendChild(elem_link_to_view('Sign up', sign_up, url_sign_up));
 	}
-
-	document.body.appendChild(navbar);
 }
 
 /* ================================= Modal ================================= */
@@ -926,12 +985,39 @@ function ModalBase() {
 	self.content_elem = content_elem;
 }
 
+function set_api_interface(modal_or_view, content_elem) {
+	modal_or_view.get_from_api = (url) => {
+		return new Promise((resolve, reject, request_handler = (response, request_status) => response) => {
+			do_xhr_with_status('get', url, {
+				response_type: 'json',
+			}, content_elem, (response, request_status) => {
+				resolve(request_handler(response, request_status));
+			});
+		});
+	};
+	modal_or_view.post_to_api = (url, form_data, request_handler = (response, request_status) => response) => {
+		form_data.set('csrf_token', get_cookie('csrf_token')); // TODO: remove after backend refactor
+		return new Promise((resolve, reject) => {
+			do_xhr_with_status('post', url, {
+				body: form_data,
+				response_type: 'json',
+				extra_http_headers: {
+					'x-csrf-token': get_cookie('csrf_token'),
+				},
+			}, content_elem, (response, request_status) => {
+				resolve(request_handler(response, request_status));
+			});
+		});
+	};
+}
+
 function Modal() {
 	if (this == window) {
 		throw new Error('Call as "new Modal()", not "Modal()"');
 	}
 	const self = this;
 	ModalBase.call(self);
+	set_api_interface(self, self.content_elem);
 	append_with_fade_in(History.get_current_view_elem(), self.modal_elem);
 }
 
@@ -953,20 +1039,23 @@ function View(new_window_location) {
 		self.content_elem = modal.content_elem;
 		History.push(self.view_elem, new_window_location);
 	}
-	self.get_from_api = (url) => {
-		return new Promise((resolve, reject) => {
-			do_xhr_with_status('get', url, {
-				response_type: 'json',
-			}, self.content_elem, resolve);
-		});
-
-	};
+	set_api_interface(self, self.content_elem);
 };
+
+function elem_link_to_view(contents, view_func, url_func, ...args) {
+	const elem = elem_of('a', contents);
+	elem.href = url_func(...args);
+	elem.addEventListener('click', (event) => {
+		event.preventDefault();
+		view_func(...args);
+	});
+	return elem;
+}
 
 /* ================================= Pages ================================= */
 
 function main_page() {
-	const view =new View('/');
+	const view = new View('/');
 	const img = document.createElement('img');
 	img.src = url_sim_logo_img();
 	img.width = 260;
@@ -1006,9 +1095,12 @@ async function edit_user(user_id) {
 async function delete_user(user_id) {
 	const view = new View(url_user_delete(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
-	const is_me = (user.id == logged_user_id);
+	const is_me = (user.id == signed_user_id);
 	const title = is_me ? 'Delete account' : 'Delete user ' + user.id;
-	const form = new AjaxForm(title, url_api_user_delete(user.id), 'with-notice');
+	const form = new AjaxForm(title, url_api_user_delete(user.id), {
+		css_classes: 'with-notice',
+		response_type: 'text',
+	});
 	if (is_me) {
 		form.append(elem_of('p', 'You are going to delete your account. As it cannot be undone, you have to confirm it with your password.'));
 	} else {
@@ -1033,7 +1125,10 @@ async function delete_user(user_id) {
 async function merge_user(user_id) {
 	const view = new View(url_user_merge(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
-	const form = new AjaxForm('Merge into another user', url_api_user_merge_into_another(user.id), 'with-notice');
+	const form = new AjaxForm('Merge into another user', url_api_user_merge_into_another(user.id), {
+		css_classes: 'with-notice',
+		response_type: 'text',
+	});
 	form.append(elem_of('p', 'The user ',
 		a_view_button('/u/' + user.id, user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
 		' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
@@ -1050,10 +1145,64 @@ async function merge_user(user_id) {
 	form.attach_to(view.content_elem);
 }
 
+async function sign_in() {
+	const view = new View(url_sign_in());
+	const form = new AjaxForm('Sign in', url_api_sign_in());
+	form.append_input_text('username', 'Username', '', 24, true, true);
+	form.append_input_password('password', 'Password', 24, false);
+	form.append_checkbox('remember_for_a_month', 'Remember for a month');
+	const old_csrf_token = get_cookie('csrf_token');
+	form.success_handler = (response, ctx) => {
+		const csrf_token = get_cookie('csrf_token');
+		if ((csrf_token == '' || csrf_token == old_csrf_token) && !location.href.startsWith('https://')) {
+			ctx.show_status_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
+		} else {
+			ctx.show_status_success('Signed in successfully');
+			ctx.keep_submit_button_disabled();
+			handle_session_change(response);
+		}
+	};
+	form.append_submit_button('Sign in', 'blue');
+	form.attach_to(view.content_elem);
+}
+
+async function sign_up() {
+	const view = new View(url_sign_up());
+	const form = new AjaxForm('Sign up', url_api_sign_up());
+	form.append_input_text('username', 'Username', '', 24, true, true);
+	form.append_input_text('first_name', 'First name', '', 24, true, true);
+	form.append_input_text('last_name', 'Last name', '', 24, true, true);
+	form.append_input_email('email', 'Email', '', 24, true, true);
+	form.append_input_password('password', 'Password', 24, false);
+	form.append_input_password('password_repeated', 'Password (repeat)', 24, false);
+	const old_csrf_token = get_cookie('csrf_token');
+	form.success_handler = (response, ctx) => {
+		const csrf_token = get_cookie('csrf_token');
+		if ((csrf_token == '' || csrf_token == old_csrf_token) && !location.href.startsWith('https://')) {
+			ctx.show_status_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
+		} else {
+			ctx.show_status_success('Signed up successfully');
+			ctx.keep_submit_button_disabled();
+			handle_session_change(response);
+		}
+	};
+	form.append_submit_button('Sign up', 'blue');
+	form.attach_to(view.content_elem);
+}
+
+async function sign_out() {
+	const view = new View(url_sign_out());
+	view.content_elem.appendChild(elem_of('center', elem_with_text('h1', 'Signing out')));
+	view.post_to_api(url_api_sign_out(), new FormData(), (response, request_status) => {
+		request_status.show_success("Signed out");
+		handle_session_change(response);
+	});
+}
+
 async function change_user_password(user_id) {
 	const view = new View(url_user_change_password(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
-	const is_me = (user.id == logged_user_id);
+	const is_me = (user.id == signed_user_id);
 	const title = is_me ? 'Change my password' : 'Change user password';
 	const form = new AjaxForm(title, url_api_user_change_password(user.id));
 	if (!user.capabilities.change_password_without_old_password) {
@@ -1121,14 +1270,14 @@ function text_to_safe_html(str) { // This is deprecated because DOM elements hav
 	x.innerText = str;
 	return x.innerHTML;
 }
-function logged_user_is_admin() { // This is deprecated
-	return logged_user_type == 'admin';
+function signed_user_is_admin() { // This is deprecated
+	return signed_user_type == 'admin';
 }
-function logged_user_is_teacher() { // This is deprecated
-	return logged_user_type == 'teacher';
+function signed_user_is_teacher() { // This is deprecated
+	return signed_user_type == 'teacher';
 }
-function logged_user_is_teacher_or_admin() { // This is deprecated
-	return logged_user_is_teacher() || logged_user_is_admin();
+function signed_user_is_teacher_or_admin() { // This is deprecated
+	return signed_user_is_teacher() || signed_user_is_admin();
 }
 // Returns value of cookie @p name or empty string
 function get_cookie(name) {
@@ -1569,6 +1718,7 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 		processData: false,
 		contentType: false,
 		data: form_data,
+		headers: {'x-csrf-token': get_cookie('csrf_token')},
 		success: function(resp) {
 			if (typeof success_msg_or_handler === "function") {
 				success_msg_or_handler.call(form, resp, oldloader_parent);
@@ -1857,7 +2007,7 @@ function tabmenu(attacher, tabs) {
 
 	var arg = url_hash_parser.extract_next_arg();
 	var rc = res.children();
-	for (i = 0; i < rc.length; ++i) {
+	for (var i = 0; i < rc.length; ++i) {
 		var elem = $(rc[i]);
 		if (tabname_to_hash(elem.text()) === arg) {
 			set_min_width(this);
@@ -2796,7 +2946,7 @@ function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 		tabmenu(default_tabmenu_attacher.bind(main), [
 			'Submissions', function() {
 				main.append($('<div>', {html: "<h2>User's submissions</h2>"}));
-				tab_submissions_lister(main.children().last(), '/u' + user_id, false, !logged_user_is_admin());
+				tab_submissions_lister(main.children().last(), '/u' + user_id, false, !signed_user_is_admin());
 			},
 			'Jobs', function() {
 				var j_table = $('<table>', {
@@ -2834,7 +2984,7 @@ function user_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
 		'/u' + (opt_hash === undefined ? '' : opt_hash), function() {
 			timed_hide($(this).parent().parent().filter('.oldmodal'));
 			$(this).append($('<h1>', {text: 'Users'}));
-			if (logged_user_is_admin())
+			if (signed_user_is_admin())
 				$(this).append(a_view_button('/u/add', 'Add user', 'btn',
 					add_user.bind(null, true)));
 
@@ -3126,7 +3276,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 
 	var tabs = [
 		'All', retab.bind(null, ''),
-		'My', retab.bind(null, '/u' + logged_user_id)
+		'My', retab.bind(null, '/u' + signed_user_id)
 	];
 
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
@@ -3457,12 +3607,12 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 			});
 
 		if (s.owner_id !== null) {
-			tabs.push((s.owner_id == logged_user_id ? 'My' : "User's") + ' submissions to this problem', function() {
+			tabs.push((s.owner_id == signed_user_id ? 'My' : "User's") + ' submissions to this problem', function() {
 				elem.append($('<div>'));
 				tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + (s.contest_id === null ? '/p' + s.problem_id : '/P' + s.contest_problem_id));
 			});
 
-			if (s.contest_id !== null && s.owner_id != logged_user_id) {
+			if (s.contest_id !== null && s.owner_id != signed_user_id) {
 				tabs.push("User's submissions to this round", function() {
 					elem.append($('<div>'));
 					tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + '/R' + s.contest_round_id);
@@ -4257,7 +4407,7 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 						var tags = [];
 						for (var i in problem.tags.public)
 							tags.push($('<label>', {text: problem.tags.public[i]}));
-						for (i in problem.tags.hidden)
+						for (var i in problem.tags.hidden)
 							tags.push($('<label>', {
 								class: 'hidden',
 								text: problem.tags.hidden[i]
@@ -4299,10 +4449,10 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 						true);
 				});
 
-		if (is_logged_in())
+		if (is_signed_in())
 			tabs.push('My submissions', function() {
 					elem.append($('<div>'));
-					tab_submissions_lister(elem.children().last(), '/p' + problem_id + '/u' + logged_user_id);
+					tab_submissions_lister(elem.children().last(), '/p' + problem_id + '/u' + signed_user_id);
 				});
 
 		if (actions.indexOf('f') !== -1)
@@ -4346,8 +4496,8 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-	this.show_owner = logged_user_is_teacher_or_admin();
-	this.show_added = logged_user_is_teacher_or_admin() ||
+	this.show_owner = signed_user_is_teacher_or_admin();
+	this.show_added = signed_user_is_teacher_or_admin() ||
 		(query_suffix.indexOf('/u') !== -1);
 
 	OldLister.call(this, elem);
@@ -4398,7 +4548,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			var tags = [];
 			for (var i in x.tags.public)
 				tags.push($('<label>', {text: x.tags.public[i]}));
-			for (i in x.tags.hidden)
+			for (var i in x.tags.hidden)
 				tags.push($('<label>', {
 					class: 'hidden',
 					text: x.tags.hidden[i]
@@ -4454,8 +4604,8 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 		'All', retab.bind(null, '')
 	];
 
-	if (is_logged_in())
-		tabs.push('My', retab.bind(null, '/u' + logged_user_id));
+	if (is_signed_in())
+		tabs.push('My', retab.bind(null, '/u' + signed_user_id));
 
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
@@ -4464,7 +4614,7 @@ function problem_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
 		'/p' + (opt_hash === undefined ? '' : opt_hash), function() {
 			timed_hide($(this).parent().parent().filter('.oldmodal'));
 			$(this).append($('<h1>', {text: 'Problems'}));
-			if (logged_user_is_teacher_or_admin())
+			if (signed_user_is_teacher_or_admin())
 				$(this).append(a_view_button('/p/add', 'Add problem', 'btn',
 					add_problem.bind(null, true)));
 
@@ -4532,7 +4682,7 @@ function append_create_contest(elem, as_oldmodal) {
 			// maxlength: 'TODO...',
 			trim_before_send: true,
 			required: true
-		}).add(logged_user_is_admin() ? Form.field_group('Make public', {
+		}).add(signed_user_is_admin() ? Form.field_group('Make public', {
 			type: 'checkbox',
 			name: 'public'
 		}) : $()).add('<div>', {
@@ -4583,7 +4733,7 @@ function append_clone_contest(elem, as_oldmodal) {
 						source_contest_input.val(''); // unset on invalid value
 				}
 			})
-		)).add(logged_user_is_admin() ? Form.field_group('Make public', {
+		)).add(signed_user_is_admin() ? Form.field_group('Make public', {
 			type: 'checkbox',
 			name: 'public'
 		}) : $()).add('<div>', {
@@ -5270,7 +5420,7 @@ function view_contest_impl(as_oldmodal, id_for_api, opt_hash /*= ''*/) {
 						append_problem(dashboard_round, problems[l++], cannot_submit);
 				}
 
-				if (is_logged_in()) {
+				if (is_signed_in()) {
 					// All problems have been colored
 					// Mark rounds as green (only the ones that contain a problem)
 					var rounds_to_check = dashboard_rounds.children().filter(function() { return $(this).children().length > 1; });
@@ -5305,7 +5455,7 @@ function view_contest_impl(as_oldmodal, id_for_api, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('p') !== -1)
 			tabs.push('My submissions', function() {
-				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + logged_user_id, false, (actions.indexOf('A') === -1));
+				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + signed_user_id, false, (actions.indexOf('A') === -1));
 			});
 
 		if (actions.indexOf('v') !== -1)
@@ -5501,7 +5651,7 @@ function contest_ranking(elem_, id_for_api) {
 		// Add round item to the every problem (and remove invalid problems -
 		// the ones which don't belong to the valid rounds)
 		var tmp_problems = [];
-		for (i = 0; i < problems.length; ++i) {
+		for (var i = 0; i < problems.length; ++i) {
 			var x = rid_to_item.get(problems[i].round_id);
 			if (x != null) {
 				problems[i].round_item = x;
@@ -5518,7 +5668,7 @@ function contest_ranking(elem_, id_for_api) {
 
 		// Map problems (by id) to their indexes in the above array
 		var problem_to_col_id = new StaticMap();
-		for (i = 0; i < problems.length; ++i)
+		for (var i = 0; i < problems.length; ++i)
 			problem_to_col_id.add(problems[i].id, i);
 		problem_to_col_id.prepare();
 
@@ -5583,7 +5733,7 @@ function contest_ranking(elem_, id_for_api) {
 			var thead = $('<thead>', {html: tr});
 			tr = $('<tr>');
 			// Add problems
-			for (i = 0; i < problems.length; ++i)
+			for (var i = 0; i < problems.length; ++i)
 				tr.append($('<th>', {
 					html: $('<a>', {
 						href: '/c/p' + problems[i].id + '#ranking',
@@ -5594,12 +5744,12 @@ function contest_ranking(elem_, id_for_api) {
 
 			// Add score for each user add this to the user's info
 			var submissions;
-			for (i = 0; i < data.length; ++i) {
+			for (var i = 0; i < data.length; ++i) {
 				submissions = data[i].submissions;
 				var total_score = 0;
 				// Count only valid problems (to fix potential discrepancies
 				// between ranking submissions and the contest structure)
-				for (j = 0; j < submissions.length; ++j) {
+				for (var j = 0; j < submissions.length; ++j) {
 					if (problem_to_col_id.get(submissions[j].contest_problem_id) !== null) {
 						total_score += submissions[j].score;
 					}
@@ -5615,7 +5765,7 @@ function contest_ranking(elem_, id_for_api) {
 			var tbody = $('<tbody>');
 			var prev_score = data[0].score + 1;
 			var place;
-			for (i = 0; i < data.length; ++i) {
+			for (var i = 0; i < data.length; ++i) {
 				var user_row = data[i];
 				tr = $('<tr>');
 				// Place
@@ -5638,7 +5788,7 @@ function contest_ranking(elem_, id_for_api) {
 				// Submissions
 				var row = new Array(problems.length);
 				submissions = data[i].submissions;
-				for (j = 0; j < submissions.length; ++j) {
+				for (var j = 0; j < submissions.length; ++j) {
 					var x = problem_to_col_id.get(submissions[j].contest_problem_id);
 					if (x != null) {
 						var score_text = (submissions[j].score != null ? submissions[j].score : '?');
@@ -5658,7 +5808,7 @@ function contest_ranking(elem_, id_for_api) {
 					}
 				}
 				// Construct the row
-				for (j = 0; j < problems.length; ++j) {
+				for (var j = 0; j < problems.length; ++j) {
 					if (row[j] === undefined)
 						$('<td>').appendTo(tr);
 					else
@@ -5702,7 +5852,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 			}
 
 			this_.elem.html('<thead><tr>' +
-					(logged_user_is_admin() ? '<th>Id</th>' : '') +
+					(signed_user_is_admin() ? '<th>Id</th>' : '') +
 					'<th class="name">Name</th>' +
 					'<th class="actions">Actions</th>' +
 				'</tr></thead><tbody></tbody>');
@@ -5718,7 +5868,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 			});
 
 			// Id
-			if (logged_user_is_admin())
+			if (signed_user_is_admin())
 				row.append($('<td>', {text: x.id}));
 			// Name
 			row.append($('<td>', {
@@ -5754,8 +5904,8 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 	];
 
 	// TODO: implement it
-	// if (is_logged_in())
-		// tabs.push('My', retab.bind(null, '/u' + logged_user_id));
+	// if (is_signed_in())
+		// tabs.push('My', retab.bind(null, '/u' + signed_user_id));
 
 	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
@@ -5764,7 +5914,7 @@ function contest_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
 		'/c' + (opt_hash === undefined ? '' : opt_hash), function() {
 			timed_hide($(this).parent().parent().filter('.oldmodal'));
 			$(this).append($('<h1>', {text: 'Contests'}));
-			if (logged_user_is_teacher_or_admin())
+			if (signed_user_is_teacher_or_admin())
 				$(this).append(a_view_button('/c/add', 'Add contest', 'btn',
 					add_contest.bind(null, true)));
 

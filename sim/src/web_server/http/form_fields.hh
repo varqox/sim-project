@@ -35,27 +35,26 @@ public:
         others_.emplace(std::move(name), std::move(value));
     }
 
-    /// @brief Returns value of the variable @p name or nullptr if such does not exist.
-    // Returned pointer may be invalided by modifying this object
-    const std::string* get(StringView name) const noexcept {
+    /// Returns value of the variable @p name if exists. Returned value may be invalided by
+    /// modifying this object
+    std::optional<CStringView> get(StringView name) const noexcept {
         auto it = others_.find(name);
-        return it != others_.end() ? &it->second : nullptr;
-    }
-
-    /// @brief Returns value of the variable @p name or @p or_value if such does not exist.
-    // Returned pointer may be invalided by modifying this object
-    CStringView get_or(StringView name, CStringView or_value) const noexcept {
-        auto* val = get(name);
-        return val ? *val : or_value;
+        if (it != others_.end()) {
+            return it->second;
+        }
+        return std::nullopt;
     }
 
     bool contains(StringView name) const noexcept { return others_.count(name) == 1; }
 
-    /// @brief Returns path of the uploaded file with the form's name @p name or nullptr if
-    /// such does not exist. Returned pointer may be invalided by modifying this object
-    const std::string* file_path(StringView name) const noexcept {
+    /// Returns path of the uploaded file with the form's name @p name if exists. Returned
+    /// value may be invalided by modifying this object.
+    std::optional<CStringView> file_path(StringView name) const noexcept {
         auto it = files_.find(name);
-        return it != files_.end() ? &it->second : nullptr;
+        if (it != files_.end()) {
+            return it->second;
+        }
+        return std::nullopt;
     }
 
     const auto& files() const noexcept { return files_; }

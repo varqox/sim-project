@@ -14,6 +14,9 @@ Users users_for(const decltype(web_worker::Context::session)& session) noexcept 
         .add_admin = session and session->user_id == sim::users::SIM_ROOT_UID,
         .add_teacher = is_admin,
         .add_normal_user = is_admin,
+        .sign_in = true,
+        .sign_up = true,
+        .sign_out = session.has_value(),
     };
 }
 

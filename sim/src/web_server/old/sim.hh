@@ -260,20 +260,6 @@ class Sim final {
 
     decltype(web_worker::Context::session) session;
 
-    /**
-     * @brief Creates session and opens it
-     * @details First closes old session and then creates and opens new one
-     *
-     * @param user_id Id of user to which session will belong
-     * @param short_session Whether create short or long session
-     *
-     * @errors Throws an exception in any case of error
-     */
-    void session_create_and_open(decltype(session->user_id) user_id, bool short_session);
-
-    /// Destroys session (removes from database, etc.)
-    void session_destroy();
-
     /// Opens session, returns true if opened successfully, false otherwise
     bool session_open();
 
@@ -335,7 +321,7 @@ class Sim final {
         T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
 
-        const auto* value = request.form_fields.get(name);
+        const auto value = request.form_fields.get(name);
         if (not value) {
             form_validation_error = true;
             add_notification("error", "Invalid ", html_escape(name_to_print));
@@ -385,7 +371,7 @@ class Sim final {
         T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
 
-        const auto* value = request.form_fields.get(name);
+        const auto value = request.form_fields.get(name);
         if (not value) {
             form_validation_error = true;
             add_notification("error", "Invalid ", html_escape(name_to_print));
@@ -442,7 +428,7 @@ class Sim final {
         T& var, const std::string& name, StringView name_to_print) {
         STACK_UNWINDING_MARK;
 
-        const auto* file = request.form_fields.file_path(name);
+        const auto file = request.form_fields.file_path(name);
         if (not file) {
             form_validation_error = true;
             add_notification(
@@ -504,12 +490,6 @@ private:
     bool check_submitted_password(StringView password_field_name = "password");
 
     /* Pages */
-
-    void login();
-
-    void logout();
-
-    void sign_up();
 
     // @brief Main User handler
     void users_handle();

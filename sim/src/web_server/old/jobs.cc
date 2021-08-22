@@ -178,10 +178,6 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
 void Sim::jobs_handle() {
     STACK_UNWINDING_MARK;
 
-    if (not session.has_value()) {
-        return redirect("/login?" + request.target);
-    }
-
     StringView next_arg = url_args.extract_next_arg();
     if (is_digit(next_arg)) {
         jobs_jid = next_arg;

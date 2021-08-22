@@ -1,7 +1,9 @@
 #include "src/web_server/ui_template.hh"
 #include "sim/sessions/session.hh"
 #include "sim/users/user.hh"
+#include "simlib/concat_tostr.hh"
 #include "simlib/file_info.hh"
+#include "simlib/json_str/json_str.hh"
 #include "simlib/string_transform.hh"
 #include "simlib/string_view.hh"
 #include "src/web_server/capabilities/contests.hh"
@@ -11,6 +13,7 @@
 #include "src/web_server/capabilities/submissions.hh"
 #include "src/web_server/capabilities/users.hh"
 #include "src/web_server/http/response.hh"
+#include "src/web_server/web_worker/web_worker.hh"
 
 #include <chrono>
 
@@ -51,13 +54,19 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
     // Protect from clickjacking
     resp.headers["X-Frame-Options"] = "DENY";
     resp.headers["x-content-type-options"] = "nosniff";
-    resp.headers["Content-Security-Policy"] = "default-src 'none'; "
-                                              "style-src 'self' 'unsafe-inline'; "
-                                              "script-src 'self' 'unsafe-inline'; "
-                                              "connect-src 'self'; "
-                                              "object-src 'self'; "
-                                              "frame-src 'self'; "
-                                              "img-src 'self'; ";
+    resp.headers["Content-Security-Policy"] =
+        "default-src 'none'; "
+        "style-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this requires
+                                              // no inline js, so url dispatch in UI is done
+                                              // from scripts.js and we provide required
+                                              // parameters (when generating ui_template
+                                              // response) not inside <script> tag but in some
+                                              // other way)
+        "connect-src 'self'; "
+        "object-src 'self'; "
+        "frame-src 'self'; "
+        "img-src 'self'; ";
 
     // Disable X-XSS-Protection, as it may be used to misbehave the whole website
     resp.headers["X-XSS-Protection"] = "0";
@@ -73,12 +82,6 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
                 "<link rel=\"stylesheet\" type=\"text/css\" "
                       "href=\"/kit/styles.css?",
                           get_hash_of<STYLES_CSS>(), "\">"
-                "<script>",
-                    "const logged_user_id = ",
-                        params.session ? to_string(params.session->user_id) : StaticCStringBuff{"null"}, ";"
-                    "const logged_user_type = ", params.session ? params.session->user_type.to_enum().to_quoted_str() : "null", ";"
-                    "const logged_user_username = ", params.session ? json_stringify(params.session->username) : "null", ";"
-                "</script>"
                 "<script src=\"/kit/jquery.js?",
                     get_hash_of<JQUERY_JS>(), "\"></script>"
                 "<script src=\"/kit/scripts.js?",
@@ -88,18 +91,34 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
             "</head>"
         "<body>"
             "<script>"
-                "sim_template({"
-                    "contests:", capabilities::contests_for(params.session).web_ui_view, ","
-                    "jobs:", capabilities::jobs_for(params.session).web_ui_view, ","
-                    "logs:", capabilities::logs_for(params.session).view, ","
-                    "problems:", capabilities::problems_for(params.session).web_ui_view, ","
-                    "submissions:", capabilities::submissions_for(params.session).web_ui_view, ","
-                    "users:", capabilities::users_for(params.session).web_ui_view, ","
-                "},", microtime() / 1000, ");"
+                "sim_template(", sim_template_params(params.session), ',', microtime() / 1000, ");"
                 "document.body.appendChild(elem_with_class('div', 'notifications')).innerHTML = '", params.notifications, "';");
     // clang-format on
 }
 
 void end_ui_template(Response& resp) { resp.content.append("</script></body></html>"); }
+
+std::string sim_template_params(const decltype(web_worker::Context::session)& session) {
+    json_str::Object obj;
+    obj.prop_obj("capabilities", [&](auto& obj) {
+        obj.prop("contests", capabilities::contests_for(session).web_ui_view);
+        obj.prop("jobs", capabilities::jobs_for(session).web_ui_view);
+        obj.prop("logs", capabilities::logs_for(session).view);
+        obj.prop("problems", capabilities::problems_for(session).web_ui_view);
+        obj.prop("submissions", capabilities::submissions_for(session).web_ui_view);
+        obj.prop("users", capabilities::users_for(session).web_ui_view);
+        obj.prop("contests", capabilities::contests_for(session).web_ui_view);
+    });
+    if (session) {
+        obj.prop_obj("session", [&](auto& obj) {
+            obj.prop("user_id", session->user_id);
+            obj.prop("user_type", session->user_type);
+            obj.prop("username", session->username);
+        });
+    } else {
+        obj.prop("session", nullptr);
+    }
+    return std::move(obj).into_str();
+}
 
 } // namespace web_server

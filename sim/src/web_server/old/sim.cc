@@ -65,7 +65,8 @@ http::Response Sim::handle(http::Request req) {
                 // If no session is open, load value from cookie to pass
                 // verification
                 if (session_open() and
-                    request.form_fields.get_or("csrf_token", "") != session->csrf_token) {
+                    request.form_fields.get("csrf_token").value_or("") != session->csrf_token)
+                {
                     error403();
                     goto cleanup;
                 }
@@ -101,20 +102,11 @@ http::Response Sim::handle(http::Request req) {
                 } else if (next_arg == "contest_file") {
                     contest_file_handle();
 
-                } else if (next_arg == "login") {
-                    login();
-
                 } else if (next_arg == "jobs") {
                     jobs_handle();
 
                 } else if (next_arg == "file") {
                     file_handle();
-
-                } else if (next_arg == "logout") {
-                    logout();
-
-                } else if (next_arg == "signup") {
-                    sign_up();
 
                 } else if (next_arg == "logs") {
                     view_logs();
@@ -190,9 +182,9 @@ void Sim::static_file() {
         // If "If-Modified-Since" header is set and its value is not lower than
         // attr.st_mtime
         struct tm client_mtime {};
-        CStringView if_modified_since = request.headers.get("if-modified-since");
-        if (!if_modified_since.empty() and
-            strptime(if_modified_since.data(), "%a, %d %b %Y %H:%M:%S GMT", &client_mtime) !=
+        auto if_modified_since = request.headers.get("if-modified-since");
+        if (if_modified_since and
+            strptime(if_modified_since->data(), "%a, %d %b %Y %H:%M:%S GMT", &client_mtime) !=
                 nullptr and
             timegm(&client_mtime) >= attr.st_mtime)
         {

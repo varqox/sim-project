@@ -15,7 +15,7 @@ Request::~Request() {
 StringView Request::get_cookie(StringView name) const noexcept {
     STACK_UNWINDING_MARK;
 
-    CStringView cookie = headers.get("cookie");
+    CStringView cookie = headers.get("cookie").value_or("");
     for (size_t beg = 0; beg < cookie.size();) {
         if (cookie[beg] == ' ' && beg + 1 < cookie.size()) {
             ++beg;

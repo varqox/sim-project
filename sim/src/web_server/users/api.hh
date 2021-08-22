@@ -19,4 +19,10 @@ http::Response list_by_type_above_id(
 
 http::Response view(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 
+http::Response sign_in(web_worker::Context& ctx);
+
+http::Response sign_up(web_worker::Context& ctx);
+
+http::Response sign_out(web_worker::Context& ctx);
+
 } // namespace web_server::users::api

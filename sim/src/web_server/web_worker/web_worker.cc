@@ -6,6 +6,7 @@
 #include "src/web_server/http/request.hh"
 #include "src/web_server/http/response.hh"
 #include "src/web_server/users/api.hh"
+#include "src/web_server/users/ui.hh"
 #include "src/web_server/web_worker/context.hh"
 
 #include <optional>
@@ -40,6 +41,9 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     GET("/api/users/type=/{string}")(users::api::list_by_type);
     GET("/api/users/type=/{string}/id%3E/{u64}")(users::api::list_by_type_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
+    GET("/sign_in")(users::ui::sign_in);
+    GET("/sign_out")(users::ui::sign_out);
+    GET("/sign_up")(users::ui::sign_up);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::api::add);
     POST("/api/contest/{u64}/entry_tokens/add_short")(contest_entry_tokens::api::add_short);
     POST("/api/contest/{u64}/entry_tokens/delete")(contest_entry_tokens::api::delete_);
@@ -47,6 +51,9 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     POST("/api/contest/{u64}/entry_tokens/regen")(contest_entry_tokens::api::regen);
     POST("/api/contest/{u64}/entry_tokens/regen_short")(contest_entry_tokens::api::regen_short);
     POST("/api/contest_entry_token/{string}/use")(contest_entry_tokens::api::use);
+    POST("/api/sign_in")(users::api::sign_in);
+    POST("/api/sign_out")(users::api::sign_out);
+    POST("/api/sign_up")(users::api::sign_up);
     // clang-format on
     // Ensure fast query dispatch
     assert(get_dispatcher.all_potential_collisions().empty());
@@ -86,7 +93,9 @@ Response WebWorker::handler_impl(ResponseMaker&& response_maker) {
     auto transaction = ctx.mysql.start_transaction();
     ctx.open_session();
     auto response = std::forward<ResponseMaker>(response_maker)(ctx);
-    assert(ctx.cookie_changes.cookies_as_headers.is_empty());
+    assert(
+        ctx.cookie_changes.cookies_as_headers.is_empty() and
+        "cookie_changes need to be handled during producing the response");
     if (ctx.session) {
         ctx.close_session();
     }
@@ -115,8 +124,8 @@ void WebWorker::do_add_post_handler(
                 StringView csrf_token = ctx.session
                     ? StringView{ctx.session->csrf_token}
                     : ctx.request.get_cookie(Context::Session::csrf_token_cookie_name);
-                if (ctx.request.form_fields.get_or("csrf_token", "") != csrf_token) {
-                    return ctx.response_400("Invalid CSRF token");
+                if (ctx.request.headers.get("x-csrf-token") != csrf_token) {
+                    return ctx.response_400("Missing or invalid CSRF token");
                 }
                 // Safe to pass the request to the proper handler
                 return handler(ctx, std::forward<Params>(args)...);

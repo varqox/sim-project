@@ -15,7 +15,6 @@ struct Session {
     sql_fields::Varbinary<20> csrf_token;
     decltype(sim::users::User::id) user_id;
     sql_fields::Blob<32> data;
-    sql_fields::Varbinary<15> ip;
     sql_fields::Blob<128> user_agent;
     sql_fields::Datetime expires;
 

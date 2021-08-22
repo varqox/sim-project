@@ -22,6 +22,7 @@
 #include "simlib/sha.hh"
 #include "simlib/string_view.hh"
 #include "src/sql_tables.hh"
+#include "src/web_server/users/api.hh"
 
 #include <fcntl.h>
 #include <iostream>
@@ -125,14 +126,15 @@ struct TryToCreateTable {
     }
 
     template <class Str, class Func>
-    void operator()(const char* table_name, Str&& query, Func&& f) noexcept {
+    void operator()(
+        const char* table_name, Str&& sql_str, Func&& do_after_creating_table) noexcept {
         try {
             if (not binary_search(sorted_tables, StringView{table_name})) {
                 THROW("Table `", table_name, "` not found in the table list");
             }
 
-            conn_.update(std::forward<Str>(query));
-            f();
+            conn_.update(std::forward<Str>(sql_str));
+            do_after_creating_table();
 
         } catch (const std::exception& e) {
             errlog("\033[31mFailed to create table `", table_name, "`\033[m - ", e.what());
@@ -141,8 +143,8 @@ struct TryToCreateTable {
     }
 
     template <class Str>
-    void operator()(const char* table_name, Str&& query) noexcept {
-        operator()(table_name, std::forward<Str>(query), [] {});
+    void operator()(const char* table_name, Str&& sql_str) noexcept {
+        operator()(table_name, std::forward<Str>(sql_str), [] {});
     }
 };
 
@@ -207,32 +209,29 @@ int main(int argc, char** argv) {
     try_to_create_table("users", concat(
         "CREATE TABLE IF NOT EXISTS `users` ("
             "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
+            "`type` tinyint unsigned NOT NULL,"
             "`username` VARBINARY(", decltype(User::username)::max_len, ") NOT NULL,"
             "`first_name` VARBINARY(", decltype(User::first_name)::max_len, ") NOT NULL,"
             "`last_name` VARBINARY(", decltype(User::last_name)::max_len, ") NOT NULL,"
             "`email` VARBINARY(", decltype(User::email)::max_len, ") NOT NULL,"
             "`password_salt` BINARY(", decltype(User::password_salt)::max_len, ") NOT NULL,"
             "`password_hash` BINARY(", decltype(User::password_hash)::max_len, ") NOT NULL,"
-            "`type` tinyint unsigned NOT NULL DEFAULT ", EnumVal(User::Type::NORMAL).to_int(), ","
             "PRIMARY KEY (id),"
             "UNIQUE KEY (username),"
             "KEY(type, id DESC)"
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
+        // clang-format on
         [&] {
-            // Add default user sim with password sim
-            char password_salt_bin[decltype(sim::users::User::password_salt)::max_len >> 1];
-            fill_randomly(password_salt_bin, sizeof(password_salt_bin));
-            auto password_salt = to_hex(StringView(password_salt_bin, sizeof(password_salt_bin)));
-
-            auto stmt = conn.prepare("INSERT IGNORE users (id, username,"
-                                     " first_name, last_name, email, password_salt,"
-                                     " password_hash, type) "
-                                     "VALUES (", sim::users::SIM_ROOT_UID, ", 'sim', 'sim',"
-                                     " 'sim', 'sim@sim', ?, ?, 0)");
-            stmt.bind_and_execute(
-               password_salt, sha3_512(intentional_unsafe_string_view(concat(password_salt, "sim"))));
+            using sim::users::User;
+            // Add sim root user
+            auto [salt, hash] = sim::users::salt_and_hash_password("sim");
+            decltype(User::type) sim_root_type = User::Type::ADMIN;
+            conn.prepare("INSERT IGNORE INTO users(id, type, username, first_name, last_name, "
+                         "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?, ?)")
+                .bind_and_execute(
+                    sim::users::SIM_ROOT_UID, sim_root_type, "sim", "sim", "sim", "sim@sim",
+                    salt, hash);
         });
-    // clang-format on
 
     using sim::sessions::Session;
     // clang-format off
@@ -242,7 +241,6 @@ int main(int argc, char** argv) {
             "`csrf_token` BINARY(", decltype(Session::csrf_token)::max_len, ") NOT NULL,"
             "`user_id` bigint unsigned NOT NULL,"
             "`data` blob NOT NULL,"
-            "`ip` VARBINARY(", decltype(Session::ip)::max_len, ") NOT NULL,"
             "`user_agent` blob NOT NULL,"
             "`expires` datetime NOT NULL,"
             "PRIMARY KEY (id),"

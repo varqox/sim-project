@@ -11,6 +11,9 @@ struct Users {
     bool add_admin : 1;
     bool add_teacher : 1;
     bool add_normal_user : 1;
+    bool sign_in : 1;
+    bool sign_up : 1;
+    bool sign_out : 1;
 };
 
 Users users_for(const decltype(web_worker::Context::session)& session) noexcept;

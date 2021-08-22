@@ -43,7 +43,7 @@ struct CmdOptions {
 
 } // namespace
 
-static void
+[[maybe_unused]] static void
 run_command(const std::vector<std::string>& args, const Spawner::Options& options = {}) {
     auto es = Spawner::run(args[0], args, options);
     if (es.si.code != CLD_EXITED or es.si.status != 0) {
@@ -175,7 +175,9 @@ static int perform_upgrade() {
         AT_FDCWD, concat(sim_build, "logs/server-error.log").to_string().data(), AT_FDCWD,
         concat(sim_build, web_server::errlog_file).to_string().data(), RENAME_NOREPLACE);
 
-    update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
+    conn.update("ALTER TABLE users MODIFY COLUMN type tinyint unsigned NOT NULL AFTER id");
+    conn.update("ALTER TABLE sessions DROP COLUMN IF EXISTS ip");
+    // update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
 
     stdlog("\033[1;32mSim upgrading is complete\033[m");
     return 0;

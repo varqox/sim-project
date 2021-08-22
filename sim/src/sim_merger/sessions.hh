@@ -28,13 +28,11 @@ class SessionsMerger : public Merger<sim::sessions::Session> {
 
         sim::sessions::Session ses;
         auto stmt = conn.prepare(
-            "SELECT id, csrf_token, user_id, data, ip, "
-            "user_agent, expires FROM ",
+            "SELECT id, csrf_token, user_id, data, user_agent, expires FROM ",
             record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(
-            ses.id, ses.csrf_token, ses.user_id, ses.data, ses.ip, ses.user_agent,
-            ses.expires);
+            ses.id, ses.csrf_token, ses.user_id, ses.data, ses.user_agent, ses.expires);
 
         while (stmt.next()) {
             ses.user_id = users_.new_id(ses.user_id, record_set.kind);
@@ -64,16 +62,15 @@ public:
         conn.update("TRUNCATE ", sql_table_name());
         auto stmt = conn.prepare(
             "INSERT INTO ", sql_table_name(),
-            "(id, csrf_token, user_id, data, ip,"
-            " user_agent, expires) "
-            "VALUES(?, ?, ?, ?, ?, ?, ?)");
+            "(id, csrf_token, user_id, data, user_agent, expires) VALUES(?, ?, ?, ?, ?, ?, "
+            "?)");
 
         ProgressBar progress_bar("Sessions saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
             stmt.bind_and_execute(
-                x.id, x.csrf_token, x.user_id, x.data, x.ip, x.user_agent, x.expires);
+                x.id, x.csrf_token, x.user_id, x.data, x.user_agent, x.expires);
         }
 
         transaction.commit();
