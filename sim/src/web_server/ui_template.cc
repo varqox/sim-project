@@ -56,7 +56,10 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
     resp.headers["x-content-type-options"] = "nosniff";
     resp.headers["Content-Security-Policy"] =
         "default-src 'none'; "
-        "style-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this requires
+                                             // CppSyntaxHighlighter to be implemented in some
+                                             // different way either in JS or styles in
+                                             // styles.css)
         "script-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this requires
                                               // no inline js, so url dispatch in UI is done
                                               // from scripts.js and we provide required
