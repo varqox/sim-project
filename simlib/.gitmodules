@@ -1,6 +1,0 @@
-[submodule "googletest"]
-	path = googletest
-	url = https://github.com/google/googletest
-[submodule "makefile-utils"]
-	path = makefile-utils
-	url = https://github.com/varqox/makefile-utils
