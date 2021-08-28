@@ -17,7 +17,7 @@ user=$1
 apt update
 
 /bin/echo -e '\033[1;32m==>\033[0;1m Install required packages\033[m'
-apt install sudo git g++-multilib mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev pkgconf expect meson -y
+apt install sudo git g++-multilib fpc mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev pkgconf expect meson -y
 
 /bin/echo -e '\033[1;32m==>\033[0;1m Prepare database and database user\033[m'
 expect -c 'spawn mysql_secure_installation; send "\ry\rn\ry\ry\ry\ry\r"; interact'

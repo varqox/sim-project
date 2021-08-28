@@ -18,7 +18,7 @@ echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources
 apt update
 
 /bin/echo -e '\033[1;32m==>\033[0;1m Install required packages\033[m'
-apt install sudo git g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libzip-dev libssl-dev pkgconf expect -y
+apt install sudo git g++-multilib fpc mariadb-server libmariadbclient-dev libseccomp-dev libzip-dev libssl-dev pkgconf expect -y
 apt install -t buster-backports meson clang-11 -y
 
 /bin/echo -e '\033[1;32m==>\033[0;1m Prepare database and database user\033[m'
