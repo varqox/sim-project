@@ -75,6 +75,23 @@ static inline void seccomp_rule_add_throw(Arg&&... args) {
 }
 
 template <class... Arg>
+static inline void seccomp_rule_add_throw_str(
+    scmp_filter_ctx ctx, uint32_t action, const char* syscall_name, unsigned arg_cnt,
+    Arg&&... args) {
+    int syscall = seccomp_syscall_resolve_name(syscall_name);
+    if (syscall == -1) {
+        if (action == SCMP_ACT_ALLOW) {
+            return;
+        }
+        THROW("seccomp_rule_add_throw_str() failed to resolve syscall name: ", syscall_name);
+    }
+    int errnum = seccomp_rule_add(ctx, action, syscall, arg_cnt, std::forward<Arg>(args)...);
+    if (errnum) {
+        THROW("seccomp_rule_add_throw_str()", errmsg(-errnum));
+    }
+}
+
+template <class... Arg>
 static inline void seccomp_arch_add_throw(Arg&&... args) {
     int errnum = seccomp_arch_add(std::forward<Arg>(args)...);
     if (errnum) {
@@ -390,6 +407,7 @@ Sandbox::Sandbox() {
 
     // stat
     seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(stat), 0);
+    seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(stat64), 0);
     // statx
     seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(statx), 0);
     // uname
@@ -684,6 +702,7 @@ Sandbox::Sandbox() {
     seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(time), 0);
     // Allowed syscalls (x86 architecture)
     seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_ALLOW, SCMP_SYS(_newselect), 0);
+    seccomp_rule_add_throw_str(x86_ctx_, SCMP_ACT_ALLOW, "clock_gettime64", 0);
     seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_ALLOW, SCMP_SYS(getegid32), 0);
     seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_ALLOW, SCMP_SYS(geteuid32), 0);
     seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_ALLOW, SCMP_SYS(getgid32), 0);
