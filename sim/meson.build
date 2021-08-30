@@ -45,9 +45,13 @@ if get_option('warning_level') > '0'
 endif
 
 static_kwargs = {}
+static_dep = declare_dependency()
 if get_option('static')
+    if get_option('default_library') != 'static'
+        error('-Dstatic=true requires -Ddefault_library=static')
+    endif
     static_kwargs = {'static': true}
-    add_project_link_arguments(['-static'], language : ['c', 'cpp'])
+    static_dep = declare_dependency(link_args : '-static')
 endif
 
 mariadb_dep = dependency('mariadb')
@@ -118,6 +122,7 @@ job_server = executable('job-server',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -129,6 +134,7 @@ sim_merger = executable('sim-merger',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -140,6 +146,7 @@ sim_upgrader = executable('sim-upgrader',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : false,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -151,6 +158,7 @@ setup_installation = executable('setup-installation',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : false,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -162,6 +170,7 @@ backup = executable('backup',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -210,6 +219,7 @@ sim_server = executable('sim-server',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -221,6 +231,7 @@ manage = executable('manage',
     ],
     dependencies : [
         simlib_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
