@@ -30,9 +30,13 @@ if get_option('warning_level') > '0'
 endif
 
 static_kwargs = {}
+static_dep = declare_dependency()
 if get_option('static')
+    if get_option('default_library') != 'static'
+        error('-Dstatic=true requires -Ddefault_library=static')
+    endif
     static_kwargs = {'static': true}
-    add_project_link_arguments(['-static'], language : ['c', 'cpp'])
+    static_dep = declare_dependency(link_args : '-static')
 endif
 
 dump_file_as_c_array = generator(find_program('subprojects/simlib/dump_file_as_c_array.py'),
@@ -121,6 +125,7 @@ sip = executable('sip',
     ],
     dependencies : [
         simlib_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
