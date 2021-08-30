@@ -46,8 +46,10 @@ endif
 
 static_kwargs = {}
 if get_option('static')
+    if get_option('default_library') != 'static'
+        error('-Dstatic=true requires -Ddefault_library=static')
+    endif
     static_kwargs = {'static': true}
-    add_project_link_arguments(['-static'], language : ['c', 'cpp'])
 endif
 
 dump_file_as_c_array = generator(find_program('dump_file_as_c_array.py'),
@@ -136,28 +138,31 @@ run_target('tidy', command : [find_program('tidy')], depends : simlib)
 
 #################################### Tests ####################################
 
-gtest_main_dep = dependency('gtest', main : true, required : false, method : 'system')
-gmock_dep = dependency('gmock', main : false, required : false, method : 'system')
-
-if not gtest_main_dep.found() or not gmock_dep.found()
-    gtest = subproject('gtest')
-endif
+# Compiling with dependency('gtest', main : true, fallback : ['gtest', 'gtest_main_dep'])
+# is crap because it compiles whole googletest source code every time a test executable
+# is built if the fallback (gtest subproject) is chosen.
+#
+# To solve this, we build gtest/gmock as a shared library (I see no reason for it to be
+# a static library) and link test executables against it instead of compiling whole gtest
+# every time a test executable is compiled.
+#
+# 'pkg-config' method is used, as 'system' does the same crap descripted above e.g. on
+# Debian 11 when 'googletest' is installed but 'libgtest-dev' is not installed. pkg-config
+# does the right thing and detects the system to not provide gtest library.
+gtest_main_dep = dependency('gtest', main : true, method : 'pkg-config', required : false)
 if not gtest_main_dep.found()
+    gtest_main_dep = subproject('gtest').get_variable('gtest_main_dep')
     gtest_main_dep = declare_dependency(
-        include_directories : gtest.get_variable('gtest_incdir'),
-        link_with : library('gtest_main',
-            dependencies : gtest.get_variable('gtest_main_dep')
-        ),
-        dependencies : threads_dep,
+    link_with : shared_library('gtest_main', dependencies : gtest_main_dep),
+    dependencies : gtest_main_dep.partial_dependency(includes : true),
     )
 endif
+gmock_dep = dependency('gmock', main : false, method : 'pkg-config', required : false)
 if not gmock_dep.found()
+    gmock_dep = subproject('gtest').get_variable('gmock_dep')
     gmock_dep = declare_dependency(
-        include_directories : gtest.get_variable('gmock_incdir'),
-        link_with : library('gmock',
-            dependencies : gtest.get_variable('gmock_dep')
-        ),
-        dependencies : threads_dep,
+    link_with : shared_library('gmock', dependencies : gmock_dep),
+    dependencies : gmock_dep.partial_dependency(includes : true),
     )
 endif
 
