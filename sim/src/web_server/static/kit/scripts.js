@@ -452,6 +452,7 @@ function AjaxForm(title, destination_api_url, init) {
 	let show_upload_progress = false;
 	let leave_submit_button_disabled = false;
 	const password_inputs = [];
+	const submit_inputs = [];
 
 	form_elem.addEventListener('submit', (event) => {
 		event.preventDefault();
@@ -468,7 +469,11 @@ function AjaxForm(title, destination_api_url, init) {
 			body: form_data,
 			show_upload_progress: show_upload_progress,
 			response_type: init.response_type,
-			do_before_send: () => { event.submitter.disabled = true; },
+			do_before_send: () => {
+				for (const input of submit_inputs) {
+					input.disabled = true;
+				}
+			},
 			onloadend: () => {
 				if (leave_submit_button_disabled) {
 					// Clear all password inputs
@@ -476,7 +481,9 @@ function AjaxForm(title, destination_api_url, init) {
 						input.value = '';
 					}
 				} else {
-					event.submitter.disabled = false;
+					for (const input of submit_inputs) {
+						input.disabled = false;
+					}
 				}
 			},
 			extra_http_headers: {
@@ -566,6 +573,8 @@ function AjaxForm(title, destination_api_url, init) {
 		input.type = 'submit';
 		input.className = 'btn' + (css_classes == null ? '' : ' ' + css_classes);
 		input.value = name;
+		submit_inputs.push(input);
+		return input;
 	};
 }
 
