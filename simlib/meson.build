@@ -153,16 +153,16 @@ gtest_main_dep = dependency('gtest', main : true, method : 'pkg-config', require
 if not gtest_main_dep.found()
     gtest_main_dep = subproject('gtest').get_variable('gtest_main_dep')
     gtest_main_dep = declare_dependency(
-    link_with : shared_library('gtest_main', dependencies : gtest_main_dep),
-    dependencies : gtest_main_dep.partial_dependency(includes : true),
+        link_with : shared_library('gtest_main', dependencies : gtest_main_dep),
+        dependencies : gtest_main_dep.partial_dependency(includes : true),
     )
 endif
 gmock_dep = dependency('gmock', main : false, method : 'pkg-config', required : false)
 if not gmock_dep.found()
     gmock_dep = subproject('gtest').get_variable('gmock_dep')
     gmock_dep = declare_dependency(
-    link_with : shared_library('gmock', dependencies : gmock_dep),
-    dependencies : gmock_dep.partial_dependency(includes : true),
+        link_with : shared_library('gmock', dependencies : gmock_dep),
+        dependencies : gmock_dep.partial_dependency(includes : true),
     )
 endif
 
