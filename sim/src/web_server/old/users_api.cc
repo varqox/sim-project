@@ -71,15 +71,14 @@ void Sim::api_user_add() {
     }
 
     // Validate fields
-    StringView pass = request.form_fields.get_or("pass", "");
-    StringView pass1 = request.form_fields.get_or("pass1", "");
+    StringView pass = request.form_fields.get("pass").value_or("");
+    StringView pass1 = request.form_fields.get("pass1").value_or("");
 
     if (pass != pass1) {
         return api_error403("Passwords do not match");
     }
 
     StringView username;
-    StringView utype_str;
     StringView fname;
     StringView lname;
     StringView email;
@@ -90,7 +89,7 @@ void Sim::api_user_add() {
         decltype(User::username)::max_len);
 
     // Validate user type
-    utype_str = request.form_fields.get_or("type", "");
+    auto utype_str = request.form_fields.get("type");
     decltype(User::type) utype = User::Type::NORMAL; // Silence GCC warning
     if (utype_str == "A") {
         utype = User::Type::ADMIN;
@@ -128,18 +127,11 @@ void Sim::api_user_add() {
     }
 
     // All fields are valid
-    static_assert(decltype(User::password_salt)::max_len % 2 == 0);
-    array<char, (decltype(User::password_salt)::max_len >> 1)> password_salt_bin{};
-    fill_randomly(password_salt_bin.data(), password_salt_bin.size());
-    auto password_salt = to_hex({password_salt_bin.data(), password_salt_bin.size()});
-
+    auto [salt, hash] = sim::users::salt_and_hash_password(pass);
     auto stmt = mysql.prepare("INSERT IGNORE users (username, type,"
                               " first_name, last_name, email, password_salt, password_hash) "
                               "VALUES(?, ?, ?, ?, ?, ?, ?)");
-
-    stmt.bind_and_execute(
-        username, utype, fname, lname, email, password_salt,
-        sha3_512(intentional_unsafe_string_view(concat(password_salt, pass))));
+    stmt.bind_and_execute(username, utype, fname, lname, email, salt, hash);
 
     // User account successfully created
     if (stmt.affected_rows() != 1) {
@@ -159,7 +151,6 @@ void Sim::api_user_edit() {
 
     // TODO: this looks very similar to the above validation
     StringView username;
-    StringView new_utype_str;
     StringView fname;
     StringView lname;
     StringView email;
@@ -170,7 +161,7 @@ void Sim::api_user_edit() {
         decltype(User::username)::max_len);
 
     // Validate user type
-    new_utype_str = request.form_fields.get_or("type", "");
+    auto new_utype_str = request.form_fields.get("type");
     decltype(User::type) new_utype = User::Type::NORMAL;
     if (new_utype_str == "A") {
         new_utype = User::Type::ADMIN;
@@ -238,8 +229,8 @@ void Sim::api_user_change_password() {
         return api_error403();
     }
 
-    StringView new_pass = request.form_fields.get_or("new_pass", "");
-    StringView new_pass1 = request.form_fields.get_or("new_pass1", "");
+    StringView new_pass = request.form_fields.get("new_pass").value_or("");
+    StringView new_pass1 = request.form_fields.get("new_pass1").value_or("");
 
     if (new_pass != new_pass1) {
         return api_error400("Passwords do not match");
@@ -251,19 +242,10 @@ void Sim::api_user_change_password() {
     }
 
     // Commit password change
-    static_assert(decltype(User::password_salt)::max_len % 2 == 0);
-    array<char, (decltype(User::password_salt)::max_len >> 1)> password_salt_bin{};
-    fill_randomly(password_salt_bin.data(), password_salt_bin.size());
-    InplaceBuff<decltype(User::password_salt)::max_len> password_salt(
-        to_hex({password_salt_bin.data(), password_salt_bin.size()}));
-
+    auto [salt, hash] = sim::users::salt_and_hash_password(new_pass);
     auto transaction = mysql.start_transaction();
-
     mysql.prepare("UPDATE users SET password_salt=?, password_hash=? WHERE id=?")
-        .bind_and_execute(
-            password_salt,
-            sha3_512(intentional_unsafe_string_view(concat(password_salt, new_pass))),
-            users_uid);
+        .bind_and_execute(salt, hash, users_uid);
 
     // Remove other sessions (for security reasons)
     mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")

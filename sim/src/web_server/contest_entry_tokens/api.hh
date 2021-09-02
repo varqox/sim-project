@@ -5,7 +5,7 @@
 #include "src/web_server/http/response.hh"
 #include "src/web_server/web_worker/context.hh"
 
-namespace web_server::contest_entry_tokens {
+namespace web_server::contest_entry_tokens::api {
 
 http::Response view(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
@@ -30,4 +30,4 @@ http::Response view_contest_name(web_worker::Context& ctx, StringView token_or_s
 
 http::Response use(web_worker::Context& ctx, StringView token_or_short_token);
 
-} // namespace web_server::contest_entry_tokens
+} // namespace web_server::contest_entry_tokens::api

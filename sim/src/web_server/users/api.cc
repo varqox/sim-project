@@ -3,9 +3,12 @@
 #include "sim/users/user.hh"
 #include "simlib/concat.hh"
 #include "simlib/json_str/json_str.hh"
+#include "simlib/string_view.hh"
 #include "src/web_server/capabilities/user.hh"
 #include "src/web_server/capabilities/users.hh"
+#include "src/web_server/http/form_validation.hh"
 #include "src/web_server/http/response.hh"
+#include "src/web_server/ui_template.hh"
 #include "src/web_server/web_worker/context.hh"
 
 using sim::users::User;
@@ -16,16 +19,16 @@ namespace {
 
 Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
     decltype(User::id) id{};
+    decltype(User::type) type;
     decltype(User::username) username;
     decltype(User::first_name) first_name;
     decltype(User::last_name) last_name;
     decltype(User::email) email;
-    decltype(User::type) type;
     auto stmt = ctx.mysql.prepare(
-        "SELECT id, username, first_name, last_name, email, type FROM users ", where_str,
+        "SELECT id, type, username, first_name, last_name, email FROM users ", where_str,
         " ORDER BY id LIMIT ", limit);
     stmt.bind_and_execute();
-    stmt.res_bind_all(id, username, first_name, last_name, email, type);
+    stmt.res_bind_all(id, type, username, first_name, last_name, email);
 
     json_str::Object obj;
     obj.prop("may_be_more", stmt.rows_num() == limit);
@@ -33,11 +36,11 @@ Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
         while (stmt.next()) {
             arr.val_obj([&](auto& obj) {
                 obj.prop("id", id);
+                obj.prop("type", type);
                 obj.prop("username", username);
                 obj.prop("first_name", first_name);
                 obj.prop("last_name", last_name);
                 obj.prop("email", email);
-                obj.prop("type", type);
                 obj.prop_obj("capabilities", [&](auto& obj) {
                     const auto caps = web_server::capabilities::user_for(ctx.session, id);
                     obj.prop("view", caps.view);
@@ -64,7 +67,7 @@ Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
 
 } // namespace
 
-namespace web_server::users {
+namespace web_server::users::api {
 
 constexpr inline uint32_t FIRST_QUERY_LIMIT = 64;
 constexpr inline uint32_t NEXT_QUERY_LIMIT = 200;
@@ -153,4 +156,98 @@ Response view(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_json(std::move(obj).into_str());
 }
 
-} // namespace web_server::users
+namespace params {
+
+constexpr http::ApiParam username{&User::username, "username", "Username"};
+constexpr http::ApiParam first_name{&User::first_name, "first_name", "First name"};
+constexpr http::ApiParam last_name{&User::last_name, "last_name", "Last name"};
+constexpr http::ApiParam email{&User::email, "email", "Email"};
+constexpr http::ApiParam<CStringView> password{"password", "Password"};
+constexpr http::ApiParam<CStringView> password_repeated{
+    "password_repeated", "Password (repeat)"};
+constexpr http::ApiParam<bool> remember_for_a_month{
+    "remember_for_a_month", "Remember for a month"};
+
+} // namespace params
+
+http::Response sign_in(web_worker::Context& ctx) {
+    auto caps = capabilities::users_for(ctx.session);
+    if (not caps.sign_in) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (username, params::username)
+        (password, params::password, ALLOW_BLANK)
+        (remember_for_a_month, params::remember_for_a_month)
+    );
+
+    auto stmt = ctx.mysql.prepare(
+        "SELECT id, password_salt, password_hash, type FROM users WHERE username=?");
+    stmt.bind_and_execute(username);
+    decltype(User::id) user_id{};
+    decltype(User::password_salt) password_salt;
+    decltype(User::password_hash) password_hash;
+    decltype(User::type) user_type;
+    stmt.res_bind_all(user_id, password_salt, password_hash, user_type);
+    if (stmt.next() and sim::users::password_matches(password, password_salt, password_hash)) {
+        if (ctx.session) {
+            ctx.destroy_session();
+        }
+        ctx.create_session(user_id, user_type, username, {}, remember_for_a_month);
+        return ctx.response_json(sim_template_params(ctx.session));
+    }
+    return ctx.response_400("Invalid username or password");
+}
+
+http::Response sign_up(web_worker::Context& ctx) {
+    auto caps = capabilities::users_for(ctx.session);
+    if (not caps.sign_up) {
+        return ctx.response_403();
+    }
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (username, params::username)
+        (first_name, params::first_name)
+        (last_name, params::last_name)
+        (email, params::email)
+        (password, params::password, ALLOW_BLANK)
+        (password_repeated, params::password_repeated, ALLOW_BLANK)
+    );
+    if (password != password_repeated) {
+        return ctx.response_400("Passwords do not match");
+    }
+
+    auto [password_salt, password_hash] = sim::users::salt_and_hash_password(password);
+    decltype(User::type) user_type = User::Type::NORMAL;
+    auto stmt = ctx.mysql.prepare(
+        "INSERT IGNORE INTO users(type, username, first_name, last_name, email, "
+        "password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+    stmt.bind_and_execute(
+        user_type, username, first_name, last_name, email, password_salt, password_hash);
+    if (stmt.affected_rows() != 1) {
+        return ctx.response_400("Username taken");
+    }
+
+    auto user_id = stmt.insert_id();
+    stdlog("New user: {id: ", user_id, ", username: ", json_stringify(username), '}');
+    if (ctx.session) {
+        ctx.destroy_session();
+    }
+    ctx.create_session(user_id, user_type, username, {}, false);
+    return ctx.response_json(sim_template_params(ctx.session));
+}
+
+http::Response sign_out(web_worker::Context& ctx) {
+    auto caps = capabilities::users_for(ctx.session);
+    if (not ctx.session) {
+        assert(not caps.sign_out);
+        return ctx.response_400("You are already signed out");
+    }
+    if (not caps.sign_out) {
+        return ctx.response_400("You have no permission to sign out");
+    }
+    ctx.destroy_session();
+    return ctx.response_json(sim_template_params(ctx.session));
+}
+
+} // namespace web_server::users::api

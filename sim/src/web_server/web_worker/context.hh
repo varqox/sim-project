@@ -31,9 +31,13 @@ struct Context {
     http::Cookies cookie_changes;
 
     void open_session();
-    // void create_new_session(); // TODO: implement during refactor of log-in / sign-up
-    // void destroy_session(); // TODO: implement during refactor of log-out
     void close_session();
+
+    void create_session(
+        decltype(Session::user_id) user_id, decltype(Session::user_type) user_type,
+        decltype(Session::username) username, decltype(Session::data) data,
+        bool long_exiration);
+    void destroy_session();
 
     bool session_has_expired() noexcept;
 

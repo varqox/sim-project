@@ -4,6 +4,7 @@
 #include "simlib/string_transform.hh"
 
 #include <map>
+#include <optional>
 #include <string>
 
 namespace web_server::http {
@@ -36,10 +37,10 @@ public:
         return it->second;
     }
 
-    CStringView get(StringView key) const noexcept {
+    std::optional<CStringView> get(StringView key) const noexcept {
         auto it = entries_.find(key);
         if (it == entries_.end()) {
-            return "";
+            return std::nullopt;
         }
         return it->second;
     }

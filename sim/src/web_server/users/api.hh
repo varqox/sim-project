@@ -5,7 +5,7 @@
 #include "src/web_server/http/response.hh"
 #include "src/web_server/web_worker/context.hh"
 
-namespace web_server::users {
+namespace web_server::users::api {
 
 http::Response list(web_worker::Context& ctx);
 
@@ -19,4 +19,10 @@ http::Response list_by_type_above_id(
 
 http::Response view(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 
-} // namespace web_server::users
+http::Response sign_in(web_worker::Context& ctx);
+
+http::Response sign_up(web_worker::Context& ctx);
+
+http::Response sign_out(web_worker::Context& ctx);
+
+} // namespace web_server::users::api

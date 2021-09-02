@@ -26,13 +26,13 @@ class UsersMerger : public Merger<sim::users::User> {
 
         sim::users::User user;
         auto stmt = conn.prepare(
-            "SELECT id, username, first_name, last_name, "
-            "email, password_salt, password_hash, type FROM ",
+            "SELECT id, type, username, first_name, last_name, "
+            "email, password_salt, password_hash FROM ",
             record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(
-            user.id, user.username, user.first_name, user.last_name, user.email,
-            user.password_salt, user.password_hash, user.type);
+            user.id, user.type, user.username, user.first_name, user.last_name, user.email,
+            user.password_salt, user.password_hash);
 
         while (stmt.next()) {
             record_set.add_record(user, time);
@@ -65,8 +65,8 @@ public:
         conn.update("TRUNCATE ", sql_table_name());
         auto stmt = conn.prepare(
             "INSERT INTO ", sql_table_name(),
-            "(id, username, first_name, last_name, email,"
-            " password_salt, password_hash, type) "
+            "(id, type, username, first_name, last_name, email,"
+            " password_salt, password_hash) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 
         ProgressBar progress_bar("Users saved:", new_table_.size(), 128);
@@ -74,8 +74,8 @@ public:
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
             stmt.bind_and_execute(
-                x.id, x.username, x.first_name, x.last_name, x.email, x.password_salt,
-                x.password_hash, x.type);
+                x.id, x.type, x.username, x.first_name, x.last_name, x.email, x.password_salt,
+                x.password_hash);
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);

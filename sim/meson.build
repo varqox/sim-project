@@ -45,9 +45,13 @@ if get_option('warning_level') > '0'
 endif
 
 static_kwargs = {}
+static_dep = declare_dependency()
 if get_option('static')
+    if get_option('default_library') != 'static'
+        error('-Dstatic=true requires -Ddefault_library=static')
+    endif
     static_kwargs = {'static': true}
-    add_project_link_arguments(['-static'], language : ['c', 'cpp'])
+    static_dep = declare_dependency(link_args : '-static')
 endif
 
 mariadb_dep = dependency('mariadb')
@@ -79,6 +83,7 @@ libsim = library('sim',
         'src/sim/problems/permissions.cc',
         'src/sim/random.cc',
         'src/sim/submissions/update_final.cc',
+        'src/sim/users/user.cc',
     ],
     include_directories : libsim_incdir,
     dependencies : libsim_dependencies,
@@ -117,6 +122,7 @@ job_server = executable('job-server',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -128,6 +134,7 @@ sim_merger = executable('sim-merger',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -139,6 +146,7 @@ sim_upgrader = executable('sim-upgrader',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : false,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -150,6 +158,7 @@ setup_installation = executable('setup-installation',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : false,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -161,6 +170,7 @@ backup = executable('backup',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -203,11 +213,13 @@ sim_server = executable('sim-server',
         'src/web_server/server/server.cc',
         'src/web_server/ui_template.cc',
         'src/web_server/users/api.cc',
+        'src/web_server/users/ui.cc',
         'src/web_server/web_worker/context.cc',
         'src/web_server/web_worker/web_worker.cc',
     ],
     dependencies : [
         libsim_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
@@ -219,6 +231,7 @@ manage = executable('manage',
     ],
     dependencies : [
         simlib_dep,
+        static_dep,
     ],
     install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),

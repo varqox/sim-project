@@ -16,37 +16,34 @@
 namespace sim::submissions {
 
 struct Submission {
-    ENUM_WITH_STRING_CONVERSIONS(
-        Type, uint8_t,
-        (NORMAL, 0, "normal") //
-        (IGNORED, 2, "ignored") //
-        (PROBLEM_SOLUTION, 3, "problem_solution") //
+    ENUM_WITH_STRING_CONVERSIONS(Type, uint8_t,
+        (NORMAL, 0, "normal")
+        (IGNORED, 2, "ignored")
+        (PROBLEM_SOLUTION, 3, "problem_solution")
     );
 
-    ENUM_WITH_STRING_CONVERSIONS(
-        Language, uint8_t,
-        (C11, 0, "c11") //
-        (CPP11, 1, "cpp11") //
-        (PASCAL, 2, "pascal") //
-        (CPP14, 3, "cpp14") //
-        (CPP17, 4, "cpp17") //
+    ENUM_WITH_STRING_CONVERSIONS(Language, uint8_t,
+        (C11, 0, "c11")
+        (CPP11, 1, "cpp11")
+        (PASCAL, 2, "pascal")
+        (CPP14, 3, "cpp14")
+        (CPP17, 4, "cpp17")
     );
 
     // Initial and final values may be combined, but special not
-    ENUM_WITH_STRING_CONVERSIONS(
-        Status, uint8_t,
+    ENUM_WITH_STRING_CONVERSIONS(Status, uint8_t,
         // Final
-        (OK, 1, "ok") //
-        (WA, 2, "wa") //
-        (TLE, 3, "tle") //
-        (MLE, 4, "mle") //
-        (RTE, 5, "rte") //
+        (OK, 1, "ok")
+        (WA, 2, "wa")
+        (TLE, 3, "tle")
+        (MLE, 4, "mle")
+        (RTE, 5, "rte")
         // Special
         (PENDING, 8 + 0, "pending")
         // Fatal
-        (COMPILATION_ERROR, 8 + 1, "compilation_error") //
-        (CHECKER_COMPILATION_ERROR, 8 + 2, "checker_compilation_error") //
-        (JUDGE_ERROR, 8 + 3, "judge_error") //
+        (COMPILATION_ERROR, 8 + 1, "compilation_error")
+        (CHECKER_COMPILATION_ERROR, 8 + 2, "checker_compilation_error")
+        (JUDGE_ERROR, 8 + 3, "judge_error")
     );
 
     uint64_t id;

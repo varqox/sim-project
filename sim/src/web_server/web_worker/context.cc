@@ -1,9 +1,13 @@
 #include "context.hh"
+#include "sim/random.hh"
+#include "sim/sessions/session.hh"
+#include "simlib/string_traits.hh"
 #include "simlib/string_view.hh"
 #include "simlib/time.hh"
 #include "src/web_server/http/response.hh"
 #include "src/web_server/ui_template.hh"
 
+#include <chrono>
 #include <optional>
 
 using web_server::http::Response;
@@ -11,7 +15,7 @@ using web_server::http::Response;
 namespace web_server::web_worker {
 
 void Context::open_session() {
-    session = std::nullopt;
+    assert(not session);
     auto session_id = request.get_cookie(Session::id_cookie_name);
     if (session_id.empty()) {
         return; // Optimization (no mysql query) for empty or nonexistent cookie
@@ -24,7 +28,7 @@ void Context::open_session() {
     stmt.res_bind_all(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
     if (not stmt.next()) {
         // Session expired or was deleted
-        cookie_changes.set(Session::id_cookie_name, "", 0);
+        cookie_changes.set(Session::id_cookie_name, "", 0, std::nullopt, false, false);
         return;
     }
     s.id = session_id;
@@ -33,11 +37,62 @@ void Context::open_session() {
 }
 
 void Context::close_session() {
-    assert(session.has_value());
+    assert(session);
     if (session->data != session->orig_data) {
         auto stmt = mysql.prepare("UPDATE sessions SET data=? WHERE id=?");
         stmt.bind_and_execute(session->data, session->id);
     }
+    session = std::nullopt;
+}
+
+void Context::create_session(
+    decltype(Session::user_id) user_id, decltype(Session::user_type) user_type,
+    decltype(Session::username) username, decltype(Session::data) data, bool long_exiration) {
+    assert(not session);
+    // Remove expired sessions
+    mysql.prepare("DELETE FROM sessions WHERE expires<?").bind_and_execute(mysql_date());
+    // Create a new session
+    Session s = {
+        .id = {},
+        .csrf_token = {},
+        .user_id = user_id,
+        .user_type = user_type,
+        .username = std::move(username),
+        .data = std::move(data),
+        .orig_data = {},
+    };
+    s.orig_data = s.data;
+    s.csrf_token = sim::generate_random_token(decltype(s.csrf_token)::max_len);
+    auto stmt = mysql.prepare("INSERT IGNORE INTO sessions(id, csrf_token, user_id, data, "
+                              "user_agent, expires) VALUES(?, ?, ?, ?, ?, ?)");
+    auto expires_tp = std::chrono::system_clock::now() +
+        (long_exiration ? sim::sessions::Session::long_session_max_lifetime
+                        : sim::sessions::Session::short_session_max_lifetime);
+    auto expires_str = mysql_date(expires_tp);
+    do {
+        s.id = sim::generate_random_token(decltype(s.id)::max_len);
+        stmt.bind_and_execute(
+            s.id, s.csrf_token, s.user_id, s.data,
+            request.headers.get("user-agent").value_or(""), expires_str);
+    } while (stmt.affected_rows() == 0);
+
+    auto exp_time_t = long_exiration
+        ? std::optional{std::chrono::system_clock::to_time_t(expires_tp)}
+        : std::nullopt;
+
+    cookie_changes.set("session", s.id, exp_time_t, "/", true, true);
+    cookie_changes.set("csrf_token", s.csrf_token, exp_time_t, "/", false, true);
+
+    session = s;
+}
+
+void Context::destroy_session() {
+    assert(session);
+    mysql.prepare("DELETE FROM sessions WHERE id=?").bind_and_execute(session->id);
+    // Delete client cookies
+    cookie_changes.set("session", "", 0, "/", true, true);
+    cookie_changes.set("csrf_token", "", 0, "/", false, true);
+
     session = std::nullopt;
 }
 
@@ -96,7 +151,7 @@ http::Response Context::response_404() {
 Response Context::response_ui(StringView title, StringView javascript_code) {
     auto resp = response_ok("", "text/html; charset=utf-8");
     // TODO: merge *_ui_template into one function after getting rid of the old code requiring
-    // split form
+    // the split form
     begin_ui_template(
         resp,
         {

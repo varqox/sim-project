@@ -19,4 +19,9 @@ public:
     ~Blob() = default;
 };
 
+template <class...>
+constexpr inline bool is_blob = false;
+template <size_t N>
+constexpr inline bool is_blob<Blob<N>> = true;
+
 } // namespace sim::sql_fields

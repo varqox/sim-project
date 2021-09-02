@@ -15,11 +15,10 @@ struct ContestUser {
         decltype(contests::Contest::id) contest_id;
     } id;
 
-    ENUM_WITH_STRING_CONVERSIONS(
-        Mode, uint8_t,
-        (CONTESTANT, 0, "contestant") //
-        (MODERATOR, 1, "moderator") //
-        (OWNER, 2, "owner") //
+    ENUM_WITH_STRING_CONVERSIONS(Mode, uint8_t,
+        (CONTESTANT, 0, "contestant")
+        (MODERATOR, 1, "moderator")
+        (OWNER, 2, "owner")
     );
     EnumVal<Mode> mode;
 };

@@ -12,11 +12,10 @@
 namespace sim::problems {
 
 struct Problem {
-    ENUM_WITH_STRING_CONVERSIONS(
-        Type, uint8_t,
-        (PUBLIC, 1, "public") //
-        (PRIVATE, 2, "private") //
-        (CONTEST_ONLY, 3, "contest_only") //
+    ENUM_WITH_STRING_CONVERSIONS(Type, uint8_t,
+        (PUBLIC, 1, "public")
+        (PRIVATE, 2, "private")
+        (CONTEST_ONLY, 3, "contest_only")
     );
 
     uint64_t id;

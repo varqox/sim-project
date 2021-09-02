@@ -469,7 +469,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     }
 
     // Validate problem type
-    StringView ptype_str = request.form_fields.get_or("type", "");
+    auto ptype_str = request.form_fields.get("type");
     Problem::Type ptype = Problem::Type::PRIVATE; // Silence GCC warning
     if (ptype_str == "PRI") {
         ptype = Problem::Type::PRIVATE;
@@ -733,7 +733,7 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
     STACK_UNWINDING_MARK;
 
     auto add_tag = [&] {
-        bool hidden = (request.form_fields.get_or("hidden", "") == "true");
+        bool hidden = (request.form_fields.get("hidden") == "true");
         StringView name;
         form_validate_not_blank(
             name, "name", "Tag name", decltype(ProblemTag::id.tag)::max_len);
@@ -760,7 +760,7 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
     };
 
     auto edit_tag = [&] {
-        bool hidden = (request.form_fields.get_or("hidden", "") == "true");
+        bool hidden = (request.form_fields.get("hidden") == "true");
         StringView name;
         StringView old_name;
         form_validate_not_blank(
@@ -803,7 +803,7 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
 
     auto delete_tag = [&] {
         StringView name;
-        bool hidden = (request.form_fields.get_or("hidden", "") == "true");
+        bool hidden = (request.form_fields.get("hidden") == "true");
         form_validate_not_blank(
             name, "name", "Tag name", decltype(ProblemTag::id.tag)::max_len);
         if (notifications.size) {

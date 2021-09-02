@@ -849,7 +849,7 @@ void Sim::api_submission_add() {
 
     // Validate fields
     Submission::Language slang = Submission::Language::C11; // Silence GCC warning
-    auto slang_str = request.form_fields.get_or("language", "");
+    auto slang_str = request.form_fields.get("language");
     if (slang_str == "c11") {
         slang = Submission::Language::C11;
     } else if (slang_str == "cpp11") {
@@ -864,16 +864,16 @@ void Sim::api_submission_add() {
         add_notification("error", "Invalid language");
     }
 
-    auto* solution_tmp_path_opt = request.form_fields.file_path("solution");
+    auto solution_tmp_path_opt = request.form_fields.file_path("solution");
     if (!solution_tmp_path_opt) {
         add_notification("error", "Missing solution file");
         return api_error400(notifications);
     }
 
-    StringView code = request.form_fields.get_or("code", "");
+    StringView code = request.form_fields.get("code").value_or("");
     bool ignored_submission = (may_submit_ignored and request.form_fields.contains("ignored"));
 
-    if ((code.empty() ^ request.form_fields.get_or("solution", "").empty()) == 0) {
+    if ((code.empty() ^ request.form_fields.get("solution").value_or("").empty()) == 0) {
         add_notification("error", "You have to either choose a file or paste the code");
         return api_error400(notifications);
     }
@@ -997,7 +997,7 @@ void Sim::api_submission_change_type() {
         return api_error403();
     }
 
-    StringView type_s = request.form_fields.get_or("type", "");
+    auto type_s = request.form_fields.get("type");
 
     EnumVal<Submission::Type> new_type{};
     if (type_s == "I") {

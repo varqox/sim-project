@@ -8,7 +8,6 @@
 #include <optional>
 
 using sim::sessions::Session;
-using sim::users::User;
 using std::string;
 
 namespace web_server::old {
@@ -40,67 +39,8 @@ bool Sim::session_open() {
         return true;
     }
 
-    resp.cookies.set("session", "", 0); // Delete cookie
+    resp.cookies.set("session", "", 0, std::nullopt, false, false); // Delete cookie
     return false;
-}
-
-void Sim::session_create_and_open(decltype(session->user_id) user_id, bool short_session) {
-    STACK_UNWINDING_MARK;
-
-    session_close();
-
-    // Remove obsolete sessions
-    mysql.prepare("DELETE FROM sessions WHERE expires<?").bind_and_execute(mysql_date());
-
-    // Create a record in database
-    auto stmt = mysql.prepare("INSERT IGNORE sessions(id, csrf_token, user_id,"
-                              " data, ip, user_agent, expires) "
-                              "VALUES(?,?,?,'','',?,?)");
-
-    decltype(session)::value_type ses;
-    ses.user_id = user_id;
-    ses.csrf_token = sim::generate_random_token(decltype(Session::csrf_token)::max_len);
-    auto user_agent = request.headers.get("User-Agent");
-    auto exp_tp = std::chrono::system_clock::now() +
-        (short_session ? Session::short_session_max_lifetime
-                       : Session::long_session_max_lifetime);
-
-    do {
-        ses.id = sim::generate_random_token(decltype(Session::id)::max_len);
-        stmt.bind_and_execute(
-            ses.id, ses.csrf_token, ses.user_id, user_agent, mysql_date(exp_tp));
-
-    } while (stmt.affected_rows() == 0);
-
-    auto exp_time_t = std::chrono::system_clock::to_time_t(exp_tp);
-    if (short_session) {
-        exp_time_t = -1; // -1 causes cookies.set() to not set Expire= field
-    }
-
-    // There is no better method than looking on the referer
-    bool is_https = has_prefix(request.headers["referer"], "https://");
-    resp.cookies.set(
-        "csrf_token", ses.csrf_token.to_string(), exp_time_t, "/", "", false, is_https);
-    resp.cookies.set("session", ses.id.to_string(), exp_time_t, "/", "", true, is_https);
-    session = ses;
-}
-
-void Sim::session_destroy() {
-    STACK_UNWINDING_MARK;
-
-    if (not session_open()) {
-        return;
-    }
-
-    try {
-        mysql.prepare("DELETE FROM sessions WHERE id=?").bind_and_execute(session->id);
-    } catch (const std::exception& e) {
-        ERRLOG_CATCH(e);
-    }
-
-    resp.cookies.set("csrf_token", "", 0); // Delete cookie
-    resp.cookies.set("session", "", 0); // Delete cookie
-    session = std::nullopt;
 }
 
 void Sim::session_close() {

@@ -15,5 +15,6 @@ struct UiTemplateParams {
 
 void begin_ui_template(http::Response& resp, UiTemplateParams params);
 void end_ui_template(http::Response& resp);
+std::string sim_template_params(const decltype(web_worker::Context::session)& session);
 
 } // namespace web_server
