@@ -1,5 +1,5 @@
 #include "simlib/inplace_buff.hh"
-#include "simlib/random.hh"
+#include "simlib/random_bytes.hh"
 #include "simlib/string_view.hh"
 
 #include <cstddef>
@@ -11,15 +11,6 @@
 
 using std::optional;
 using std::string;
-
-string random_str(size_t size) {
-    string str(size, '\0');
-    for (size_t i = 0; i < size; ++i) {
-        str[i] =
-            get_random(std::numeric_limits<char>::min(), std::numeric_limits<char>::max());
-    }
-    return str;
-}
 
 template <size_t N>
 void random_check(InplaceBuff<N>& ibuff, string ibuff_as_str) {
@@ -36,7 +27,7 @@ void random_check(InplaceBuff<N>& ibuff, string ibuff_as_str) {
         }
     } break;
     case 2: {
-        auto str = random_str(get_random<size_t>(0, old_size * 2));
+        auto str = random_bytes(get_random<size_t>(0, old_size * 2));
         ibuff_as_str += str;
         ibuff.append(str);
         EXPECT_EQ(StringView{ibuff}, StringView{ibuff_as_str});
@@ -56,7 +47,7 @@ void test_constructors(size_t size) {
     {
         // Constructor with given size
         InplaceBuff<N> ibuff(size);
-        auto str = random_str(size);
+        auto str = random_bytes(size);
         for (size_t i = 0; i < size; ++i) {
             ibuff[i] = str[i];
         }
@@ -65,7 +56,7 @@ void test_constructors(size_t size) {
     }
     {
         // Copy construct from other InplaceBuff
-        auto str = random_str(size);
+        auto str = random_bytes(size);
         optional other = InplaceBuff<OTHER_N>{string{str}}; // use string copy
         auto ibuff = InplaceBuff<N>{*other};
         EXPECT_EQ(StringView{*other}, StringView{str});
@@ -77,7 +68,7 @@ void test_constructors(size_t size) {
     }
     {
         // Move construct from other InplaceBuff
-        auto str = random_str(size);
+        auto str = random_bytes(size);
         optional other = InplaceBuff<OTHER_N>{string{str}}; // use string copy
         auto ibuff = InplaceBuff<N>{std::move(*other)};
         other.reset();
@@ -86,22 +77,22 @@ void test_constructors(size_t size) {
     }
     {
         // Copy construct from string
-        auto str = random_str(size);
+        auto str = random_bytes(size);
         auto ibuff = InplaceBuff<N>{string{str}}; // use string copy
         EXPECT_EQ(StringView{ibuff}, StringView{str});
         random_check(ibuff, std::move(str));
     }
     {
         // Inplace construct from string
-        auto str = random_str(size);
+        auto str = random_bytes(size);
         auto ibuff = InplaceBuff<N>{std::in_place, string{str}}; // use string copy
         EXPECT_EQ(StringView{ibuff}, StringView{str});
         random_check(ibuff, std::move(str));
     }
     {
         // Inplace construct from string two times
-        auto str1 = random_str(size);
-        auto str2 = random_str(size);
+        auto str1 = random_bytes(size);
+        auto str2 = random_bytes(size);
         auto ibuff =
             InplaceBuff<N>{std::in_place, string{str1}, string{str2}}; // use string copies
         auto str = str1 + str2;
@@ -110,8 +101,8 @@ void test_constructors(size_t size) {
     }
     {
         // Construct from string two times
-        auto str1 = random_str(size);
-        auto str2 = random_str(size);
+        auto str1 = random_bytes(size);
+        auto str2 = random_bytes(size);
         auto ibuff = InplaceBuff<N>{string{str1}, string{str2}}; // use string copies
         auto str = str1 + str2;
         EXPECT_EQ(StringView{ibuff}, StringView{str});
@@ -119,9 +110,9 @@ void test_constructors(size_t size) {
     }
     {
         // Construct from string two times
-        auto str1 = random_str(size);
-        auto str2 = random_str(size);
-        auto str3 = random_str(size);
+        auto str1 = random_bytes(size);
+        auto str2 = random_bytes(size);
+        auto str3 = random_bytes(size);
         auto ibuff =
             InplaceBuff<N>{string{str1}, string{str2}, string{str3}}; // use string copies
         auto str = str1 + str2 + str3;
@@ -134,8 +125,8 @@ template <size_t N, size_t OTHER_N>
 void test_assignments(size_t size, size_t other_size) {
     {
         // Copy assign from other InplaceBuff
-        auto ibuff = InplaceBuff<N>(random_str(size));
-        auto str = random_str(other_size);
+        auto ibuff = InplaceBuff<N>(random_bytes(size));
+        auto str = random_bytes(other_size);
         optional other = InplaceBuff<OTHER_N>{string{str}}; // use string copy
         ibuff = *other;
         EXPECT_EQ(StringView{*other}, StringView{str});
@@ -147,8 +138,8 @@ void test_assignments(size_t size, size_t other_size) {
     }
     {
         // Move assign from other InplaceBuff
-        auto ibuff = InplaceBuff<N>(random_str(size));
-        auto str = random_str(other_size);
+        auto ibuff = InplaceBuff<N>(random_bytes(size));
+        auto str = random_bytes(other_size);
         optional other = InplaceBuff<OTHER_N>{string{str}}; // use string copy
         ibuff = std::move(*other);
         other.reset();
@@ -157,8 +148,8 @@ void test_assignments(size_t size, size_t other_size) {
     }
     {
         // Copy assign from string
-        auto ibuff = InplaceBuff<N>(random_str(size));
-        auto str = random_str(other_size);
+        auto ibuff = InplaceBuff<N>(random_bytes(size));
+        auto str = random_bytes(other_size);
         ibuff = string{str}; // use string copy
         EXPECT_EQ(StringView{ibuff}, StringView{str});
         random_check(ibuff, std::move(str));

@@ -6,7 +6,7 @@
 #include "simlib/file_info.hh"
 #include "simlib/file_path.hh"
 #include "simlib/opened_temporary_file.hh"
-#include "simlib/random.hh"
+#include "simlib/random_bytes.hh"
 #include "simlib/temporary_directory.hh"
 #include "test/get_file_permissions.hh"
 
@@ -15,12 +15,6 @@
 using std::max;
 using std::string;
 using std::vector;
-
-static string some_random_data(size_t len) {
-    string data(len, '0');
-    read_from_dev_urandom(data.data(), data.size());
-    return data;
-}
 
 // NOLINTNEXTLINE
 TEST(DISABLED_file_manip, remove_r) { // TODO:
@@ -90,7 +84,7 @@ TEST(file_manip, blast) {
     OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
     OpenedTemporaryFile b("/tmp/filesystem-test.XXXXXX");
 
-    string data = some_random_data(1 << 20);
+    string data = random_bytes(1 << 20);
     write_all_throw(a, data);
 
     EXPECT_EQ(get_file_size(a.path()), data.size());
@@ -137,11 +131,11 @@ void copy_test(void (*copy_fn)(FilePath, FilePath, mode_t)) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
     OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
 
-    string data = some_random_data(1 << 18);
+    string data = random_bytes(1 << 18);
     write_all_throw(a, data);
 
-    string bigger_data = some_random_data(1 << 19);
-    string smaller_data = some_random_data(1 << 17);
+    string bigger_data = random_bytes(1 << 19);
+    string smaller_data = random_bytes(1 << 17);
 
     std::set<string> allowed_files;
     auto check_allowed_files = [&](size_t line) {
@@ -235,39 +229,39 @@ TEST(file_manip, copy_r) {
     };
 
     vector<FileInfo> orig_files = {
-        {"a", some_random_data(1023)},
-        {"b", some_random_data(1024)},
-        {"c", some_random_data(1025)},
-        {"dir/a", some_random_data(1023)},
-        {"dir/aa", some_random_data(100000)},
-        {"dir/b", some_random_data(1024)},
-        {"dir/bb", some_random_data(100000)},
-        {"dir/c", some_random_data(1025)},
-        {"dir/cc", some_random_data(100000)},
-        {"dir/dir/a", some_random_data(1023)},
-        {"dir/dir/aa", some_random_data(100000)},
-        {"dir/dir/b", some_random_data(1024)},
-        {"dir/dir/bb", some_random_data(100000)},
-        {"dir/dir/c", some_random_data(1025)},
-        {"dir/dir/cc", some_random_data(100000)},
-        {"dir/dir/xxx/a", some_random_data(1023)},
-        {"dir/dir/xxx/aa", some_random_data(100000)},
-        {"dir/dir/xxx/b", some_random_data(1024)},
-        {"dir/dir/xxx/bb", some_random_data(100000)},
-        {"dir/dir/xxx/c", some_random_data(1025)},
-        {"dir/dir/xxx/cc", some_random_data(100000)},
-        {"dir/dur/a", some_random_data(1023)},
-        {"dir/dur/aa", some_random_data(100000)},
-        {"dir/dur/b", some_random_data(1024)},
-        {"dir/dur/bb", some_random_data(100000)},
-        {"dir/dur/c", some_random_data(1025)},
-        {"dir/dur/cc", some_random_data(100000)},
-        {"dir/dur/xxx/a", some_random_data(1023)},
-        {"dir/dur/xxx/aa", some_random_data(100000)},
-        {"dir/dur/xxx/b", some_random_data(1024)},
-        {"dir/dur/xxx/bb", some_random_data(100000)},
-        {"dir/dur/xxx/c", some_random_data(1025)},
-        {"dir/dur/xxx/cc", some_random_data(100000)},
+        {"a", random_bytes(1023)},
+        {"b", random_bytes(1024)},
+        {"c", random_bytes(1025)},
+        {"dir/a", random_bytes(1023)},
+        {"dir/aa", random_bytes(100000)},
+        {"dir/b", random_bytes(1024)},
+        {"dir/bb", random_bytes(100000)},
+        {"dir/c", random_bytes(1025)},
+        {"dir/cc", random_bytes(100000)},
+        {"dir/dir/a", random_bytes(1023)},
+        {"dir/dir/aa", random_bytes(100000)},
+        {"dir/dir/b", random_bytes(1024)},
+        {"dir/dir/bb", random_bytes(100000)},
+        {"dir/dir/c", random_bytes(1025)},
+        {"dir/dir/cc", random_bytes(100000)},
+        {"dir/dir/xxx/a", random_bytes(1023)},
+        {"dir/dir/xxx/aa", random_bytes(100000)},
+        {"dir/dir/xxx/b", random_bytes(1024)},
+        {"dir/dir/xxx/bb", random_bytes(100000)},
+        {"dir/dir/xxx/c", random_bytes(1025)},
+        {"dir/dir/xxx/cc", random_bytes(100000)},
+        {"dir/dur/a", random_bytes(1023)},
+        {"dir/dur/aa", random_bytes(100000)},
+        {"dir/dur/b", random_bytes(1024)},
+        {"dir/dur/bb", random_bytes(100000)},
+        {"dir/dur/c", random_bytes(1025)},
+        {"dir/dur/cc", random_bytes(100000)},
+        {"dir/dur/xxx/a", random_bytes(1023)},
+        {"dir/dur/xxx/aa", random_bytes(100000)},
+        {"dir/dur/xxx/b", random_bytes(1024)},
+        {"dir/dur/xxx/bb", random_bytes(100000)},
+        {"dir/dur/xxx/c", random_bytes(1025)},
+        {"dir/dur/xxx/cc", random_bytes(100000)},
     };
 
     throw_assert(is_sorted(orig_files));
