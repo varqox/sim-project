@@ -209,6 +209,7 @@ tests = [
     ['test/random.cc', [], {}],
     ['test/ranges.cc', [], {}],
     ['test/request_uri_parser.cc', [], {}],
+    ['test/result.cc', [], {}],
     ['test/sandbox.cc', [], {'priority': 8}],
     ['test/sha.cc', [], {}],
     ['test/shared_function.cc', [], {}],
