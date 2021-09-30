@@ -281,6 +281,7 @@ gmock_dep = simlib_proj.get_variable('gmock_dep')
 tests = [
     ['test/sim/cpp_syntax_highlighter.cc', [], {}],
     ['test/sim/jobs/utils.cc', [], {}],
+    ['test/web_server/http/form_validation.cc', [], {}],
 ]
 foreach test : tests
     name = test[0].underscorify()
