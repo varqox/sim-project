@@ -11,6 +11,8 @@
 #define REV_CAT(...) PRIMITIVE_REV_CAT(__VA_ARGS__)
 #define PRIMITIVE_REV_CAT(b, ...) __VA_ARGS__##b
 
+#define PRIMITIVE_DOUBLE_CAT(a, b, ...) a##b##__VA_ARGS__
+
 #define EMPTY()
 #define EXPAND(...) __VA_ARGS__
 #define DEFER1(...) __VA_ARGS__ EMPTY()

@@ -5,6 +5,7 @@
 
 #define ABC a b c
 #define XYZ x y z
+#define KLM k l m
 
 #define XXX() x x x
 #define YYY(...) y y y __VA_ARGS__
@@ -78,6 +79,21 @@ TEST(EnumVal, REV_CAT) {
     static_assert(StringView{STRINGIFY(REV_CAT(, ABC))} == "a b c");
     static_assert(StringView{STRINGIFY(REV_CAT())} == "");
     static_assert(StringView{STRINGIFY(REV_CAT(DEFER1(EAT)(), XYZ))} == "x y zEAT ()");
+}
+
+// NOLINTNEXTLINE
+TEST(EnumVal, PRIMITIVE_DOUBLE_CAT) {
+    static_assert(StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(ABC, XYZ, KLM))} == "ABCXYZKLM");
+    static_assert(
+        StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(ABC, XYZ, KLM, ABC, XYZ, KLM))} ==
+        "ABCXYZKLM, a b c, x y z, k l m");
+#define ABCXYZ abcxyz
+    static_assert(StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(ABC, XYZ))} == "abcxyz");
+    static_assert(StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(ABC, XYZ, ))} == "abcxyz");
+    static_assert(StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(, ABC, XYZ))} == "abcxyz");
+    static_assert(StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(ABC, , XYZ))} == "abcxyz");
+    static_assert(StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(, ))} == "");
+#undef ABCXYZ
 }
 
 // NOLINTNEXTLINE
