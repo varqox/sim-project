@@ -26,7 +26,7 @@ public:
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     constexpr explicit Datetime(T&& str)
     : Varbinary([&]() -> decltype(auto) {
-        throw_assert(is_datetime(intentional_unsafe_c_string_view(concat(str))));
+        throw_assert(is_datetime(intentional_unsafe_cstring_view(concat(str))));
         return str;
     }()) {}
 
@@ -37,7 +37,7 @@ public:
                 !std::is_same_v<std::decay_t<T>, Datetime>,
             int> = 0>
     Datetime& operator=(T&& str) {
-        throw_assert(is_datetime(intentional_unsafe_c_string_view(concat(str))));
+        throw_assert(is_datetime(intentional_unsafe_cstring_view(concat(str))));
         Varbinary::operator=(std::forward<T>(str));
         return *this;
     }
