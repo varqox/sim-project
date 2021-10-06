@@ -159,6 +159,7 @@ Response view(Context& ctx, decltype(User::id) user_id) {
 namespace params {
 
 constexpr http::ApiParam username{&User::username, "username", "Username"};
+constexpr http::ApiParam type{&User::type, "type", "Type"};
 constexpr http::ApiParam first_name{&User::first_name, "first_name", "First name"};
 constexpr http::ApiParam last_name{&User::last_name, "last_name", "Last name"};
 constexpr http::ApiParam email{&User::email, "email", "Email"};
@@ -248,6 +249,44 @@ http::Response sign_out(web_worker::Context& ctx) {
     }
     ctx.destroy_session();
     return ctx.response_json(sim_template_params(ctx.session));
+}
+
+http::Response add(web_worker::Context& ctx) {
+    auto caps = capabilities::users_for(ctx.session);
+    if (not caps.add_user) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (username, params::username)
+        (type, params::type, ENUM_CAPS(
+            (ADMIN, caps.add_admin)
+            (TEACHER, caps.add_teacher)
+            (NORMAL, caps.add_normal_user)
+        ))
+        (first_name, params::first_name)
+        (last_name, params::last_name)
+        (email, params::email)
+        (password, params::password, ALLOW_BLANK)
+        (password_repeated, params::password_repeated, ALLOW_BLANK)
+    );
+    if (password != password_repeated) {
+        return ctx.response_400("Passwords do not match");
+    }
+
+    auto [salt, hash] = sim::users::salt_and_hash_password(password);
+    auto stmt =
+        ctx.mysql.prepare("INSERT IGNORE INTO users(type, username, first_name, last_name, "
+                          "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+    stmt.bind_and_execute(type, username, first_name, last_name, email, salt, hash);
+    if (stmt.affected_rows() != 1) {
+        return ctx.response_400("Username taken");
+    }
+
+    auto user_id = stmt.insert_id();
+    stdlog("New user: {id: ", user_id, ", username: ", json_stringify(username), '}');
+
+    return ctx.response_ok(intentional_unsafe_cstring_view(to_string(user_id)));
 }
 
 } // namespace web_server::users::api

@@ -104,13 +104,32 @@ void end_ui_template(Response& resp) { resp.content.append("</script></body></ht
 std::string sim_template_params(const decltype(web_worker::Context::session)& session) {
     json_str::Object obj;
     obj.prop_obj("capabilities", [&](auto& obj) {
-        obj.prop("contests", capabilities::contests_for(session).web_ui_view);
-        obj.prop("jobs", capabilities::jobs_for(session).web_ui_view);
-        obj.prop("logs", capabilities::logs_for(session).view);
-        obj.prop("problems", capabilities::problems_for(session).web_ui_view);
-        obj.prop("submissions", capabilities::submissions_for(session).web_ui_view);
-        obj.prop("users", capabilities::users_for(session).web_ui_view);
-        obj.prop("contests", capabilities::contests_for(session).web_ui_view);
+        obj.prop_obj("contests", [&](auto& obj) {
+            obj.prop("ui_view", capabilities::contests_for(session).web_ui_view);
+        });
+        obj.prop_obj("jobs", [&](auto& obj) {
+            obj.prop("ui_view", capabilities::jobs_for(session).web_ui_view);
+        });
+        obj.prop_obj("logs", [&](auto& obj) {
+            obj.prop("ui_view", capabilities::logs_for(session).view);
+        });
+        obj.prop_obj("problems", [&](auto& obj) {
+            obj.prop("ui_view", capabilities::problems_for(session).web_ui_view);
+        });
+        obj.prop_obj("submissions", [&](auto& obj) {
+            obj.prop("ui_view", capabilities::submissions_for(session).web_ui_view);
+        });
+        obj.prop_obj("users", [&](auto& obj) {
+            auto caps = capabilities::users_for(session);
+            obj.prop("ui_view", bool{caps.web_ui_view});
+            obj.prop("add_user", bool{caps.add_user});
+            obj.prop("add_admin", bool{caps.add_admin});
+            obj.prop("add_teacher", bool{caps.add_teacher});
+            obj.prop("add_normal_user", bool{caps.add_normal_user});
+        });
+        obj.prop_obj("contests", [&](auto& obj) {
+            obj.prop("ui_view", capabilities::contests_for(session).web_ui_view);
+        });
     });
     if (session) {
         obj.prop_obj("session", [&](auto& obj) {

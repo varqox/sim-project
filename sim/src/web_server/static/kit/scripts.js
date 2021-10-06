@@ -121,6 +121,7 @@ function url_api_user_delete(user_id) { return '/api/user/' + user_id + '/delete
 function url_api_user_edit(user_id) { return '/api/user/' + user_id + '/edit'; }
 function url_api_user_merge_into_another(user_id) { return '/api/user/' + user_id + '/merge_into_another'; }
 function url_api_users(query_suffix) { return '/api/users' + query_suffix; }
+function url_api_users_add() { return '/api/users/add'; }
 function url_contests() { return '/c'; }
 function url_enter_contest(contest_entry_token) { return '/enter_contest/' + contest_entry_token; }
 function url_jobs() { return '/jobs'; }
@@ -138,6 +139,7 @@ function url_user_delete(user_id) { return '/u/' + user_id + '/delete'; }
 function url_user_edit(user_id) { return '/u/' + user_id + '/edit'; }
 function url_user_merge(user_id) { return '/u/' + user_id + '/merge'; }
 function url_users() { return '/u'; }
+function url_users_add() { return '/u/add'; }
 
 /* ================================= Humanize ================================= */
 
@@ -902,6 +904,7 @@ function sim_template(params, server_response_end_ts) {
 }
 
 function handle_session_change(params) {
+	window.global_capabilities = params.capabilities;
 	window.is_signed_in = () => signed_user_id != null;
 
 	window.signed_user_id = params.session != null ? params.session.user_id : null;
@@ -916,23 +919,23 @@ function handle_session_change(params) {
 		return document.body.appendChild(elem_with_class('div', 'navbar'));
 	})();
 	navbar.appendChild(elem_with_class_and_text('a', 'brand', 'Sim beta')).href = url_main_page();
-	if (params.capabilities.contests) {
+	if (global_capabilities.contests.ui_view) {
 		// TODO: this requires jQuery
 		$(navbar).append(a_view_button(url_contests(), 'Contests', undefined, contest_chooser));
 	}
-	if (params.capabilities.problems) {
+	if (global_capabilities.problems.ui_view) {
 		navbar.appendChild(elem_with_text('a', 'Problems')).href = url_problems();
 	}
-	if (params.capabilities.users) {
+	if (global_capabilities.users.ui_view) {
 		navbar.appendChild(elem_with_text('a', 'Users')).href = url_users();
 	}
-	if (params.capabilities.submissions) {
+	if (global_capabilities.submissions.ui_view) {
 		navbar.appendChild(elem_with_text('a', 'Submissions')).href = url_submissions();
 	}
-	if (params.capabilities.jobs) {
+	if (global_capabilities.jobs.ui_view) {
 		navbar.appendChild(elem_with_text('a', 'Jobs')).href = url_jobs();
 	}
-	if (params.capabilities.logs) {
+	if (global_capabilities.logs.ui_view) {
 		navbar.appendChild(elem_with_text('a', 'Logs')).href = url_logs();
 	}
 
@@ -1057,13 +1060,19 @@ function View(new_window_location) {
 	set_api_interface(self, self.content_elem);
 };
 
-function elem_link_to_view(contents, view_func, url_func, ...args) {
+function elem_link_to_view(contents, view_func, url_func, ...url_func_args) {
 	const elem = elem_of('a', contents);
-	elem.href = url_func(...args);
+	elem.href = url_func(...url_func_args);
 	elem.addEventListener('click', (event) => {
 		event.preventDefault();
-		view_func(...args);
+		view_func(...url_func_args);
 	});
+	return elem;
+}
+
+function elem_link_with_class_to_view(classes, contents, view_func, url_func, ...url_func_args) {
+	const elem = elem_link_to_view(contents, view_func, url_func, ...url_func_args);
+	elem.className = classes;
 	return elem;
 }
 
@@ -1081,6 +1090,31 @@ function main_page() {
 	welcome_p.style.fontSize = '30px'
 
 	view.content_elem.appendChild(elem_of('center', img, welcome_p, document.createElement('hr'), elem_with_text('p', 'Sim is an open source platform for carrying out algorithmic contests')));
+}
+
+async function add_user() {
+	const view = new View(url_users_add());
+	const form = new AjaxForm('Add user', url_api_users_add());
+	const select = form.append_select('type', 'Type', true);
+	if (global_capabilities.users.add_admin) {
+		select.add_option('Admin', 'admin', false);
+	}
+	if (global_capabilities.users.add_teacher) {
+		select.add_option('Teacher', 'teacher', false);
+	}
+	if (global_capabilities.users.add_normal_user) {
+		select.add_option('Normal', 'normal', true);
+	}
+
+	form.append_input_text('username', 'Username', '', 24, true, true);
+	form.append_input_text('first_name', 'First name', '', 24, true, true);
+	form.append_input_text('last_name', 'Last name', '', 24, true, true);
+	form.append_input_email('email', 'Email', '', 24, true, true);
+	form.append_input_password('password', 'Password', 24, false);
+	form.append_input_password('password_repeated', 'Password (repeat)', 24, false);
+	form.append_submit_button('Add user', 'blue');
+	form.attach_to(view.content_elem);
+
 }
 
 async function edit_user(user_id) {
@@ -2847,71 +2881,6 @@ ActionsToHTML.contest_files = function(contest_id, overall_actions_str) {
 };
 
 /* ================================= Users ================================= */
-function add_user(as_oldmodal) {
-	view_base(as_oldmodal, '/u/add', function() {
-		this.append(ajax_form('Add user', '/api/user/add',
-			Form.field_group('Username', {
-				type: 'text',
-				name: 'username',
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			}).add(Form.field_group('Type',
-				$('<select>', {
-					name: 'type',
-					required: true,
-					html: $('<option>', {
-						value: 'A',
-						text: 'Admin'
-					}).add('<option>', {
-						value: 'T',
-						text: 'Teacher'
-					}).add('<option>', {
-						value: 'N',
-						text: 'Normal',
-						selected: true
-					})
-				})
-			)).add(Form.field_group('First name', {
-				type: 'text',
-				name: 'first_name',
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			})).add(Form.field_group('Last name', {
-				type: 'text',
-				name: 'last_name',
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			})).add(Form.field_group('Email', {
-				type: 'email',
-				name: 'email',
-				size: 24,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				required: true
-			})).add(Form.field_group('Password', {
-				type: 'password',
-				name: 'pass',
-				size: 24,
-			})).add(Form.field_group('Password (repeat)', {
-				type: 'password',
-				name: 'pass1',
-				size: 24,
-			})).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Submit'
-				})
-			}), 'User was added'
-		));
-	});
-}
 function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 	view_ajax(as_oldmodal, url_api_user(user_id), function(user) {
 		this.append($('<div>', {
@@ -2999,9 +2968,9 @@ function user_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
 		'/u' + (opt_hash === undefined ? '' : opt_hash), function() {
 			timed_hide($(this).parent().parent().filter('.oldmodal'));
 			$(this).append($('<h1>', {text: 'Users'}));
-			if (signed_user_is_admin())
-				$(this).append(a_view_button('/u/add', 'Add user', 'btn',
-					add_user.bind(null, true)));
+			if (global_capabilities.users.add_user) {
+				$(this)[0].appendChild(elem_link_with_class_to_view('btn', 'Add user', add_user, url_users_add));
+			}
 
 			tab_users_lister($(this));
 		});

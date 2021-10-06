@@ -54,6 +54,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     POST("/api/sign_in")(users::api::sign_in);
     POST("/api/sign_out")(users::api::sign_out);
     POST("/api/sign_up")(users::api::sign_up);
+    POST("/api/users/add")(users::api::add);
     // clang-format on
     // Ensure fast query dispatch
     assert(get_dispatcher.all_potential_collisions().empty());

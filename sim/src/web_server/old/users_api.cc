@@ -28,10 +28,6 @@ void Sim::api_user() {
     }
 
     StringView next_arg = url_args.extract_next_arg();
-    if (next_arg == "add") {
-        users_perms = users_get_overall_permissions();
-        return api_user_add();
-    }
     if (not is_digit(next_arg) or request.method != http::Request::POST) {
         return api_error400();
     }
@@ -60,85 +56,6 @@ void Sim::api_user() {
         return api_user_change_password();
     }
     return api_error404();
-}
-
-void Sim::api_user_add() {
-    STACK_UNWINDING_MARK;
-    using PERM = UserPermissions;
-
-    if (uint(~users_perms & PERM::ADD_USER)) {
-        return api_error403();
-    }
-
-    // Validate fields
-    StringView pass = request.form_fields.get("pass").value_or("");
-    StringView pass1 = request.form_fields.get("pass1").value_or("");
-
-    if (pass != pass1) {
-        return api_error403("Passwords do not match");
-    }
-
-    StringView username;
-    StringView fname;
-    StringView lname;
-    StringView email;
-
-    form_validate_not_blank(
-        username, "username", "Username", is_username,
-        "Username can only consist of characters [a-zA-Z0-9_-]",
-        decltype(User::username)::max_len);
-
-    // Validate user type
-    auto utype_str = request.form_fields.get("type");
-    decltype(User::type) utype = User::Type::NORMAL; // Silence GCC warning
-    if (utype_str == "A") {
-        utype = User::Type::ADMIN;
-        if (uint(~users_perms & PERM::ADD_ADMIN)) {
-            add_notification("error", "You have no permissions to make this user an admin");
-        }
-
-    } else if (utype_str == "T") {
-        utype = User::Type::TEACHER;
-        if (uint(~users_perms & PERM::ADD_TEACHER)) {
-            add_notification("error", "You have no permissions to make this user a teacher");
-        }
-
-    } else if (utype_str == "N") {
-        utype = User::Type::NORMAL;
-        if (uint(~users_perms & PERM::ADD_NORMAL)) {
-            add_notification(
-                "error", "You have no permissions to make this user a normal user");
-        }
-
-    } else {
-        add_notification("error", "Invalid user's type");
-    }
-
-    form_validate_not_blank(
-        fname, "first_name", "First Name", decltype(User::first_name)::max_len);
-
-    form_validate_not_blank(
-        lname, "last_name", "Last Name", decltype(User::last_name)::max_len);
-
-    form_validate_not_blank(email, "email", "Email", decltype(User::email)::max_len);
-
-    if (notifications.size) {
-        return api_error400(notifications);
-    }
-
-    // All fields are valid
-    auto [salt, hash] = sim::users::salt_and_hash_password(pass);
-    auto stmt = mysql.prepare("INSERT IGNORE users (username, type,"
-                              " first_name, last_name, email, password_salt, password_hash) "
-                              "VALUES(?, ?, ?, ?, ?, ?, ?)");
-    stmt.bind_and_execute(username, utype, fname, lname, email, salt, hash);
-
-    // User account successfully created
-    if (stmt.affected_rows() != 1) {
-        return api_error400("Username taken");
-    }
-
-    stdlog("New user: ", stmt.insert_id(), " -> `", username, '`');
 }
 
 void Sim::api_user_edit() {

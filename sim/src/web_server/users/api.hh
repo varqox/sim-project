@@ -25,4 +25,6 @@ http::Response sign_up(web_worker::Context& ctx);
 
 http::Response sign_out(web_worker::Context& ctx);
 
+http::Response add(web_worker::Context& ctx);
+
 } // namespace web_server::users::api

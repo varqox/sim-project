@@ -136,7 +136,7 @@ void Sim::users_handle() {
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg == "add") { // Add user
         page_template("Add user");
-        append("add_user(false);");
+        append("add_user();");
 
     } else if (auto uid = str2num<decltype(users_uid)>(next_arg)) { // View user
         users_uid = *uid;
