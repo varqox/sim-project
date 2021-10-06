@@ -409,6 +409,7 @@ function Select(name, required) {
 	const select_elem = document.createElement('select');
 	select_elem.name = name;
 	select_elem.required = required;
+	let selected_option_exists = false;
 
 	self.attach_to = (elem) => {
 		elem.appendChild(select_elem);
@@ -417,7 +418,12 @@ function Select(name, required) {
 	self.add_option = (name, value, selected) => {
 		const option = select_elem.appendChild(elem_with_text('option', name));
 		option.value = value;
-		option.selected = selected;
+		if (selected) {
+			option.selected = selected;
+			selected_option_exists = true;
+		} else if (!selected_option_exists) {
+			select_elem.value = '';
+		}
 		return option;
 	}
 }
