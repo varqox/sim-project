@@ -573,7 +573,17 @@ function AjaxForm(title, destination_api_url, init) {
 	};
 
 	self.append_checkbox = (name, label) => {
-		return self.append_input('checkbox', name, label, false);
+		const fg = append_field_group(label);
+		const checkbox = fg.appendChild(document.createElement('input'));
+		checkbox.type = 'checkbox';
+		const hidden = fg.appendChild(document.createElement('input'));
+		hidden.type = 'hidden';
+		hidden.name = name;
+		hidden.value = false;
+		checkbox.addEventListener('change', () => {
+			hidden.value = checkbox.checked;
+		});
+		return checkbox;
 	};
 
 	self.append_submit_button = (name, css_classes) => {

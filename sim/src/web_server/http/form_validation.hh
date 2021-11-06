@@ -95,8 +95,6 @@ std::optional<decltype(detail::validate_result_type<T>())> validate(
             return std::nullopt;
         }
         return std::optional{T{std::move(*opt)}};
-    } else if constexpr (std::is_same_v<T, bool> or std::is_same_v<T, sim::sql_fields::Bool>) {
-        return form_fields.contains(api_param.name);
     } else {
         const auto str_val_opt = form_fields.get(api_param.name);
         if (not str_val_opt) {
@@ -110,6 +108,15 @@ std::optional<decltype(detail::validate_result_type<T>())> validate(
         if constexpr (is_enum_val_with_string_conversions<T>) {
             if (auto opt = T::EnumType::from_str(str_val); opt) {
                 return std::move(*opt);
+            }
+            return error("has invalid value");
+        } else if constexpr (
+            std::is_same_v<T, bool> or std::is_same_v<T, sim::sql_fields::Bool>) {
+            if (str_val == "true") {
+                return true;
+            }
+            if (str_val == "false") {
+                return false;
             }
             return error("has invalid value");
         } else if constexpr (std::is_integral_v<T>) {
@@ -178,23 +185,23 @@ std::optional<decltype(detail::validate_result_type<T>())> validate(
             form_fields, errors_str, IMPL_VALIDATE_DECLARE_VAR_NOOP args, ) __VA_ARGS__
 #define IMPL_VALIDATE_DECLARE_VAR_NOOP(...) __VA_ARGS__
 #define IMPL_VALIDATE_DECLARE_VAR2(...) IMPL_VALIDATE_DECLARE_VAR3(__VA_ARGS__, )
-#define IMPL_VALIDATE_DECLARE_VAR3(form_fields, errors_str, var_name, api_param, option, ...) \
-    IMPL_VALIDATE_DECLARE_VAR4(                                                               \
-        form_fields, errors_str, var_name, api_param,                                         \
-        PRIMITIVE_DOUBLE_CAT(IMPL_VALIDATE_DECLARE_VAR_OPTION, _, option))
+#define IMPL_VALIDATE_DECLARE_VAR3(form_fields, errors_str, var_name, api_param, kind, ...) \
+    IMPL_VALIDATE_DECLARE_VAR4(                                                             \
+        form_fields, errors_str, var_name, api_param,                                       \
+        PRIMITIVE_DOUBLE_CAT(IMPL_VALIDATE_DECLARE_VAR_KIND, _, kind))
 #define IMPL_VALIDATE_DECLARE_VAR4(...) IMPL_VALIDATE_DECLARE_VAR5(__VA_ARGS__)
 
-#define IMPL_VALIDATE_DECLARE_VAR_OPTION_ IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, false
-#define IMPL_VALIDATE_DECLARE_VAR_OPTION_ALLOW_BLANK IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, true
-#define IMPL_VALIDATE_DECLARE_VAR_OPTION_ALLOW_IF(condition)                               \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, false
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOW_BLANK IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, true
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOW_IF(condition)                                 \
     IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF, condition, IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, \
         (, false)
-#define IMPL_VALIDATE_DECLARE_VAR_OPTION_ALLOW_BLANK_ALLOW_IF(condition)                   \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOW_BLANK_ALLOW_IF(condition)                     \
     IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF, condition, IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, \
         (, true)
-#define IMPL_VALIDATE_DECLARE_VAR_OPTION_ENUM_CAPS(caps_seq) \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ENUM_CAPS(caps_seq) \
     IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS, caps_seq
-#define IMPL_VALIDATE_DECLARE_VAR_OPTION_ENUM_CAPS_ALLOW_IF(condition, caps_seq)              \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ENUM_CAPS_ALLOW_IF(condition, caps_seq)                \
     IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF, condition, IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS, \
         (, caps_seq)
 

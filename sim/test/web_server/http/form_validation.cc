@@ -277,25 +277,38 @@ TEST(form_validation, sql_varbinary_allow_blank_allow_if) {
 template <class Bool, class ResT = Bool>
 static void test_bool() {
     ValidationTest t;
-    EXPECT_EQ((t.validate<Bool, ResT>("on")), Ok{true});
-    EXPECT_EQ((t.validate<Bool, ResT>("")), Ok{true});
-    EXPECT_EQ((t.validate<Bool, ResT>(nullopt)), Ok{false});
+    EXPECT_EQ((t.validate<Bool, ResT>("true")), Ok{true});
+    EXPECT_EQ((t.validate<Bool, ResT>("false")), Ok{false});
+    EXPECT_EQ((t.validate<Bool, ResT>("on")), Err{"abc: ABC has invalid value"});
+    EXPECT_EQ((t.validate<Bool, ResT>("")), Err{"abc: ABC cannot be blank"});
+    EXPECT_EQ((t.validate<Bool, ResT>(nullopt)), Err{"abc: ABC is not set"});
 }
 
 template <class Bool, class ResT = Bool>
 static void test_bool_allow_blank() {
     ValidationTest t;
-    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>("on")), Ok{true});
-    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>("")), Ok{true});
-    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>(nullopt)), Ok{false});
+    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>("true")), Ok{true});
+    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>("false")), Ok{false});
+    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>("on")), Err{"abc: ABC has invalid value"});
+    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>("")), Err{"abc: ABC has invalid value"});
+    EXPECT_EQ((t.validate_allow_blank<Bool, ResT>(nullopt)), Err{"abc: ABC is not set"});
 }
 
 template <class Bool, class ResT = Bool>
 static void test_bool_allow_if() {
     ValidationTest t;
-    EXPECT_EQ((t.validate_allow_if<Bool, ResT>("on", true)), Ok{true});
-    EXPECT_EQ((t.validate_allow_if<Bool, ResT>("", true)), Ok{true});
-    EXPECT_EQ((t.validate_allow_if<Bool, ResT>(nullopt, true)), Ok{false});
+    EXPECT_EQ((t.validate_allow_if<Bool, ResT>("true", true)), Ok{true});
+    EXPECT_EQ((t.validate_allow_if<Bool, ResT>("false", true)), Ok{false});
+    EXPECT_EQ(
+        (t.validate_allow_if<Bool, ResT>("on", true)), Err{"abc: ABC has invalid value"});
+    EXPECT_EQ((t.validate_allow_if<Bool, ResT>("", true)), Err{"abc: ABC cannot be blank"});
+    EXPECT_EQ((t.validate_allow_if<Bool, ResT>(nullopt, true)), Err{"abc: ABC is not set"});
+    EXPECT_EQ(
+        (t.validate_allow_if<Bool, ResT>("true", false)),
+        Err{"abc: ABC should not be sent within request at all"});
+    EXPECT_EQ(
+        (t.validate_allow_if<Bool, ResT>("false", false)),
+        Err{"abc: ABC should not be sent within request at all"});
     EXPECT_EQ(
         (t.validate_allow_if<Bool, ResT>("on", false)),
         Err{"abc: ABC should not be sent within request at all"});
@@ -308,9 +321,23 @@ static void test_bool_allow_if() {
 template <class Bool, class ResT = Bool>
 static void test_bool_allow_blank_allow_if() {
     ValidationTest t;
-    EXPECT_EQ((t.validate_allow_blank_allow_if<Bool, ResT>("on", true)), Ok{true});
-    EXPECT_EQ((t.validate_allow_blank_allow_if<Bool, ResT>("", true)), Ok{true});
-    EXPECT_EQ((t.validate_allow_blank_allow_if<Bool, ResT>(nullopt, true)), Ok{false});
+    EXPECT_EQ((t.validate_allow_blank_allow_if<Bool, ResT>("true", true)), Ok{true});
+    EXPECT_EQ((t.validate_allow_blank_allow_if<Bool, ResT>("false", true)), Ok{false});
+    EXPECT_EQ(
+        (t.validate_allow_blank_allow_if<Bool, ResT>("on", true)),
+        Err{"abc: ABC has invalid value"});
+    EXPECT_EQ(
+        (t.validate_allow_blank_allow_if<Bool, ResT>("", true)),
+        Err{"abc: ABC has invalid value"});
+    EXPECT_EQ(
+        (t.validate_allow_blank_allow_if<Bool, ResT>(nullopt, true)),
+        Err{"abc: ABC is not set"});
+    EXPECT_EQ(
+        (t.validate_allow_blank_allow_if<Bool, ResT>("true", false)),
+        Err{"abc: ABC should not be sent within request at all"});
+    EXPECT_EQ(
+        (t.validate_allow_blank_allow_if<Bool, ResT>("false", false)),
+        Err{"abc: ABC should not be sent within request at all"});
     EXPECT_EQ(
         (t.validate_allow_blank_allow_if<Bool, ResT>("on", false)),
         Err{"abc: ABC should not be sent within request at all"});
