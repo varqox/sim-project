@@ -139,17 +139,37 @@ int main2(int argc, char** argv) {
         THROW("chmod()", errmsg());
     }
 
-    run_command({"git", "init"});
-    run_command({"git", "config", "--local", "pack.packSizeLimit", "1g"});
-    run_command({"git", "config", "--local", "gc.auto", "0"});
-    run_command({"git", "config", "--local", "user.name", "Sim backuper"});
+    run_command({"git", "init", "--initial-branch", "main"});
+    run_command({"git", "config", "user.name", "bin/backup"});
+    run_command({"git", "config", "user.email", ""});
+    // Optimize git for worktree with many files
+    run_command({"git", "config", "feature.manyFiles", "true"});
+    // Tell git not to delta compress too big files
+    run_command({"git", "config", "core.bigFileThreshold", "16m"});
+    // Tell git not to make internal files too large
+    run_command({"git", "config", "pack.packSizeLimit", "1g"});
+    // Tell git not to repack big packs
+    run_command({"git", "config", "gc.bigPackThreshold", "500m"});
+    // Tell git not to repack large number of big packs
+    run_command({"git", "config", "gc.autoPackLimit", "0"});
+    // Makes fetching from this repository faster
+    run_command({"git", "config", "pack.window", "0"});
+    // Prevent git from too excessive memory usage during git fetch (on remote) and git gc
+    run_command({"git", "config", "pack.deltaCacheSize", "128m"});
+    run_command({"git", "config", "pack.windowMemory", "128m"});
+    run_command({"git", "config", "pack.threads", "1"});
+    // Run automatic git gc more fequently
+    run_command({"git", "config", "gc.auto", "500"});
+
     run_command({"git", "add", "--verbose", "dump.sql"});
     run_command({"git", "add", "--verbose", "bin/", "manage", "proot"});
     run_command({"git", "add", "--verbose", "internal_files/"});
     run_command({"git", "add", "--verbose", "logs/"});
     run_command({"git", "add", "--verbose", "sim.conf", ".db.config"});
     run_command({"git", "add", "--verbose", "static/"});
-    run_command({"git", "commit", "-q", "-m", concat_tostr("Backup ", mysql_date())});
+    run_command(
+        {"git", "commit", "-q", "-m",
+         concat_tostr("Backup ", mysql_localdate(), " (", mysql_date(), " UTC)")});
     run_command({"git", "--no-pager", "show", "--stat"});
 
     return 0;
