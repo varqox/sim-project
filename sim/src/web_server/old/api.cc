@@ -11,7 +11,6 @@ namespace web_server::old {
 void Sim::api_handle() {
     STACK_UNWINDING_MARK;
 
-    resp.headers["Content-type"] = "text/plain; charset=utf-8";
     // Allow download queries to pass without POST
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg == "download") {
@@ -49,6 +48,8 @@ void Sim::api_handle() {
 
     } else if (request.method != http::Request::POST) {
         return api_error403("To access API you have to use POST");
+    } else {
+        resp.headers["Content-type"] = "text/plain; charset=utf-8";
     }
 
     if (next_arg == "contest") {

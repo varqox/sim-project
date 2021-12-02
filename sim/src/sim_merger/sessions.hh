@@ -62,8 +62,7 @@ public:
         conn.update("TRUNCATE ", sql_table_name());
         auto stmt = conn.prepare(
             "INSERT INTO ", sql_table_name(),
-            "(id, csrf_token, user_id, data, user_agent, expires) VALUES(?, ?, ?, ?, ?, ?, "
-            "?)");
+            "(id, csrf_token, user_id, data, user_agent, expires) VALUES(?, ?, ?, ?, ?, ?)");
 
         ProgressBar progress_bar("Sessions saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {

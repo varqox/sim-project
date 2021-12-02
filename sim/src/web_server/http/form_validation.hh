@@ -13,6 +13,7 @@
 #include "src/web_server/http/form_fields.hh"
 
 #include <limits>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -25,6 +26,8 @@ template <class T>
 struct ApiParam {
     CStringView name;
     CStringView description;
+
+    using type = T;
 
     constexpr ApiParam(CStringView name, CStringView description) noexcept
     : name{name}
@@ -46,7 +49,7 @@ namespace detail {
 template <class T>
 auto validate_result_type() {
     if constexpr (sim::sql_fields::is_satisfying_predicate<T>) {
-        return validate_result_type<typename T::underlying_type>();
+        return T{validate_result_type<typename T::underlying_type>()};
     } else if constexpr (std::is_same_v<T, bool> or std::is_same_v<T, sim::sql_fields::Bool>) {
         return false;
     } else if constexpr (
@@ -60,6 +63,17 @@ auto validate_result_type() {
     }
 }
 
+template <class T, class... Arg>
+std::nullopt_t append_error(std::string& errors_str, ApiParam<T> api_param, Arg&&... args) {
+    if (!errors_str.empty()) {
+        errors_str += '\n';
+    }
+    back_insert(
+        errors_str, api_param.name, ": ", api_param.description, ' ',
+        std::forward<decltype(args)>(args)...);
+    return std::nullopt;
+}
+
 } // namespace detail
 
 template <class T>
@@ -67,24 +81,20 @@ std::optional<decltype(detail::validate_result_type<T>())> validate(
     const FormFields& form_fields, std::string& errors_str, ApiParam<T> api_param,
     bool allow_blank) {
     auto error = [&](auto&&... args) {
-        if (!errors_str.empty()) {
-            errors_str += '\n';
-        }
-        back_insert(
-            errors_str, api_param.name, ": ", api_param.description, ' ',
-            std::forward<decltype(args)>(args)...);
-        return std::nullopt;
+        return detail::append_error(
+            errors_str, api_param, std::forward<decltype(args)>(args)...);
     };
     if constexpr (sim::sql_fields::is_satisfying_predicate<T>) {
         auto opt = validate<typename T::underlying_type>(
             form_fields, errors_str, api_param, allow_blank);
-        if (opt and not T::predicate(T{*opt})) {
+        if (!opt) {
+            return std::nullopt;
+        }
+        if (not T::predicate(T{*opt})) {
             error(T::description);
             return std::nullopt;
         }
-        return opt;
-    } else if constexpr (std::is_same_v<T, bool> or std::is_same_v<T, sim::sql_fields::Bool>) {
-        return form_fields.contains(api_param.name);
+        return std::optional{T{std::move(*opt)}};
     } else {
         const auto str_val_opt = form_fields.get(api_param.name);
         if (not str_val_opt) {
@@ -98,6 +108,15 @@ std::optional<decltype(detail::validate_result_type<T>())> validate(
         if constexpr (is_enum_val_with_string_conversions<T>) {
             if (auto opt = T::EnumType::from_str(str_val); opt) {
                 return std::move(*opt);
+            }
+            return error("has invalid value");
+        } else if constexpr (
+            std::is_same_v<T, bool> or std::is_same_v<T, sim::sql_fields::Bool>) {
+            if (str_val == "true") {
+                return true;
+            }
+            if (str_val == "false") {
+                return false;
             }
             return error("has invalid value");
         } else if constexpr (std::is_integral_v<T>) {
@@ -165,14 +184,94 @@ std::optional<decltype(detail::validate_result_type<T>())> validate(
         IMPL_VALIDATE_DECLARE_VAR2(                                   \
             form_fields, errors_str, IMPL_VALIDATE_DECLARE_VAR_NOOP args, ) __VA_ARGS__
 #define IMPL_VALIDATE_DECLARE_VAR_NOOP(...) __VA_ARGS__
-#define IMPL_VALIDATE_DECLARE_VAR2(...) IMPL_VALIDATE_DECLARE_VAR3(__VA_ARGS__)
-#define IMPL_VALIDATE_DECLARE_VAR3(form_fields, errors_str, var_name, api_param, ...) \
-    auto var_name = ::web_server::http::validate(                                     \
-        form_fields, errors_str, api_param,                                           \
-        IMPL_VALIDATE_DECLARE_VAR_FLAG_TO_VALIDATE_ARG(__VA_ARGS__, ));
-#define IMPL_VALIDATE_DECLARE_VAR_FLAG_TO_VALIDATE_ARG(flag, ...) \
-    CAT(IMPL_VALIDATE_DECLARE_VAR_FLAG_TO_VALIDATE_ARG_FLAG_, flag)()
-#define IMPL_VALIDATE_DECLARE_VAR_FLAG_TO_VALIDATE_ARG_FLAG_() false
-#define IMPL_VALIDATE_DECLARE_VAR_FLAG_TO_VALIDATE_ARG_FLAG_ALLOW_BLANK() true
+#define IMPL_VALIDATE_DECLARE_VAR2(...) IMPL_VALIDATE_DECLARE_VAR3(__VA_ARGS__, )
+#define IMPL_VALIDATE_DECLARE_VAR3(form_fields, errors_str, var_name, api_param, kind, ...) \
+    IMPL_VALIDATE_DECLARE_VAR4(                                                             \
+        form_fields, errors_str, var_name, api_param,                                       \
+        PRIMITIVE_DOUBLE_CAT(IMPL_VALIDATE_DECLARE_VAR_KIND, _, kind))
+#define IMPL_VALIDATE_DECLARE_VAR4(...) IMPL_VALIDATE_DECLARE_VAR5(__VA_ARGS__)
+
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, false
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOW_BLANK IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, true
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOW_IF(condition)                                 \
+    IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF, condition, IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, \
+        (, false)
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOW_BLANK_ALLOW_IF(condition)                     \
+    IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF, condition, IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE, \
+        (, true)
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ENUM_CAPS(caps_seq) \
+    IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS, caps_seq
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ENUM_CAPS_ALLOW_IF(condition, caps_seq)                \
+    IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF, condition, IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS, \
+        (, caps_seq)
+
+#define IMPL_VALIDATE_DECLARE_VAR5(form_fields, errors_str, var_name, api_param, macro, ...) \
+    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                         \
+    auto var_name = macro(form_fields, errors_str, api_param, __VA_ARGS__);
+
+#define IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE(form_fields, errors_str, api_param, allow_blank) \
+    ::web_server::http::validate(form_fields, errors_str, api_param, allow_blank)
+
+#define IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF(                                 \
+    form_fields, errors_str, api_param, condition, macro, macro_extra_args)    \
+    [&] {                                                                      \
+        auto&& form_fields_var = form_fields;                                  \
+        auto&& api_param_var = api_param;                                      \
+        auto& errors_str_var = errors_str;                                     \
+        auto do_validate = [&] {                                               \
+            return IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF_CALL_MACRO(           \
+                macro, form_fields_var, errors_str_var,                        \
+                api_param_var IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF_PASTE_ARGS \
+                    macro_extra_args);                                         \
+        };                                                                     \
+        using ResType = std::optional<decltype(do_validate())>;                \
+        if (!(condition)) {                                                    \
+            if (form_fields_var.contains(api_param_var.name)) {                \
+                ::web_server::http::detail::append_error(                      \
+                    errors_str_var, api_param_var,                             \
+                    "should not be sent within request at all");               \
+                return ResType{std::nullopt};                                  \
+            }                                                                  \
+            return ResType{decltype(do_validate()){std::nullopt}};             \
+        }                                                                      \
+        auto res = do_validate();                                              \
+        if (!res) {                                                            \
+            return ResType{std::nullopt};                                      \
+        }                                                                      \
+        return ResType{std::move(res)};                                        \
+    }()
+
+#define IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF_PASTE_ARGS(...) __VA_ARGS__
+#define IMPL_VALIDATE_INITIALIZE_VAR_ALLOW_IF_CALL_MACRO(macro, ...) macro(__VA_ARGS__)
+
+#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS(form_fields, errors_str, api_param, caps_seq) \
+    [&] {                                                                                    \
+        auto var =                                                                           \
+            IMPL_VALIDATE_INITIALIZE_VAR_SIMPLE(form_fields, errors_str, api_param, false);  \
+        if (!var) {                                                                          \
+            return decltype(var){std::nullopt};                                              \
+        }                                                                                    \
+        using Enum = std::remove_reference_t<decltype(*var)>::EnumType;                      \
+        switch (*var) {                                                                      \
+            REV_CAT(_END, IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_1 caps_seq)           \
+        }                                                                                    \
+        ::web_server::http::detail::append_error(                                            \
+            errors_str, api_param, "selects option to which you do not have permission");    \
+        return decltype(var){std::nullopt};                                                  \
+    }()
+#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_1_END
+#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_2_END
+#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_1(...)     \
+    IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_3(__VA_ARGS__) \
+    IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_2
+#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_2(...)     \
+    IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_3(__VA_ARGS__) \
+    IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_1
+#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_3(enum_variant, capability) \
+    case Enum::enum_variant: {                                                   \
+        if (capability) {                                                        \
+            return var;                                                          \
+        }                                                                        \
+    } break;
 
 } // namespace web_server::http
