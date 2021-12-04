@@ -6,7 +6,7 @@ Problem's label is not specified in options - loading it from Simfile
 Missing checker in the package's Simfile - searching for one
 No checker was found - the default checker will be used
 Missing statement specified in the package's Simfile - searching for one
-[1;35mwarning[m: no statement was found (recognized extensions: pdf, md, txt)
+Chosen statement: foo.txt
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `aa`
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `44`
 [1;35mwarning[m: "limits": ignoring test `ttt` because it has no group id in its name
@@ -21,4 +21,5 @@ Global memory limit not specified in options - loading it from Simfile
 [1;35mwarning[m: "scoring": ignoring score of the group with id `42` because no test belongs to it
 [1;35mwarning[m: "scoring": ignoring unparsable item -> Simfile: scoring of the invalid group `oo` - it has to be a positive integer or empty string i.e. "" or ''
 Auto-scoring: score of the group with id `0` set to 0
-Auto-scoring: score of the group with id `3` set to 94
+Auto-scoring: score of the group with id `` set to 47
+Auto-scoring: score of the group with id `3` set to 47

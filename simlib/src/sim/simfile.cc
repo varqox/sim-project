@@ -20,6 +20,9 @@ static void append_scoring_value(string& res, const sim::Simfile& simfile) {
             if (p.tid == "ocen") {
                 p.gid = "0";
             }
+            if (p.gid.empty()) {
+                p.gid = "\"\"";
+            }
             back_insert(
                 res, '\t',
                 ConfigFile::escape_string(
@@ -318,10 +321,12 @@ Simfile::parse_limits_item(StringView item) {
 std::tuple<StringView, int64_t> Simfile::parse_scoring_item(StringView item) {
     SimpleParser sp(item);
     StringView gid = sp.extract_next_non_empty(is_space<char>);
-    if (!is_digit(gid)) {
+    if (gid == "\"\"" or gid == "''") {
+        gid = "";
+    } else if (!is_digit(gid)) {
         throw std::runtime_error{concat_tostr(
             "Simfile: scoring of the invalid group `", gid,
-            "` - it has to be a positive integer")};
+            "` - it has to be a positive integer or empty string i.e. \"\" or ''")};
     }
 
     sp.remove_leading(is_space<char>);
@@ -350,7 +355,7 @@ void Simfile::load_tests() {
     }
 
     // group id => test group
-    std::map<StringView, TestGroup, StrNumCompare> tests_groups;
+    std::map<StringView, TestGroup, TestNameComparator> tests_groups;
     // StringView may be used as Key because it will point to a string in
     // limits.as_array() which is a const reference to vector inside the
     // `limits` variable which will be valid as long as config is not changed
@@ -370,13 +375,9 @@ void Simfile::load_tests() {
 
         // Add test to its group
         auto p = TestNameComparator::split(test_name);
-        if (p.gid.empty()) {
-            throw std::runtime_error{concat_tostr(
-                "Simfile: missing group id in the name of the test `", test_name, '`')};
-        }
 
         // tid == "ocen" belongs to the same group as tests with gid == "0"
-        if (p.tid == "ocen") {
+        if (!p.gid.empty() and p.tid == "ocen") {
             p.gid = "0";
         }
 

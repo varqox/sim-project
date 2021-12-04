@@ -47,6 +47,7 @@ constexpr bool lower_equal(StringView a, StringView b) noexcept {
  */
 struct StrNumCompare {
     constexpr bool operator()(StringView a, StringView b) const {
+        assert(!a.empty() and !b.empty());
         a.remove_leading('0');
         b.remove_leading('0');
         return (a.size() == b.size() ? a < b : a.size() < b.size());

@@ -19,5 +19,5 @@ Chosen statement: foo.txt
 [1;35mwarning[m: limits: ignoring test `8888` because it has no corresponding output file
 Global memory limit not specified in options - loading it from Simfile
 [1;35mwarning[m: "scoring": ignoring score of the group with id `42` because no test belongs to it
-[1;35mwarning[m: "scoring": ignoring unparsable item -> Simfile: scoring of the invalid group `oo` - it has to be a positive integer
+[1;35mwarning[m: "scoring": ignoring unparsable item -> Simfile: scoring of the invalid group `oo` - it has to be a positive integer or empty string i.e. "" or ''
 Auto-scoring: score of the group with id `3` set to 94

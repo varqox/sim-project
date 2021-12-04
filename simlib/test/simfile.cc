@@ -402,12 +402,17 @@ TEST(Simfile, load_tests) {
                       "  foo1 1\n"
                       "  foo1ocen 1\n"
                       "  foo2 1\n"
+                      "  foo_a 1\n" // no group id
+                      "  foo_b 1\n" // no group id
                       "]\n"};
     sf.load_tests();
     EXPECT_EQ(
         "solutions: []\n"
         "memory_limit: 64\n"
         "limits: [\n"
+        "\tfoo_a 1\n"
+        "\tfoo_b 1\n"
+        "\n"
         "\tfoo0 1\n"
         "\tfoo1ocen 1\n"
         "\n"
@@ -416,9 +421,10 @@ TEST(Simfile, load_tests) {
         "\tfoo2 1\n"
         "]\n"
         "scoring: [\n"
+        "\t'\"\" 33'\n"
         "\t0 0\n"
-        "\t1 50\n"
-        "\t2 50\n"
+        "\t1 33\n"
+        "\t2 34\n"
         "]\n"
         "tests_files: [\n"
         "]\n",
@@ -467,10 +473,6 @@ TEST(Simfile, load_tests) {
     EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
     sf = sim::Simfile{"limits: [1 1 3.14]"};
-    EXPECT_THROW(sf.load_tests(), std::runtime_error);
-
-    // Exceptions - test group
-    sf = sim::Simfile{"limits: [no_group 1 33]"};
     EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
     // Exceptions - scoring

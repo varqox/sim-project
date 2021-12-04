@@ -512,14 +512,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
         std::multimap<StringView, TestProperties, Simfile::TestNameComparator> tests;
     };
 
-    std::map<StringView, TestsGroup, StrNumCompare> tests_groups; // group name => test group
+    std::map<StringView, TestsGroup, Simfile::TestNameComparator>
+        tests_groups; // group name => test group
     // Fill tests_groups
     for (auto const& [test_name, test] : tests) {
         auto sr = Simfile::TestNameComparator::split(test_name);
-        if (sr.gid.empty()) {
-            continue; // Ignore the tests with no group id
-        }
-
         if (sr.tid == "ocen") {
             sr.gid = "0";
         }
@@ -573,13 +570,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
         max_score = (max_score > 100 ? 0 : 100 - max_score);
 
         // Group 0 always has score equal to 0
-        TestsGroup& first_group = tests_groups.begin()->second;
-        StringView first_gid = tests_groups.begin()->first;
-        if (first_gid.without_leading('0').empty() and not first_group.score.has_value()) {
-            first_group.score = 0;
+        if (auto it = tests_groups.find("0");
+            it != tests_groups.end() and !it->second.score.has_value())
+        {
+            it->second.score = 0;
             --unscored_tests;
             report_.append(
-                "Auto-scoring: score of the group with id `", first_gid, "` set to 0");
+                "Auto-scoring: score of the group with id `", it->first, "` set to 0");
         }
 
         // Distribute scoring

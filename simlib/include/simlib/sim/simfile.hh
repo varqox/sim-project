@@ -2,6 +2,7 @@
 
 #include "simlib/config_file.hh"
 #include "simlib/ctype.hh"
+#include "simlib/string_view.hh"
 
 #include <chrono>
 #include <optional>
@@ -353,21 +354,24 @@ public:
         bool operator()(StringView a, StringView b) const {
             auto x = split(a);
             auto y = split(b);
-            // tid == "ocen" behaves the same as gid == "0"
-            if (x.tid == "ocen") {
-                if (y.tid == "ocen") {
-                    return StrNumCompare()(x.gid, y.gid);
+            auto normalize_gid = [](StringView& gid) {
+                while (gid.size() > 1 and gid[0] == '0') {
+                    gid.remove_prefix(1);
                 }
-
-                y.gid.remove_leading('0');
-                return (not y.gid.empty()); // true iff y.gid was not equal to 0
+            };
+            normalize_gid(x.gid);
+            normalize_gid(x.gid);
+            // tid == "ocen" behaves the same as gid == "0"
+            if (x.tid == "ocen" and y.tid == "ocen") {
+                return StrVersionCompare()(x.gid, y.gid);
+            }
+            if (x.tid == "ocen") {
+                x.gid = "0";
             }
             if (y.tid == "ocen") {
-                x.gid.remove_leading('0');
-                return x.gid.empty(); // true iff x.gid was equal to 0
+                y.gid = "0";
             }
-
-            return (x.gid == y.gid ? x.tid < y.tid : StrNumCompare()(x.gid, y.gid));
+            return (x.gid == y.gid ? x.tid < y.tid : StrVersionCompare()(x.gid, y.gid));
         }
     };
 };
