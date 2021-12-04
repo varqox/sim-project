@@ -58,6 +58,7 @@ dump_file_as_c_array = generator(find_program('dump_file_as_c_array.py'),
     capture : true,
 )
 
+dl_dep = cpp.find_library('dl', kwargs : static_kwargs)
 libseccomp_dep = dependency('libseccomp', kwargs : static_kwargs)
 libzip_dep = dependency('libzip', version : '>=1.3.0', kwargs : static_kwargs)
 rt_dep = cpp.find_library('rt', kwargs : static_kwargs)
@@ -71,6 +72,7 @@ if get_option('static')
 endif
 
 simlib_dependencies = [
+    dl_dep,
     libseccomp_dep,
     libzip_dep,
     rt_dep,
