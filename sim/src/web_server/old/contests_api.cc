@@ -1115,10 +1115,10 @@ void Sim::api_contest_problem_add(
     }
 
     VALIDATE(request.form_fields, api_error400,
-        (problem_id, params::contest_problem_problem_id)
-        (name, params::contest_problem_name, ALLOW_BLANK)
-        (method_of_choosing_final_submission, params::contest_problem_method_of_choosing_final_submission)
-        (score_revealing, params::contest_problem_score_revealing)
+        (problem_id, params::contest_problem_problem_id, REQUIRED)
+        (name, allow_blank(params::contest_problem_name), REQUIRED)
+        (method_of_choosing_final_submission, params::contest_problem_method_of_choosing_final_submission, REQUIRED)
+        (score_revealing, params::contest_problem_score_revealing, REQUIRED)
     );
 
     auto transaction = mysql.start_transaction();
@@ -1192,9 +1192,9 @@ void Sim::api_contest_problem_edit(
     }
 
     VALIDATE(request.form_fields, api_error400,
-        (name, params::contest_problem_name)
-        (method_of_choosing_final_submission, params::contest_problem_method_of_choosing_final_submission)
-        (score_revealing, params::contest_problem_score_revealing)
+        (name, params::contest_problem_name, REQUIRED)
+        (method_of_choosing_final_submission, params::contest_problem_method_of_choosing_final_submission, REQUIRED)
+        (score_revealing, params::contest_problem_score_revealing, REQUIRED)
     );
 
     // Have to check if it is necessary to reselect problem final submissions

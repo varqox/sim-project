@@ -178,9 +178,9 @@ http::Response sign_in(web_worker::Context& ctx) {
     }
 
     VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (username, params::username)
-        (password, params::password, ALLOW_BLANK)
-        (remember_for_a_month, params::remember_for_a_month)
+        (username, params::username, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+        (remember_for_a_month, params::remember_for_a_month, REQUIRED)
     );
 
     auto stmt = ctx.mysql.prepare(
@@ -207,12 +207,12 @@ http::Response sign_up(web_worker::Context& ctx) {
         return ctx.response_403();
     }
     VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (username, params::username)
-        (first_name, params::first_name)
-        (last_name, params::last_name)
-        (email, params::email)
-        (password, params::password, ALLOW_BLANK)
-        (password_repeated, params::password_repeated, ALLOW_BLANK)
+        (username, params::username, REQUIRED)
+        (first_name, params::first_name, REQUIRED)
+        (last_name, params::last_name, REQUIRED)
+        (email, params::email, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+        (password_repeated, allow_blank(params::password_repeated), REQUIRED)
     );
     if (password != password_repeated) {
         return ctx.response_400("Passwords do not match");
@@ -258,17 +258,17 @@ http::Response add(web_worker::Context& ctx) {
     }
 
     VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (username, params::username)
-        (type, params::type, ENUM_CAPS(
+        (type, params::type, REQUIRED_ENUM_CAPS(
             (ADMIN, caps.add_admin)
             (TEACHER, caps.add_teacher)
             (NORMAL, caps.add_normal_user)
         ))
-        (first_name, params::first_name)
-        (last_name, params::last_name)
-        (email, params::email)
-        (password, params::password, ALLOW_BLANK)
-        (password_repeated, params::password_repeated, ALLOW_BLANK)
+        (username, params::username, REQUIRED)
+        (first_name, params::first_name, REQUIRED)
+        (last_name, params::last_name, REQUIRED)
+        (email, params::email, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+        (password_repeated, allow_blank(params::password_repeated), REQUIRED)
     );
     if (password != password_repeated) {
         return ctx.response_400("Passwords do not match");
