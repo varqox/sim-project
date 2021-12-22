@@ -11,16 +11,15 @@
 TemporaryFile::TemporaryFile(std::string templ, mode_t mode) {
     assert(has_suffix(templ, "XXXXXX"));
     auto opt_fd = create_unique_file(
-        AT_FDCWD, templ.data(), templ.size(), 6, O_RDONLY | O_CLOEXEC, mode);
+            AT_FDCWD, templ.data(), templ.size(), 6, O_RDONLY | O_CLOEXEC, mode);
     if (not opt_fd) {
         THROW("create_unique_file()", errmsg());
     }
     path_ = std::move(templ);
 }
 
-std::optional<FileDescriptor> create_unique_file(
-    int dirfd, char* path_buff, size_t buff_len, size_t suffix_len, int open_flags,
-    mode_t mode) noexcept {
+std::optional<FileDescriptor> create_unique_file(int dirfd, char* path_buff, size_t buff_len,
+        size_t suffix_len, int open_flags, mode_t mode) noexcept {
     assert(buff_len >= suffix_len);
     assert(path_buff[buff_len] == '\0');
 

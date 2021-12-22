@@ -198,7 +198,7 @@ TEST(time, to_string_with_duration) {
     static_assert(intentional_unsafe_string_view(to_string(1012300000ns)) == "1.0123");
     static_assert(intentional_unsafe_string_view(to_string(100123456780ns)) == "100.12345678");
     static_assert(
-        intentional_unsafe_string_view(to_string(123123456789ns)) == "123.123456789");
+            intentional_unsafe_string_view(to_string(123123456789ns)) == "123.123456789");
     static_assert(intentional_unsafe_string_view(to_string(123456789ns)) == "0.123456789");
     static_assert(intentional_unsafe_string_view(to_string(89ns)) == "0.000000089");
     static_assert(intentional_unsafe_string_view(to_string(800ns)) == "0.0000008");
@@ -206,7 +206,7 @@ TEST(time, to_string_with_duration) {
     static_assert(intentional_unsafe_string_view(to_string(1230000ms)) == "1230");
 
     static_assert(
-        intentional_unsafe_string_view(to_string(1012300000ns, false)) == "1.012300000");
+            intentional_unsafe_string_view(to_string(1012300000ns, false)) == "1.012300000");
     static_assert(intentional_unsafe_string_view(to_string(800ns, false)) == "0.000000800");
     static_assert(intentional_unsafe_string_view(to_string(12ms, false)) == "0.012");
     static_assert(intentional_unsafe_string_view(to_string(1230000ms, false)) == "1230.000");

@@ -21,7 +21,7 @@ public:
         template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
         ParseError(size_t line, size_t pos, Args&&... msg)
         : runtime_error(
-              concat_tostr("line ", line, ':', pos, ": ", std::forward<Args>(msg)...)) {}
+                  concat_tostr("line ", line, ':', pos, ": ", std::forward<Args>(msg)...)) {}
 
         ParseError(const ParseError& pe) = default;
         ParseError(ParseError&&) noexcept = default;

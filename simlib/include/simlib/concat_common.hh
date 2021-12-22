@@ -38,8 +38,8 @@ constexpr decltype(auto) stringify(T&& x) {
 
 namespace detail {
 
-template <
-    class T, class = decltype(string_length(stringify(std::forward<T>(std::declval<T>()))))>
+template <class T,
+        class = decltype(string_length(stringify(std::forward<T>(std::declval<T>()))))>
 constexpr auto is_string_argument(int) -> std::true_type;
 
 template <class>

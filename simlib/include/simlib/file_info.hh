@@ -52,8 +52,8 @@ inline uint64_t get_file_size(FilePath file) {
 }
 
 // Returns file modification time (with second precision) as a time_point
-inline std::chrono::system_clock::time_point
-get_modification_time(const struct stat64& st) noexcept {
+inline std::chrono::system_clock::time_point get_modification_time(
+        const struct stat64& st) noexcept {
     return std::chrono::system_clock::time_point(to_duration(st.st_mtim));
 }
 

@@ -137,7 +137,7 @@ public:
 
     Result(Result&& r) noexcept
     : connection_referencing_objects_no_(
-          std::exchange(r.connection_referencing_objects_no_, nullptr))
+              std::exchange(r.connection_referencing_objects_no_, nullptr))
     , res_(std::exchange(r.res_, nullptr))
     , row_(r.row_)
     , lengths_(r.lengths_) {
@@ -156,7 +156,7 @@ public:
         }
 
         connection_referencing_objects_no_ =
-            std::exchange(r.connection_referencing_objects_no_, nullptr);
+                std::exchange(r.connection_referencing_objects_no_, nullptr);
         res_ = std::exchange(r.res_, nullptr);
         row_ = r.row_;
         lengths_ = r.lengths_;
@@ -266,7 +266,7 @@ public:
 
     Statement(Statement&& s) noexcept
     : connection_referencing_objects_no_(
-          std::exchange(s.connection_referencing_objects_no_, nullptr))
+              std::exchange(s.connection_referencing_objects_no_, nullptr))
     , stmt_(std::exchange(s.stmt_, nullptr))
     , binds_size_(std::exchange(s.binds_size_, 0))
     , binds_(std::move(s.binds_))
@@ -285,7 +285,7 @@ public:
         }
 
         connection_referencing_objects_no_ =
-            std::exchange(s.connection_referencing_objects_no_, nullptr);
+                std::exchange(s.connection_referencing_objects_no_, nullptr);
         stmt_ = std::exchange(s.stmt_, nullptr);
         binds_size_ = std::exchange(s.binds_size_, 0);
         binds_ = std::move(s.binds_);
@@ -359,7 +359,7 @@ public:
     }
 
     void bind(unsigned idx, char* str, size_t& length, size_t max_size)
-        NO_DEBUG_MYSQL(noexcept) {
+            NO_DEBUG_MYSQL(noexcept) {
         DEBUG_MYSQL(throw_assert(idx < binds_size_);)
         clear_bind(idx);
         binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
@@ -466,11 +466,11 @@ public:
 
             if constexpr (std::is_same_v<TypeNoRefNoCV, bool>) {
                 return static_cast<unsigned char>(arg);
-            } else if constexpr (
-                std::is_pointer_v<Type> and std::is_same_v<TypeNoRef, const char*>) {
+            } else if constexpr (std::is_pointer_v<Type> and
+                    std::is_same_v<TypeNoRef, const char*>) {
                 return InplaceBuff<inplace_buff_size>(arg);
-            } else if constexpr (
-                std::is_array_v<TypeNoRef> and std::is_same_v<ArrayType, const char>) {
+            } else if constexpr (std::is_array_v<TypeNoRef> and
+                    std::is_same_v<ArrayType, const char>) {
                 return InplaceBuff<inplace_buff_size>(arg);
             } else if constexpr (std::is_base_of_v<StringBase<const char>, TypeNoRefNoCV>) {
                 return InplaceBuff<inplace_buff_size>(arg);
@@ -490,7 +490,7 @@ public:
                                     // make bind_all() think that all arguments
                                     // are references
             execute();
-        }(transform_arg(std::forward<Args>(args))...);
+                }(transform_arg(std::forward<Args>(args))...);
         (void)transform_arg; // Disable GCC warning
     }
 
@@ -530,7 +530,7 @@ public:
     void res_bind(unsigned idx, mysql::Optional<T>& x) NO_DEBUG_MYSQL(noexcept) {
         res_bind(idx, x.value_);
         static_assert(
-            std::is_same_v<decltype(res_binds_[idx].is_null), decltype(&x.has_no_value_)>);
+                std::is_same_v<decltype(res_binds_[idx].is_null), decltype(&x.has_no_value_)>);
         res_binds_[idx].is_null = &x.has_no_value_;
     }
 
@@ -570,9 +570,8 @@ public:
             for (unsigned idx = 0; idx < res_binds_size_; ++idx) {
                 auto is_null = res_binds_[idx].is_null;
                 if (is_null and *is_null and is_null == &res_binds_[idx].is_null_value) {
-                    THROW(
-                        "Encountered NULL at column ", idx,
-                        " that did not expect nullable data");
+                    THROW("Encountered NULL at column ", idx,
+                            " that did not expect nullable data");
                 }
             }
 
@@ -715,7 +714,7 @@ private:
 
     template <class Func2, class Func3, class Func, class... Args>
     auto call_and_try_reconnecting_on_error_impl(
-        Func2&& resetter, Func3&& error_msg, Func&& func, Args&&... args) {
+            Func2&& resetter, Func3&& error_msg, Func&& func, Args&&... args) {
         STACK_UNWINDING_MARK;
         // std::forward is omitted as we may use arguments second time
         auto rc = func(args...);
@@ -723,8 +722,8 @@ private:
             return rc;
         }
 
-        if (not is_one_of(
-                static_cast<int>(mysql_errno(conn_)), CR_SERVER_GONE_ERROR, CR_SERVER_LOST)) {
+        if (not is_one_of(static_cast<int>(mysql_errno(conn_)), CR_SERVER_GONE_ERROR,
+                    CR_SERVER_LOST)) {
             THROW(error_msg());
         }
 
@@ -747,9 +746,9 @@ private:
     template <class Func, class... Args>
     auto call_and_try_reconnecting_on_error(Func&& func, Args&&... args) {
         STACK_UNWINDING_MARK;
-        return call_and_try_reconnecting_on_error_impl(
-            [] {}, [&] { return mysql_error(conn_); }, std::forward<Func>(func),
-            std::forward<Args>(args)...);
+        return call_and_try_reconnecting_on_error_impl([] {},
+                [&] { return mysql_error(conn_); }, std::forward<Func>(func),
+                std::forward<Args>(args)...);
     }
 
 public:
@@ -769,7 +768,7 @@ public:
     Connection(Connection&& c) noexcept
     : conn_(std::exchange(c.conn_, nullptr))
     , referencing_objects_no_(c.referencing_objects_no_)
-          DEBUG_MYSQL(, connection_id(c.connection_id)) {}
+              DEBUG_MYSQL(, connection_id(c.connection_id)) {}
 
     Connection& operator=(const Connection&) = delete;
 
@@ -830,7 +829,7 @@ public:
         auto sql_str = concat(std::forward<Args>(sql)...);
         DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ", sql_str);)
         call_and_try_reconnecting_on_error(
-            mysql_real_query, *this, sql_str.data(), sql_str.size);
+                mysql_real_query, *this, sql_str.data(), sql_str.size);
 
         MYSQL_RES* res = call_and_try_reconnecting_on_error(mysql_store_result, *this);
         return {res, referencing_objects_no_};
@@ -842,7 +841,7 @@ public:
         auto sql_str = concat(std::forward<Args>(sql)...);
         DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): update -> ", sql_str);)
         call_and_try_reconnecting_on_error(
-            mysql_real_query, *this, sql_str.data(), sql_str.size);
+                mysql_real_query, *this, sql_str.data(), sql_str.size);
     }
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
@@ -853,12 +852,12 @@ public:
         MYSQL_STMT* stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
         try {
             call_and_try_reconnecting_on_error_impl(
-                [&] {
-                    (void)mysql_stmt_close(stmt);
-                    stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
-                },
-                [&] { return mysql_stmt_error(stmt); }, mysql_stmt_prepare, stmt,
-                sql_str.data(), sql_str.size);
+                    [&] {
+                (void)mysql_stmt_close(stmt);
+                stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+                    },
+                    [&] { return mysql_stmt_error(stmt); }, mysql_stmt_prepare, stmt,
+                    sql_str.data(), sql_str.size);
 
         } catch (...) {
             (void)mysql_stmt_close(stmt);

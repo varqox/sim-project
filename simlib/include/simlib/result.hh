@@ -75,9 +75,8 @@ constexpr bool operator!=(const Err<A>& a, const Err<B>& b) {
 template <class T, class E>
 using Result = std::variant<Ok<T>, Err<E>>;
 
-template <
-    class TA, class EA, class TB, class EB,
-    std::enable_if_t<!std::is_same_v<TA, TB> or !std::is_same_v<EA, EB>, int> = 0>
+template <class TA, class EA, class TB, class EB,
+        std::enable_if_t<!std::is_same_v<TA, TB> or !std::is_same_v<EA, EB>, int> = 0>
 constexpr bool operator==(const Result<TA, EA>& a, const Result<TB, EB>& b) {
     if (a.index() != b.index()) {
         return false;
@@ -88,9 +87,8 @@ constexpr bool operator==(const Result<TA, EA>& a, const Result<TB, EB>& b) {
     return std::get<1>(a) == std::get<1>(b);
 }
 
-template <
-    class TA, class EA, class TB, class EB,
-    std::enable_if_t<!std::is_same_v<TA, TB> or !std::is_same_v<EA, EB>, int> = 0>
+template <class TA, class EA, class TB, class EB,
+        std::enable_if_t<!std::is_same_v<TA, TB> or !std::is_same_v<EA, EB>, int> = 0>
 constexpr bool operator!=(const Result<TA, EA>& a, const Result<TB, EB>& b) {
     return !(a == b);
 }
@@ -98,26 +96,26 @@ constexpr bool operator!=(const Result<TA, EA>& a, const Result<TB, EB>& b) {
 template <class T, class E, class X>
 constexpr bool operator==(const Result<T, E>& r, const Ok<X>& x) {
     return std::visit(
-        [&](const auto& a) {
-            if constexpr (std::is_same_v<decltype(a), const Ok<T>&>) {
-                return a == x;
-            } else {
-                return false;
-            }
-        },
-        r);
+            [&](const auto& a) {
+        if constexpr (std::is_same_v<decltype(a), const Ok<T>&>) {
+            return a == x;
+        } else {
+            return false;
+        }
+            },
+            r);
 }
 template <class T, class E, class X>
 constexpr bool operator==(const Result<T, E>& r, const Err<X>& x) {
     return std::visit(
-        [&](const auto& a) {
-            if constexpr (std::is_same_v<decltype(a), const Err<E>&>) {
-                return a == x;
-            } else {
-                return false;
-            }
-        },
-        r);
+            [&](const auto& a) {
+        if constexpr (std::is_same_v<decltype(a), const Err<E>&>) {
+            return a == x;
+        } else {
+            return false;
+        }
+            },
+            r);
 }
 template <class T, class E, class X>
 constexpr bool operator!=(const Result<T, E>& r, const Ok<X>& x) {

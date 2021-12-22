@@ -114,7 +114,7 @@ public:
 
 protected:
     constexpr InplaceBuffBase(
-        size_t s, size_t max_s, char* p, char* p_value_when_unallocated) noexcept
+            size_t s, size_t max_s, char* p, char* p_value_when_unallocated) noexcept
     : size(s)
     , max_size_(max_s)
     , p_(p)
@@ -153,7 +153,7 @@ public:
             };
             (void)append_impl; // Fix GCC warning
             (append_impl(std::forward<decltype(str)>(str)), ...);
-        }(stringify(std::forward<Args>(args))...);
+                }(stringify(std::forward<Args>(args))...);
         return *this;
     }
 };
@@ -198,12 +198,10 @@ public:
         }
     }
 
-    template <
-        class T,
-        std::enable_if_t<
-            not std::is_integral_v<std::decay_t<T>> and
-                not std::is_same_v<std::decay_t<T>, InplaceBuff>,
-            int> = 0>
+    template <class T,
+            std::enable_if_t<not std::is_integral_v<std::decay_t<T>> and
+                            not std::is_same_v<std::decay_t<T>, InplaceBuff>,
+                    int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload): see enable_if
     constexpr explicit InplaceBuff(T&& str)
     : InplaceBuff(string_length(str)) {
@@ -218,16 +216,14 @@ public:
         append(std::forward<Args>(args)...);
     }
 
-    template <
-        class Arg1, class Arg2, class... Args,
-        std::enable_if_t<
-            not std::is_same_v<
-                std::remove_cv_t<std::remove_reference_t<Arg1>>, std::in_place_t>,
-            int> = 0>
+    template <class Arg1, class Arg2, class... Args,
+            std::enable_if_t<
+                    not std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg1>>,
+                            std::in_place_t>,
+                    int> = 0>
     constexpr InplaceBuff(Arg1&& arg1, Arg2&& arg2, Args&&... args)
-    : InplaceBuff(
-          std::in_place, std::forward<Arg1>(arg1), std::forward<Arg2>(arg2),
-          std::forward<Args>(args)...) {}
+    : InplaceBuff(std::in_place, std::forward<Arg1>(arg1), std::forward<Arg2>(arg2),
+              std::forward<Args>(args)...) {}
 
     template <size_t M, std::enable_if_t<M != N, int> = 0>
     explicit InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
@@ -257,8 +253,8 @@ public:
         return *this;
     }
 
-    template <
-        class T, std::enable_if_t<not std::is_same_v<std::decay_t<T>, InplaceBuff>, int> = 0>
+    template <class T,
+            std::enable_if_t<not std::is_same_v<std::decay_t<T>, InplaceBuff>, int> = 0>
     // NOLINTNEXTLINE(misc-unconventional-assign-operator)
     constexpr InplaceBuff& operator=(T&& str) {
         make_copy_of(::data(str), string_length(str));
@@ -317,8 +313,8 @@ constexpr auto string_length(const InplaceBuff<T>& buff) -> decltype(buff.size) 
     return buff.size;
 }
 
-template <
-    size_t N, class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+template <size_t N, class... Args,
+        std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 InplaceBuff<N>& back_insert(InplaceBuff<N>& buff, Args&&... args) {
     buff.append(std::forward<Args>(args)...);
     return buff;

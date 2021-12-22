@@ -47,7 +47,7 @@ TEST(FilePath, constructor_from_string) {
         [&](FilePath y) {
             EXPECT_EQ(y.size(), str.size());
             EXPECT_EQ(y.data(), str);
-        }(string(arg));
+                }(string(arg));
     };
 
     test("abc");
@@ -67,7 +67,7 @@ TEST(FilePath, constructor_from_inplace_buff) {
         [&](FilePath y) {
             EXPECT_EQ(y.size(), str.size());
             EXPECT_EQ(y.data(), str);
-        }(InplaceBuff<16>(arg));
+                }(InplaceBuff<16>(arg));
     };
 
     test("abc");
@@ -99,7 +99,7 @@ TEST(FilePath, assignment_from_const_char_ptr) {
 // NOLINTNEXTLINE
 TEST(FilePath, assignment_from_const_cstring_view) {
     static_assert(
-        not std::is_assignable_v<FilePath, CStringView>, "assigning temporary is evil");
+            not std::is_assignable_v<FilePath, CStringView>, "assigning temporary is evil");
     auto test = [](auto&& arg) {
         const string& str(arg);
         FilePath x = "";
@@ -118,7 +118,7 @@ TEST(FilePath, assignment_from_const_cstring_view) {
 TEST(FilePath, assignment_from_string) {
     auto test = [](auto&& arg) {
         static_assert(
-            not std::is_assignable_v<FilePath, string>, "assigning temporary is evil");
+                not std::is_assignable_v<FilePath, string>, "assigning temporary is evil");
         string str(arg);
         FilePath x = "";
         x = str;
@@ -134,9 +134,8 @@ TEST(FilePath, assignment_from_string) {
 // NOLINTNEXTLINE
 TEST(FilePath, assignment_from_inplace_buff) {
     auto test = [](auto&& arg) {
-        static_assert(
-            not std::is_assignable_v<FilePath, InplaceBuff<16>>,
-            "assigning temporary is evil");
+        static_assert(not std::is_assignable_v<FilePath, InplaceBuff<16>>,
+                "assigning temporary is evil");
         string str(arg);
         InplaceBuff<16> ib(arg);
         FilePath x = "";

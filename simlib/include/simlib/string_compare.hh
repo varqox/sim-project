@@ -130,8 +130,8 @@ struct LowerStrCompare : public SpecialStrCompare<int (*)(int)> {
 };
 
 // Compares two strings: @p str[beg, end) and @p s
-constexpr int
-compare(const StringView& str, size_t beg, size_t end, const StringView& s) noexcept {
+constexpr int compare(
+        const StringView& str, size_t beg, size_t end, const StringView& s) noexcept {
     if (end > str.size()) {
         end = str.size();
     }
@@ -143,8 +143,8 @@ compare(const StringView& str, size_t beg, size_t end, const StringView& s) noex
 }
 
 // Compares @p str[pos, str.find(c, pos)) and @p s
-constexpr int
-compare_to(const StringView& str, size_t pos, char c, const StringView& s) noexcept {
+constexpr int compare_to(
+        const StringView& str, size_t pos, char c, const StringView& s) noexcept {
     return compare(str, pos, str.find(c, pos), s);
 }
 
@@ -155,7 +155,7 @@ bool slow_equal(const char* str1, const char* str2, size_t len) noexcept;
 
 inline bool slow_equal(StringView str1, StringView str2) noexcept {
     return slow_equal(str1.data(), str2.data(), std::min(str1.size(), str2.size())) &&
-        str1.size() == str2.size();
+            str1.size() == str2.size();
 }
 
 /// Checks whether string @p s consist only of digits and is not greater than

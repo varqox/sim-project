@@ -28,7 +28,7 @@ public:
     }
 
     [[nodiscard]] bool is_cached(
-        StringView in_cache_path, std::chrono::system_clock::time_point file_mtime) const {
+            StringView in_cache_path, std::chrono::system_clock::time_point file_mtime) const {
         struct stat64 cached_stat {};
         if (stat64(FilePath(cached_path(in_cache_path)), &cached_stat)) {
             if (errno == ENOENT) {
@@ -38,12 +38,12 @@ public:
         }
 
         auto cached_mtime =
-            std::chrono::system_clock::time_point(to_duration(cached_stat.st_mtim));
+                std::chrono::system_clock::time_point(to_duration(cached_stat.st_mtim));
         if (cached_mtime < file_mtime) {
             return false; // Cached file is older than the source file
         }
         if (valid_duration_ and
-            std::chrono::system_clock::now() - cached_mtime > *valid_duration_) {
+                std::chrono::system_clock::now() - cached_mtime > *valid_duration_) {
             return false; // Cached file has expired
         }
         return true;

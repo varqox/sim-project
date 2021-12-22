@@ -81,13 +81,13 @@ TEST(string_traits, is_alpha) {
 // NOLINTNEXTLINE
 TEST(string_traits, is_alnum) {
     EXPECT_EQ(
-        true, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+            true, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
 
     EXPECT_EQ(false, is_alnum(""));
+    EXPECT_EQ(false,
+            is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH-IJKLMNOPQRSTUVWXYZ"));
     EXPECT_EQ(
-        false, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH-IJKLMNOPQRSTUVWXYZ"));
-    EXPECT_EQ(
-        false, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG#IJKLMNOPQRSTUVWXYZ"));
+            false, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG#IJKLMNOPQRSTUVWXYZ"));
 }
 
 // NOLINTNEXTLINE
@@ -96,24 +96,20 @@ TEST(string_traits, is_word) {
         EXPECT_EQ(bool(is_alnum(c) or c == '-' or c == '_'), is_word(c));
     }
 
-    EXPECT_EQ(
-        true,
-        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                "-_"));
+    EXPECT_EQ(true,
+            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    "-_"));
 
     EXPECT_EQ(false, is_word(""));
-    EXPECT_EQ(
-        false,
-        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ@"
-                "KLMNOPQRSTUVWXYZ-_"));
-    EXPECT_EQ(
-        false,
-        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ#"
-                "KLMNOPQRSTUVWXYZ-_"));
-    EXPECT_EQ(
-        false,
-        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ`"
-                "KLMNOPQRSTUVWXYZ-_"));
+    EXPECT_EQ(false,
+            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ@"
+                    "KLMNOPQRSTUVWXYZ-_"));
+    EXPECT_EQ(false,
+            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ#"
+                    "KLMNOPQRSTUVWXYZ-_"));
+    EXPECT_EQ(false,
+            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ`"
+                    "KLMNOPQRSTUVWXYZ-_"));
 }
 
 // NOLINTNEXTLINE

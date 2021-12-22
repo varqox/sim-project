@@ -43,7 +43,7 @@ struct InotifyTest {
             handle(path);
             if (no_more_events and fired_files.empty()) {
                 monitor.event_queue().add_time_handler(
-                    50us, [&] { monitor.pause_immediately(); });
+                        50us, [&] { monitor.pause_immediately(); });
             }
         });
     }

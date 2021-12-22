@@ -25,9 +25,8 @@ public:
     ~SimpleParser() = default;
 
     [[nodiscard]] bool is_next(const StringView& s, char delimiter = '/') const noexcept {
-        DEBUG_PARSER(stdlog(
-                         '\'', *this, "' -> compared with: '", s, "' -> ",
-                         compare_to(*this, 0, delimiter, s));)
+        DEBUG_PARSER(stdlog('\'', *this, "' -> compared with: '", s, "' -> ",
+                compare_to(*this, 0, delimiter, s));)
         return (compare_to(*this, 0, delimiter, s) == 0);
     }
 

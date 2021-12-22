@@ -25,9 +25,8 @@ namespace sim {
  *
  * @return 0 on success, non-zero value on error
  */
-int compile(
-    StringView dir_to_chdir, std::vector<std::string> compile_command,
-    std::optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
-    size_t c_errors_max_len, const std::string& proot_path);
+int compile(StringView dir_to_chdir, std::vector<std::string> compile_command,
+        std::optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
+        size_t c_errors_max_len, const std::string& proot_path);
 
 } // namespace sim

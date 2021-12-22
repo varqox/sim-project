@@ -49,8 +49,7 @@ TEST(json_str, integration) {
         arr.val("hohoho");
         arr.val("xd\n\rxd");
     });
-    EXPECT_EQ(
-        std::move(obj).into_str(),
-        "{\"test\":42,\"foo\":[42,true,[1,2,null,3,null],{\"abc\":\"xd\",\"hohoho\":42},"
-        "\"hohoho\",\"xd\\n\\u000dxd\"]}");
+    EXPECT_EQ(std::move(obj).into_str(),
+            "{\"test\":42,\"foo\":[42,true,[1,2,null,3,null],{\"abc\":\"xd\",\"hohoho\":42},"
+            "\"hohoho\",\"xd\\n\\u000dxd\"]}");
 }

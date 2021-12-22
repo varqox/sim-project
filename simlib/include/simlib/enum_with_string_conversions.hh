@@ -93,4 +93,4 @@ constexpr auto has_enum_with_string_conversions_marker(...) -> std::false_type;
 
 template <class T>
 constexpr inline bool is_enum_with_string_conversions =
-    decltype(detail::has_enum_with_string_conversions_marker<T>(0))::value;
+        decltype(detail::has_enum_with_string_conversions_marker<T>(0))::value;

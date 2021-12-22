@@ -43,25 +43,24 @@ TEST(proc_status_file, open_proc_status_and_field_from_proc_status) {
         auto normalize = [](auto str) {
             return std::regex_replace(std::move(str), std::regex{"\nSigQ:.*?\n"}, "\n");
         };
-        EXPECT_EQ(
-            normalize(contents),
-            normalize(get_file_contents(concat("/proc/", cpid, "/status"))));
+        EXPECT_EQ(normalize(contents),
+                normalize(get_file_contents(concat("/proc/", cpid, "/status"))));
     }
 
     constexpr static auto is_newline = [](char c) { return c == '\n'; };
     constexpr static auto not_newline = [](char c) { return c != '\n'; };
     auto first_field = field_name_and_value(StringView{contents}.extract_leading(not_newline));
     EXPECT_EQ(field_from_proc_status(fd, first_field.name), first_field.value)
-        << "first_field.name: " << first_field.name;
+            << "first_field.name: " << first_field.name;
 
     EXPECT_EQ(field_from_proc_status(fd, "Pid"), to_string(cpid));
     EXPECT_EQ(field_from_proc_status(fd, "Tgid"), to_string(cpid));
     EXPECT_EQ(field_from_proc_status(fd, "PPid"), to_string(getpid()));
 
     auto last_field = field_name_and_value(
-        StringView{contents}.without_trailing(is_newline).extract_trailing(not_newline));
+            StringView{contents}.without_trailing(is_newline).extract_trailing(not_newline));
     EXPECT_EQ(field_from_proc_status(fd, last_field.name), last_field.value)
-        << "last_field.name: " << last_field.name;
+            << "last_field.name: " << last_field.name;
 
     (void)kill(cpid, SIGCONT);
     ASSERT_EQ(syscalls::waitid(P_PID, cpid, nullptr, WEXITED, nullptr), 0);

@@ -233,7 +233,7 @@ public:
             size_t new_max_size = std::max(max_size_ << 1, n);
             auto new_p = std::make_unique<Elem[]>(new_max_size);
             std::uninitialized_move(
-                iterator(new_p.get()), iterator(new_p.get() + size_), begin());
+                    iterator(new_p.get()), iterator(new_p.get() + size_), begin());
             deallocate();
             p_ = new_p.release();
             max_size_ = new_max_size;

@@ -30,17 +30,17 @@ TEST(strongly_typed_function, constructor_checks_arguments) {
     (void)strongly_typed_function<void(int)>([&](auto /*unused*/) noexcept {});
     (void)strongly_typed_function<void(int)>([&](auto /*unused*/) mutable noexcept {});
 
-    static_assert(
-        not std::is_constructible_v<strongly_typed_function<void(int)>, decltype(uint_foo)>);
-    static_assert(not std::is_constructible_v<
-                  strongly_typed_function<void(int)>, decltype(uint_noexcept_foo)>);
+    static_assert(not std::is_constructible_v<strongly_typed_function<void(int)>,
+                  decltype(uint_foo)>);
+    static_assert(not std::is_constructible_v<strongly_typed_function<void(int)>,
+                  decltype(uint_noexcept_foo)>);
 
     auto lambda = [&](uint /*unused*/) {};
     static_assert(
-        not std::is_constructible_v<strongly_typed_function<void(int)>, decltype(lambda)>);
+            not std::is_constructible_v<strongly_typed_function<void(int)>, decltype(lambda)>);
     auto lambda_mut = [&](uint /*unused*/) mutable {};
-    static_assert(
-        not std::is_constructible_v<strongly_typed_function<void(int)>, decltype(lambda_mut)>);
+    static_assert(not std::is_constructible_v<strongly_typed_function<void(int)>,
+                  decltype(lambda_mut)>);
 }
 
 static int ret_int() { return -42; }
@@ -59,21 +59,21 @@ TEST(strongly_typed_function, constructor_checks_return_value) {
     (void)strongly_typed_function<int()>([&]() mutable noexcept { return 17; });
 
     static_assert(
-        not std::is_constructible_v<strongly_typed_function<int()>, decltype(ret_uint)>);
-    static_assert(not std::is_constructible_v<
-                  strongly_typed_function<int()>, decltype(ret_uint_noexcept)>);
+            not std::is_constructible_v<strongly_typed_function<int()>, decltype(ret_uint)>);
+    static_assert(not std::is_constructible_v<strongly_typed_function<int()>,
+                  decltype(ret_uint_noexcept)>);
 
     auto lambda = [&]() -> uint { return 17; };
     static_assert(
-        not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda)>);
+            not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda)>);
     auto lambda_mut = [&]() mutable -> uint { return 17; };
     static_assert(
-        not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda_mut)>);
+            not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda_mut)>);
 }
 
 // NOLINTNEXTLINE
 TEST(strongly_typed_function, call) {
     strongly_typed_function<int64_t(int64_t, int32_t)> func(
-        [](int64_t x, int32_t y) { return x - y; });
+            [](int64_t x, int32_t y) { return x - y; });
     EXPECT_EQ(func(4, 8), -4);
 }

@@ -42,9 +42,9 @@ protected:
 
 public:
     void run() {
-        const int workers_no = std::max(
-            static_cast<int>(std::thread::hardware_concurrency()) - 1,
-            1); // One has to remain to prevent deadlock if queue gets full
+        const int workers_no =
+                std::max(static_cast<int>(std::thread::hardware_concurrency()) - 1,
+                        1); // One has to remain to prevent deadlock if queue gets full
         std::vector<std::thread> workers(workers_no);
         spawn_workers(workers);
         generate_jobs_and_signal_no_more();

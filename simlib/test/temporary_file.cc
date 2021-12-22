@@ -45,8 +45,8 @@ TEST(temporary_file, TemporaryFile) {
 TEST(create_unique_file, typical) {
     string path1 = "/tmp/create_unique_file_test.XXXX";
     string path2 = path1;
-    auto opt =
-        create_unique_file(-1, path1.data(), path1.size(), 4, O_RDONLY | O_CLOEXEC, S_0644);
+    auto opt = create_unique_file(
+            -1, path1.data(), path1.size(), 4, O_RDONLY | O_CLOEXEC, S_0644);
     Defer cleaner1 = [&] { (void)remove(path1); };
     EXPECT_TRUE(opt.has_value());
     EXPECT_TRUE(path_exists(path1));
@@ -67,7 +67,7 @@ TEST(create_unique_file, fail) {
     string path = "/tmp/create_unique_file_test.";
     string path_copy = path;
     auto opt =
-        create_unique_file(-1, path.data(), path.size(), 0, O_RDONLY | O_CLOEXEC, S_0600);
+            create_unique_file(-1, path.data(), path.size(), 0, O_RDONLY | O_CLOEXEC, S_0600);
     Defer cleaner = [&] { (void)remove(path); };
     EXPECT_TRUE(opt.has_value());
     EXPECT_TRUE(path_exists(path));

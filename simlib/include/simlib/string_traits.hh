@@ -13,9 +13,8 @@ constexpr bool has_one_of_prefixes(StringView str, T&&... prefixes) noexcept {
 }
 
 constexpr bool has_suffix(const StringView& str, const StringView& suffix) noexcept {
-    return (
-        str.size() >= suffix.size() and
-        str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
+    return (str.size() >= suffix.size() and
+            str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
 }
 
 template <class... T>

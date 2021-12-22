@@ -13,70 +13,70 @@ using std::vector;
 TEST(ConfigFile, is_string_literal) {
     // (input, output)
     vector<pair<string, bool>> cases{
-        {"", false},
-        {R"===(foo-bar)===", true},
-        {"line: 1\nab d E\n", false},
-        {R"===(\\\\\\)===", true},
-        {R"===( foo)===", false},
-        {R"===(foo )===", false},
-        {R"===( foo )===", false},
-        {"\n", false},
-        {R"===('')===", false},
-        {R"===(this isn't a single-quoted string)===", true},
-        {R"===(a'a)===", true},
-        {R"===("a a")===", false},
-        {R"===("a'a")===", false},
+            {"", false},
+            {R"===(foo-bar)===", true},
+            {"line: 1\nab d E\n", false},
+            {R"===(\\\\\\)===", true},
+            {R"===( foo)===", false},
+            {R"===(foo )===", false},
+            {R"===( foo )===", false},
+            {"\n", false},
+            {R"===('')===", false},
+            {R"===(this isn't a single-quoted string)===", true},
+            {R"===(a'a)===", true},
+            {R"===("a a")===", false},
+            {R"===("a'a")===", false},
 
-        {" ", false},
-        {"\t", false},
-        {"\r", false},
-        {"\n", false},
-        {"[", false},
-        {",", false},
-        {"#", false},
-        {"'", false},
-        {"\"", false},
-        // Beginning
-        {" aaaa", false},
-        {"\taaaa", false},
-        {"\raaaa", false},
-        {"\naaaa", false},
-        {"[aaaa", false},
-        {"]aaaa", false},
-        {",aaaa", false},
-        {"#aaaa", false},
-        {"'aaaa", false},
-        {"\"aaaa", false},
-        // Ending
-        {"aaaa ", false},
-        {"aaaa\t", false},
-        {"aaaa\r", false},
-        {"aaaa\n", false},
-        {"aaaa]", false},
-        {"aaaa,", false},
-        // Ending
-        {"aaaa[", true},
-        {"aaaa'", true},
-        {"aaaa\"", true},
-        // Interior
-        {"aa\naa", false},
-        {"aa]aa", false},
-        {"aa,aa", false},
-        // Comment
-        {"aaaa#", false},
-        {"aa#aa", false},
-        {"aaaa #", false},
-        {"aa #aa", false},
-        {"#aaaa", false},
-        {"aaaa# ", false},
-        {"aaaa # ", false},
-        {" #aa", false},
+            {" ", false},
+            {"\t", false},
+            {"\r", false},
+            {"\n", false},
+            {"[", false},
+            {",", false},
+            {"#", false},
+            {"'", false},
+            {"\"", false},
+            // Beginning
+            {" aaaa", false},
+            {"\taaaa", false},
+            {"\raaaa", false},
+            {"\naaaa", false},
+            {"[aaaa", false},
+            {"]aaaa", false},
+            {",aaaa", false},
+            {"#aaaa", false},
+            {"'aaaa", false},
+            {"\"aaaa", false},
+            // Ending
+            {"aaaa ", false},
+            {"aaaa\t", false},
+            {"aaaa\r", false},
+            {"aaaa\n", false},
+            {"aaaa]", false},
+            {"aaaa,", false},
+            // Ending
+            {"aaaa[", true},
+            {"aaaa'", true},
+            {"aaaa\"", true},
+            // Interior
+            {"aa\naa", false},
+            {"aa]aa", false},
+            {"aa,aa", false},
+            // Comment
+            {"aaaa#", false},
+            {"aa#aa", false},
+            {"aaaa #", false},
+            {"aa #aa", false},
+            {"#aaaa", false},
+            {"aaaa# ", false},
+            {"aaaa # ", false},
+            {" #aa", false},
     };
 
     // Hardcoded tests
     for (auto&& p : cases) {
         EXPECT_EQ(ConfigFile::is_string_literal(p.first), p.second)
-            << "p.first: " << p.first << endl;
+                << "p.first: " << p.first << endl;
     }
 
     auto is_beginning = [](auto c) {
@@ -94,29 +94,26 @@ TEST(ConfigFile, is_string_literal) {
     t[0] = '\0';
     for (int a = 0; a < 256; t[0] = ++a) {
         // One character
-        EXPECT_EQ(
-            ConfigFile::is_string_literal({t.data(), 1}),
-            is_beginning(t[0]) && is_ending(t[0]))
-            << dump(a) << endl;
+        EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 1}),
+                is_beginning(t[0]) && is_ending(t[0]))
+                << dump(a) << endl;
 
         t[1] = '\0';
         for (int b = 0; b < 256; t[1] = ++b) {
             // Two characters
-            EXPECT_EQ(
-                ConfigFile::is_string_literal({t.data(), 2}),
-                is_beginning(t[0]) && is_ending(t[1]))
-                << dump(a, b) << endl;
+            EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 2}),
+                    is_beginning(t[0]) && is_ending(t[1]))
+                    << dump(a, b) << endl;
 
             bool cached_res = is_beginning(t[0]) && is_interior(t[1]);
             t[2] = '\0';
             for (int c = 0; c < 256; t[2] = ++c) {
                 // Three characters
                 if (ConfigFile::is_string_literal({t.data(), 3}) != cached_res &&
-                    is_ending(t[2])) {
-                    EXPECT_EQ(
-                        ConfigFile::is_string_literal({t.data(), 3}),
-                        is_beginning(t[0]) && is_interior(t[1]) && is_ending(t[2]))
-                        << dump(a, b, c) << endl;
+                        is_ending(t[2])) {
+                    EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 3}),
+                            is_beginning(t[0]) && is_interior(t[1]) && is_ending(t[2]))
+                            << dump(a, b, c) << endl;
                 }
             }
         }
@@ -127,7 +124,8 @@ TEST(ConfigFile, is_string_literal) {
         for (int b = 0; b < 256; ++b) {
             t = {{static_cast<char>(a), ' ', '#', static_cast<char>(b)}};
             EXPECT_EQ(ConfigFile::is_string_literal(StringView(t.data(), 4)), false)
-                << "a: " << a << " b: " << b << " str: " << StringView(t.data(), 4) << endl;
+                    << "a: " << a << " b: " << b << " str: " << StringView(t.data(), 4)
+                    << endl;
         }
     }
 }
@@ -136,69 +134,69 @@ TEST(ConfigFile, is_string_literal) {
 TEST(ConfigFile, escape_to_single_quoted_string) {
     // (input, output)
     vector<pair<string, string>> cases{
-        {"", "''"},
-        {R"===(foo-bar)===", R"===('foo-bar')==="},
-        {"line: 1\nab d E\n", "'line: 1\nab d E\n'"},
-        {R"===(\\\\\\)===", R"===('\\\\\\')==="},
-        {R"===( foo)===", R"===(' foo')==="},
-        {R"===(foo )===", R"===('foo ')==="},
-        {R"===( foo )===", R"===(' foo ')==="},
-        {R"===('')===", R"===('''''')==="},
-        {R"===(this isn't a single-quoted string)===",
-         R"===('this isn''t a single-quoted string')==="},
-        {R"===(a'a)===", R"===('a''a')==="},
-        {R"===("a a")===", R"===('"a a"')==="},
-        {R"===("a'a")===", R"===('"a''a"')==="},
+            {"", "''"},
+            {R"===(foo-bar)===", R"===('foo-bar')==="},
+            {"line: 1\nab d E\n", "'line: 1\nab d E\n'"},
+            {R"===(\\\\\\)===", R"===('\\\\\\')==="},
+            {R"===( foo)===", R"===(' foo')==="},
+            {R"===(foo )===", R"===('foo ')==="},
+            {R"===( foo )===", R"===(' foo ')==="},
+            {R"===('')===", R"===('''''')==="},
+            {R"===(this isn't a single-quoted string)===",
+                    R"===('this isn''t a single-quoted string')==="},
+            {R"===(a'a)===", R"===('a''a')==="},
+            {R"===("a a")===", R"===('"a a"')==="},
+            {R"===("a'a")===", R"===('"a''a"')==="},
 
-        {" ", "' '"},
-        {"\t", "'\t'"},
-        {"\r", "'\r'"},
-        {"\n", "'\n'"},
-        {"[", "'['"},
-        {",", "','"},
-        {"#", "'#'"},
-        {"'", "''''"},
-        {"\"", "'\"'"},
-        // Beginning
-        {" aaaa", "' aaaa'"},
-        {"\taaaa", "'\taaaa'"},
-        {"\raaaa", "'\raaaa'"},
-        {"\naaaa", "'\naaaa'"},
-        {"[aaaa", "'[aaaa'"},
-        {"]aaaa", "']aaaa'"},
-        {",aaaa", "',aaaa'"},
-        {"#aaaa", "'#aaaa'"},
-        {"'aaaa", "'''aaaa'"},
-        {"\"aaaa", "'\"aaaa'"},
-        // Ending
-        {"aaaa ", "'aaaa '"},
-        {"aaaa\t", "'aaaa\t'"},
-        {"aaaa\r", "'aaaa\r'"},
-        {"aaaa\n", "'aaaa\n'"},
-        {"aaaa]", "'aaaa]'"},
-        {"aaaa,", "'aaaa,'"},
-        // Ending
-        {"aaaa[", "'aaaa['"},
-        {"aaaa'", "'aaaa'''"},
-        {"aaaa\"", "'aaaa\"'"},
-        // Interior
-        {"aa\naa", "'aa\naa'"},
-        {"aa]aa", "'aa]aa'"},
-        {"aa,aa", "'aa,aa'"},
-        // Comment
-        {"aaaa#", "'aaaa#'"},
-        {"aa#aa", "'aa#aa'"},
-        {"aaaa #", "'aaaa #'"},
-        {"aa #aa", "'aa #aa'"},
-        {"#aaaa", "'#aaaa'"},
-        {"aaaa# ", "'aaaa# '"},
-        {"aaaa # ", "'aaaa # '"},
-        {" #aa", "' #aa'"},
+            {" ", "' '"},
+            {"\t", "'\t'"},
+            {"\r", "'\r'"},
+            {"\n", "'\n'"},
+            {"[", "'['"},
+            {",", "','"},
+            {"#", "'#'"},
+            {"'", "''''"},
+            {"\"", "'\"'"},
+            // Beginning
+            {" aaaa", "' aaaa'"},
+            {"\taaaa", "'\taaaa'"},
+            {"\raaaa", "'\raaaa'"},
+            {"\naaaa", "'\naaaa'"},
+            {"[aaaa", "'[aaaa'"},
+            {"]aaaa", "']aaaa'"},
+            {",aaaa", "',aaaa'"},
+            {"#aaaa", "'#aaaa'"},
+            {"'aaaa", "'''aaaa'"},
+            {"\"aaaa", "'\"aaaa'"},
+            // Ending
+            {"aaaa ", "'aaaa '"},
+            {"aaaa\t", "'aaaa\t'"},
+            {"aaaa\r", "'aaaa\r'"},
+            {"aaaa\n", "'aaaa\n'"},
+            {"aaaa]", "'aaaa]'"},
+            {"aaaa,", "'aaaa,'"},
+            // Ending
+            {"aaaa[", "'aaaa['"},
+            {"aaaa'", "'aaaa'''"},
+            {"aaaa\"", "'aaaa\"'"},
+            // Interior
+            {"aa\naa", "'aa\naa'"},
+            {"aa]aa", "'aa]aa'"},
+            {"aa,aa", "'aa,aa'"},
+            // Comment
+            {"aaaa#", "'aaaa#'"},
+            {"aa#aa", "'aa#aa'"},
+            {"aaaa #", "'aaaa #'"},
+            {"aa #aa", "'aa #aa'"},
+            {"#aaaa", "'#aaaa'"},
+            {"aaaa# ", "'aaaa# '"},
+            {"aaaa # ", "'aaaa # '"},
+            {" #aa", "' #aa'"},
     };
 
     for (auto&& p : cases) {
         EXPECT_EQ(ConfigFile::escape_to_single_quoted_string(p.first), p.second)
-            << "p.first: " << p.first << endl;
+                << "p.first: " << p.first << endl;
     }
 }
 
@@ -206,183 +204,177 @@ TEST(ConfigFile, escape_to_single_quoted_string) {
 TEST(ConfigFile, escape_to_double_quoted_string) {
     // (input, output)
     vector<pair<string, string>> cases{
-        {"", R"===("")==="},
-        {R"===(foo-bar)===", R"===("foo-bar")==="},
-        {"line: 1\nab d E\n", R"===("line: 1\nab d E\n")==="},
-        {R"===(\\\\\\)===", R"===("\\\\\\\\\\\\")==="},
-        {R"===( foo)===", R"===(" foo")==="},
-        {R"===(foo )===", R"===("foo ")==="},
-        {R"===( foo )===", R"===(" foo ")==="},
-        {R"===('')===", R"===("''")==="},
-        {R"===(this isn't a single-quoted string)===",
-         R"===("this isn't a single-quoted string")==="},
-        {R"===(a'a)===", R"===("a'a")==="},
-        {R"===("a a")===", R"===("\"a a\"")==="},
-        {R"===("a'a")===", R"===("\"a'a\"")==="},
-        {" ", R"===(" ")==="},
-        {"\t", R"===("\t")==="},
-        {"\r", R"===("\r")==="},
-        {"\n", R"===("\n")==="},
-        {"[", R"===("[")==="},
-        {",", R"===(",")==="},
-        {"#", R"===("#")==="},
-        {"'", R"===("'")==="},
-        {"\"", R"===("\"")==="},
-        // Beginning
-        {" aaaa", R"===(" aaaa")==="},
-        {"\taaaa", R"===("\taaaa")==="},
-        {"\raaaa", R"===("\raaaa")==="},
-        {"\naaaa", R"===("\naaaa")==="},
-        {"[aaaa", R"===("[aaaa")==="},
-        {"]aaaa", R"===("]aaaa")==="},
-        {",aaaa", R"===(",aaaa")==="},
-        {"#aaaa", R"===("#aaaa")==="},
-        {"'aaaa", R"===("'aaaa")==="},
-        {"\"aaaa", R"===("\"aaaa")==="},
-        // Ending
-        {"aaaa ", R"===("aaaa ")==="},
-        {"aaaa\t", R"===("aaaa\t")==="},
-        {"aaaa\r", R"===("aaaa\r")==="},
-        {"aaaa\n", R"===("aaaa\n")==="},
-        {"aaaa]", R"===("aaaa]")==="},
-        {"aaaa,", R"===("aaaa,")==="},
-        // Ending
-        {"aaaa[", R"===("aaaa[")==="},
-        {"aaaa'", R"===("aaaa'")==="},
-        {"aaaa\"", R"===("aaaa\"")==="},
-        // Interior
-        {"aa\naa", R"===("aa\naa")==="},
-        {"aa]aa", R"===("aa]aa")==="},
-        {"aa,aa", R"===("aa,aa")==="},
-        // Comment
-        {"aaaa#", R"===("aaaa#")==="},
-        {"aa#aa", R"===("aa#aa")==="},
-        {"aaaa #", R"===("aaaa #")==="},
-        {"aa #aa", R"===("aa #aa")==="},
-        {"#aaaa", R"===("#aaaa")==="},
-        {"aaaa# ", R"===("aaaa# ")==="},
-        {"aaaa # ", R"===("aaaa # ")==="},
-        {" #aa", R"===(" #aa")==="},
+            {"", R"===("")==="},
+            {R"===(foo-bar)===", R"===("foo-bar")==="},
+            {"line: 1\nab d E\n", R"===("line: 1\nab d E\n")==="},
+            {R"===(\\\\\\)===", R"===("\\\\\\\\\\\\")==="},
+            {R"===( foo)===", R"===(" foo")==="},
+            {R"===(foo )===", R"===("foo ")==="},
+            {R"===( foo )===", R"===(" foo ")==="},
+            {R"===('')===", R"===("''")==="},
+            {R"===(this isn't a single-quoted string)===",
+                    R"===("this isn't a single-quoted string")==="},
+            {R"===(a'a)===", R"===("a'a")==="},
+            {R"===("a a")===", R"===("\"a a\"")==="},
+            {R"===("a'a")===", R"===("\"a'a\"")==="},
+            {" ", R"===(" ")==="},
+            {"\t", R"===("\t")==="},
+            {"\r", R"===("\r")==="},
+            {"\n", R"===("\n")==="},
+            {"[", R"===("[")==="},
+            {",", R"===(",")==="},
+            {"#", R"===("#")==="},
+            {"'", R"===("'")==="},
+            {"\"", R"===("\"")==="},
+            // Beginning
+            {" aaaa", R"===(" aaaa")==="},
+            {"\taaaa", R"===("\taaaa")==="},
+            {"\raaaa", R"===("\raaaa")==="},
+            {"\naaaa", R"===("\naaaa")==="},
+            {"[aaaa", R"===("[aaaa")==="},
+            {"]aaaa", R"===("]aaaa")==="},
+            {",aaaa", R"===(",aaaa")==="},
+            {"#aaaa", R"===("#aaaa")==="},
+            {"'aaaa", R"===("'aaaa")==="},
+            {"\"aaaa", R"===("\"aaaa")==="},
+            // Ending
+            {"aaaa ", R"===("aaaa ")==="},
+            {"aaaa\t", R"===("aaaa\t")==="},
+            {"aaaa\r", R"===("aaaa\r")==="},
+            {"aaaa\n", R"===("aaaa\n")==="},
+            {"aaaa]", R"===("aaaa]")==="},
+            {"aaaa,", R"===("aaaa,")==="},
+            // Ending
+            {"aaaa[", R"===("aaaa[")==="},
+            {"aaaa'", R"===("aaaa'")==="},
+            {"aaaa\"", R"===("aaaa\"")==="},
+            // Interior
+            {"aa\naa", R"===("aa\naa")==="},
+            {"aa]aa", R"===("aa]aa")==="},
+            {"aa,aa", R"===("aa,aa")==="},
+            // Comment
+            {"aaaa#", R"===("aaaa#")==="},
+            {"aa#aa", R"===("aa#aa")==="},
+            {"aaaa #", R"===("aaaa #")==="},
+            {"aa #aa", R"===("aa #aa")==="},
+            {"#aaaa", R"===("#aaaa")==="},
+            {"aaaa# ", R"===("aaaa# ")==="},
+            {"aaaa # ", R"===("aaaa # ")==="},
+            {" #aa", R"===(" #aa")==="},
     };
 
     for (auto&& p : cases) {
         // First version
         EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(p.first), p.second)
-            << "p.first: " << p.first << endl;
+                << "p.first: " << p.first << endl;
         // Second version
         EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string(p.first), p.second)
-            << "p.first: " << p.first << endl;
+                << "p.first: " << p.first << endl;
     }
 
     // Escaping control characters
-    EXPECT_EQ(
-        ConfigFile::escape_to_double_quoted_string("\x07\x0e\n\x15\x1f"),
-        R"===("\a\x0e\n\x15\x1f")===");
-    EXPECT_EQ(
-        ConfigFile::escape_to_double_quoted_string("\x02\x03\tśćąłź\x11"),
-        R"===("\x02\x03\tśćąłź\x11")===");
+    EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("\x07\x0e\n\x15\x1f"),
+            R"===("\a\x0e\n\x15\x1f")===");
+    EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("\x02\x03\tśćąłź\x11"),
+            R"===("\x02\x03\tśćąłź\x11")===");
     EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("ś"), R"===("ś")===");
     EXPECT_EQ(
-        ConfigFile::escape_to_double_quoted_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
+            ConfigFile::escape_to_double_quoted_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
     // Escaping unprintable characters
-    EXPECT_EQ(
-        ConfigFile::full_escape_to_double_quoted_string("\x07\x0e\n\x15\x1f"),
-        R"===("\a\x0e\n\x15\x1f")===");
-    EXPECT_EQ(
-        ConfigFile::full_escape_to_double_quoted_string("\x02\x03\tśćąłź\x11"),
-        R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
+    EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string("\x07\x0e\n\x15\x1f"),
+            R"===("\a\x0e\n\x15\x1f")===");
+    EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string("\x02\x03\tśćąłź\x11"),
+            R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
     EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string("ś"), R"===("\xc5\x9b")===");
-    EXPECT_EQ(
-        ConfigFile::full_escape_to_double_quoted_string(" '\t\n' ś "),
-        R"===(" '\t\n' \xc5\x9b ")===");
+    EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string(" '\t\n' ś "),
+            R"===(" '\t\n' \xc5\x9b ")===");
 }
 
 // NOLINTNEXTLINE
 TEST(ConfigFile, escape_string) {
     // (input, output)
     vector<pair<string, string>> cases{
-        {"", "''"},
-        {R"===(foo-bar)===", R"===(foo-bar)==="},
-        {"line: 1\nab d E\n", R"===("line: 1\nab d E\n")==="},
-        {R"===(\\\\\\)===", R"===(\\\\\\)==="},
-        {R"===( foo)===", R"===(' foo')==="},
-        {R"===(foo )===", R"===('foo ')==="},
-        {R"===( foo )===", R"===(' foo ')==="},
-        {R"===('')===", R"===("''")==="},
-        {R"===(this isn't a single-quoted string)===",
-         R"===("this isn't a single-quoted string")==="},
-        {R"===(a'a)===", R"===("a'a")==="},
-        {R"===("a a")===", R"===('"a a"')==="},
-        {R"===("a'a")===", R"===("\"a'a\"")==="},
-        {" ", R"===(' ')==="},
-        {"\t", R"===("\t")==="},
-        {"\r", R"===("\r")==="},
-        {"\n", R"===("\n")==="},
-        {"[", R"===('[')==="},
-        {",", R"===(',')==="},
-        {"#", R"===('#')==="},
-        {"'", R"===("'")==="},
-        {"\"", R"===('"')==="},
-        // Beginning
-        {" aaaa", R"===(' aaaa')==="},
-        {"\taaaa", R"===("\taaaa")==="},
-        {"\raaaa", R"===("\raaaa")==="},
-        {"\naaaa", R"===("\naaaa")==="},
-        {"[aaaa", R"===('[aaaa')==="},
-        {"]aaaa", R"===(']aaaa')==="},
-        {",aaaa", R"===(',aaaa')==="},
-        {"#aaaa", R"===('#aaaa')==="},
-        {"'aaaa", R"===("'aaaa")==="},
-        {"\"aaaa", R"===('"aaaa')==="},
-        // Ending
-        {"aaaa ", R"===('aaaa ')==="},
-        {"aaaa\t", R"===("aaaa\t")==="},
-        {"aaaa\r", R"===("aaaa\r")==="},
-        {"aaaa\n", R"===("aaaa\n")==="},
-        {"aaaa]", R"===('aaaa]')==="},
-        {"aaaa,", R"===('aaaa,')==="},
-        // Ending
-        {"aaaa[", R"===(aaaa[)==="},
-        {"aaaa'", R"===("aaaa'")==="},
-        {"aaaa\"", R"===(aaaa")==="},
-        // Interior
-        {"aa\naa", R"===("aa\naa")==="},
-        {"aa]aa", R"===('aa]aa')==="},
-        {"aa,aa", R"===('aa,aa')==="},
-        // Comment
-        {"aaaa#", R"===('aaaa#')==="},
-        {"aa#aa", R"===('aa#aa')==="},
-        {"aaaa #", R"===('aaaa #')==="},
-        {"aa #aa", R"===('aa #aa')==="},
-        {"#aaaa", R"===('#aaaa')==="},
-        {"aaaa# ", R"===('aaaa# ')==="},
-        {"aaaa # ", R"===('aaaa # ')==="},
-        {" #aa", R"===(' #aa')==="},
+            {"", "''"},
+            {R"===(foo-bar)===", R"===(foo-bar)==="},
+            {"line: 1\nab d E\n", R"===("line: 1\nab d E\n")==="},
+            {R"===(\\\\\\)===", R"===(\\\\\\)==="},
+            {R"===( foo)===", R"===(' foo')==="},
+            {R"===(foo )===", R"===('foo ')==="},
+            {R"===( foo )===", R"===(' foo ')==="},
+            {R"===('')===", R"===("''")==="},
+            {R"===(this isn't a single-quoted string)===",
+                    R"===("this isn't a single-quoted string")==="},
+            {R"===(a'a)===", R"===("a'a")==="},
+            {R"===("a a")===", R"===('"a a"')==="},
+            {R"===("a'a")===", R"===("\"a'a\"")==="},
+            {" ", R"===(' ')==="},
+            {"\t", R"===("\t")==="},
+            {"\r", R"===("\r")==="},
+            {"\n", R"===("\n")==="},
+            {"[", R"===('[')==="},
+            {",", R"===(',')==="},
+            {"#", R"===('#')==="},
+            {"'", R"===("'")==="},
+            {"\"", R"===('"')==="},
+            // Beginning
+            {" aaaa", R"===(' aaaa')==="},
+            {"\taaaa", R"===("\taaaa")==="},
+            {"\raaaa", R"===("\raaaa")==="},
+            {"\naaaa", R"===("\naaaa")==="},
+            {"[aaaa", R"===('[aaaa')==="},
+            {"]aaaa", R"===(']aaaa')==="},
+            {",aaaa", R"===(',aaaa')==="},
+            {"#aaaa", R"===('#aaaa')==="},
+            {"'aaaa", R"===("'aaaa")==="},
+            {"\"aaaa", R"===('"aaaa')==="},
+            // Ending
+            {"aaaa ", R"===('aaaa ')==="},
+            {"aaaa\t", R"===("aaaa\t")==="},
+            {"aaaa\r", R"===("aaaa\r")==="},
+            {"aaaa\n", R"===("aaaa\n")==="},
+            {"aaaa]", R"===('aaaa]')==="},
+            {"aaaa,", R"===('aaaa,')==="},
+            // Ending
+            {"aaaa[", R"===(aaaa[)==="},
+            {"aaaa'", R"===("aaaa'")==="},
+            {"aaaa\"", R"===(aaaa")==="},
+            // Interior
+            {"aa\naa", R"===("aa\naa")==="},
+            {"aa]aa", R"===('aa]aa')==="},
+            {"aa,aa", R"===('aa,aa')==="},
+            // Comment
+            {"aaaa#", R"===('aaaa#')==="},
+            {"aa#aa", R"===('aa#aa')==="},
+            {"aaaa #", R"===('aaaa #')==="},
+            {"aa #aa", R"===('aa #aa')==="},
+            {"#aaaa", R"===('#aaaa')==="},
+            {"aaaa# ", R"===('aaaa# ')==="},
+            {"aaaa # ", R"===('aaaa # ')==="},
+            {" #aa", R"===(' #aa')==="},
     };
 
     for (auto&& p : cases) {
         // First version
         EXPECT_EQ(ConfigFile::escape_string(p.first), p.second)
-            << "p.first: " << p.first << endl;
+                << "p.first: " << p.first << endl;
         // Second version
         EXPECT_EQ(ConfigFile::full_escape_string(p.first), p.second)
-            << "p.first: " << p.first << endl;
+                << "p.first: " << p.first << endl;
     }
 
     // Escaping control characters
     EXPECT_EQ(ConfigFile::escape_string("\x07\x0e\n\x15\x1f"), R"===("\a\x0e\n\x15\x1f")===");
-    EXPECT_EQ(
-        ConfigFile::escape_string("\x02\x03\tśćąłź\x11"), R"===("\x02\x03\tśćąłź\x11")===");
+    EXPECT_EQ(ConfigFile::escape_string("\x02\x03\tśćąłź\x11"),
+            R"===("\x02\x03\tśćąłź\x11")===");
 
     EXPECT_EQ(ConfigFile::escape_string("ś"), R"===(ś)===");
     EXPECT_EQ(ConfigFile::escape_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
 
     // Escaping unprintable characters
-    EXPECT_EQ(
-        ConfigFile::full_escape_string("\x07\x0e\n\x15\x1f"), R"===("\a\x0e\n\x15\x1f")===");
-    EXPECT_EQ(
-        ConfigFile::full_escape_string("\x02\x03\tśćąłź\x11"),
-        R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
+    EXPECT_EQ(ConfigFile::full_escape_string("\x07\x0e\n\x15\x1f"),
+            R"===("\a\x0e\n\x15\x1f")===");
+    EXPECT_EQ(ConfigFile::full_escape_string("\x02\x03\tśćąłź\x11"),
+            R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
 
     EXPECT_EQ(ConfigFile::full_escape_string("ś"), R"===("\xc5\x9b")===");
     EXPECT_EQ(ConfigFile::full_escape_string(" '\t\n' ś "), R"===(" '\t\n' \xc5\x9b ")===");
@@ -396,19 +388,18 @@ string dump_config(const ConfigFile& cf) {
             back_insert(res, p.first, ": [\n");
             for (auto&& s : p.second.as_array()) {
                 back_insert(
-                    res, "  ", ConfigFile::full_escape_to_double_quoted_string(s), '\n');
+                        res, "  ", ConfigFile::full_escape_to_double_quoted_string(s), '\n');
             }
             res += ']';
 
         } else { // Other
-            back_insert(
-                res, p.first, ": ",
-                ConfigFile::full_escape_to_double_quoted_string(p.second.as_string()));
+            back_insert(res, p.first, ": ",
+                    ConfigFile::full_escape_to_double_quoted_string(p.second.as_string()));
         }
 
         // Include the value position
         back_insert(
-            res, " # [", p.second.value_span().beg, ",", p.second.value_span().end, ")\n");
+                res, " # [", p.second.value_span().beg, ",", p.second.value_span().end, ")\n");
     };
     return res;
 }
@@ -417,29 +408,29 @@ string dump_config(const ConfigFile& cf) {
 TEST(ConfigFile, load_config_from_string) {
     // (input, dumped config)
     vector<pair<string, string>> cases{
-        /*  1 */ {R"===()===", ""},
-        /*  2 */ {"    a  = 1234", "a: \"1234\" # [9,13)\n"},
-        /*  3 */ {" a : eee \t\n ", "a: \"eee\" # [5,8)\n"},
-        /*  4 */ {"a=:eee\t\n ", "a: \":eee\" # [2,6)\n"},
-        /*  5 */ {"a = abą'\n ", "a: \"ab\\xc4\\x85'\" # [4,9)\n"},
-        /*  6 */ {"a: aa'\t\n ", "a: \"aa'\" # [3,6)\n"},
-        /*  7 */ {"a: aa\"\t\n ", "a: \"aa\\\"\" # [3,6)\n"},
-        /*  8 */ {"a: aa\"#aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
-        /*  9 */ {"a: aa\" #aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
-        /* 10 */ {"a: aa\" # aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
-        /* 11 */
-        {"a: '\"It''s awesome\"'\n ", "a: \"\\\"It's awesome\\\"\" # [3,20)\n"},
-        /* 12 */ {"a = \"abą\"\n ", "a: \"ab\\xc4\\x85\" # [4,10)\n"},
-        /* 13 */ {"a = \"ab\\xa61\"\n ", "a: \"ab\\xa61\" # [4,13)\n"},
-        /* 14 */ {"a = b]b", "a: \"b]b\" # [4,7)\n"},
-        /* 15 */ {"a = b,b", "a: \"b,b\" # [4,7)\n"},
-        /* 16 */ {"a = bb]", "a: \"bb]\" # [4,7)\n"},
-        /* 17 */ {"a = bb,", "a: \"bb,\" # [4,7)\n"},
-        /* 18 */ {"a = ,a", "a: \",a\" # [4,6)\n"},
-        /* 19 */ {"a = ]a", "a: \"]a\" # [4,6)\n"},
-        /* 20 */ {"a = a\nb = ,]", "a: \"a\" # [4,5)\nb: \",]\" # [10,12)\n"},
-        /* 21 */
-        {R"===(# Server address
+            /*  1 */ {R"===()===", ""},
+            /*  2 */ {"    a  = 1234", "a: \"1234\" # [9,13)\n"},
+            /*  3 */ {" a : eee \t\n ", "a: \"eee\" # [5,8)\n"},
+            /*  4 */ {"a=:eee\t\n ", "a: \":eee\" # [2,6)\n"},
+            /*  5 */ {"a = abą'\n ", "a: \"ab\\xc4\\x85'\" # [4,9)\n"},
+            /*  6 */ {"a: aa'\t\n ", "a: \"aa'\" # [3,6)\n"},
+            /*  7 */ {"a: aa\"\t\n ", "a: \"aa\\\"\" # [3,6)\n"},
+            /*  8 */ {"a: aa\"#aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
+            /*  9 */ {"a: aa\" #aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
+            /* 10 */ {"a: aa\" # aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
+            /* 11 */
+            {"a: '\"It''s awesome\"'\n ", "a: \"\\\"It's awesome\\\"\" # [3,20)\n"},
+            /* 12 */ {"a = \"abą\"\n ", "a: \"ab\\xc4\\x85\" # [4,10)\n"},
+            /* 13 */ {"a = \"ab\\xa61\"\n ", "a: \"ab\\xa61\" # [4,13)\n"},
+            /* 14 */ {"a = b]b", "a: \"b]b\" # [4,7)\n"},
+            /* 15 */ {"a = b,b", "a: \"b,b\" # [4,7)\n"},
+            /* 16 */ {"a = bb]", "a: \"bb]\" # [4,7)\n"},
+            /* 17 */ {"a = bb,", "a: \"bb,\" # [4,7)\n"},
+            /* 18 */ {"a = ,a", "a: \",a\" # [4,6)\n"},
+            /* 19 */ {"a = ]a", "a: \"]a\" # [4,6)\n"},
+            /* 20 */ {"a = a\nb = ,]", "a: \"a\" # [4,5)\nb: \",]\" # [10,12)\n"},
+            /* 21 */
+            {R"===(# Server address
 address: 127.7.7.7:8080
 
 # Number of server workers (cannot be lower than 1)
@@ -490,7 +481,7 @@ test5 = [1, 2
   5 6 7 # This is equivalent to '5 6 7'
 ]
 )===",
-         R"===(a1: " test test " # [532,545)
+                    R"===(a1: " test test " # [532,545)
 a2: "This's awesome" # [621,638)
 address: "127.7.7.7:8080" # [26,40)
 b1: "\n\n'Foo bar'\n\ttest\n # This is not a comment" # [686,735)

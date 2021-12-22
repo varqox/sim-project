@@ -96,16 +96,15 @@ TEST(string_transform_DeathTest, dec2hex) {
 // NOLINTNEXTLINE
 TEST(string_transform, to_hex) {
     EXPECT_EQ("4200baddab", to_hex(StringView("\x42\0\xba\xdd\xab", 5)));
-    EXPECT_EQ(
-        "92ffabc0ff1e0d200a20096162636465666768696a6b6c6d6e6f707172737475767778"
-        "797a",
-        to_hex("\x92\xff\xab\xc0\xff\x1e\r \n \tabcdefghijklmnopqrstuvwxyz"));
+    EXPECT_EQ("92ffabc0ff1e0d200a20096162636465666768696a6b6c6d6e6f707172737475767778"
+              "797a",
+            to_hex("\x92\xff\xab\xc0\xff\x1e\r \n \tabcdefghijklmnopqrstuvwxyz"));
 
     for (int i = 0; i < 256; ++i) {
         auto char_i = static_cast<char>(i);
         const std::array expected = {dec2hex(i >> 4), dec2hex(i & 15)};
         EXPECT_EQ(StringView(expected.data(), 2), to_hex(StringView(&char_i, 1)))
-            << " for i = " << i;
+                << " for i = " << i;
     }
 }
 

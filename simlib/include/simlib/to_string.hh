@@ -93,10 +93,9 @@ std::string& operator+=(std::string& str, const StaticCStringBuff<N>& c_buff) {
     return str.append(c_buff.data(), c_buff.size());
 }
 
-template <
-    class T,
-    std::enable_if_t<std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> =
-        0>
+template <class T,
+        std::enable_if_t<std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>,
+                int> = 0>
 constexpr auto to_string(T x) noexcept {
     constexpr auto digits = [](auto val) constexpr {
         size_t res = 0;
@@ -159,10 +158,10 @@ constexpr auto to_string(bool x) noexcept {
     return StaticCStringBuff<5>("false");
 }
 
-template <
-    class T,
-    std::enable_if_t<
-        not std::is_arithmetic_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> = 0>
+template <class T,
+        std::enable_if_t<
+                not std::is_arithmetic_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> =
+                0>
 std::string to_string(T x) {
     const auto zero = std::remove_cv_t<std::remove_reference_t<T>>();
     if (x == zero) {
@@ -208,12 +207,12 @@ std::string to_string(T x, int precision = 6) {
     }
 #else
     std::string res(STEP, '\0');
-    int len =
-        std::snprintf(res.data(), STEP - 1, "%.*Lf", precision, static_cast<long double>(x));
+    int len = std::snprintf(
+            res.data(), STEP - 1, "%.*Lf", precision, static_cast<long double>(x));
     if (len >= STEP) {
         res.resize(len + 1, '\0');
         (void)std::snprintf(
-            res.data(), res.size() - 1, "%.*Lf", precision, static_cast<long double>(x));
+                res.data(), res.size() - 1, "%.*Lf", precision, static_cast<long double>(x));
     }
 
     res.resize(len);

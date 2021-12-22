@@ -62,15 +62,15 @@ bool is_datetime(const CStringView& str) noexcept;
  *
  * @errors The same that occur for strptime(3) and timegm(3)
  */
-time_t
-str_to_time_t(CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) noexcept;
+time_t str_to_time_t(
+        CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) noexcept;
 
 /**
  * @brief Converts a @p str containing time in format @p format to time_point
  * @errors The same that occur for str_to_time_t() but thrown as exceptions
  */
-inline std::chrono::system_clock::time_point
-str_to_time_point(CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
+inline std::chrono::system_clock::time_point str_to_time_point(
+        CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
     time_t t = str_to_time_t(str, format);
     if (t == -1) {
         THROW("str_to_time_t()", errmsg());
@@ -168,13 +168,12 @@ constexpr bool operator<=(timeval a, timeval b) noexcept {
 
 constexpr bool operator>=(timeval a, timeval b) noexcept { return b <= a; }
 
-template <
-    size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-        11> // +11
-            // for terminating null and decimal point and the
-            // fraction part
-constexpr StaticCStringBuff<N>
-timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
+template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
+                11> // +11
+                    // for terminating null and decimal point and the
+                    // fraction part
+constexpr StaticCStringBuff<N> timespec_to_string(
+        timespec x, uint prec, bool trim_zeros = true) noexcept {
     auto res = to_string<uint64_t, N>(x.tv_sec);
     res[res.len_++] = '.';
     for (unsigned i = res.len_ + 8; i >= res.len_; --i) {
@@ -201,13 +200,12 @@ timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
     return res;
 }
 
-template <
-    size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-        8> // +8
-           // for terminating null and decimal point and the
-           // fraction part
-constexpr StaticCStringBuff<N>
-timeval_to_string(timeval x, uint prec, bool trim_zeros = true) noexcept {
+template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
+                8> // +8
+                   // for terminating null and decimal point and the
+                   // fraction part
+constexpr StaticCStringBuff<N> timeval_to_string(
+        timeval x, uint prec, bool trim_zeros = true) noexcept {
     auto res = to_string<uint64_t, N>(x.tv_sec);
     res[res.len_++] = '.';
     for (unsigned i = res.len_ + 5; i >= res.len_; --i) {
@@ -258,12 +256,11 @@ constexpr bool is_power_of_10(T x) noexcept {
  *
  * @return floating-point @p dur in seconds as string
  */
-template <
-    class Rep, class Period,
-    size_t N = decltype(to_string(std::declval<Rep>()))::max_size() +
-        3> // +3 for sign, terminating null and decimal point
-constexpr StaticCStringBuff<N>
-to_string(const std::chrono::duration<Rep, Period>& dur, bool trim_zeros = true) noexcept {
+template <class Rep, class Period,
+        size_t N = decltype(to_string(std::declval<Rep>()))::max_size() +
+                3> // +3 for sign, terminating null and decimal point
+constexpr StaticCStringBuff<N> to_string(
+        const std::chrono::duration<Rep, Period>& dur, bool trim_zeros = true) noexcept {
     static_assert(Period::num == 1, "Needed below");
     static_assert(is_power_of_10(Period::den), "Needed below");
     auto dec_dur = std::chrono::duration_cast<std::chrono::duration<intmax_t>>(dur);

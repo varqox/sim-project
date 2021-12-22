@@ -54,10 +54,9 @@ TemporaryDirectory& TemporaryDirectory::operator=(TemporaryDirectory&& td) {
 TemporaryDirectory::~TemporaryDirectory() {
 #ifdef DEBUG
     if (exists() && remove_r(path_) == -1) {
-        errlog(
-            "Error: remove_r()",
-            errmsg()); // We cannot throw because throwing from the
-                       // destructor is (may be) UB
+        errlog("Error: remove_r()",
+                errmsg()); // We cannot throw because throwing from the
+                           // destructor is (may be) UB
     }
 #else
     if (exists()) {

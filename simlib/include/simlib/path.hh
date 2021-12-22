@@ -22,7 +22,7 @@ std::string path_absolute(StringView path, std::string curr_dir = "/");
 template <class T>
 constexpr auto path_filename(T&& path) noexcept {
     using RetType =
-        std::conditional_t<std::is_convertible_v<T, CStringView>, CStringView, StringView>;
+            std::conditional_t<std::is_convertible_v<T, CStringView>, CStringView, StringView>;
     RetType path_str(std::forward<T>(path));
     auto pos = path_str.rfind('/');
     return path_str.substr(pos == path_str.npos ? 0 : pos + 1);
@@ -32,7 +32,7 @@ constexpr auto path_filename(T&& path) noexcept {
 template <class T>
 constexpr auto path_extension(T&& path) noexcept {
     using RetType =
-        std::conditional_t<std::is_convertible_v<T, CStringView>, CStringView, StringView>;
+            std::conditional_t<std::is_convertible_v<T, CStringView>, CStringView, StringView>;
 
     RetType path_str(std::forward<T>(path));
     size_t start_pos = path_str.rfind('/');
@@ -81,5 +81,5 @@ constexpr inline StringView path_dirpath(const StringView& path) noexcept {
  *     "/a/x/y/"
  *     "/x/y/"
  */
-std::optional<std::string>
-deepest_ancestor_dir_with_subpath(std::string path, StringView subpath);
+std::optional<std::string> deepest_ancestor_dir_with_subpath(
+        std::string path, StringView subpath);

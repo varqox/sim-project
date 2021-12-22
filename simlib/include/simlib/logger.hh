@@ -99,8 +99,8 @@ public:
         }
 
         /// Deeply integrated with flush() and flush_no_nl()
-        void
-        flush_impl(const char* format1, const char* format2, const char* format3) noexcept;
+        void flush_impl(
+                const char* format1, const char* format2, const char* format3) noexcept;
 
     public:
         Appender(const Appender&) = delete;
