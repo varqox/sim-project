@@ -27,4 +27,6 @@ http::Response sign_out(web_worker::Context& ctx);
 
 http::Response add(web_worker::Context& ctx);
 
+http::Response edit(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
+
 } // namespace web_server::users::api

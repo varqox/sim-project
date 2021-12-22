@@ -428,6 +428,10 @@ function Select(name, required) {
 		}
 		return option;
 	}
+
+	self.disable = () => {
+		select_elem.disabled = true;
+	}
 }
 
 /**
@@ -1131,22 +1135,25 @@ async function edit_user(user_id) {
 	const view = new View(url_user_edit(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
 	const form = new AjaxForm('Edit user', url_api_user_edit(user.id));
-	form.append_input_text('username', 'Username', user.username, 24, true, true).readOnly = !user.capabilities.edit_username;
 
 	const select = form.append_select('type', 'Type', true);
+	if (!user.capabilities.change_type) {
+		select.disable();
+	}
 	if (user.capabilities.make_admin || user.type === 'admin') {
-		select.add_option('Admin', 'A', user.type === 'admin');
+		select.add_option('Admin', 'admin', user.type === 'admin');
 	}
 	if (user.capabilities.make_teacher || user.type === 'teacher') {
-		select.add_option('Teacher', 'T', user.type === 'teacher');
+		select.add_option('Teacher', 'teacher', user.type === 'teacher');
 	}
 	if (user.capabilities.make_normal || user.type === 'normal') {
-		select.add_option('Normal', 'N', user.type === 'normal');
+		select.add_option('Normal', 'normal', user.type === 'normal');
 	}
 
-	form.append_input_text('first_name', 'First name', user.first_name, 24, true, true).readOnly = !user.capabilities.edit_first_name;
-	form.append_input_text('last_name', 'Last name', user.last_name, 24, true, true).readOnly = !user.capabilities.edit_last_name;
-	form.append_input_email('email', 'Email', user.email, 24, true, true).readOnly = !user.capabilities.edit_email;
+	form.append_input_text('username', 'Username', user.username, 24, true, true).disabled = !user.capabilities.edit_username;
+	form.append_input_text('first_name', 'First name', user.first_name, 24, true, true).disabled = !user.capabilities.edit_first_name;
+	form.append_input_text('last_name', 'Last name', user.last_name, 24, true, true).disabled = !user.capabilities.edit_last_name;
+	form.append_input_email('email', 'Email', user.email, 24, true, true).disabled = !user.capabilities.edit_email;
 	form.append_submit_button('Update', 'blue');
 	form.attach_to(view.content_elem);
 }

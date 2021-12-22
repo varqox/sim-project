@@ -13,6 +13,7 @@ struct User {
     bool edit_email : 1;
     bool change_password : 1;
     bool change_password_without_old_password : 1;
+    bool change_type : 1;
     bool make_admin : 1;
     bool make_teacher : 1;
     bool make_normal : 1;

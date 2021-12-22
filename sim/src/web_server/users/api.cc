@@ -147,6 +147,7 @@ Response view(Context& ctx, decltype(User::id) user_id) {
         obj.prop("change_password", caps.change_password);
         obj.prop(
             "change_password_without_old_password", caps.change_password_without_old_password);
+        obj.prop("change_type", caps.change_type);
         obj.prop("make_admin", caps.make_admin);
         obj.prop("make_teacher", caps.make_teacher);
         obj.prop("make_normal", caps.make_normal);
@@ -287,6 +288,33 @@ http::Response add(web_worker::Context& ctx) {
     stdlog("New user: {id: ", user_id, ", username: ", json_stringify(username), '}');
 
     return ctx.response_ok(intentional_unsafe_cstring_view(to_string(user_id)));
+}
+
+http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user_for(ctx.session, user_id);
+    if (not caps.edit) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (type, params::type, ALLOWED_ONLY_IF_ENUM_CAPS(caps.change_type,
+            (ADMIN, caps.make_admin)
+            (TEACHER, caps.make_teacher)
+            (NORMAL, caps.make_normal)
+        ))
+        (username, params::username, ALLOWED_ONLY_IF(caps.edit_username))
+        (first_name, params::first_name, ALLOWED_ONLY_IF(caps.edit_first_name))
+        (last_name, params::last_name, ALLOWED_ONLY_IF(caps.edit_last_name))
+        (email, params::email, ALLOWED_ONLY_IF(caps.edit_email))
+    );
+
+    auto stmt = ctx.mysql.prepare(
+        "UPDATE users SET type=COALESCE(?, type), username=COALESCE(?, username), "
+        "first_name=COALESCE(?, first_name), last_name=COALESCE(?, last_name), "
+        "email=COALESCE(?, email) WHERE id=?");
+    stmt.bind_and_execute(type, username, first_name, last_name, email, user_id);
+
+    return ctx.response_ok();
 }
 
 } // namespace web_server::users::api

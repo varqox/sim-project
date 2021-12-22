@@ -144,8 +144,6 @@ class Sim final {
     // users_api.cc
     void api_user();
 
-    void api_user_edit();
-
     void api_user_delete();
 
     void api_user_merge_into_another();

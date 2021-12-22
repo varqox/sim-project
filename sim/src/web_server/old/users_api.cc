@@ -12,10 +12,8 @@
 #include <limits>
 #include <type_traits>
 
-using sim::is_username;
 using sim::jobs::Job;
 using sim::users::User;
-using std::array;
 using std::string;
 
 namespace web_server::old {
@@ -43,9 +41,6 @@ void Sim::api_user() {
     }
 
     next_arg = url_args.extract_next_arg();
-    if (next_arg == "edit") {
-        return api_user_edit();
-    }
     if (next_arg == "delete") {
         return api_user_delete();
     }
@@ -56,85 +51,6 @@ void Sim::api_user() {
         return api_user_change_password();
     }
     return api_error404();
-}
-
-void Sim::api_user_edit() {
-    STACK_UNWINDING_MARK;
-    using PERM = UserPermissions;
-
-    if (uint(~users_perms & PERM::EDIT)) {
-        return api_error403();
-    }
-
-    // TODO: this looks very similar to the above validation
-    StringView username;
-    StringView fname;
-    StringView lname;
-    StringView email;
-    // Validate fields
-    form_validate_not_blank(
-        username, "username", "Username", is_username,
-        "Username can only consist of characters [a-zA-Z0-9_-]",
-        decltype(User::username)::max_len);
-
-    // Validate user type
-    auto new_utype_str = request.form_fields.get("type");
-    decltype(User::type) new_utype = User::Type::NORMAL;
-    if (new_utype_str == "A") {
-        new_utype = User::Type::ADMIN;
-        if (uint(~users_perms & PERM::MAKE_ADMIN)) {
-            add_notification("error", "You have no permissions to make this user an admin");
-        }
-    } else if (new_utype_str == "T") {
-        new_utype = User::Type::TEACHER;
-        if (uint(~users_perms & PERM::MAKE_TEACHER)) {
-            add_notification("error", "You have no permissions to make this user a teacher");
-        }
-    } else if (new_utype_str == "N") {
-        new_utype = User::Type::NORMAL;
-        if (uint(~users_perms & PERM::MAKE_NORMAL)) {
-            add_notification(
-                "error", "You have no permissions to make this user a normal user");
-        }
-    } else {
-        add_notification("error", "Invalid user's type");
-    }
-
-    form_validate_not_blank(
-        fname, "first_name", "First Name", decltype(User::first_name)::max_len);
-
-    form_validate_not_blank(
-        lname, "last_name", "Last Name", decltype(User::last_name)::max_len);
-
-    form_validate_not_blank(email, "email", "Email", decltype(User::email)::max_len);
-
-    if (notifications.size) {
-        return api_error400(notifications);
-    }
-
-    auto transaction = mysql.start_transaction();
-
-    auto stmt = mysql.prepare("SELECT 1 FROM users WHERE username=? AND id!=?");
-    stmt.bind_and_execute(username, users_uid);
-    if (stmt.next()) {
-        return api_error400("Username is already taken");
-    }
-
-    // If username changes, remove other sessions (for security reasons)
-    stmt = mysql.prepare("SELECT 1 FROM users WHERE username=? AND id=?");
-    stmt.bind_and_execute(username, users_uid);
-    if (not stmt.next()) {
-        mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
-            .bind_and_execute(users_uid, session->id);
-    }
-
-    mysql
-        .prepare("UPDATE IGNORE users "
-                 "SET username=?, first_name=?, last_name=?, email=?, type=? "
-                 "WHERE id=?")
-        .bind_and_execute(username, fname, lname, email, new_utype, users_uid);
-
-    transaction.commit();
 }
 
 void Sim::api_user_change_password() {

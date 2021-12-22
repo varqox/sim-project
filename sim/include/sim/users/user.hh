@@ -24,7 +24,7 @@ struct User {
         });
     };
     static const inline char is_username_description[] =
-        "can only consist of characters [a-zA-Z0-9_-]";
+        "a string consisting only of the characters [a-zA-Z0-9_-]";
 
     uint64_t id;
     EnumVal<Type> type;
