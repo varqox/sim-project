@@ -53,32 +53,33 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 
 timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
     return std::visit(overloaded{[](const WithoutTimeout& /*unused*/) {
-        return timespec{0, 0};
+                                     return timespec{0, 0};
                                  },
                               [&](WithTimeout& state) {
-        if (not state.timer_is_active) {
-            return timespec{0, 0};
-        }
-        state.timer_is_active = false;
-        // Disarm timer and check if it has
-        // expired
-        itimerspec new_its{{0, 0}, {0, 0}};
-        itimerspec old_its{};
-        int rc = timer_settime(state.timer_id, 0, &new_its, &old_its);
-        assert(rc == 0);
-        if (old_its.it_value == timespec{0, 0}) {
-            // timer is already disarmed => the
-            // signal handler was / is about to
-            // run => wait for it
-            while (not timeout_signal_was_sent()) {
-                pause();
-            }
-        }
+                                  if (not state.timer_is_active) {
+                                      return timespec{0, 0};
+                                  }
+                                  state.timer_is_active = false;
+                                  // Disarm timer and check if it has
+                                  // expired
+                                  itimerspec new_its{{0, 0}, {0, 0}};
+                                  itimerspec old_its{};
+                                  int rc =
+                                          timer_settime(state.timer_id, 0, &new_its, &old_its);
+                                  assert(rc == 0);
+                                  if (old_its.it_value == timespec{0, 0}) {
+                                      // timer is already disarmed => the
+                                      // signal handler was / is about to
+                                      // run => wait for it
+                                      while (not timeout_signal_was_sent()) {
+                                          pause();
+                                      }
+                                  }
 
-        rc = timer_delete(state.timer_id);
-        assert(rc == 0);
-        return old_its.it_value;
-    }},
+                                  rc = timer_delete(state.timer_id);
+                                  assert(rc == 0);
+                                  return old_its.it_value;
+                              }},
             state_);
 }
 
@@ -107,8 +108,8 @@ Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
 
     auto& state = std::get<WithTimeout>(state_);
     // It is OK to use static, since the class and constructor is not a template
-    static constexpr auto timeout_handler =
-            [](int /*unused*/, siginfo_t* si, void* /*unused*/) noexcept {
+    static constexpr auto timeout_handler = [](int /*unused*/, siginfo_t* si,
+                                                    void* /*unused*/) noexcept {
         if (si->si_code != SI_TIMER) {
             return; // Ignore other signals
         }
@@ -152,16 +153,19 @@ Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
 }
 
 std::chrono::nanoseconds Spawner::Timer::deactivate_and_get_runtime() noexcept {
-    return std::visit(overloaded{[&](const WithoutTimeout& state) {
-        timespec curr_clock_time{};
-        int rc = clock_gettime(clock_id_, &curr_clock_time);
-        assert(rc == 0);
-        return to_nanoseconds(curr_clock_time - state.start_clock_time);
-                                 },
-                              [&](WithTimeout& state) {
-        assert(state.timer_is_active and "You can call this function only once");
-        return to_nanoseconds(state.time_limit - delete_timer_and_get_remaning_time());
-    }},
+    return std::visit(
+            overloaded{[&](const WithoutTimeout& state) {
+                           timespec curr_clock_time{};
+                           int rc = clock_gettime(clock_id_, &curr_clock_time);
+                           assert(rc == 0);
+                           return to_nanoseconds(curr_clock_time - state.start_clock_time);
+                       },
+                    [&](WithTimeout& state) {
+                        assert(state.timer_is_active and
+                                "You can call this function only once");
+                        return to_nanoseconds(
+                                state.time_limit - delete_timer_and_get_remaning_time());
+                    }},
             state_);
 }
 
@@ -400,18 +404,18 @@ void Spawner::run_child(FilePath exec, const std::vector<std::string>& exec_args
         for_each_dir_component(
                 dir,
                 [&](dirent* file) {
-            auto filename = str2num<int>(file->d_name);
-            if (filename) {
-                for (int fd_no : permitted_fds) {
-                    if (*filename == fd_no) {
-                        return;
+                    auto filename = str2num<int>(file->d_name);
+                    if (filename) {
+                        for (int fd_no : permitted_fds) {
+                            if (*filename == fd_no) {
+                                return;
+                            }
+                        }
                     }
-                }
-            }
 
-            if (auto opt = str2num<int>(file->d_name); opt) {
-                close(*opt);
-            }
+                    if (auto opt = str2num<int>(file->d_name); opt) {
+                        close(*opt);
+                    }
                 },
                 [&] { send_error_and_exit(errno, "readdir()"); });
     }

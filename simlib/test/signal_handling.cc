@@ -31,8 +31,8 @@ TEST(handle_signals_while_running_DeathTest, two_signals_one_signaled) {
                     eputs("beg");
                     handle_signals_while_running(
                             [&] {
-                eputs(",main");
-                kill(getpid(), signum);
+                                eputs(",main");
+                                kill(getpid(), signum);
                             },
                             [](int) { eputs(",sig"); }, SIGINT, SIGTERM);
                     eputs(",end");
@@ -49,8 +49,8 @@ TEST(handle_signals_while_running_DeathTest, signaled_unhandled_signal) {
                 eputs("beg");
                 handle_signals_while_running(
                         [] {
-            eputs(",main");
-            kill(getpid(), SIGQUIT);
+                            eputs(",main");
+                            kill(getpid(), SIGQUIT);
                         },
                         [](int) { eputs(",sig"); }, SIGINT, SIGTERM);
                 eputs(",end");
@@ -66,9 +66,9 @@ TEST(handle_signals_while_running_DeathTest, try_to_run_two_times_simultaneously
                 eputs("beg");
                 handle_signals_while_running(
                         [] {
-            eputs(",main@");
-            handle_signals_while_running(
-                    [] { eputs(",main2"); }, [](int) { eputs(",sig2"); }, SIGQUIT);
+                            eputs(",main@");
+                            handle_signals_while_running([] { eputs(",main2"); },
+                                    [](int) { eputs(",sig2"); }, SIGQUIT);
                         },
                         [](int) { eputs(",sig"); }, SIGINT, SIGTERM);
                 eputs(",end");
@@ -102,8 +102,8 @@ TEST(handle_signals_while_running_DeathTest, two_times_one_after_another_first_s
                 eputs("beg");
                 handle_signals_while_running(
                         [] {
-            eputs(",main1");
-            kill(getpid(), SIGTERM);
+                            eputs(",main1");
+                            kill(getpid(), SIGTERM);
                         },
                         [](int) { eputs(",sig1"); }, SIGINT, SIGTERM);
                 eputs(",mid");
@@ -125,8 +125,8 @@ TEST(handle_signals_while_running_DeathTest, two_times_one_after_another_second_
                 eputs(",mid");
                 handle_signals_while_running(
                         [] {
-            eputs(",main2");
-            kill(getpid(), SIGTERM);
+                            eputs(",main2");
+                            kill(getpid(), SIGTERM);
                         },
                         [](int) { eputs(",sig2"); }, SIGINT, SIGTERM);
                 eputs(",end");
@@ -143,8 +143,8 @@ TEST(handle_signals_while_running_DeathTest, function_throws_exception) {
                 try {
                     handle_signals_while_running(
                             [] {
-                eputs(",main");
-                throw 42; // NOLINT(hicpp-exception-baseclass)
+                                eputs(",main");
+                                throw 42; // NOLINT(hicpp-exception-baseclass)
                             },
                             [](int) { eputs(",sig"); }, SIGINT, SIGTERM);
                 } catch (int x) {
@@ -165,15 +165,15 @@ TEST(handle_signals_while_running_DeathTest, function_returns_before_signal_gets
                 concurrent::Semaphore sem(0);
                 handle_signals_while_running(
                         [&] {
-            Defer poster = [&] { sem.post(); };
-            kill(getpid(), SIGUSR1);
-            eputs(",main");
+                            Defer poster = [&] { sem.post(); };
+                            kill(getpid(), SIGUSR1);
+                            eputs(",main");
                         },
                         [&](int) {
-            sem.wait();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            eputs(",sig");
-                },
+                            sem.wait();
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                            eputs(",sig");
+                        },
                         SIGUSR1, SIGUSR2);
                 eputs(",end");
                 exit(0);
@@ -189,9 +189,9 @@ TEST(handle_signals_while_running_DeathTest, signal_with_function_that_does_not_
                 eputs("beg");
                 handle_signals_while_running(
                         [] {
-            eputs(",main");
-            kill(getpid(), SIGUSR2);
-            std::this_thread::sleep_for(std::chrono::seconds(4));
+                            eputs(",main");
+                            kill(getpid(), SIGUSR2);
+                            std::this_thread::sleep_for(std::chrono::seconds(4));
                         },
                         [](int) { eputs(",sig"); }, SIGUSR1, SIGUSR2);
                 eputs(",end");

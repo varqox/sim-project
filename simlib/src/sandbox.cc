@@ -485,16 +485,16 @@ Sandbox::Sandbox()
         // without any syscall)
         seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(add_callback(
                                           [&] {
-            update_tracee_vm_peak();
-            return false;
+                                              update_tracee_vm_peak();
+                                              return false;
                                           },
                                           "exit")),
                 SCMP_SYS(exit), 0);
 
         seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(add_callback(
                                           [&] {
-            update_tracee_vm_peak();
-            return false;
+                                              update_tracee_vm_peak();
+                                              return false;
                                           },
                                           "exit_group")),
                 SCMP_SYS(exit_group), 0);
@@ -579,8 +579,8 @@ Sandbox::Sandbox()
             return false;
         };
 
-        static auto check_openat_syscall =
-                [](pid_t tracee_pid, auto& regs, const vector<AllowedFile>& allowed_files) {
+        static auto check_openat_syscall = [](pid_t tracee_pid, auto& regs,
+                                                   const vector<AllowedFile>& allowed_files) {
             // Currently opening at directory fd other than AT_FDCWD is not
             // allowed
             if (static_cast<int>(regs.arg1()) != AT_FDCWD) {
@@ -600,9 +600,9 @@ Sandbox::Sandbox()
         seccomp_rule_add_throw(x86_ctx_,
                 SCMP_ACT_TRACE(add_callback(
                         [&] {
-            X86SyscallRegisters regs(tracee_pid_);
-            return check_opening_syscall(tracee_pid_, regs, regs.syscall(), regs.res(),
-                    regs.arg1(), regs.arg2(), *allowed_files_);
+                            X86SyscallRegisters regs(tracee_pid_);
+                            return check_opening_syscall(tracee_pid_, regs, regs.syscall(),
+                                    regs.res(), regs.arg1(), regs.arg2(), *allowed_files_);
                         },
                         "open")),
                 SCMP_SYS(open), 0);
@@ -611,9 +611,9 @@ Sandbox::Sandbox()
         seccomp_rule_add_throw(x86_64_ctx_,
                 SCMP_ACT_TRACE(add_callback(
                         [&] {
-            X86_64SyscallRegisters regs(tracee_pid_);
-            return check_opening_syscall(tracee_pid_, regs, regs.syscall(), regs.res(),
-                    regs.arg1(), regs.arg2(), *allowed_files_);
+                            X86_64SyscallRegisters regs(tracee_pid_);
+                            return check_opening_syscall(tracee_pid_, regs, regs.syscall(),
+                                    regs.res(), regs.arg1(), regs.arg2(), *allowed_files_);
                         },
                         "open")),
                 SCMP_SYS(open), 0);
@@ -622,8 +622,8 @@ Sandbox::Sandbox()
         seccomp_rule_add_throw(x86_ctx_,
                 SCMP_ACT_TRACE(add_callback(
                         [&] {
-            X86SyscallRegisters regs(tracee_pid_);
-            return check_openat_syscall(tracee_pid_, regs, *allowed_files_);
+                            X86SyscallRegisters regs(tracee_pid_);
+                            return check_openat_syscall(tracee_pid_, regs, *allowed_files_);
                         },
                         "openat")),
                 SCMP_SYS(openat), 0);
@@ -632,8 +632,8 @@ Sandbox::Sandbox()
         seccomp_rule_add_throw(x86_64_ctx_,
                 SCMP_ACT_TRACE(add_callback(
                         [&] {
-            X86_64SyscallRegisters regs(tracee_pid_);
-            return check_openat_syscall(tracee_pid_, regs, *allowed_files_);
+                            X86_64SyscallRegisters regs(tracee_pid_);
+                            return check_openat_syscall(tracee_pid_, regs, *allowed_files_);
                         },
                         "openat")),
                 SCMP_SYS(openat), 0);

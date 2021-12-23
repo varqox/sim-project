@@ -153,7 +153,7 @@ public:
             };
             (void)append_impl; // Fix GCC warning
             (append_impl(std::forward<decltype(str)>(str)), ...);
-                }(stringify(std::forward<Args>(args))...);
+        }(stringify(std::forward<Args>(args))...);
         return *this;
     }
 };

@@ -47,7 +47,7 @@ TEST(FilePath, constructor_from_string) {
         [&](FilePath y) {
             EXPECT_EQ(y.size(), str.size());
             EXPECT_EQ(y.data(), str);
-                }(string(arg));
+        }(string(arg));
     };
 
     test("abc");
@@ -67,7 +67,7 @@ TEST(FilePath, constructor_from_inplace_buff) {
         [&](FilePath y) {
             EXPECT_EQ(y.size(), str.size());
             EXPECT_EQ(y.data(), str);
-                }(InplaceBuff<16>(arg));
+        }(InplaceBuff<16>(arg));
     };
 
     test("abc");

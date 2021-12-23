@@ -116,9 +116,8 @@ public:
         if constexpr (not std::is_invocable_r_v<void, Handler, FileEvent>) {
             STACK_UNWINDING_MARK;
             return add_file_handler(fd, events,
-                    [handler = std::forward<Handler>(handler)](FileEvent /*unused*/) mutable {
-                handler();
-            });
+                    [handler = std::forward<Handler>(handler)](
+                            FileEvent /*unused*/) mutable { handler(); });
 
         } else {
             auto handler_id = new_handler_id();

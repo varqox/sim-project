@@ -101,8 +101,8 @@ static int remove_rat_impl(int dirfd, FilePath path) noexcept {
                 return continue_repeating;
             },
             [&] {
-        ec = errno;
-        rc = -1;
+                ec = errno;
+                rc = -1;
             });
 
     (void)closedir(dir);
@@ -155,8 +155,8 @@ int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
                 return continue_repeating;
             },
             [&] {
-        ec = errno;
-        rc = -1;
+                ec = errno;
+                rc = -1;
             });
 
     (void)closedir(dir);
@@ -419,8 +419,8 @@ static int copy_rat_impl(int src_dirfd, FilePath src, int dest_dirfd, FilePath d
                 return continue_repeating;
             },
             [&] {
-        ec = errno;
-        rc = -1;
+                ec = errno;
+                rc = -1;
             });
 
     closedir(src_dir);

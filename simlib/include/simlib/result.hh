@@ -97,11 +97,11 @@ template <class T, class E, class X>
 constexpr bool operator==(const Result<T, E>& r, const Ok<X>& x) {
     return std::visit(
             [&](const auto& a) {
-        if constexpr (std::is_same_v<decltype(a), const Ok<T>&>) {
-            return a == x;
-        } else {
-            return false;
-        }
+                if constexpr (std::is_same_v<decltype(a), const Ok<T>&>) {
+                    return a == x;
+                } else {
+                    return false;
+                }
             },
             r);
 }
@@ -109,11 +109,11 @@ template <class T, class E, class X>
 constexpr bool operator==(const Result<T, E>& r, const Err<X>& x) {
     return std::visit(
             [&](const auto& a) {
-        if constexpr (std::is_same_v<decltype(a), const Err<E>&>) {
-            return a == x;
-        } else {
-            return false;
-        }
+                if constexpr (std::is_same_v<decltype(a), const Err<E>&>) {
+                    return a == x;
+                } else {
+                    return false;
+                }
             },
             r);
 }

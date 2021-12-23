@@ -490,7 +490,7 @@ public:
                                     // make bind_all() think that all arguments
                                     // are references
             execute();
-                }(transform_arg(std::forward<Args>(args))...);
+        }(transform_arg(std::forward<Args>(args))...);
         (void)transform_arg; // Disable GCC warning
     }
 
@@ -853,8 +853,8 @@ public:
         try {
             call_and_try_reconnecting_on_error_impl(
                     [&] {
-                (void)mysql_stmt_close(stmt);
-                stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+                        (void)mysql_stmt_close(stmt);
+                        stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
                     },
                     [&] { return mysql_stmt_error(stmt); }, mysql_stmt_prepare, stmt,
                     sql_str.data(), sql_str.size);

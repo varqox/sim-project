@@ -85,21 +85,21 @@ void update_add_file_to_zip(
 
     return update_add_file_to_zip_impl(
             [&](decltype(get_cwd())& cwd, FilePath dest_file) {
-        if (new_filename.back() != '/') {
-            throw_assert(filename.size() > 0);
-            // Make filename absolute
-            if (filename[0] != '/') {
-                cwd = get_cwd();
-                auto old_size = cwd.size;
-                cwd.append(filename);
-                filename = cwd;
-                cwd.size = old_size; // Restore cwd to contain only CWD
-            }
+                if (new_filename.back() != '/') {
+                    throw_assert(filename.size() > 0);
+                    // Make filename absolute
+                    if (filename[0] != '/') {
+                        cwd = get_cwd();
+                        auto old_size = cwd.size;
+                        cwd.append(filename);
+                        filename = cwd;
+                        cwd.size = old_size; // Restore cwd to contain only CWD
+                    }
 
-            if (symlink(filename, dest_file)) {
-                THROW("symlink() failed", errmsg());
-            }
-        }
+                    if (symlink(filename, dest_file)) {
+                        THROW("symlink() failed", errmsg());
+                    }
+                }
             },
             new_filename, zip_filename);
 }
@@ -109,9 +109,9 @@ void update_add_data_to_zip(
     throw_assert(!new_filename.empty());
     return update_add_file_to_zip_impl(
             [&](decltype(get_cwd())& /*unused*/, FilePath dest_file) {
-        if (CStringView(dest_file).back() != '/') { // Dest file is a directory
-            put_file_contents(dest_file, data);
-        }
+                if (CStringView(dest_file).back() != '/') { // Dest file is a directory
+                    put_file_contents(dest_file, data);
+                }
             },
             new_filename, zip_filename);
 }

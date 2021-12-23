@@ -931,11 +931,11 @@ TEST(EventQueue, adding_new_file_handlers_after_removing_old_ones) {
         constexpr auto handlers_to_add = 10;
         eq.add_ready_handler([&] {
             for (int j = 0; j < handlers_to_add; ++j) {
-                auto hid = eq.add_file_handler(fd, FileEvent::READABLE,
-                        [&eq, &iters, &hids, idx = hids.size()] {
-                    ++iters[idx];
-                    eq.remove_handler(hids[idx]);
-                });
+                auto hid = eq.add_file_handler(
+                        fd, FileEvent::READABLE, [&eq, &iters, &hids, idx = hids.size()] {
+                            ++iters[idx];
+                            eq.remove_handler(hids[idx]);
+                        });
 
                 hids.emplace_back(hid);
                 iters.emplace_back(0);

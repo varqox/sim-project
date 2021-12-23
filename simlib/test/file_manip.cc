@@ -307,8 +307,8 @@ TEST(file_manip, copy_r) {
         return res;
     };
 
-    auto check_equality =
-            [&](const vector<FileInfo>& fir, const vector<FileInfo>& sec, size_t line) {
+    auto check_equality = [&](const vector<FileInfo>& fir, const vector<FileInfo>& sec,
+                                  size_t line) {
         size_t len = max(fir.size(), sec.size());
         for (size_t i = 0; i < len; ++i) {
             if (i < fir.size() and i < sec.size()) {

@@ -399,25 +399,26 @@ public:
             foreach_handler(pref_map,
                     [&, &pref_map = pref_map](
                             StringView pref_a, StringView suff_a, StringView url_a) {
-                // Single url_pattern with two handlers is also a collision
-                if (std::exchange(prev_url_a, url_a) == url_a) {
-                    debuglog("collision: ", url_a, ' ', url_a);
-                    res.emplace_back(url_a, url_a);
-                }
+                        // Single url_pattern with two handlers is also a collision
+                        if (std::exchange(prev_url_a, url_a) == url_a) {
+                            debuglog("collision: ", url_a, ' ', url_a);
+                            res.emplace_back(url_a, url_a);
+                        }
 
-                foreach_handler(pref_map,
-                        [&](StringView pref_b, StringView suff_b, StringView url_b) {
-                    // Consider each pair only once and skip pairs of the form (x, x)
-                    if (url_a.data() >= url_b.data()) {
-                        return;
-                    }
-                    if (unordered_has_prefix(pref_a, pref_b) and
-                            unordered_has_suffix(suff_a, suff_b)) {
-                        debuglog("collision: ", url_a, ' ', url_b);
-                        res.emplace_back(url_a, url_b);
-                    }
-                });
-            });
+                        foreach_handler(pref_map,
+                                [&](StringView pref_b, StringView suff_b, StringView url_b) {
+                                    // Consider each pair only once and skip pairs of the form
+                                    // (x, x)
+                                    if (url_a.data() >= url_b.data()) {
+                                        return;
+                                    }
+                                    if (unordered_has_prefix(pref_a, pref_b) and
+                                            unordered_has_suffix(suff_a, suff_b)) {
+                                        debuglog("collision: ", url_a, ' ', url_b);
+                                        res.emplace_back(url_a, url_b);
+                                    }
+                                });
+                    });
         }
         return res;
     }
