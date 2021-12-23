@@ -227,8 +227,7 @@ Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
 
     // If something went wrong
     if (si.si_code != CLD_STOPPED) {
-        return ExitStat(
-                0ns, 0ns, si.si_code, si.si_status, ru, 0, receive_error_message(si, pfd[0]));
+        return {0ns, 0ns, si.si_code, si.si_status, ru, 0, receive_error_message(si, pfd[0])};
     }
 
     // Useful when exception is thrown
@@ -260,11 +259,11 @@ Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
     syscalls::waitid(P_PID, cpid, &si, WEXITED, &ru);
 
     if (si.si_code != CLD_EXITED or si.si_status != 0) {
-        return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru, 0,
-                receive_error_message(si, pfd[0]));
+        return {runtime, cpu_runtime, si.si_code, si.si_status, ru, 0,
+                receive_error_message(si, pfd[0])};
     }
 
-    return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru, 0);
+    return {runtime, cpu_runtime, si.si_code, si.si_status, ru, 0};
 }
 
 void Spawner::run_child(FilePath exec, const std::vector<std::string>& exec_args,

@@ -32,13 +32,13 @@ string executable_path(pid_t pid) {
             THROW("Failed: readlink('", path, "')", errmsg());
         }
 
-        return string(buff2.data(), rc);
+        return {buff2.data(), static_cast<size_t>(rc)};
     }
     if (rc == -1) {
         THROW("Failed: readlink('", path, "')", errmsg());
     }
 
-    return string(buff.data(), rc);
+    return {buff.data(), static_cast<size_t>(rc)};
 }
 
 vector<pid_t> find_processes_by_executable_path(vector<string> exec_set, bool include_me) {
@@ -69,7 +69,7 @@ vector<pid_t> find_processes_by_executable_path(vector<string> exec_set, bool in
     // Process with deleted exec will have " (deleted)" suffix in result of
     // readlink(2)
     size_t buff_size = 0;
-    for (int i = 0, n = exec_set.size(); i < n; ++i) {
+    for (size_t i = 0, n = exec_set.size(); i < n; ++i) {
         string deleted = concat_tostr(exec_set[i], " (deleted)");
         buff_size = std::max(buff_size, deleted.size());
         exec_set.emplace_back(std::move(deleted));
@@ -156,7 +156,7 @@ void kill_processes_by_exec(vector<string> exec_set, optional<duration<double>> 
     auto current_uptime = to_string(
             str2num<double>(StringView(proc_uptime).extract_leading(not_fn(is_space<char>)))
                             .value() *
-                    ticks_per_second,
+                    static_cast<double>(ticks_per_second),
             0);
 
     // If one of the processes has just appeared, wait for a clock tick

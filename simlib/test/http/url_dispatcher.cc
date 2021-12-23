@@ -24,7 +24,7 @@ TEST(http, UrlParser) {
     using http::UrlParser;
     static constexpr char url[] = "/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}";
     static_assert(UrlParser<url, is_xyz>::literal_prefix == "/");
-    static_assert(UrlParser<url, is_xyz>::literal_suffix == "");
+    static_assert(UrlParser<url, is_xyz>::literal_suffix.empty());
     // Parsing
     static_assert(UrlParser<url, is_xyz>::try_parse("/-8/abcxyz/42/hohyha/7/xyz") ==
             std::tuple(-8, 42, "hohyha", 7, std::tuple()));
@@ -35,7 +35,7 @@ TEST(http, UrlParser) {
     // Prefixes and suffixes
     static constexpr char url1[] = "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}";
     static_assert(UrlParser<url1, is_xyz>::literal_prefix == "/a/bc/def/hijk/");
-    static_assert(UrlParser<url1, is_xyz>::literal_suffix == "");
+    static_assert(UrlParser<url1, is_xyz>::literal_suffix.empty());
     static constexpr char url2[] =
             "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}/";
     static_assert(UrlParser<url2, is_xyz>::literal_prefix == "/a/bc/def/hijk/");

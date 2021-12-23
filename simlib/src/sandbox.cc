@@ -283,8 +283,9 @@ inline auto syscall_callback_lambda(Func&& f DEBUG_SANDBOX(, StringView callback
             std::forward<Func>(f) DEBUG_SANDBOX(, callback_name));
 }
 
-Sandbox::Sandbox() {
-    x86_ctx_ = seccomp_init(SCMP_ACT_TRAP);
+Sandbox::Sandbox()
+: x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
+
     if (not x86_ctx_) {
         THROW("seccomp_init()", errmsg());
     }
@@ -1030,8 +1031,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec, const std::vector<std::string>& ex
 
     // If something went wrong
     if (si.si_code != CLD_TRAPPED) {
-        return ExitStat(
-                0ns, 0ns, si.si_code, si.si_status, ru, 0, receive_error_message(si, pfd[0]));
+        return {0ns, 0ns, si.si_code, si.si_status, ru, 0, receive_error_message(si, pfd[0])};
     }
 
     // Useful when exception is thrown
@@ -1283,17 +1283,17 @@ Sandbox::ExitStat Sandbox::run(FilePath exec, const std::vector<std::string>& ex
 tracee_died:
     // Message was set
     if (not message_to_set_in_exit_stat_.empty()) {
-        return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru,
-                tracee_vm_peak_ * sysconf(_SC_PAGESIZE), message_to_set_in_exit_stat_);
+        return {runtime, cpu_runtime, si.si_code, si.si_status, ru,
+                tracee_vm_peak_ * sysconf(_SC_PAGESIZE), message_to_set_in_exit_stat_};
     }
 
     // Excited abnormally - probably killed by some signal
     if (si.si_code != CLD_EXITED or si.si_status != 0) {
-        return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru,
-                tracee_vm_peak_ * sysconf(_SC_PAGESIZE), receive_error_message(si, pfd[0]));
+        return {runtime, cpu_runtime, si.si_code, si.si_status, ru,
+                tracee_vm_peak_ * sysconf(_SC_PAGESIZE), receive_error_message(si, pfd[0])};
     }
 
     // Exited normally (maybe with some code != 0)
-    return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru,
-            tracee_vm_peak_ * sysconf(_SC_PAGESIZE));
+    return {runtime, cpu_runtime, si.si_code, si.si_status, ru,
+            tracee_vm_peak_ * sysconf(_SC_PAGESIZE)};
 }

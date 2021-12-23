@@ -160,6 +160,7 @@ static void test_errlog_catch_and_stack_unwinding_mark_ignoring_older_marks() {
     // Earlier stack unwinding marks should not appear in ERRLOG_CATCH()
     leave_stack_unwinding_mark();
 
+    // NOLINTNEXTLINE(readability-simplify-boolean-expr)
     if constexpr (/* DISABLES CODE */ (false)) {
         // Unfortunately, this test cannot be met as there is no way to get
         // information about current exception during stack unwinding

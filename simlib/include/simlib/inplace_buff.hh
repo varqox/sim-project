@@ -171,13 +171,17 @@ public:
 
     constexpr InplaceBuff() noexcept
     : InplaceBuffBase(0, N, nullptr, nullptr) {
-        p_value_when_unallocated_ = a_.data();
+        // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
+        p_value_when_unallocated_ =
+                a_.data(); // a_ is uninitialized in the call to InplaceBuffBase()
         p_ = p_value_when_unallocated_;
     }
 
     constexpr explicit InplaceBuff(size_t n)
     : InplaceBuffBase(n, std::max(N, n), nullptr, nullptr) {
-        p_value_when_unallocated_ = a_.data();
+        // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
+        p_value_when_unallocated_ =
+                a_.data(); // a_ is uninitialized in the call to InplaceBuffBase()
         p_ = (n <= N ? p_value_when_unallocated_ : new char[n]);
     }
 

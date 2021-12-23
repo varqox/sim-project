@@ -78,7 +78,7 @@ public:
 
     [[nodiscard]] constexpr CStringView to_cstr() const noexcept { return {str_, size_}; }
 
-    [[nodiscard]] std::string to_str() const noexcept { return std::string(str_, size_); }
+    [[nodiscard]] std::string to_str() const noexcept { return {str_, size_}; }
 
     [[nodiscard]] constexpr const char* data() const noexcept { return str_; }
 

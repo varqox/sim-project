@@ -21,7 +21,7 @@ string humanize_file_size(uint64_t size) {
         return (size == 1 ? "1 byte" : concat_tostr(size, " bytes"));
     }
 
-    double dsize = size;
+    auto dsize = static_cast<double>(size);
     // KiB
     if (size < MIN_3DIGIT_KIB) {
         return to_string(dsize / MIN_KIB, 1) + " KiB";
@@ -58,5 +58,5 @@ string humanize_file_size(uint64_t size) {
         return to_string(dsize / MIN_PIB, 0) + " PiB";
     }
     // EiB
-    return to_string(dsize / MIN_EIB, 1) + " EiB";
+    return to_string(static_cast<long double>(dsize) / MIN_EIB, 1) + " EiB";
 }

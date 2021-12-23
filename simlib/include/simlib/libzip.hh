@@ -369,29 +369,27 @@ public:
     }
 
     // @p data has to be valid until calling close() (and is not freed)
-    ZipSource source_buffer(const void* data, zip_uint64_t len) {
-        return ZipSource(zip_, data, len);
-    }
+    ZipSource source_buffer(const void* data, zip_uint64_t len) { return {zip_, data, len}; }
 
     // @p str has to be valid until calling close() (and is not freed)
-    ZipSource source_buffer(StringView str) { return ZipSource(zip_, str.data(), str.size()); }
+    ZipSource source_buffer(StringView str) { return {zip_, str.data(), str.size()}; }
 
     // By default whole file (len == -1 means reading till the end of file)
     ZipSource source_file(FilePath fpath, zip_uint64_t start = 0, zip_int64_t len = -1) {
-        return ZipSource(zip_, fpath, start, len);
+        return {zip_, fpath, start, len};
     }
 
     // By default whole file (len == -1 means reading till the end of file)
     // @p file will be closed only on successful close() (as long as I
     // understood the documentation correctly)
     ZipSource source_file(FILE* file, zip_uint64_t start = 0, zip_int64_t len = -1) {
-        return ZipSource(zip_, file, start, len);
+        return {zip_, file, start, len};
     }
 
     // By default whole file (len == -1 means reading till the end of file)
     ZipSource source_zip(ZipFile& src_zip, index_t src_idx, zip_flags_t flags = 0,
             zip_uint64_t start = 0, zip_int64_t len = -1) {
-        return ZipSource(zip_, src_zip, src_idx, flags, start, len);
+        return {zip_, src_zip, static_cast<zip_uint64_t>(src_idx), flags, start, len};
     }
 
     void file_set_compression(index_t index, zip_int32_t method, zip_uint32_t flags) {
