@@ -7,7 +7,7 @@ namespace web_server::capabilities {
 
 Logs logs_for(const decltype(web_worker::Context::session)& session) noexcept {
     return Logs{
-        .view = session and session->user_type == User::Type::ADMIN,
+            .view = session and session->user_type == User::Type::ADMIN,
     };
 }
 

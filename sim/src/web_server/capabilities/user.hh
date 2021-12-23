@@ -21,8 +21,7 @@ struct User {
     bool merge : 1;
 };
 
-User user_for(
-    const decltype(web_worker::Context::session)& session,
-    decltype(sim::users::User::id) id) noexcept;
+User user_for(const decltype(web_worker::Context::session)& session,
+        decltype(sim::users::User::id) id) noexcept;
 
 } // namespace web_server::capabilities

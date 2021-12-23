@@ -25,8 +25,8 @@ Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
     decltype(User::last_name) last_name;
     decltype(User::email) email;
     auto stmt = ctx.mysql.prepare(
-        "SELECT id, type, username, first_name, last_name, email FROM users ", where_str,
-        " ORDER BY id LIMIT ", limit);
+            "SELECT id, type, username, first_name, last_name, email FROM users ", where_str,
+            " ORDER BY id LIMIT ", limit);
     stmt.bind_and_execute();
     stmt.res_bind_all(id, type, username, first_name, last_name, email);
 
@@ -50,9 +50,8 @@ Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
                     obj.prop("edit_last_name", caps.edit_last_name);
                     obj.prop("edit_email", caps.edit_email);
                     obj.prop("change_password", caps.change_password);
-                    obj.prop(
-                        "change_password_without_old_password",
-                        caps.change_password_without_old_password);
+                    obj.prop("change_password_without_old_password",
+                            caps.change_password_without_old_password);
                     obj.prop("make_admin", caps.make_admin);
                     obj.prop("make_teacher", caps.make_teacher);
                     obj.prop("make_normal", caps.make_normal);
@@ -99,15 +98,15 @@ Response list_by_type(Context& ctx, StringView user_type_str) {
     return ctx.response_400("Invalid user type");
 }
 
-Response
-list_by_type_above_id(Context& ctx, StringView user_type_str, decltype(User::id) user_id) {
+Response list_by_type_above_id(
+        Context& ctx, StringView user_type_str, decltype(User::id) user_id) {
     auto caps = capabilities::users_for(ctx.session);
     if (not caps.view_all_by_type) {
         return ctx.response_403();
     }
     if (auto opt = decltype(User::type)::from_str(user_type_str)) {
-        return do_list(
-            ctx, concat("WHERE type=", opt->to_int(), " AND id>", user_id), NEXT_QUERY_LIMIT);
+        return do_list(ctx, concat("WHERE type=", opt->to_int(), " AND id>", user_id),
+                NEXT_QUERY_LIMIT);
     }
     return ctx.response_400("Invalid user type");
 }
@@ -124,7 +123,7 @@ Response view(Context& ctx, decltype(User::id) user_id) {
     decltype(User::email) email;
     decltype(User::type) type;
     auto stmt = ctx.mysql.prepare(
-        "SELECT username, first_name, last_name, email, type FROM users WHERE id=?");
+            "SELECT username, first_name, last_name, email, type FROM users WHERE id=?");
     stmt.bind_and_execute(user_id);
     stmt.res_bind_all(username, first_name, last_name, email, type);
     if (not stmt.next()) {
@@ -145,8 +144,8 @@ Response view(Context& ctx, decltype(User::id) user_id) {
         obj.prop("edit_last_name", caps.edit_last_name);
         obj.prop("edit_email", caps.edit_email);
         obj.prop("change_password", caps.change_password);
-        obj.prop(
-            "change_password_without_old_password", caps.change_password_without_old_password);
+        obj.prop("change_password_without_old_password",
+                caps.change_password_without_old_password);
         obj.prop("change_type", caps.change_type);
         obj.prop("make_admin", caps.make_admin);
         obj.prop("make_teacher", caps.make_teacher);
@@ -166,9 +165,9 @@ constexpr http::ApiParam last_name{&User::last_name, "last_name", "Last name"};
 constexpr http::ApiParam email{&User::email, "email", "Email"};
 constexpr http::ApiParam<CStringView> password{"password", "Password"};
 constexpr http::ApiParam<CStringView> password_repeated{
-    "password_repeated", "Password (repeat)"};
+        "password_repeated", "Password (repeat)"};
 constexpr http::ApiParam<bool> remember_for_a_month{
-    "remember_for_a_month", "Remember for a month"};
+        "remember_for_a_month", "Remember for a month"};
 
 } // namespace params
 
@@ -185,7 +184,7 @@ http::Response sign_in(web_worker::Context& ctx) {
     );
 
     auto stmt = ctx.mysql.prepare(
-        "SELECT id, password_salt, password_hash, type FROM users WHERE username=?");
+            "SELECT id, password_salt, password_hash, type FROM users WHERE username=?");
     stmt.bind_and_execute(username);
     decltype(User::id) user_id{};
     decltype(User::password_salt) password_salt;
@@ -222,10 +221,10 @@ http::Response sign_up(web_worker::Context& ctx) {
     auto [password_salt, password_hash] = sim::users::salt_and_hash_password(password);
     decltype(User::type) user_type = User::Type::NORMAL;
     auto stmt = ctx.mysql.prepare(
-        "INSERT IGNORE INTO users(type, username, first_name, last_name, email, "
-        "password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+            "INSERT IGNORE INTO users(type, username, first_name, last_name, email, "
+            "password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
     stmt.bind_and_execute(
-        user_type, username, first_name, last_name, email, password_salt, password_hash);
+            user_type, username, first_name, last_name, email, password_salt, password_hash);
     if (stmt.affected_rows() != 1) {
         return ctx.response_400("Username taken");
     }
@@ -276,9 +275,9 @@ http::Response add(web_worker::Context& ctx) {
     }
 
     auto [salt, hash] = sim::users::salt_and_hash_password(password);
-    auto stmt =
-        ctx.mysql.prepare("INSERT IGNORE INTO users(type, username, first_name, last_name, "
-                          "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+    auto stmt = ctx.mysql.prepare(
+            "INSERT IGNORE INTO users(type, username, first_name, last_name, "
+            "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
     stmt.bind_and_execute(type, username, first_name, last_name, email, salt, hash);
     if (stmt.affected_rows() != 1) {
         return ctx.response_400("Username taken");
@@ -309,9 +308,9 @@ http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
     );
 
     auto stmt = ctx.mysql.prepare(
-        "UPDATE users SET type=COALESCE(?, type), username=COALESCE(?, username), "
-        "first_name=COALESCE(?, first_name), last_name=COALESCE(?, last_name), "
-        "email=COALESCE(?, email) WHERE id=?");
+            "UPDATE users SET type=COALESCE(?, type), username=COALESCE(?, username), "
+            "first_name=COALESCE(?, first_name), last_name=COALESCE(?, last_name), "
+            "email=COALESCE(?, email) WHERE id=?");
     stmt.bind_and_execute(type, username, first_name, last_name, email, user_id);
 
     return ctx.response_ok();

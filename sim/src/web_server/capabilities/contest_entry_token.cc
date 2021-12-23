@@ -11,25 +11,25 @@ using sim::users::User;
 
 namespace web_server::capabilities {
 
-ContestEntryToken contest_entry_token_for(
-    ContestEntryTokenKind token_kind, const decltype(web_worker::Context::session)& session,
-    const Contest& caps_contest,
-    std::optional<decltype(sim::contest_users::ContestUser::mode)>
-        contest_user_mode) noexcept {
+ContestEntryToken contest_entry_token_for(ContestEntryTokenKind token_kind,
+        const decltype(web_worker::Context::session)& session, const Contest& caps_contest,
+        std::optional<decltype(sim::contest_users::ContestUser::mode)>
+                contest_user_mode) noexcept {
     bool is_admin = session and session->user_type == User::Type::ADMIN;
     bool is_contest_moderator = caps_contest.node.view and
-        (is_admin or
-         is_one_of(contest_user_mode, ContestUser::Mode::OWNER, ContestUser::Mode::MODERATOR));
+            (is_admin or
+                    is_one_of(contest_user_mode, ContestUser::Mode::OWNER,
+                            ContestUser::Mode::MODERATOR));
     switch (token_kind) {
     case ContestEntryTokenKind::NORMAL:
     case ContestEntryTokenKind::SHORT:
         return ContestEntryToken{
-            .view = is_contest_moderator,
-            .create = is_contest_moderator,
-            .regen = is_contest_moderator,
-            .delete_ = is_contest_moderator,
-            .use = true,
-            .view_contest_name = true,
+                .view = is_contest_moderator,
+                .create = is_contest_moderator,
+                .regen = is_contest_moderator,
+                .delete_ = is_contest_moderator,
+                .use = true,
+                .view_contest_name = true,
         };
     }
     std::abort();

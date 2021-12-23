@@ -10,9 +10,9 @@ namespace web_server::http {
 
 class FormFields {
     std::map<std::string, std::string, std::less<>>
-        files_; // name (the one from HTTP form) => tmp_filename
+            files_; // name (the one from HTTP form) => tmp_filename
     std::map<std::string, std::string, std::less<>>
-        others_; // name => value (for a file: name => client_filename)
+            others_; // name => value (for a file: name => client_filename)
 
 public:
     FormFields() = default;
@@ -24,9 +24,8 @@ public:
     FormFields& operator=(FormFields&&) noexcept = default;
 
     // Adds new field or replaces existing one
-    void add_field(
-        std::string name, std::string value,
-        std::optional<std::string> tmp_file_path = std::nullopt) {
+    void add_field(std::string name, std::string value,
+            std::optional<std::string> tmp_file_path = std::nullopt) {
         if (tmp_file_path) {
             files_.emplace(name, std::move(*tmp_file_path));
         } else {

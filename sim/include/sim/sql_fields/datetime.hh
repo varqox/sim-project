@@ -17,12 +17,10 @@ public:
     Datetime& operator=(Datetime&&) noexcept = default;
     ~Datetime() override = default;
 
-    template <
-        class T,
-        std::enable_if_t<
-            std::is_convertible_v<T, StringView> and
-                !std::is_same_v<std::decay_t<T>, Datetime>,
-            int> = 0>
+    template <class T,
+            std::enable_if_t<std::is_convertible_v<T, StringView> and
+                            !std::is_same_v<std::decay_t<T>, Datetime>,
+                    int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     constexpr explicit Datetime(T&& str)
     : Varbinary([&]() -> decltype(auto) {
@@ -30,12 +28,10 @@ public:
         return str;
     }()) {}
 
-    template <
-        class T,
-        std::enable_if_t<
-            std::is_convertible_v<T, StringView> and
-                !std::is_same_v<std::decay_t<T>, Datetime>,
-            int> = 0>
+    template <class T,
+            std::enable_if_t<std::is_convertible_v<T, StringView> and
+                            !std::is_same_v<std::decay_t<T>, Datetime>,
+                    int> = 0>
     Datetime& operator=(T&& str) {
         throw_assert(is_datetime(intentional_unsafe_cstring_view(concat(str))));
         Varbinary::operator=(std::forward<T>(str));

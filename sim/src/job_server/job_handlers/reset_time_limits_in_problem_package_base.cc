@@ -17,7 +17,7 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath pac
     job_log("Model solution: ", simfile.solutions[0]);
 
     auto compilation_errors = compile_solution_from_problem_package(
-        simfile.solutions[0], sim::filename_to_lang(simfile.solutions[0]));
+            simfile.solutions[0], sim::filename_to_lang(simfile.solutions[0]));
     if (compilation_errors.has_value()) {
         return set_failure();
     }
@@ -42,7 +42,7 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath pac
         opts.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
 
         sim::Conver::reset_time_limits_using_jugde_reports(
-            simfile, initial_rep, final_rep, opts);
+                simfile, initial_rep, final_rep, opts);
 
     } catch (const std::exception& e) {
         return set_failure("Conver failed: ", e.what());

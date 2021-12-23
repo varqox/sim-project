@@ -15,9 +15,8 @@ void AddOrReuploadProblemJudgeModelSolutionBase::run() {
 
     // Put the Simfile in the package
     ZipFile zip(package_path);
-    zip.file_add(
-        concat(sim::zip_package_main_dir(zip), "Simfile"), zip.source_buffer(new_simfile_),
-        ZIP_FL_OVERWRITE);
+    zip.file_add(concat(sim::zip_package_main_dir(zip), "Simfile"),
+            zip.source_buffer(new_simfile_), ZIP_FL_OVERWRITE);
     zip.close();
 
     bool canceled = false;

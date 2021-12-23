@@ -16,8 +16,8 @@ class ContestUsersMerger
         STACK_UNWINDING_MARK;
 
         sim::contest_users::ContestUser cu{};
-        auto stmt =
-            conn.prepare("SELECT user_id, contest_id, mode FROM ", record_set.sql_table_name);
+        auto stmt = conn.prepare(
+                "SELECT user_id, contest_id, mode FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(cu.id.user_id, cu.id.contest_id, cu.mode);
         while (stmt.next()) {
@@ -31,11 +31,11 @@ class ContestUsersMerger
     void merge() override {
         STACK_UNWINDING_MARK;
         Merger::merge(
-            [&](const sim::contest_users::ContestUser& /*unused*/) { return nullptr; });
+                [&](const sim::contest_users::ContestUser& /*unused*/) { return nullptr; });
     }
 
     decltype(sim::contest_users::ContestUser::id) pre_merge_record_id_to_post_merge_record_id(
-        const decltype(sim::contest_users::ContestUser::id)& record_id) override {
+            const decltype(sim::contest_users::ContestUser::id)& record_id) override {
         return record_id;
     }
 
@@ -44,10 +44,9 @@ public:
         STACK_UNWINDING_MARK;
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
-            "INSERT INTO ", sql_table_name(),
-            "(user_id, contest_id, mode) "
-            "VALUES(?, ?, ?)");
+        auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
+                "(user_id, contest_id, mode) "
+                "VALUES(?, ?, ?)");
 
         ProgressBar progress_bar("Contest users saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
@@ -59,12 +58,10 @@ public:
         transaction.commit();
     }
 
-    ContestUsersMerger(
-        const IdsFromMainAndOtherJobs& ids_from_both_jobs, const UsersMerger& users,
-        const ContestsMerger& contests)
-    : Merger(
-          "contest_users", ids_from_both_jobs.main.contest_users,
-          ids_from_both_jobs.other.contest_users)
+    ContestUsersMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
+            const UsersMerger& users, const ContestsMerger& contests)
+    : Merger("contest_users", ids_from_both_jobs.main.contest_users,
+              ids_from_both_jobs.other.contest_users)
     , users_(users)
     , contests_(contests) {
         STACK_UNWINDING_MARK;

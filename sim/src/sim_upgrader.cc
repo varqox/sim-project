@@ -43,8 +43,8 @@ struct CmdOptions {
 
 } // namespace
 
-[[maybe_unused]] static void
-run_command(const std::vector<std::string>& args, const Spawner::Options& options = {}) {
+[[maybe_unused]] static void run_command(
+        const std::vector<std::string>& args, const Spawner::Options& options = {}) {
     auto es = Spawner::run(args[0], args, options);
     if (es.si.code != CLD_EXITED or es.si.status != 0) {
         THROW(args[0], " failed: ", es.message);
@@ -59,11 +59,9 @@ run_command(const std::vector<std::string>& args, const Spawner::Options& option
 template <class Func>
 static void update_db_schema(Func&& prepare_database) {
     OpenedTemporaryFile mysql_cnf("/tmp/sim-upgrade-mysql-cnf.XXXXXX");
-    write_all_throw(
-        mysql_cnf,
-        intentional_unsafe_string_view(concat(
-            "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd,
-            "\"\n")));
+    write_all_throw(mysql_cnf,
+            intentional_unsafe_string_view(concat("[client]\nuser=\"", conn.impl()->user,
+                    "\"\npassword=\"", conn.impl()->passwd, "\"\n")));
 
     static constexpr auto backup_table_suffix = "_bkp";
     auto drop_backup_tables = [&] {
@@ -77,11 +75,11 @@ static void update_db_schema(Func&& prepare_database) {
 
     drop_backup_tables();
     run_command({
-        "mysqldump",
-        concat_tostr("--defaults-file=", mysql_cnf.path()),
-        concat_tostr("--result-file=", db_backup.path()),
-        "--single-transaction",
-        conn.impl()->db,
+            "mysqldump",
+            concat_tostr("--defaults-file=", mysql_cnf.path()),
+            concat_tostr("--result-file=", db_backup.path()),
+            "--single-transaction",
+            conn.impl()->db,
     });
 
     ErrDefer save_backup = [&] {
@@ -100,25 +98,24 @@ static void update_db_schema(Func&& prepare_database) {
         ErrDefer restore_from_backup = [&] {
             stdlog("Restore tables from dump-backup");
             run_command(
-                {
-                    "mysql",
-                    concat_tostr("--defaults-file=", mysql_cnf.path()),
-                    conn.impl()->db,
-                },
-                Spawner::Options{
-                    FileDescriptor{db_backup.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO,
-                    "."});
+                    {
+                            "mysql",
+                            concat_tostr("--defaults-file=", mysql_cnf.path()),
+                            conn.impl()->db,
+                    },
+                    Spawner::Options{FileDescriptor{db_backup.path(), O_RDONLY}, STDOUT_FILENO,
+                            STDERR_FILENO, "."});
             drop_backup_tables();
         };
         prepare_database();
         // Save records for reinsertion in the new schema
         run_command({
-            "mysqldump",
-            concat_tostr("--defaults-file=", mysql_cnf.path()),
-            concat_tostr("--result-file=", db_dump.path()),
-            "--single-transaction",
-            "-t",
-            conn.impl()->db,
+                "mysqldump",
+                concat_tostr("--defaults-file=", mysql_cnf.path()),
+                concat_tostr("--result-file=", db_dump.path()),
+                "--single-transaction",
+                "-t",
+                conn.impl()->db,
         });
         // Rename tables (as a fast backup)
         stdlog("Rename tables (as a backup)");
@@ -154,13 +151,13 @@ static void update_db_schema(Func&& prepare_database) {
     run_command({"build/setup-installation", "--drop-tables", sim_build.to_string()});
     conn.update("DELETE FROM users"); // Remove the just created root account
     run_command(
-        {
-            "mysql",
-            concat_tostr("--defaults-file=", mysql_cnf.path()),
-            conn.impl()->db,
-        },
-        Spawner::Options{
-            FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO, "."});
+            {
+                    "mysql",
+                    concat_tostr("--defaults-file=", mysql_cnf.path()),
+                    conn.impl()->db,
+            },
+            Spawner::Options{FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO,
+                    STDERR_FILENO, "."});
     done = true;
     drop_backup_tables();
 }
@@ -168,12 +165,12 @@ static void update_db_schema(Func&& prepare_database) {
 static int perform_upgrade() {
     STACK_UNWINDING_MARK;
 
-    (void)renameat2(
-        AT_FDCWD, concat(sim_build, "logs/server.log").to_string().data(), AT_FDCWD,
-        concat(sim_build, web_server::stdlog_file).to_string().data(), RENAME_NOREPLACE);
-    (void)renameat2(
-        AT_FDCWD, concat(sim_build, "logs/server-error.log").to_string().data(), AT_FDCWD,
-        concat(sim_build, web_server::errlog_file).to_string().data(), RENAME_NOREPLACE);
+    (void)renameat2(AT_FDCWD, concat(sim_build, "logs/server.log").to_string().data(),
+            AT_FDCWD, concat(sim_build, web_server::stdlog_file).to_string().data(),
+            RENAME_NOREPLACE);
+    (void)renameat2(AT_FDCWD, concat(sim_build, "logs/server-error.log").to_string().data(),
+            AT_FDCWD, concat(sim_build, web_server::errlog_file).to_string().data(),
+            RENAME_NOREPLACE);
 
     conn.update("ALTER TABLE users MODIFY COLUMN type tinyint unsigned NOT NULL AFTER id");
     conn.update("ALTER TABLE sessions DROP COLUMN IF EXISTS ip");
@@ -189,14 +186,13 @@ static void print_help(const char* program_name) {
     }
 
     errlog.label(false);
-    errlog(
-        "Usage: ", program_name,
-        " [options] <sim_build>\n"
-        "  Where sim_build is a path to build directory of a Sim to upgrade\n"
-        "\n"
-        "Options:\n"
-        "  -h, --help            Display this information\n"
-        "  -q, --quiet           Quiet mode");
+    errlog("Usage: ", program_name,
+            " [options] <sim_build>\n"
+            "  Where sim_build is a path to build directory of a Sim to upgrade\n"
+            "\n"
+            "Options:\n"
+            "  -h, --help            Display this information\n"
+            "  -q, --quiet           Quiet mode");
 }
 
 static CmdOptions parse_cmd_options(int& argc, char** argv) {

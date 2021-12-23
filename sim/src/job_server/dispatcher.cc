@@ -24,10 +24,9 @@ using sim::jobs::Job;
 
 namespace job_server {
 
-void job_dispatcher(
-    uint64_t job_id, Job::Type jtype, std::optional<uint64_t> file_id,
-    std::optional<uint64_t> tmp_file_id, std::optional<StringView> creator,
-    std::optional<uint64_t> aux_id, StringView info, StringView added) {
+void job_dispatcher(uint64_t job_id, Job::Type jtype, std::optional<uint64_t> file_id,
+        std::optional<uint64_t> tmp_file_id, std::optional<StringView> creator,
+        std::optional<uint64_t> aux_id, StringView info, StringView added) {
     STACK_UNWINDING_MARK;
     using std::make_unique;
     std::unique_ptr<job_handlers::JobHandler> job_handler;
@@ -38,19 +37,19 @@ void job_dispatcher(
         switch (jtype) {
         case JT::ADD_PROBLEM:
             job_handler = make_unique<AddProblem>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id);
+                    job_id, creator.value(), info, file_id.value(), tmp_file_id);
             break;
 
         case JT::REUPLOAD_PROBLEM:
-            job_handler = make_unique<ReuploadProblem>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id, aux_id.value());
+            job_handler = make_unique<ReuploadProblem>(job_id, creator.value(), info,
+                    file_id.value(), tmp_file_id, aux_id.value());
             break;
 
         case JT::EDIT_PROBLEM:
             // TODO: implement it (editing Simfile for now)
             std::this_thread::sleep_for(std::chrono::seconds(1));
             mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-                .bind_and_execute(EnumVal(Job::Status::CANCELED), job_id);
+                    .bind_and_execute(EnumVal(Job::Status::CANCELED), job_id);
             return;
 
         case JT::DELETE_PROBLEM:
@@ -59,7 +58,7 @@ void job_dispatcher(
 
         case JT::MERGE_PROBLEMS:
             job_handler = make_unique<MergeProblems>(
-                job_id, aux_id.value(), sim::jobs::MergeProblemsInfo(info));
+                    job_id, aux_id.value(), sim::jobs::MergeProblemsInfo(info));
             break;
 
         case JT::DELETE_USER:
@@ -68,12 +67,12 @@ void job_dispatcher(
 
         case JT::MERGE_USERS:
             job_handler = make_unique<MergeUsers>(
-                job_id, aux_id.value(), sim::jobs::MergeUsersInfo(info));
+                    job_id, aux_id.value(), sim::jobs::MergeUsersInfo(info));
             break;
 
         case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
-            job_handler =
-                make_unique<ReselectFinalSubmissionsInContestProblem>(job_id, aux_id.value());
+            job_handler = make_unique<ReselectFinalSubmissionsInContestProblem>(
+                    job_id, aux_id.value());
             break;
 
         case JT::DELETE_CONTEST:
@@ -93,9 +92,8 @@ void job_dispatcher(
             break;
 
         case JT::CHANGE_PROBLEM_STATEMENT:
-            job_handler = make_unique<ChangeProblemStatement>(
-                job_id, aux_id.value(), file_id.value(),
-                sim::jobs::ChangeProblemStatementInfo(info));
+            job_handler = make_unique<ChangeProblemStatement>(job_id, aux_id.value(),
+                    file_id.value(), sim::jobs::ChangeProblemStatementInfo(info));
             break;
 
         case JT::JUDGE_SUBMISSION:
@@ -105,12 +103,12 @@ void job_dispatcher(
 
         case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
             job_handler = make_unique<AddProblemJudgeModelSolution>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id);
+                    job_id, creator.value(), info, file_id.value(), tmp_file_id);
             break;
 
         case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            job_handler = make_unique<ReuploadProblemJudgeModelSolution>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id, aux_id.value());
+            job_handler = make_unique<ReuploadProblemJudgeModelSolution>(job_id,
+                    creator.value(), info, file_id.value(), tmp_file_id, aux_id.value());
             break;
 
         case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
@@ -122,8 +120,8 @@ void job_dispatcher(
         job_handler->run();
         if (job_handler->failed()) {
             mysql.prepare("UPDATE jobs SET status=?, data=? WHERE id=?")
-                .bind_and_execute(
-                    EnumVal(Job::Status::FAILED), job_handler->get_log(), job_id);
+                    .bind_and_execute(
+                            EnumVal(Job::Status::FAILED), job_handler->get_log(), job_id);
         }
 
     } catch (const std::exception& e) {
@@ -132,25 +130,23 @@ void job_dispatcher(
 
         // Add job to delete temporary file
         auto stmt =
-            mysql.prepare("INSERT INTO jobs(file_id, creator, type,"
-                          " priority, status, added, aux_id, info, data) "
-                          "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM jobs"
-                          " WHERE id=? AND tmp_file_id IS NOT NULL");
-        stmt.bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING), mysql_date(), job_id);
+                mysql.prepare("INSERT INTO jobs(file_id, creator, type,"
+                              " priority, status, added, aux_id, info, data) "
+                              "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM jobs"
+                              " WHERE id=? AND tmp_file_id IS NOT NULL");
+        stmt.bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
+                default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
+                mysql_date(), job_id);
 
         // Fail job
         stmt = mysql.prepare("UPDATE jobs SET tmp_file_id=NULL, status=?, data=? "
                              "WHERE id=?");
         if (job_handler) {
-            stmt.bind_and_execute(
-                EnumVal(Job::Status::FAILED),
-                concat(job_handler->get_log(), "\nCaught exception: ", e.what()), job_id);
+            stmt.bind_and_execute(EnumVal(Job::Status::FAILED),
+                    concat(job_handler->get_log(), "\nCaught exception: ", e.what()), job_id);
         } else {
-            stmt.bind_and_execute(
-                EnumVal(Job::Status::FAILED), concat("\nCaught exception: ", e.what()),
-                job_id);
+            stmt.bind_and_execute(EnumVal(Job::Status::FAILED),
+                    concat("\nCaught exception: ", e.what()), job_id);
         }
 
         transaction.commit();

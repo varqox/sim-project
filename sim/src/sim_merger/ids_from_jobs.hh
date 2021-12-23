@@ -59,17 +59,15 @@ struct IdsWithTime {
 };
 
 struct ProblemTagIdCmp {
-    bool operator()(
-        const decltype(sim::problem_tags::ProblemTag::id)& a,
-        const decltype(sim::problem_tags::ProblemTag::id)& b) const noexcept {
+    bool operator()(const decltype(sim::problem_tags::ProblemTag::id)& a,
+            const decltype(sim::problem_tags::ProblemTag::id)& b) const noexcept {
         return std::pair{a.problem_id, a.tag} < std::pair{b.problem_id, b.tag};
     }
 };
 
 struct ContestUserIdCmp {
-    bool operator()(
-        const decltype(sim::contest_users::ContestUser::id)& a,
-        const decltype(sim::contest_users::ContestUser::id)& b) const noexcept {
+    bool operator()(const decltype(sim::contest_users::ContestUser::id)& a,
+            const decltype(sim::contest_users::ContestUser::id)& b) const noexcept {
         return std::pair{a.user_id, a.contest_id} < std::pair{b.user_id, b.contest_id};
     }
 };
@@ -87,7 +85,7 @@ struct IdsFromJobs {
     IdsWithTime<decltype(sim::contest_users::ContestUser::id), ContestUserIdCmp> contest_users;
     IdsWithTime<decltype(sim::contest_files::ContestFile::id)> contest_files;
     IdsWithTime<decltype(sim::contest_entry_tokens::ContestEntryToken::token)>
-        contest_entry_tokens;
+            contest_entry_tokens;
     IdsWithTime<decltype(sim::submissions::Submission::id)> submissions;
     IdsWithTime<decltype(sim::jobs::Job::id)> jobs;
 
@@ -104,10 +102,9 @@ struct IdsFromJobs {
         mysql::Optional<decltype(Job::aux_id)::value_type> aux_id;
         sim::sql_fields::Blob<32> info;
 
-        auto stmt = conn.prepare(
-            "SELECT id, creator, type, file_id, "
-            "tmp_file_id, added, aux_id, info FROM ",
-            job_table_name, " ORDER BY id");
+        auto stmt = conn.prepare("SELECT id, creator, type, file_id, "
+                                 "tmp_file_id, added, aux_id, info FROM ",
+                job_table_name, " ORDER BY id");
         stmt.bind_and_execute();
         stmt.res_bind_all(id, creator, type, file_id, tmp_file_id, added_str, aux_id, info);
         while (stmt.next()) {

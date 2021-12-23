@@ -53,146 +53,146 @@ struct Word {
 };
 
 constexpr array<CStringView, 11> begin_style{{
-    "<span style=\"color:#00a000\">",
-    "<span style=\"color:#a0a0a0\">",
-    "<span style=\"color:#0000ff;font-weight:bold\">",
-    "<span style=\"color:#c90049;font-weight:bold;\">",
-    "<span style=\"color:#ff0000\">",
-    "<span style=\"color:#e0a000\">",
-    "<span style=\"color:#d923e9\">",
-    "<span style=\"color:#d923e9\">",
-    "<span style=\"color:#a800ff\">",
-    "<span style=\"color:#0086b3\">",
-    "<span style=\"color:#515125\">",
+        "<span style=\"color:#00a000\">",
+        "<span style=\"color:#a0a0a0\">",
+        "<span style=\"color:#0000ff;font-weight:bold\">",
+        "<span style=\"color:#c90049;font-weight:bold;\">",
+        "<span style=\"color:#ff0000\">",
+        "<span style=\"color:#e0a000\">",
+        "<span style=\"color:#d923e9\">",
+        "<span style=\"color:#d923e9\">",
+        "<span style=\"color:#a800ff\">",
+        "<span style=\"color:#0086b3\">",
+        "<span style=\"color:#515125\">",
 }};
 
 constexpr CStringView end_style = "</span>";
 
 constexpr array<Word, 124> words{{
-    {"", COMMENT}, // Guard - ignored
-    {"uint_least16_t", BUILTIN_TYPE},
-    {"uint_least32_t", BUILTIN_TYPE},
-    {"uint_least64_t", BUILTIN_TYPE},
-    {"uint_fast16_t", BUILTIN_TYPE},
-    {"uint_fast64_t", BUILTIN_TYPE},
-    {"uint_least8_t", BUILTIN_TYPE},
-    {"int_least16_t", BUILTIN_TYPE},
-    {"int_least32_t", BUILTIN_TYPE},
-    {"int_least64_t", BUILTIN_TYPE},
-    {"uint_fast32_t", BUILTIN_TYPE},
-    {"uint_fast8_t", BUILTIN_TYPE},
-    {"int_fast16_t", BUILTIN_TYPE},
-    {"int_least8_t", BUILTIN_TYPE},
-    {"int_fast32_t", BUILTIN_TYPE},
-    {"int_fast64_t", BUILTIN_TYPE},
-    {"int_fast8_t", BUILTIN_TYPE},
-    {"_Char16_t", BUILTIN_TYPE},
-    {"_Char32_t", BUILTIN_TYPE},
-    {"uintptr_t", BUILTIN_TYPE},
-    {"uintmax_t", BUILTIN_TYPE},
-    {"wint_t", BUILTIN_TYPE},
-    {"wctrans_t", BUILTIN_TYPE},
-    {"unsigned", BUILTIN_TYPE},
-    {"uint16_t", BUILTIN_TYPE},
-    {"uint32_t", BUILTIN_TYPE},
-    {"uint64_t", BUILTIN_TYPE},
-    {"intmax_t", BUILTIN_TYPE},
-    {"wctype_t", BUILTIN_TYPE},
-    {"intptr_t", BUILTIN_TYPE},
-    {"wchar_t", BUILTIN_TYPE},
-    {"uint8_t", BUILTIN_TYPE},
-    {"int16_t", BUILTIN_TYPE},
-    {"int32_t", BUILTIN_TYPE},
-    {"int64_t", BUILTIN_TYPE},
-    {"wchar_t", BUILTIN_TYPE},
-    {"double", BUILTIN_TYPE},
-    {"signed", BUILTIN_TYPE},
-    {"size_t", BUILTIN_TYPE},
-    {"time_t", BUILTIN_TYPE},
-    {"int8_t", BUILTIN_TYPE},
-    {"short", BUILTIN_TYPE},
-    {"float", BUILTIN_TYPE},
-    {"void", BUILTIN_TYPE},
-    {"char", BUILTIN_TYPE},
-    {"bool", BUILTIN_TYPE},
-    {"long", BUILTIN_TYPE},
-    {"int", BUILTIN_TYPE},
-    {"nullptr_t", BUILTIN_TYPE},
-    {"auto", BUILTIN_TYPE},
-    {"align_union", KEYWORD},
-    {"alignof", KEYWORD},
-    {"and", KEYWORD},
-    {"and_eq", KEYWORD},
-    {"asm", KEYWORD},
-    {"bitand", KEYWORD},
-    {"bitor", KEYWORD},
-    {"break", KEYWORD},
-    {"case", KEYWORD},
-    {"catch", KEYWORD},
-    {"class", KEYWORD},
-    {"compl", KEYWORD},
-    {"const", KEYWORD},
-    {"const_cast", KEYWORD},
-    {"constexpr", KEYWORD},
-    {"continue", KEYWORD},
-    {"decltype", KEYWORD},
-    {"default", KEYWORD},
-    {"delete", KEYWORD},
-    {"do", KEYWORD},
-    {"dynamic_cast", KEYWORD},
-    {"else", KEYWORD},
-    {"enum", KEYWORD},
-    {"explicit", KEYWORD},
-    {"export", KEYWORD},
-    {"extern", KEYWORD},
-    {"final", KEYWORD},
-    {"for", KEYWORD},
-    {"friend", KEYWORD},
-    {"goto", KEYWORD},
-    {"if", KEYWORD},
-    {"import", KEYWORD},
-    {"inline", KEYWORD},
-    {"mutable", KEYWORD},
-    {"namespace", KEYWORD},
-    {"new", KEYWORD},
-    {"noexcept", KEYWORD},
-    {"not", KEYWORD},
-    {"not_eq", KEYWORD},
-    {"nullptr", KEYWORD},
-    {"operator", KEYWORD},
-    {"or", KEYWORD},
-    {"or_eq", KEYWORD},
-    {"override", KEYWORD},
-    {"private", KEYWORD},
-    {"protected", KEYWORD},
-    {"public", KEYWORD},
-    {"register", KEYWORD},
-    {"reinterpret_cast", KEYWORD},
-    {"return", KEYWORD},
-    {"sizeof", KEYWORD},
-    {"static", KEYWORD},
-    {"static_assert", KEYWORD},
-    {"static_cast", KEYWORD},
-    {"struct", KEYWORD},
-    {"switch", KEYWORD},
-    {"template", KEYWORD},
-    {"this", KEYWORD},
-    {"throw", KEYWORD},
-    {"try", KEYWORD},
-    {"typedef", KEYWORD},
-    {"typeid", KEYWORD},
-    {"typename", KEYWORD},
-    {"union", KEYWORD},
-    {"using", KEYWORD},
-    {"virtual", KEYWORD},
-    {"volatile", KEYWORD},
-    {"while", KEYWORD},
-    {"xor", KEYWORD},
-    {"xor_eq", KEYWORD},
-    {"true", CONSTANT},
-    {"false", CONSTANT},
-    {"NULL", CONSTANT},
-    {"nullptr", CONSTANT},
+        {"", COMMENT}, // Guard - ignored
+        {"uint_least16_t", BUILTIN_TYPE},
+        {"uint_least32_t", BUILTIN_TYPE},
+        {"uint_least64_t", BUILTIN_TYPE},
+        {"uint_fast16_t", BUILTIN_TYPE},
+        {"uint_fast64_t", BUILTIN_TYPE},
+        {"uint_least8_t", BUILTIN_TYPE},
+        {"int_least16_t", BUILTIN_TYPE},
+        {"int_least32_t", BUILTIN_TYPE},
+        {"int_least64_t", BUILTIN_TYPE},
+        {"uint_fast32_t", BUILTIN_TYPE},
+        {"uint_fast8_t", BUILTIN_TYPE},
+        {"int_fast16_t", BUILTIN_TYPE},
+        {"int_least8_t", BUILTIN_TYPE},
+        {"int_fast32_t", BUILTIN_TYPE},
+        {"int_fast64_t", BUILTIN_TYPE},
+        {"int_fast8_t", BUILTIN_TYPE},
+        {"_Char16_t", BUILTIN_TYPE},
+        {"_Char32_t", BUILTIN_TYPE},
+        {"uintptr_t", BUILTIN_TYPE},
+        {"uintmax_t", BUILTIN_TYPE},
+        {"wint_t", BUILTIN_TYPE},
+        {"wctrans_t", BUILTIN_TYPE},
+        {"unsigned", BUILTIN_TYPE},
+        {"uint16_t", BUILTIN_TYPE},
+        {"uint32_t", BUILTIN_TYPE},
+        {"uint64_t", BUILTIN_TYPE},
+        {"intmax_t", BUILTIN_TYPE},
+        {"wctype_t", BUILTIN_TYPE},
+        {"intptr_t", BUILTIN_TYPE},
+        {"wchar_t", BUILTIN_TYPE},
+        {"uint8_t", BUILTIN_TYPE},
+        {"int16_t", BUILTIN_TYPE},
+        {"int32_t", BUILTIN_TYPE},
+        {"int64_t", BUILTIN_TYPE},
+        {"wchar_t", BUILTIN_TYPE},
+        {"double", BUILTIN_TYPE},
+        {"signed", BUILTIN_TYPE},
+        {"size_t", BUILTIN_TYPE},
+        {"time_t", BUILTIN_TYPE},
+        {"int8_t", BUILTIN_TYPE},
+        {"short", BUILTIN_TYPE},
+        {"float", BUILTIN_TYPE},
+        {"void", BUILTIN_TYPE},
+        {"char", BUILTIN_TYPE},
+        {"bool", BUILTIN_TYPE},
+        {"long", BUILTIN_TYPE},
+        {"int", BUILTIN_TYPE},
+        {"nullptr_t", BUILTIN_TYPE},
+        {"auto", BUILTIN_TYPE},
+        {"align_union", KEYWORD},
+        {"alignof", KEYWORD},
+        {"and", KEYWORD},
+        {"and_eq", KEYWORD},
+        {"asm", KEYWORD},
+        {"bitand", KEYWORD},
+        {"bitor", KEYWORD},
+        {"break", KEYWORD},
+        {"case", KEYWORD},
+        {"catch", KEYWORD},
+        {"class", KEYWORD},
+        {"compl", KEYWORD},
+        {"const", KEYWORD},
+        {"const_cast", KEYWORD},
+        {"constexpr", KEYWORD},
+        {"continue", KEYWORD},
+        {"decltype", KEYWORD},
+        {"default", KEYWORD},
+        {"delete", KEYWORD},
+        {"do", KEYWORD},
+        {"dynamic_cast", KEYWORD},
+        {"else", KEYWORD},
+        {"enum", KEYWORD},
+        {"explicit", KEYWORD},
+        {"export", KEYWORD},
+        {"extern", KEYWORD},
+        {"final", KEYWORD},
+        {"for", KEYWORD},
+        {"friend", KEYWORD},
+        {"goto", KEYWORD},
+        {"if", KEYWORD},
+        {"import", KEYWORD},
+        {"inline", KEYWORD},
+        {"mutable", KEYWORD},
+        {"namespace", KEYWORD},
+        {"new", KEYWORD},
+        {"noexcept", KEYWORD},
+        {"not", KEYWORD},
+        {"not_eq", KEYWORD},
+        {"nullptr", KEYWORD},
+        {"operator", KEYWORD},
+        {"or", KEYWORD},
+        {"or_eq", KEYWORD},
+        {"override", KEYWORD},
+        {"private", KEYWORD},
+        {"protected", KEYWORD},
+        {"public", KEYWORD},
+        {"register", KEYWORD},
+        {"reinterpret_cast", KEYWORD},
+        {"return", KEYWORD},
+        {"sizeof", KEYWORD},
+        {"static", KEYWORD},
+        {"static_assert", KEYWORD},
+        {"static_cast", KEYWORD},
+        {"struct", KEYWORD},
+        {"switch", KEYWORD},
+        {"template", KEYWORD},
+        {"this", KEYWORD},
+        {"throw", KEYWORD},
+        {"try", KEYWORD},
+        {"typedef", KEYWORD},
+        {"typeid", KEYWORD},
+        {"typename", KEYWORD},
+        {"union", KEYWORD},
+        {"using", KEYWORD},
+        {"virtual", KEYWORD},
+        {"volatile", KEYWORD},
+        {"while", KEYWORD},
+        {"xor", KEYWORD},
+        {"xor_eq", KEYWORD},
+        {"true", CONSTANT},
+        {"false", CONSTANT},
+        {"NULL", CONSTANT},
+        {"nullptr", CONSTANT},
 }};
 
 } // anonymous namespace
@@ -205,51 +205,49 @@ constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
 }
 
 template <size_t N, size_t... Idx>
-constexpr array<CStringView, N> extract_keywords_from_append(
-    const array<CStringView, N>& base, CStringView x,
-    std::integer_sequence<size_t, Idx...> /*unused*/) {
+constexpr array<CStringView, N> extract_keywords_from_append(const array<CStringView, N>& base,
+        CStringView x, std::integer_sequence<size_t, Idx...> /*unused*/) {
     return {{base[Idx]..., x}};
 }
 
 template <size_t N, size_t RES_N, size_t RES_END>
 constexpr std::enable_if_t<RES_END >= RES_N, array<CStringView, RES_N>> extract_keywords_from(
-    const array<Word, N>& /*unused*/, const array<CStringView, RES_N>& res = {},
-    size_t /*unused*/ = 0) {
+        const array<Word, N>& /*unused*/, const array<CStringView, RES_N>& res = {},
+        size_t /*unused*/ = 0) {
     return res;
 }
 
 template <size_t N, size_t RES_N, size_t RES_END = 0>
-    constexpr std::enable_if_t <
-    RES_END<RES_N, array<CStringView, RES_N>> extract_keywords_from(
-        const array<Word, N>& arr, const array<CStringView, RES_N>& res, size_t idx = 0) {
-    return (
-        idx == N ? res
-                 : (arr[idx].style == KEYWORD
-                        ? extract_keywords_from<N, RES_N, RES_END + 1>(
-                              arr,
-                              extract_keywords_from_append(
-                                  res, {arr[idx].str, arr[idx].size},
-                                  std::make_integer_sequence<size_t, RES_END>{}),
-                              idx + 1)
-                        : extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
+        constexpr std::enable_if_t <
+        RES_END<RES_N, array<CStringView, RES_N>> extract_keywords_from(
+                const array<Word, N>& arr, const array<CStringView, RES_N>& res,
+                size_t idx = 0) {
+    return (idx == N ? res
+                     : (arr[idx].style == KEYWORD
+                                       ? extract_keywords_from<N, RES_N, RES_END + 1>(arr,
+                                                 extract_keywords_from_append(res,
+                                                         {arr[idx].str, arr[idx].size},
+                                                         std::make_integer_sequence<size_t,
+                                                                 RES_END>{}),
+                                                 idx + 1)
+                                       : extract_keywords_from<N, RES_N, RES_END>(
+                                                 arr, res, idx + 1)));
 }
 
 static constexpr auto cpp_keywords =
-    extract_keywords_from<words.size(), count_keywords(words)>(words, {});
+        extract_keywords_from<words.size(), count_keywords(words)>(words, {});
 
 // Important: elements have to be sorted!
-static_assert(
-    is_sorted(cpp_keywords),
-    "cpp_keywords has to be sorted, fields in words with style "
-    "KEYWORD are probably unsorted");
+static_assert(is_sorted(cpp_keywords),
+        "cpp_keywords has to be sorted, fields in words with style "
+        "KEYWORD are probably unsorted");
 
 namespace sim {
 
 CppSyntaxHighlighter::CppSyntaxHighlighter() {
-    static_assert(
-        words[0].size == 0,
-        "First (zero) element of words is a guard - because "
-        "Aho-Corasick implementation takes only positive IDs");
+    static_assert(words[0].size == 0,
+            "First (zero) element of words is a guard - because "
+            "Aho-Corasick implementation takes only positive IDs");
     for (uint i = 1; i < words.size(); ++i) {
         aho.add_pattern({words[i].str, words[i].size}, i);
     }
@@ -280,7 +278,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
     // Make sure we can use int
     if (input.size() + BEGIN_GUARDS + END_GUARDS >
-        static_cast<size_t>(std::numeric_limits<int>::max()))
+            static_cast<size_t>(std::numeric_limits<int>::max()))
     {
         THROW("Input string is too long");
     }
@@ -308,9 +306,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
     DEBUG_CSH(stdlog("end: ", end);)
 
     vector<StyleType> begs(str.size(),
-                           -1); // here beginnings of styles are marked
+            -1); // here beginnings of styles are marked
     vector<int8_t> ends(
-        str.size() + 1); // ends[i] = # of endings (of styles) JUST BEFORE str[i]
+            str.size() + 1); // ends[i] = # of endings (of styles) JUST BEFORE str[i]
 
     /* Mark comments string / character literals */
 
@@ -374,7 +372,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
         for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
             while (str[i] != input[j]) {
                 throw_assert(
-                    input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
+                        input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
                 j += 2;
                 ++line;
             }
@@ -471,11 +469,10 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
                 StringView function_name = substring(str, k, name_end);
                 // It is important that function_name is taken as StringView
                 // below!
-                begs[k] =
-                    (std::binary_search(
-                         cpp_keywords.begin(), cpp_keywords.end(), function_name)
-                         ? KEYWORD
-                         : FUNCTION);
+                begs[k] = (std::binary_search(
+                                   cpp_keywords.begin(), cpp_keywords.end(), function_name)
+                                ? KEYWORD
+                                : FUNCTION);
                 ++ends[name_end];
             }
 
@@ -557,10 +554,10 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
             // Ignore invalid numeric literals
             if ((str[k - 1] == '.' && dot_as_beginning) ||
-                // In floating-point hexadecimals exponent has to appear
-                (exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
-                // Allow literals like: "111."
-                (str[k - 1] != '.' && !curr_is_digit(str[k - 1])))
+                    // In floating-point hexadecimals exponent has to appear
+                    (exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
+                    // Allow literals like: "111."
+                    (str[k - 1] != '.' && !curr_is_digit(str[k - 1])))
             {
             kill_try:
                 // dot_as_beginning does not imply beg[i - 1] in hexadecimals
@@ -731,7 +728,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
             // Handle "\\\n"
             do {
                 throw_assert(
-                    input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
+                        input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
 
                 ++line;
                 // When we were ending styles (somewhere above), there can be
@@ -739,9 +736,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
                 // iteration of this loop) but it's not worth that, as it's a
                 // very rare situation and gives little profit at the expense of
                 // a not pretty if statement
-                back_insert(
-                    res, begin_style[OPERATOR], '\\', end_style, "\n</td></tr><tr><td id=\"L",
-                    line, "\" line=\"", line, "\"></td><td>");
+                back_insert(res, begin_style[OPERATOR], '\\', end_style,
+                        "\n</td></tr><tr><td id=\"L", line, "\" line=\"", line,
+                        "\"></td><td>");
             } while (str[i] != input[j += 2]);
 
             // Restore styles
@@ -760,8 +757,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
             }
             // Break the line
             ++line;
-            back_insert(
-                res, "\n</td></tr><tr><td id=\"L", line, "\" line=\"", line, "\"></td><td>");
+            back_insert(res, "\n</td></tr><tr><td id=\"L", line, "\" line=\"", line,
+                    "\"></td><td>");
             // Restore styles
             for (StyleType style : style_stack) {
                 res += begin_style[style];

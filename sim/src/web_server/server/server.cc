@@ -31,9 +31,8 @@ static void* worker(void* ptr) {
 
         for (;;) {
             // accept the connection
-            FileDescriptor client_socket_fd{accept4(
-                socket_fd, reinterpret_cast<sockaddr*>(&name), &client_name_len,
-                SOCK_CLOEXEC)};
+            FileDescriptor client_socket_fd{accept4(socket_fd,
+                    reinterpret_cast<sockaddr*>(&name), &client_name_len, SOCK_CLOEXEC)};
             if (client_socket_fd == -1) {
                 continue;
             }
@@ -52,7 +51,7 @@ static void* worker(void* ptr) {
                 http::Response resp = sim_worker.handle(std::move(req));
 
                 auto microdur = std::chrono::duration_cast<std::chrono::microseconds>(
-                    steady_clock::now() - beg);
+                        steady_clock::now() - beg);
                 stdlog("Response generated in ", to_string(microdur * 1000), " ms.");
 
                 conn.send_response(resp);
@@ -91,7 +90,7 @@ int main() {
     // Loggers
     // stdlog writes to stderr (like everything), so redirect stdout and stderr to the log file
     if (freopen(web_server::stdlog_file.data(), "a", stdout) == nullptr ||
-        dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
+            dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
         errlog("Failed to open `", web_server::stdlog_file, '`', errmsg());
         return 1;
@@ -193,7 +192,7 @@ int main() {
         for (int try_no = 1; try_no <= FAST_SILENT_TRIES; ++try_no) {
             if (try_no > 1) {
                 std::this_thread::sleep_for(
-                    std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
+                        std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
             }
 
             if (call_bind() == 0) {
@@ -233,9 +232,8 @@ int main() {
 
     std::vector<pthread_t> threads(workers);
     for (size_t i = 1; i < workers; ++i) {
-        pthread_create(
-            &threads[i], &attr, web_server::server::worker,
-            reinterpret_cast<void*>(socket_fd)); // TODO: errors...
+        pthread_create(&threads[i], &attr, web_server::server::worker,
+                reinterpret_cast<void*>(socket_fd)); // TODO: errors...
     }
     threads[0] = pthread_self();
     web_server::server::worker(reinterpret_cast<void*>(socket_fd));

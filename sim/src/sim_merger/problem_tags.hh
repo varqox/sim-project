@@ -15,8 +15,8 @@ class ProblemTagsMerger
         STACK_UNWINDING_MARK;
 
         sim::problem_tags::ProblemTag ptag;
-        auto stmt =
-            conn.prepare("SELECT problem_id, tag, hidden FROM ", record_set.sql_table_name);
+        auto stmt = conn.prepare(
+                "SELECT problem_id, tag, hidden FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(ptag.id.problem_id, ptag.id.tag, ptag.hidden);
         while (stmt.next()) {
@@ -29,11 +29,11 @@ class ProblemTagsMerger
     void merge() override {
         STACK_UNWINDING_MARK;
         Merger::merge(
-            [&](const sim::problem_tags::ProblemTag& /*unused*/) { return nullptr; });
+                [&](const sim::problem_tags::ProblemTag& /*unused*/) { return nullptr; });
     }
 
     decltype(sim::problem_tags::ProblemTag::id) pre_merge_record_id_to_post_merge_record_id(
-        const decltype(sim::problem_tags::ProblemTag::id)& record_id) override {
+            const decltype(sim::problem_tags::ProblemTag::id)& record_id) override {
         return record_id;
     }
 
@@ -42,10 +42,9 @@ public:
         STACK_UNWINDING_MARK;
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
-            "INSERT INTO ", sql_table_name(),
-            "(problem_id, tag, hidden) "
-            "VALUES(?, ?, ?)");
+        auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
+                "(problem_id, tag, hidden) "
+                "VALUES(?, ?, ?)");
 
         ProgressBar progress_bar("Problem tags saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
@@ -57,10 +56,9 @@ public:
         transaction.commit();
     }
     ProblemTagsMerger(
-        const IdsFromMainAndOtherJobs& ids_from_both_jobs, const ProblemsMerger& problems)
-    : Merger(
-          "problem_tags", ids_from_both_jobs.main.problem_tags,
-          ids_from_both_jobs.other.problem_tags)
+            const IdsFromMainAndOtherJobs& ids_from_both_jobs, const ProblemsMerger& problems)
+    : Merger("problem_tags", ids_from_both_jobs.main.problem_tags,
+              ids_from_both_jobs.other.problem_tags)
     , problems_(problems) {
         STACK_UNWINDING_MARK;
         initialize();

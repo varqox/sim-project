@@ -7,7 +7,7 @@ using sim::contest_problems::ContestProblem;
 using sim::submissions::Submission;
 
 static void update_problem_final(
-    mysql::Connection& mysql, uint64_t submission_owner, uint64_t problem_id) {
+        mysql::Connection& mysql, uint64_t submission_owner, uint64_t problem_id) {
     STACK_UNWINDING_MARK;
 
     // Such index: (final_candidate, owner, problem_id, score DESC, full_status,
@@ -24,10 +24,9 @@ static void update_problem_final(
     if (not stmt.next()) {
         // Unset final submissions if there are any because there are no
         // candidates now
-        mysql
-            .prepare("UPDATE submissions SET problem_final=0 "
-                     "WHERE owner=? AND problem_id=? AND problem_final=1")
-            .bind_and_execute(submission_owner, problem_id);
+        mysql.prepare("UPDATE submissions SET problem_final=0 "
+                      "WHERE owner=? AND problem_id=? AND problem_final=1")
+                .bind_and_execute(submission_owner, problem_id);
         return; // Nothing more to be done
     }
 
@@ -53,14 +52,13 @@ static void update_problem_final(
     throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
     // Update finals
-    mysql
-        .prepare("UPDATE submissions SET problem_final=IF(id=?, 1, 0) "
-                 "WHERE owner=? AND problem_id=? AND (problem_final=1 OR id=?)")
-        .bind_and_execute(new_final_id, submission_owner, problem_id, new_final_id);
+    mysql.prepare("UPDATE submissions SET problem_final=IF(id=?, 1, 0) "
+                  "WHERE owner=? AND problem_id=? AND (problem_final=1 OR id=?)")
+            .bind_and_execute(new_final_id, submission_owner, problem_id, new_final_id);
 }
 
 static void update_contest_final(
-    mysql::Connection& mysql, uint64_t submission_owner, uint64_t contest_problem_id) {
+        mysql::Connection& mysql, uint64_t submission_owner, uint64_t contest_problem_id) {
     // TODO: update the initial_final if the submission is half-judged (only
     // initial_status is set and method of choosing the final submission does not show points)
     STACK_UNWINDING_MARK;
@@ -71,7 +69,7 @@ static void update_contest_final(
     stmt.bind_and_execute(contest_problem_id);
 
     decltype(ContestProblem::method_of_choosing_final_submission)
-        method_of_choosing_final_submission;
+            method_of_choosing_final_submission;
     decltype(ContestProblem::score_revealing) score_revealing;
     stmt.res_bind_all(method_of_choosing_final_submission, score_revealing);
     if (not stmt.next()) {
@@ -82,12 +80,11 @@ static void update_contest_final(
     auto unset_all_finals = [&] {
         // Unset final submissions if there are any because there are no
         // candidates now
-        mysql
-            .prepare("UPDATE submissions "
-                     "SET contest_final=0, contest_initial_final=0 "
-                     "WHERE owner=? AND contest_problem_id=?"
-                     " AND (contest_final=1 OR contest_initial_final=1)")
-            .bind_and_execute(submission_owner, contest_problem_id);
+        mysql.prepare("UPDATE submissions "
+                      "SET contest_final=0, contest_initial_final=0 "
+                      "WHERE owner=? AND contest_problem_id=?"
+                      " AND (contest_final=1 OR contest_initial_final=1)")
+                .bind_and_execute(submission_owner, contest_problem_id);
     };
 
     uint64_t new_final_id = 0;
@@ -197,7 +194,7 @@ static void update_contest_final(
                                  " AND initial_status=? "
                                  "ORDER BY id DESC LIMIT 1");
             stmt.bind_and_execute(
-                submission_owner, contest_problem_id, final_score, initial_status);
+                    submission_owner, contest_problem_id, final_score, initial_status);
             stmt.res_bind_all(new_initial_final_id);
             throw_assert(stmt.next()); // Previous query succeeded, so this has to
             break;
@@ -214,39 +211,37 @@ static void update_contest_final(
     }
 
     // Update finals
-    mysql
-        .prepare("UPDATE submissions SET contest_final=IF(id=?, 1, 0) "
-                 "WHERE id=?"
-                 " OR (owner=? AND contest_problem_id=? AND contest_final=1)")
-        .bind_and_execute(new_final_id, new_final_id, submission_owner, contest_problem_id);
+    mysql.prepare("UPDATE submissions SET contest_final=IF(id=?, 1, 0) "
+                  "WHERE id=?"
+                  " OR (owner=? AND contest_problem_id=? AND contest_final=1)")
+            .bind_and_execute(
+                    new_final_id, new_final_id, submission_owner, contest_problem_id);
 
     // Update initial finals
-    mysql
-        .prepare("UPDATE submissions SET contest_initial_final=IF(id=?, 1, 0) "
-                 "WHERE id=? OR (owner=? AND contest_problem_id=?"
-                 " AND contest_initial_final=1)")
-        .bind_and_execute(
-            new_initial_final_id, new_initial_final_id, submission_owner, contest_problem_id);
+    mysql.prepare("UPDATE submissions SET contest_initial_final=IF(id=?, 1, 0) "
+                  "WHERE id=? OR (owner=? AND contest_problem_id=?"
+                  " AND contest_initial_final=1)")
+            .bind_and_execute(new_initial_final_id, new_initial_final_id, submission_owner,
+                    contest_problem_id);
 }
 
 namespace sim::submissions {
 
-void update_final_lock(
-    mysql::Connection& mysql, std::optional<uint64_t> submission_owner, uint64_t problem_id) {
+void update_final_lock(mysql::Connection& mysql, std::optional<uint64_t> submission_owner,
+        uint64_t problem_id) {
     if (not submission_owner.has_value()) {
         return; // update_final on System submission is no-op
     }
 
     // This acts as a lock that serializes updating finals
-    mysql
-        .prepare("UPDATE submissions SET id=id "
-                 "WHERE owner=? AND problem_id=? ORDER BY id LIMIT 1")
-        .bind_and_execute(submission_owner, problem_id);
+    mysql.prepare("UPDATE submissions SET id=id "
+                  "WHERE owner=? AND problem_id=? ORDER BY id LIMIT 1")
+            .bind_and_execute(submission_owner, problem_id);
 }
 
-void update_final(
-    mysql::Connection& mysql, std::optional<uint64_t> submission_owner, uint64_t problem_id,
-    std::optional<uint64_t> contest_problem_id, bool make_transaction) {
+void update_final(mysql::Connection& mysql, std::optional<uint64_t> submission_owner,
+        uint64_t problem_id, std::optional<uint64_t> contest_problem_id,
+        bool make_transaction) {
     STACK_UNWINDING_MARK;
 
     if (not submission_owner.has_value()) {

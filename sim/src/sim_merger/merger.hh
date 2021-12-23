@@ -35,9 +35,8 @@ public:
 
 private:
     void log() {
-        auto tmplog = stdlog(
-            "\033[2K\033[G", header_, ' ', iter_, " / ", iters_num_, " = ",
-            100 * iter_ / iters_num_, "%");
+        auto tmplog = stdlog("\033[2K\033[G", header_, ' ', iter_, " / ", iters_num_, " = ",
+                100 * iter_ / iters_num_, "%");
         if (iter_ < iters_num_) {
             tmplog.flush_no_nl();
         }
@@ -45,9 +44,8 @@ private:
 };
 
 template <class CollA, class CollB, class FuncA, class FuncB, class Compare>
-void merge(
-    CollA&& collection_a, CollB&& collection_b, FuncA&& a_merge, FuncB&& b_merge,
-    Compare&& is_left_lower) {
+void merge(CollA&& collection_a, CollB&& collection_b, FuncA&& a_merge, FuncB&& b_merge,
+        Compare&& is_left_lower) {
     auto a_beg = std::begin(collection_a);
     auto a_end = std::end(collection_a);
     auto b_beg = std::begin(collection_b);
@@ -90,17 +88,16 @@ public:
 
 enum class IdKind { Main, Other };
 
-template <
-    class Record, class IdGetter = DefaultIdGetter,
-    class IdCmp = std::less<std::remove_cv_t<
-        std::remove_reference_t<decltype(IdGetter{}(std::declval<Record>()))>>>>
+template <class Record, class IdGetter = DefaultIdGetter,
+        class IdCmp = std::less<std::remove_cv_t<
+                std::remove_reference_t<decltype(IdGetter{}(std::declval<Record>()))>>>>
 class Merger : public MergerBase {
     constexpr static bool debug = false;
 
     const std::string sql_table_name_;
     IdGetter id_getter_;
     using IdType =
-        std::remove_cv_t<std::remove_reference_t<std::invoke_result_t<IdGetter, Record&>>>;
+            std::remove_cv_t<std::remove_reference_t<std::invoke_result_t<IdGetter, Record&>>>;
 
 protected:
     IdType last_new_id_ = {};
@@ -135,9 +132,8 @@ protected:
             }
         }
 
-        RecordSet(
-            IdKind my_kind, std::string my_sql_tbl_name, StringView my_sql_tbl_prefix,
-            const IdGetter& my_id_getter, IdsWithTime<IdType, IdCmp> my_ids)
+        RecordSet(IdKind my_kind, std::string my_sql_tbl_name, StringView my_sql_tbl_prefix,
+                const IdGetter& my_id_getter, IdsWithTime<IdType, IdCmp> my_ids)
         : kind(my_kind)
         , sql_table_name(std::move(my_sql_tbl_name))
         , sql_table_prefix(my_sql_tbl_prefix)
@@ -145,9 +141,8 @@ protected:
         , ids(std::move(my_ids)) {}
 
     public:
-        void add_record(
-            Record record,
-            std::chrono::system_clock::time_point closest_creation_time_approximation) {
+        void add_record(Record record,
+                std::chrono::system_clock::time_point closest_creation_time_approximation) {
             ids.add_id(id_getter(record), closest_creation_time_approximation);
             table.emplace_back(std::move(record));
         }
@@ -172,12 +167,12 @@ protected:
     template <class Func>
     void merge(Func&& try_to_merge_into_an_existing_new_record) {
         constexpr bool takes_two_arguments =
-            std::is_invocable_r_v<NewRecord*, Func, const Record&, IdKind>;
+                std::is_invocable_r_v<NewRecord*, Func, const Record&, IdKind>;
         static_assert(
-            std::is_invocable_r_v<NewRecord*, Func, const Record&> or takes_two_arguments);
+                std::is_invocable_r_v<NewRecord*, Func, const Record&> or takes_two_arguments);
 
-        auto try_merging_into_existing_new_record_wrapper = [&](const Record& x,
-                                                                IdKind kind) -> NewRecord* {
+        auto try_merging_into_existing_new_record_wrapper =
+                [&](const Record& x, IdKind kind) -> NewRecord* {
             if constexpr (takes_two_arguments) {
                 return try_to_merge_into_an_existing_new_record(x, kind);
             } else {
@@ -191,9 +186,8 @@ protected:
         auto process_id = [&](RecordSet& record_set, IdType id, system_clock::time_point tp) {
             auto log_added = [&](IdType new_id) {
                 if constexpr (debug) {
-                    stdlog(
-                        "Added ", id_info(id, record_set.kind), " with new id: ", new_id, "  ",
-                        mysql_date(system_clock::to_time_t(tp)));
+                    stdlog("Added ", id_info(id, record_set.kind), " with new id: ", new_id,
+                            "  ", mysql_date(system_clock::to_time_t(tp)));
                 } else {
                     (void)new_id; // Suppress GCC warning
                 }
@@ -210,7 +204,7 @@ protected:
 
             const auto& record = record_set.table[it->second];
             NewRecord* new_record =
-                try_merging_into_existing_new_record_wrapper(record, record_set.kind);
+                    try_merging_into_existing_new_record_wrapper(record, record_set.kind);
             if (not new_record) {
                 new_record = &new_table_.emplace_back(record);
                 id_getter_(new_record->data) = pre_merge_record_id_to_post_merge_record_id(id);
@@ -231,18 +225,18 @@ protected:
 
         using IdsElem = std::pair<const IdType, system_clock::time_point>;
         sim_merger::merge(
-            main_.ids.ids, other_.ids.ids,
-            [&](const IdsElem& main_elem) {
-                process_id(main_, main_elem.first, main_elem.second);
-            },
-            [&](const IdsElem& other_elem) {
-                process_id(other_, other_elem.first, other_elem.second);
-            },
-            [&](const auto& main_elem, const auto& other_elem) {
-                auto& [main_id, main_tp] = main_elem;
-                auto& [other_id, other_tp] = other_elem;
-                return main_tp <= other_tp;
-            });
+                main_.ids.ids, other_.ids.ids,
+                [&](const IdsElem& main_elem) {
+                    process_id(main_, main_elem.first, main_elem.second);
+                },
+                [&](const IdsElem& other_elem) {
+                    process_id(other_, other_elem.first, other_elem.second);
+                },
+                [&](const auto& main_elem, const auto& other_elem) {
+                    auto& [main_id, main_tp] = main_elem;
+                    auto& [other_id, other_tp] = other_elem;
+                    return main_tp <= other_tp;
+                });
     }
 
     virtual IdType pre_merge_record_id_to_post_merge_record_id(const IdType& record_id) {
@@ -258,14 +252,13 @@ protected:
 
     virtual void merge() = 0;
 
-    Merger(
-        StringView orig_sql_table_name, IdsWithTime<IdType, IdCmp> main_ids,
-        IdsWithTime<IdType, IdCmp> other_ids)
+    Merger(StringView orig_sql_table_name, IdsWithTime<IdType, IdCmp> main_ids,
+            IdsWithTime<IdType, IdCmp> other_ids)
     : sql_table_name_(orig_sql_table_name.to_string())
-    , main_{IdKind::Main, concat_tostr(main_sim_table_prefix, orig_sql_table_name), main_sim_table_prefix, id_getter_, std::move(main_ids)}
-    , other_{
-          IdKind::Other, orig_sql_table_name.to_string(), "", id_getter_,
-          std::move(other_ids)} {
+    , main_{IdKind::Main, concat_tostr(main_sim_table_prefix, orig_sql_table_name),
+              main_sim_table_prefix, id_getter_, std::move(main_ids)}
+    , other_{IdKind::Other, orig_sql_table_name.to_string(), "", id_getter_,
+              std::move(other_ids)} {
         STACK_UNWINDING_MARK;
 
         assert(std::find(tables.begin(), tables.end(), orig_sql_table_name) != tables.end());

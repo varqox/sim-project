@@ -18,10 +18,9 @@ void MergeUsers::run() {
             run_impl();
             break;
         } catch (const std::exception& e) {
-            if (has_prefix(
-                    e.what(),
-                    "Deadlock found when trying to get lock; "
-                    "try restarting transaction"))
+            if (has_prefix(e.what(),
+                        "Deadlock found when trying to get lock; "
+                        "try restarting transaction"))
             {
                 continue;
             }
@@ -70,26 +69,24 @@ void MergeUsers::run_impl() {
                       "gets updated";
             }
         };
-        static_assert(
-            is_sorted(
-                std::array{EnumVal(UT::ADMIN), EnumVal(UT::TEACHER), EnumVal(UT::NORMAL)}),
-            "Needed by below SQL statement (comparison between types)");
+        static_assert(is_sorted(std::array{
+                              EnumVal(UT::ADMIN), EnumVal(UT::TEACHER), EnumVal(UT::NORMAL)}),
+                "Needed by below SQL statement (comparison between types)");
         // Transfer donor's user-type to the target user if the donor has higher
         // permissions
-        mysql
-            .prepare("UPDATE users tu "
-                     "JOIN users du ON du.id=? AND du.type<tu.type "
-                     "SET tu.type=du.type WHERE tu.id=?")
-            .bind_and_execute(donor_user_id_, info_.target_user_id);
+        mysql.prepare("UPDATE users tu "
+                      "JOIN users du ON du.id=? AND du.type<tu.type "
+                      "SET tu.type=du.type WHERE tu.id=?")
+                .bind_and_execute(donor_user_id_, info_.target_user_id);
     }
 
     // Transfer sessions
     mysql.prepare("UPDATE sessions SET user_id=? WHERE user_id=?")
-        .bind_and_execute(info_.target_user_id, donor_user_id_);
+            .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Transfer problems
     mysql.prepare("UPDATE problems SET owner=? WHERE owner=?")
-        .bind_and_execute(info_.target_user_id, donor_user_id_);
+            .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Transfer contest_users
     {
@@ -103,26 +100,24 @@ void MergeUsers::run_impl() {
                       "gets updated";
             }
         };
-        static_assert(
-            is_sorted(std::array{
-                EnumVal(CUM::CONTESTANT), EnumVal(CUM::MODERATOR), EnumVal(CUM::OWNER)}),
-            "Needed by below SQL statement (comparison between modes)");
+        static_assert(is_sorted(std::array{EnumVal(CUM::CONTESTANT), EnumVal(CUM::MODERATOR),
+                              EnumVal(CUM::OWNER)}),
+                "Needed by below SQL statement (comparison between modes)");
         // Transfer donor's contest permissions to the target user if the donor
         // has higher permissions
-        mysql
-            .prepare("UPDATE contest_users tu "
-                     "JOIN contest_users du ON du.user_id=?"
-                     " AND du.contest_id=tu.contest_id AND du.mode>tu.mode "
-                     "SET tu.mode=du.mode WHERE tu.user_id=?")
-            .bind_and_execute(donor_user_id_, info_.target_user_id);
+        mysql.prepare("UPDATE contest_users tu "
+                      "JOIN contest_users du ON du.user_id=?"
+                      " AND du.contest_id=tu.contest_id AND du.mode>tu.mode "
+                      "SET tu.mode=du.mode WHERE tu.user_id=?")
+                .bind_and_execute(donor_user_id_, info_.target_user_id);
         // Transfer donor's contest permissions that target user does not have
         mysql.prepare("UPDATE IGNORE contest_users SET user_id=? WHERE user_id=?")
-            .bind_and_execute(info_.target_user_id, donor_user_id_);
+                .bind_and_execute(info_.target_user_id, donor_user_id_);
     }
 
     // Transfer contest_files
     mysql.prepare("UPDATE contest_files SET creator=? WHERE creator=?")
-        .bind_and_execute(info_.target_user_id, donor_user_id_);
+            .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Collect update finals
     struct FTU {
@@ -143,19 +138,18 @@ void MergeUsers::run_impl() {
 
     // Transfer submissions
     mysql.prepare("UPDATE submissions SET owner=? WHERE owner=?")
-        .bind_and_execute(info_.target_user_id, donor_user_id_);
+            .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Update finals (both contest and problem finals are being taken care of)
     for (auto const& ftu_elem : finals_to_update) {
         sim::submissions::update_final_lock(mysql, info_.target_user_id, ftu_elem.problem_id);
-        sim::submissions::update_final(
-            mysql, info_.target_user_id, ftu_elem.problem_id, ftu_elem.contest_problem_id,
-            false);
+        sim::submissions::update_final(mysql, info_.target_user_id, ftu_elem.problem_id,
+                ftu_elem.contest_problem_id, false);
     }
 
     // Transfer jobs
     mysql.prepare("UPDATE jobs SET creator=? WHERE creator=?")
-        .bind_and_execute(info_.target_user_id, donor_user_id_);
+            .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Finally, delete the donor user
     mysql.prepare("DELETE FROM users WHERE id=?").bind_and_execute(donor_user_id_);

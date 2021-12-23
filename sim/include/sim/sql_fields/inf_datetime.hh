@@ -23,12 +23,10 @@ public:
     explicit InfDatetime(sim::InfDatetime&& dt)
     : Varbinary(dt.to_str()) {}
 
-    template <
-        class T,
-        std::enable_if_t<
-            std::is_convertible_v<T, StringView> and
-                !std::is_same_v<std::decay_t<T>, InfDatetime>,
-            int> = 0>
+    template <class T,
+            std::enable_if_t<std::is_convertible_v<T, StringView> and
+                            !std::is_same_v<std::decay_t<T>, InfDatetime>,
+                    int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     explicit InfDatetime(T&& str)
     : InfDatetime(sim::InfDatetime(std::forward<T>(str))) {}

@@ -22,7 +22,7 @@ StringView Request::get_cookie(StringView name) const noexcept {
         }
 
         if (0 == cookie.compare(beg, name.size(), name) && beg + name.size() < cookie.size() &&
-            cookie[beg + name.size()] == '=')
+                cookie[beg + name.size()] == '=')
         {
             beg += name.size() + 1;
             size_t next = std::min(cookie.size(), find(cookie, ';', beg));

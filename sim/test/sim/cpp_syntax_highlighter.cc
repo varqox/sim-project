@@ -24,7 +24,7 @@ vector<string> collect_tests(const string& tests_dir) {
         for (StringView suffix : {".in", ".out"}) {
             if (has_suffix(file_name, suffix)) {
                 ++test_file_num[file_name.substring(0, file_name.size() - suffix.size())
-                                    .to_string()];
+                                        .to_string()];
                 test_file = true;
                 break;
             }
@@ -53,7 +53,7 @@ void test_cpp_systax_highlighter(string&& tests_dir) {
     sim::CppSyntaxHighlighter csh;
     for (auto const& test_name : tests) {
         auto csh_ans = csh(intentional_unsafe_cstring_view(
-            get_file_contents(concat(tests_dir, test_name, ".in"))));
+                get_file_contents(concat(tests_dir, test_name, ".in"))));
         auto test_out_path = concat(tests_dir, test_name, ".out");
         if (regenerate_outs) {
             put_file_contents(test_out_path, csh_ans);
@@ -67,7 +67,7 @@ void test_cpp_systax_highlighter(string&& tests_dir) {
 TEST(cpp_syntax_highlighter, syntax_highlighting) {
     for (const auto& path : {string{"."}, executable_path(getpid())}) {
         auto tests_dir_opt = deepest_ancestor_dir_with_subpath(
-            path, "test/sim/cpp_syntax_highlighter_test_cases/");
+                path, "test/sim/cpp_syntax_highlighter_test_cases/");
         if (tests_dir_opt) {
             test_cpp_systax_highlighter(std::move(*tests_dir_opt));
             return;

@@ -33,7 +33,7 @@ void Sim::problems_problem() {
 
     } else if (next_arg == "submit") {
         page_template(intentional_unsafe_string_view(
-            concat("Submit solution to the problem ", problems_pid)));
+                concat("Submit solution to the problem ", problems_pid)));
         append("add_problem_submission(false, {id:", problems_pid, "})");
 
     } else if (next_arg == "edit") {
@@ -42,12 +42,12 @@ void Sim::problems_problem() {
 
     } else if (next_arg == "reupload") {
         page_template(
-            intentional_unsafe_string_view(concat("Reupload problem ", problems_pid)));
+                intentional_unsafe_string_view(concat("Reupload problem ", problems_pid)));
         append("reupload_problem(false, ", problems_pid, ");");
 
     } else if (next_arg == "reset_time_limits") {
         page_template(intentional_unsafe_string_view(
-            concat("Reset problem time limits ", problems_pid)));
+                concat("Reset problem time limits ", problems_pid)));
         append("reset_problem_time_limits(false, ", problems_pid, ");");
 
     } else if (next_arg == "delete") {

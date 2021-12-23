@@ -17,7 +17,7 @@ def sim_sources(srcdir):
 def update_clang_format_file(srcdir):
     with open(srcdir + '/subprojects/simlib/.clang-format', 'rb') as f:
         content = f.read()
-    (content, count) = re.subn(rb'^(WhitespaceSensitiveMacros: .*)\]$', rb"\1, 'VALIDATE']", content, 0, re.MULTILINE)
+    (content, count) = re.subn(rb'^(WhitespaceSensitiveMacros:)$', rb"\1\n  - VALIDATE", content, 0, re.MULTILINE)
     assert count == 1
     with open(srcdir + '/.clang-format', 'wb') as f:
         f.write(content)

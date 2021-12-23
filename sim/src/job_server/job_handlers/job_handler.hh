@@ -18,7 +18,7 @@ protected:
     template <class... Args>
     auto job_log(Args&&... args) {
         return DoubleAppender<decltype(job_log_holder_)>(
-            stdlog, job_log_holder_, std::forward<Args>(args)...);
+                stdlog, job_log_holder_, std::forward<Args>(args)...);
     }
 
     template <class... Args>

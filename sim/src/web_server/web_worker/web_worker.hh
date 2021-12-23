@@ -30,24 +30,24 @@ private:
     http::Response handler_impl(ResponseMaker&& response_maker);
 
     template <const char* url_pattern, auto... CustomParsers, class... Params>
-    void
-    do_add_get_handler(strongly_typed_function<http::Response(Context&, Params...)> handler);
+    void do_add_get_handler(
+            strongly_typed_function<http::Response(Context&, Params...)> handler);
 
     template <const char* url_pattern, auto... CustomParsers, class... Params>
-    void
-    do_add_post_handler(strongly_typed_function<http::Response(Context&, Params...)> handler);
+    void do_add_post_handler(
+            strongly_typed_function<http::Response(Context&, Params...)> handler);
 
     template <const char* url_pattern, auto... CustomParsers>
-    void add_get_handler(UrlDispatcher::HandlerImpl<
-                         std::tuple<Context&>, std::tuple<>, url_pattern, CustomParsers...>
-                             handler) {
+    void add_get_handler(UrlDispatcher::HandlerImpl<std::tuple<Context&>, std::tuple<>,
+            url_pattern, CustomParsers...>
+                    handler) {
         do_add_get_handler<url_pattern, CustomParsers...>(std::move(handler));
     }
 
     template <const char* url_pattern, auto... CustomParsers>
-    void add_post_handler(UrlDispatcher::HandlerImpl<
-                          std::tuple<Context&>, std::tuple<>, url_pattern, CustomParsers...>
-                              handler) {
+    void add_post_handler(UrlDispatcher::HandlerImpl<std::tuple<Context&>, std::tuple<>,
+            url_pattern, CustomParsers...>
+                    handler) {
         do_add_post_handler<url_pattern, CustomParsers...>(std::move(handler));
     }
 };

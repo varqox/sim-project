@@ -162,7 +162,7 @@ void Connection::read_post(http::Request& req) {
             }
 
             req.form_fields.add_field(
-                decode_uri(field_name).to_string(), decode_uri(field_content).to_string());
+                    decode_uri(field_name).to_string(), decode_uri(field_content).to_string());
         }
 
     } else if (has_prefix(con_type, "multipart/form-data")) {
@@ -217,10 +217,9 @@ void Connection::read_post(http::Request& req) {
                     if (fd == -1) { // Normal variable
                         // Erase boundary: +1 because we did not append the last
                         // character to the boundary
-                        field_content.erase(
-                            (field_content.size() < boundary.size()
-                                 ? 0
-                                 : field_content.size() - boundary.size() + 1));
+                        field_content.erase((field_content.size() < boundary.size()
+                                        ? 0
+                                        : field_content.size() - boundary.size() + 1));
                         req.form_fields.add_field(field_name, field_content);
 
                     } else { // File
@@ -230,11 +229,10 @@ void Connection::read_post(http::Request& req) {
                         size_t tmp_file_size = ftell(tmp_file);
                         // Erase boundary: +1 because we did not append the last
                         // character to the boundary
-                        ftruncate(
-                            fileno(tmp_file),
-                            (tmp_file_size < boundary.size()
-                                 ? 0
-                                 : tmp_file_size - boundary.size() + 1));
+                        ftruncate(fileno(tmp_file),
+                                (tmp_file_size < boundary.size()
+                                                ? 0
+                                                : tmp_file_size - boundary.size() + 1));
 
                         fclose(tmp_file);
                         tmp_file = nullptr;
@@ -257,7 +255,7 @@ void Connection::read_post(http::Request& req) {
                     while ((c = reader.get_char()) != -1) {
                         // Found CRLF
                         if (c == '\n' && !field_content.empty() &&
-                            field_content.back() == '\r') {
+                                field_content.back() == '\r') {
                             field_content.pop_back();
                             break;
                         }
@@ -302,7 +300,7 @@ void Connection::read_post(http::Request& req) {
                             var_name = var_val = "";
                             // extract var_name
                             while (st < last && !is_blank(header.second[st]) &&
-                                   header.second[st] != '=') {
+                                    header.second[st] != '=') {
                                 var_name += header.second[st++];
                             }
 
@@ -599,8 +597,8 @@ http::Request Connection::get_request() {
 
     req.http_version = request_line.substr(beg, end - beg);
     if (req.http_version.compare(0, 7, "HTTP/1.") != 0 ||
-        (req.http_version.compare(7, string::npos, "0") != 0 &&
-         req.http_version.compare(7, string::npos, "1") != 0))
+            (req.http_version.compare(7, string::npos, "0") != 0 &&
+                    req.http_version.compare(7, string::npos, "1") != 0))
     {
         error400();
         return req;
@@ -746,7 +744,7 @@ void Connection::send_response(const http::Response& res) {
         CStringView filename(filename_s.data(), filename_s.size - 1);
 
         FileRemover remover(
-            res.content_type == http::Response::FILE_TO_REMOVE ? filename : "");
+                res.content_type == http::Response::FILE_TO_REMOVE ? filename : "");
         FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
         if (fd == -1) {
             return error404();

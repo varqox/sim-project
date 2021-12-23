@@ -9,9 +9,8 @@
 namespace sim {
 
 constexpr bool is_safe_timestamp(StringView str) noexcept {
-    return (
-        str <=
-        intentional_unsafe_string_view(::to_string(std::numeric_limits<time_t>::max())));
+    return (str <=
+            intentional_unsafe_string_view(::to_string(std::numeric_limits<time_t>::max())));
 }
 
 constexpr bool is_safe_inf_timestamp(StringView str) noexcept {
@@ -29,8 +28,8 @@ class InfDatetime {
 public:
     InfDatetime() = default;
 
-    template <
-        class T, std::enable_if_t<not std::is_same_v<std::decay_t<T>, InfDatetime>, int> = 0>
+    template <class T,
+            std::enable_if_t<not std::is_same_v<std::decay_t<T>, InfDatetime>, int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     explicit InfDatetime(T&& str) {
         from_str(std::forward<T>(str));
@@ -94,16 +93,15 @@ public:
     }
 
     template <class T>
-    std::enable_if_t<std::is_convertible<T, CStringView>::value, InfDatetime&>
-    from_str(T&& str) {
+    std::enable_if_t<std::is_convertible<T, CStringView>::value, InfDatetime&> from_str(
+            T&& str) {
         return from_str(CStringView(str));
     }
 
     template <class T>
-    std::enable_if_t<
-        std::is_convertible<T, StringView>::value &&
-            !std::is_convertible<T, CStringView>::value,
-        InfDatetime&>
+    std::enable_if_t<std::is_convertible<T, StringView>::value &&
+                    !std::is_convertible<T, CStringView>::value,
+            InfDatetime&>
     from_str(T&& str) {
         auto x = concat<20>(str);
         return from_str(x.to_cstr());
@@ -168,7 +166,7 @@ inline InfDatetime inf_timestamp_to_InfDatetime(StringView str) {
         res.set_neg_inf();
     } else {
         res.set_datetime(intentional_unsafe_cstring_view(
-            mysql_date(WONT_THROW(str2num<uint64_t>(str).value()))));
+                mysql_date(WONT_THROW(str2num<uint64_t>(str).value()))));
     }
 
     return res;

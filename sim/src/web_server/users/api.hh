@@ -13,9 +13,8 @@ http::Response list_above_id(web_worker::Context& ctx, decltype(sim::users::User
 
 http::Response list_by_type(web_worker::Context& ctx, StringView user_type_str);
 
-http::Response list_by_type_above_id(
-    web_worker::Context& ctx, StringView user_type_str,
-    decltype(sim::users::User::id) user_id);
+http::Response list_by_type_above_id(web_worker::Context& ctx, StringView user_type_str,
+        decltype(sim::users::User::id) user_id);
 
 http::Response view(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 

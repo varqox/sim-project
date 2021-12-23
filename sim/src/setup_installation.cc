@@ -107,12 +107,11 @@ static void create_db_config(FilePath db_config_path) {
     }
 
     FileDescriptor fd(db_config_path, O_CREAT | O_TRUNC | O_WRONLY, S_0600);
-    write_all_throw(
-        fd,
-        intentional_unsafe_string_view(concat(
-            "user: ", ConfigFile::escape_string(user), "\npassword: ",
-            ConfigFile::escape_string(password), "\ndb: ", ConfigFile::escape_string(database),
-            "\nhost: ", ConfigFile::escape_string(host), '\n')));
+    write_all_throw(fd,
+            intentional_unsafe_string_view(concat("user: ", ConfigFile::escape_string(user),
+                    "\npassword: ", ConfigFile::escape_string(password),
+                    "\ndb: ", ConfigFile::escape_string(database),
+                    "\nhost: ", ConfigFile::escape_string(host), '\n')));
 }
 
 struct TryToCreateTable {
@@ -127,7 +126,7 @@ struct TryToCreateTable {
 
     template <class Str, class Func>
     void operator()(
-        const char* table_name, Str&& sql_str, Func&& do_after_creating_table) noexcept {
+            const char* table_name, Str&& sql_str, Func&& do_after_creating_table) noexcept {
         try {
             if (not binary_search(sorted_tables, StringView{table_name})) {
                 THROW("Table `", table_name, "` not found in the table list");
@@ -172,9 +171,8 @@ int main(int argc, char** argv) {
         conn.update("SET foreign_key_checks=1"); // Just for sure
 
     } catch (const std::exception& e) {
-        errlog(
-            "\033[31mFailed to connect to database, please edit or remove '", db_config_path,
-            "' file and try again\033[m");
+        errlog("\033[31mFailed to connect to database, please edit or remove '",
+                db_config_path, "' file and try again\033[m");
         ERRLOG_CATCH(e);
         return 4;
     }
@@ -220,18 +218,19 @@ int main(int argc, char** argv) {
             "UNIQUE KEY (username),"
             "KEY(type, id DESC)"
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
-        // clang-format on
-        [&] {
-            using sim::users::User;
-            // Add sim root user
-            auto [salt, hash] = sim::users::salt_and_hash_password("sim");
-            decltype(User::type) sim_root_type = User::Type::ADMIN;
-            conn.prepare("INSERT IGNORE INTO users(id, type, username, first_name, last_name, "
-                         "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?, ?)")
-                .bind_and_execute(
-                    sim::users::SIM_ROOT_UID, sim_root_type, "sim", "sim", "sim", "sim@sim",
-                    salt, hash);
-        });
+            // clang-format on
+            [&] {
+                using sim::users::User;
+                // Add sim root user
+                auto [salt, hash] = sim::users::salt_and_hash_password("sim");
+                decltype(User::type) sim_root_type = User::Type::ADMIN;
+                conn.prepare("INSERT IGNORE INTO users(id, type, username, first_name, "
+                             "last_name, "
+                             "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, "
+                             "?, ?)")
+                        .bind_and_execute(sim::users::SIM_ROOT_UID, sim_root_type, "sim",
+                                "sim", "sim", "sim@sim", salt, hash);
+            });
 
     using sim::sessions::Session;
     // clang-format off

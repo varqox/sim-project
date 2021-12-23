@@ -10,8 +10,8 @@
 
 namespace sim_merger {
 
-static std::pair<std::vector<std::string>, std::string>
-package_fingerprint(FilePath zip_file_path) {
+static std::pair<std::vector<std::string>, std::string> package_fingerprint(
+        FilePath zip_file_path) {
     std::vector<std::string> entries_list;
     ZipFile zip(zip_file_path, ZIP_RDONLY);
     entries_list.reserve(zip.entries_no());
@@ -24,8 +24,8 @@ package_fingerprint(FilePath zip_file_path) {
     auto simfile_contents = zip.extract_to_str(zip.get_index(concat(main_dir, "Simfile")));
     sim::Simfile sf(simfile_contents);
     sf.load_statement();
-    auto statement_contents =
-        zip.extract_to_str(zip.get_index(concat(main_dir, WONT_THROW(sf.statement.value()))));
+    auto statement_contents = zip.extract_to_str(
+            zip.get_index(concat(main_dir, WONT_THROW(sf.statement.value()))));
 
     return {entries_list, statement_contents};
 }
@@ -36,20 +36,18 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
     bool reset_new_problems_time_limits_;
 
     std::map<decltype(sim::problems::Problem::id), decltype(sim::problems::Problem::id)>
-        to_merge_; // (new problem id, new target problem id)
+            to_merge_; // (new problem id, new target problem id)
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
         sim::problems::Problem prob;
         mysql::Optional<decltype(prob.owner)::value_type> m_owner;
-        auto stmt = conn.prepare(
-            "SELECT id, file_id, type, name, label, "
-            "simfile, owner, added, last_edit FROM ",
-            record_set.sql_table_name);
+        auto stmt = conn.prepare("SELECT id, file_id, type, name, label, "
+                                 "simfile, owner, added, last_edit FROM ",
+                record_set.sql_table_name);
         stmt.bind_and_execute();
-        stmt.res_bind_all(
-            prob.id, prob.file_id, prob.type, prob.name, prob.label, prob.simfile, m_owner,
-            prob.added, prob.last_edit);
+        stmt.res_bind_all(prob.id, prob.file_id, prob.type, prob.name, prob.label,
+                prob.simfile, m_owner, prob.added, prob.last_edit);
         while (stmt.next()) {
             prob.file_id = internal_files_.new_id(prob.file_id, record_set.kind);
             prob.owner = m_owner.to_opt();
@@ -57,9 +55,9 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
                 prob.owner = users_.new_id(prob.owner.value(), record_set.kind);
             }
 
-            record_set.add_record(
-                prob,
-                str_to_time_point(intentional_unsafe_cstring_view(prob.added.to_string())));
+            record_set.add_record(prob,
+                    str_to_time_point(
+                            intentional_unsafe_cstring_view(prob.added.to_string())));
         }
     }
 
@@ -84,10 +82,9 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
             dsu[find(src_idx)] = find(target_idx);
         };
 
-        std::map<
-            std::invoke_result_t<decltype(package_fingerprint), FilePath>,
-            decltype(sim::problems::Problem::id)>
-            pkg_fingerprint_to_problem_idx;
+        std::map<std::invoke_result_t<decltype(package_fingerprint), FilePath>,
+                decltype(sim::problems::Problem::id)>
+                pkg_fingerprint_to_problem_idx;
         for (size_t idx = 0; idx < new_table_.size(); ++idx) {
             dsu.emplace(idx, idx);
             auto const& p = new_table_[idx].data;
@@ -113,9 +110,8 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
             auto const& src = new_table_[src_idx];
             auto const& dest = new_table_[dest_idx];
             to_merge_.emplace(src.data.id, dest.data.id);
-            stdlog(
-                "\nWill merge: ", src.data.name, ' ', id_info(src),
-                "\n      into: ", dest.data.name, ' ', id_info(dest));
+            stdlog("\nWill merge: ", src.data.name, ' ', id_info(src),
+                    "\n      into: ", dest.data.name, ' ', id_info(dest));
         }
     }
 
@@ -124,29 +120,26 @@ public:
         STACK_UNWINDING_MARK;
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
-            "INSERT INTO ", sql_table_name(),
-            "(id, file_id, type, name, label, simfile,"
-            " owner, added, last_edit) "
-            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
+                "(id, file_id, type, name, label, simfile,"
+                " owner, added, last_edit) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         ProgressBar progress_bar("Problems saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(
-                x.id, x.file_id, x.type, x.name, x.label, x.simfile, x.owner, x.added,
-                x.last_edit);
+            stmt.bind_and_execute(x.id, x.file_id, x.type, x.name, x.label, x.simfile, x.owner,
+                    x.added, x.last_edit);
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 
-    ProblemsMerger(
-        const IdsFromMainAndOtherJobs& ids_from_both_jobs,
-        const InternalFilesMerger& internal_files, const UsersMerger& users,
-        bool reset_new_problems_time_limits)
+    ProblemsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
+            const InternalFilesMerger& internal_files, const UsersMerger& users,
+            bool reset_new_problems_time_limits)
     : Merger("problems", ids_from_both_jobs.main.problems, ids_from_both_jobs.other.problems)
     , internal_files_(internal_files)
     , users_(users)
@@ -163,11 +156,10 @@ public:
             throw_assert(src_id != dest_id);
             conn.prepare("INSERT jobs (creator, status, priority, type, added,"
                          " aux_id, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
-                .bind_and_execute(
-                    EnumVal(sim::jobs::Job::Status::PENDING),
-                    default_priority(sim::jobs::Job::Type::MERGE_PROBLEMS),
-                    EnumVal(sim::jobs::Job::Type::MERGE_PROBLEMS), mysql_date(), src_id,
-                    sim::jobs::MergeProblemsInfo(dest_id, false).dump());
+                    .bind_and_execute(EnumVal(sim::jobs::Job::Status::PENDING),
+                            default_priority(sim::jobs::Job::Type::MERGE_PROBLEMS),
+                            EnumVal(sim::jobs::Job::Type::MERGE_PROBLEMS), mysql_date(),
+                            src_id, sim::jobs::MergeProblemsInfo(dest_id, false).dump());
         }
 
         if (reset_new_problems_time_limits_) {
@@ -184,16 +176,16 @@ public:
 
 private:
     static void schedule_reseting_problem_time_limits(
-        decltype(sim::problems::Problem::id) problem_new_id) {
+            decltype(sim::problems::Problem::id) problem_new_id) {
         conn.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
                      " info, data) "
                      "VALUES(NULL, ?, ?, ?, ?, ?, '', '')")
-            .bind_and_execute(
-                EnumVal(sim::jobs::Job::Status::PENDING),
-                default_priority(
-                    sim::jobs::Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-                EnumVal(sim::jobs::Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-                mysql_date(), problem_new_id);
+                .bind_and_execute(EnumVal(sim::jobs::Job::Status::PENDING),
+                        default_priority(sim::jobs::Job::Type::
+                                        RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+                        EnumVal(sim::jobs::Job::Type::
+                                        RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+                        mysql_date(), problem_new_id);
     }
 };
 

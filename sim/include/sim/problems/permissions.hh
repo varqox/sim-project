@@ -20,8 +20,8 @@ DECLARE_ENUM_UNARY_OPERATOR(OverallPermissions, ~)
 DECLARE_ENUM_OPERATOR(OverallPermissions, |)
 DECLARE_ENUM_OPERATOR(OverallPermissions, &)
 
-OverallPermissions
-get_overall_permissions(std::optional<users::User::Type> user_type) noexcept;
+OverallPermissions get_overall_permissions(
+        std::optional<users::User::Type> user_type) noexcept;
 
 enum class Permissions : uint32_t {
     NONE = 0,
@@ -53,15 +53,14 @@ DECLARE_ENUM_UNARY_OPERATOR(Permissions, ~)
 DECLARE_ENUM_OPERATOR(Permissions, |)
 DECLARE_ENUM_OPERATOR(Permissions, &)
 
-Permissions get_permissions(
-    std::optional<decltype(users::User::id)> user_id,
-    std::optional<users::User::Type> user_type, decltype(Problem::owner) problem_owner,
-    decltype(Problem::type) problem_type) noexcept;
+Permissions get_permissions(std::optional<decltype(users::User::id)> user_id,
+        std::optional<users::User::Type> user_type, decltype(Problem::owner) problem_owner,
+        decltype(Problem::type) problem_type) noexcept;
 
 template <class T>
-std::optional<Permissions> get_permissions(
-    mysql::Connection& mysql, T&& problem_id, std::optional<decltype(users::User::id)> user_id,
-    std::optional<users::User::Type> user_type) {
+std::optional<Permissions> get_permissions(mysql::Connection& mysql, T&& problem_id,
+        std::optional<decltype(users::User::id)> user_id,
+        std::optional<users::User::Type> user_type) {
     auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 

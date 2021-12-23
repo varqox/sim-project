@@ -113,20 +113,18 @@ constexpr const char* to_mime(Submission::Language x) {
 }
 
 // Non-fatal statuses
-static_assert(
-    meta::max(
-        Submission::Status::OK, Submission::Status::WA, Submission::Status::TLE,
-        Submission::Status::MLE, Submission::Status::RTE) < Submission::Status::PENDING,
-    "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-    " used during selection of the final submission");
+static_assert(meta::max(Submission::Status::OK, Submission::Status::WA,
+                      Submission::Status::TLE, Submission::Status::MLE,
+                      Submission::Status::RTE) < Submission::Status::PENDING,
+        "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+        " used during selection of the final submission");
 
 // Fatal statuses
-static_assert(
-    meta::min(
-        Submission::Status::COMPILATION_ERROR, Submission::Status::CHECKER_COMPILATION_ERROR,
-        Submission::Status::JUDGE_ERROR) > Submission::Status::PENDING,
-    "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-    " used during selection of the final submission");
+static_assert(meta::min(Submission::Status::COMPILATION_ERROR,
+                      Submission::Status::CHECKER_COMPILATION_ERROR,
+                      Submission::Status::JUDGE_ERROR) > Submission::Status::PENDING,
+        "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+        " used during selection of the final submission");
 
 constexpr bool is_special(Submission::Status status) {
     return (status >= Submission::Status::PENDING);

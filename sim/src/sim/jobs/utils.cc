@@ -6,16 +6,15 @@
 
 namespace sim::jobs {
 
-void restart_job(
-    mysql::Connection& mysql, StringView job_id, Job::Type job_type, StringView job_info,
-    bool notify_job_server) {
+void restart_job(mysql::Connection& mysql, StringView job_id, Job::Type job_type,
+        StringView job_info, bool notify_job_server) {
     STACK_UNWINDING_MARK;
     using JT = Job::Type;
 
     // Restart adding / reuploading problem
     bool adding = is_one_of(job_type, JT::ADD_PROBLEM, JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION);
-    bool reupload =
-        is_one_of(job_type, JT::REUPLOAD_PROBLEM, JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION);
+    bool reupload = is_one_of(
+            job_type, JT::REUPLOAD_PROBLEM, JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION);
 
     if (adding or reupload) {
         AddProblemInfo info{job_info};
@@ -24,30 +23,27 @@ void restart_job(
         auto transaction = mysql.start_transaction();
 
         // Delete temporary files created during problem adding
-        mysql
-            .prepare("INSERT INTO jobs(file_id, creator, type, priority,"
-                     " status, added, aux_id, info, data) "
-                     "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
-                     "FROM jobs "
-                     "WHERE id=? AND tmp_file_id IS NOT NULL")
-            .bind_and_execute(
-                EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
-                EnumVal(Job::Status::PENDING), mysql_date(), job_id);
+        mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority,"
+                      " status, added, aux_id, info, data) "
+                      "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
+                      "FROM jobs "
+                      "WHERE id=? AND tmp_file_id IS NOT NULL")
+                .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
+                        default_priority(Job::Type::DELETE_FILE),
+                        EnumVal(Job::Status::PENDING), mysql_date(), job_id);
 
         // Restart job
-        mysql
-            .prepare("UPDATE jobs SET type=?, status=?, tmp_file_id=NULL, info=? "
-                     "WHERE id=?")
-            .bind_and_execute(
-                EnumVal(adding ? JT::ADD_PROBLEM : JT::REUPLOAD_PROBLEM),
-                EnumVal(Job::Status::PENDING), info.dump(), job_id);
+        mysql.prepare("UPDATE jobs SET type=?, status=?, tmp_file_id=NULL, info=? "
+                      "WHERE id=?")
+                .bind_and_execute(EnumVal(adding ? JT::ADD_PROBLEM : JT::REUPLOAD_PROBLEM),
+                        EnumVal(Job::Status::PENDING), info.dump(), job_id);
 
         transaction.commit();
 
     } else {
         // Restart job of other type
         mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-            .bind_and_execute(EnumVal(Job::Status::PENDING), job_id);
+                .bind_and_execute(EnumVal(Job::Status::PENDING), job_id);
     }
 
     if (notify_job_server) {
