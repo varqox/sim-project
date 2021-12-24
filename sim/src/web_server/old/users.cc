@@ -160,10 +160,6 @@ void Sim::users_user() {
         page_template(intentional_unsafe_string_view(concat("User ", users_uid)));
         append("view_user(false, ", users_uid, ", window.location.hash);");
 
-    } else if (next_arg == "edit") {
-        page_template(intentional_unsafe_string_view(concat("Edit user ", users_uid)));
-        append("edit_user(", users_uid, ");");
-
     } else if (next_arg == "delete") {
         page_template(intentional_unsafe_string_view(concat("Delete user ", users_uid)));
         append("delete_user(", users_uid, ");");

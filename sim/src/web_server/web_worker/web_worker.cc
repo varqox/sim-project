@@ -44,6 +44,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     GET("/sign_in")(users::ui::sign_in);
     GET("/sign_out")(users::ui::sign_out);
     GET("/sign_up")(users::ui::sign_up);
+    GET("/user/{u64}/edit")(users::ui::edit);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::api::add);
     POST("/api/contest/{u64}/entry_tokens/add_short")(contest_entry_tokens::api::add_short);
     POST("/api/contest/{u64}/entry_tokens/delete")(contest_entry_tokens::api::delete_);

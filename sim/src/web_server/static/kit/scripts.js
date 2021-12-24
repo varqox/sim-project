@@ -136,7 +136,7 @@ function url_submissions() { return '/s'; }
 function url_user(user_id) { return '/u/' + user_id; }
 function url_user_change_password(user_id) { return '/u/' + user_id + '/change-password'; }
 function url_user_delete(user_id) { return '/u/' + user_id + '/delete'; }
-function url_user_edit(user_id) { return '/u/' + user_id + '/edit'; }
+function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
 function url_user_merge(user_id) { return '/u/' + user_id + '/merge'; }
 function url_users() { return '/u'; }
 function url_users_add() { return '/u/add'; }
@@ -2689,7 +2689,7 @@ ActionsToHTML.user = function(user, user_view /*= false*/) {
 			view_user.bind(null, true, user.id)));
 	}
 	if (user.capabilities.edit) {
-		res.push(a_view_button('/u/' + user.id + '/edit', 'Edit',
+		res.push(a_view_button(url_user_edit(user.id), 'Edit',
 			'btn-small blue', edit_user.bind(null, user.id)));
 	}
 	if (user.capabilities.delete) {

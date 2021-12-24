@@ -1,7 +1,10 @@
 #include "src/web_server/users/ui.hh"
 
+#include "simlib/string_view.hh"
 #include "src/web_server/http/response.hh"
 #include "src/web_server/web_worker/context.hh"
+
+using sim::users::User;
 
 namespace web_server::users::ui {
 
@@ -15,6 +18,11 @@ http::Response sign_up(web_worker::Context& ctx) {
 
 http::Response sign_out(web_worker::Context& ctx) {
     return ctx.response_ui("Sign out", "sign_out()");
+}
+
+http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
+    return ctx.response_ui(intentional_unsafe_string_view(concat("Edit user ", user_id)),
+            intentional_unsafe_string_view(concat("edit_user(", user_id, ')')));
 }
 
 } // namespace web_server::users::ui
