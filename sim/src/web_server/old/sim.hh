@@ -148,8 +148,6 @@ class Sim final {
 
     void api_user_merge_into_another();
 
-    void api_user_change_password();
-
     // submissions_api.cc
     void append_submission_status(sim::submissions::Submission::Status initial_status,
             sim::submissions::Submission::Status full_status, bool show_full_status);

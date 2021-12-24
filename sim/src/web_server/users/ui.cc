@@ -25,4 +25,10 @@ http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
             intentional_unsafe_string_view(concat("edit_user(", user_id, ')')));
 }
 
+http::Response change_password(web_worker::Context& ctx, decltype(User::id) user_id) {
+    return ctx.response_ui(
+            intentional_unsafe_string_view(concat("Change password of the user ", user_id)),
+            intentional_unsafe_string_view(concat("change_user_password(", user_id, ')')));
+}
+
 } // namespace web_server::users::ui

@@ -6,7 +6,6 @@
 #include "src/web_server/old/sim.hh"
 
 using sim::users::User;
-using std::array;
 using std::string;
 
 namespace web_server::old {
@@ -167,11 +166,6 @@ void Sim::users_user() {
     } else if (next_arg == "merge") {
         page_template(intentional_unsafe_string_view(concat("Merge user ", users_uid)));
         append("merge_user(", users_uid, ");");
-
-    } else if (next_arg == "change-password") {
-        page_template(intentional_unsafe_string_view(
-                concat("Change password of the user ", users_uid)));
-        append("change_user_password(", users_uid, ");");
 
     } else {
         return error404();

@@ -116,7 +116,7 @@ function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
 function url_api_use_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/use'; }
 function url_api_user(user_id) { return '/api/user/' + user_id; }
-function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change-password'; }
+function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change_password'; }
 function url_api_user_delete(user_id) { return '/api/user/' + user_id + '/delete'; }
 function url_api_user_edit(user_id) { return '/api/user/' + user_id + '/edit'; }
 function url_api_user_merge_into_another(user_id) { return '/api/user/' + user_id + '/merge_into_another'; }
@@ -134,7 +134,7 @@ function url_sign_up() { return '/sign_up'; }
 function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
 function url_submissions() { return '/s'; }
 function url_user(user_id) { return '/u/' + user_id; }
-function url_user_change_password(user_id) { return '/u/' + user_id + '/change-password'; }
+function url_change_user_password(user_id) { return '/user/' + user_id + '/change_password'; }
 function url_user_delete(user_id) { return '/u/' + user_id + '/delete'; }
 function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
 function url_user_merge(user_id) { return '/u/' + user_id + '/merge'; }
@@ -977,7 +977,7 @@ function handle_session_change(params) {
 		const ul = dropdown_menu.appendChild(document.createElement('ul'));
 		ul.appendChild(elem_with_text('a', 'My profile')).href = url_user(params.session.user_id);
 		ul.appendChild(elem_with_text('a', 'Edit profile')).href = url_user_edit(params.session.user_id);
-		ul.appendChild(elem_with_text('a', 'Change password')).href = url_user_change_password(params.session.user_id);
+		ul.appendChild(elem_with_text('a', 'Change password')).href = url_change_user_password(params.session.user_id);
 		ul.appendChild(elem_link_to_view('Sign out', sign_out, url_sign_out));
 	} else {
 		navbar.appendChild(elem_link_to_view(elem_with_text('strong', 'Sign in'), sign_in, url_sign_in));
@@ -1158,6 +1158,23 @@ async function edit_user(user_id) {
 	form.attach_to(view.content_elem);
 }
 
+async function change_user_password(user_id) {
+	const view = new View(url_change_user_password(user_id));
+	const user = await view.get_from_api(url_api_user(user_id));
+	const is_me = (user.id == signed_user_id);
+	const title = is_me ? 'Change my password'
+	                    : 'Change password of ' + user.first_name + ' ' + user.last_name;
+	const form = new AjaxForm(title, url_api_user_change_password(user.id));
+	if (!user.capabilities.change_password_without_old_password) {
+		form.append_input_password('old_password', 'Old password', 24, false);
+	}
+	form.append_input_password('new_password', 'New password', 24, false);
+	form.append_input_password('new_password_repeated', 'New password (repeat)', 24, false);
+	form.append_submit_button(title, 'blue');
+	form.success_msg = 'Password changed';
+	form.attach_to(view.content_elem);
+}
+
 async function delete_user(user_id) {
 	const view = new View(url_user_delete(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
@@ -1263,22 +1280,6 @@ async function sign_out() {
 		request_status.show_success("Signed out");
 		handle_session_change(response);
 	});
-}
-
-async function change_user_password(user_id) {
-	const view = new View(url_user_change_password(user_id));
-	const user = await view.get_from_api(url_api_user(user_id));
-	const is_me = (user.id == signed_user_id);
-	const title = is_me ? 'Change my password' : 'Change user password';
-	const form = new AjaxForm(title, url_api_user_change_password(user.id));
-	if (!user.capabilities.change_password_without_old_password) {
-		form.append_input_password('old_pass', 'Old password', 24, false);
-	}
-	form.append_input_password('new_pass', 'New password', 24, false);
-	form.append_input_password('new_pass1', 'New password (repeat)', 24, false);
-	form.append_submit_button(title, 'blue');
-	form.success_msg = 'Password changed';
-	form.attach_to(view.content_elem);
 }
 
 function UsersLister(elem, query_url_suffix) {
@@ -2702,7 +2703,7 @@ ActionsToHTML.user = function(user, user_view /*= false*/) {
 			merge_user.bind(null, user.id)));
 	}
 	if (user.capabilities.change_password || user.capabilities.change_password_without_old_password) {
-		res.push(a_view_button('/u/' + user.id + '/change-password',
+		res.push(a_view_button(url_change_user_password(user.id),
 			'Change password', 'btn-small orange',
 			change_user_password.bind(null, user.id)));
 	}

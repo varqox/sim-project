@@ -166,6 +166,10 @@ constexpr http::ApiParam email{&User::email, "email", "Email"};
 constexpr http::ApiParam<CStringView> password{"password", "Password"};
 constexpr http::ApiParam<CStringView> password_repeated{
         "password_repeated", "Password (repeat)"};
+constexpr http::ApiParam<CStringView> old_password{"old_password", "Old password"};
+constexpr http::ApiParam<CStringView> new_password{"new_password", "New password"};
+constexpr http::ApiParam<CStringView> new_password_repeated{
+        "new_password_repeated", "New password (repeat)"};
 constexpr http::ApiParam<bool> remember_for_a_month{
         "remember_for_a_month", "Remember for a month"};
 
@@ -312,6 +316,45 @@ http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
             "first_name=COALESCE(?, first_name), last_name=COALESCE(?, last_name), "
             "email=COALESCE(?, email) WHERE id=?");
     stmt.bind_and_execute(type, username, first_name, last_name, email, user_id);
+
+    return ctx.response_ok();
+}
+
+http::Response change_password(web_worker::Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user_for(ctx.session, user_id);
+    if (not caps.change_password) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (old_password, allow_blank(params::old_password), REQUIRED_AND_ALLOWED_ONLY_IF(!caps.change_password_without_old_password))
+        (new_password, allow_blank(params::new_password), REQUIRED)
+        (new_password_repeated, allow_blank(params::new_password_repeated), REQUIRED)
+    );
+    if (new_password != new_password_repeated) {
+        return ctx.response_400("New passwords do not match");
+    }
+
+    if (old_password) {
+        auto stmt =
+                ctx.mysql.prepare("SELECT password_salt, password_hash FROM users WHERE id=?");
+        stmt.bind_and_execute(user_id);
+        decltype(User::password_salt) password_salt;
+        decltype(User::password_hash) password_hash;
+        stmt.res_bind_all(password_salt, password_hash);
+        throw_assert(stmt.next());
+        if (!sim::users::password_matches(*old_password, password_salt, password_hash)) {
+            return ctx.response_400("Invalid old password");
+        }
+    }
+
+    // Commit password change
+    auto [password_salt, password_hash] = sim::users::salt_and_hash_password(new_password);
+    ctx.mysql.prepare("UPDATE users SET password_salt=?, password_hash=? WHERE id=?")
+            .bind_and_execute(password_salt, password_hash, user_id);
+    // Remove other sessions (for security reasons)
+    ctx.mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
+            .bind_and_execute(user_id, ctx.session.value().id);
 
     return ctx.response_ok();
 }

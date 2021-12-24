@@ -47,44 +47,7 @@ void Sim::api_user() {
     if (next_arg == "merge_into_another") {
         return api_user_merge_into_another();
     }
-    if (next_arg == "change-password") {
-        return api_user_change_password();
-    }
     return api_error404();
-}
-
-void Sim::api_user_change_password() {
-    STACK_UNWINDING_MARK;
-    using PERM = UserPermissions;
-
-    if (uint(~users_perms & PERM::CHANGE_PASS) and
-            uint(~users_perms & PERM::ADMIN_CHANGE_PASS)) {
-        return api_error403();
-    }
-
-    StringView new_pass = request.form_fields.get("new_pass").value_or("");
-    StringView new_pass1 = request.form_fields.get("new_pass1").value_or("");
-
-    if (new_pass != new_pass1) {
-        return api_error400("Passwords do not match");
-    }
-
-    if (uint(~users_perms & PERM::ADMIN_CHANGE_PASS) and
-            not check_submitted_password("old_pass")) {
-        return api_error403("Invalid old password");
-    }
-
-    // Commit password change
-    auto [salt, hash] = sim::users::salt_and_hash_password(new_pass);
-    auto transaction = mysql.start_transaction();
-    mysql.prepare("UPDATE users SET password_salt=?, password_hash=? WHERE id=?")
-            .bind_and_execute(salt, hash, users_uid);
-
-    // Remove other sessions (for security reasons)
-    mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
-            .bind_and_execute(users_uid, session->id);
-
-    transaction.commit();
 }
 
 void Sim::api_user_delete() {
