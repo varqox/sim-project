@@ -388,7 +388,7 @@ void Spawner::run_child(FilePath exec, const std::vector<std::string>& exec_args
     // Close file descriptors that are not needed to be open (for security
     // reasons)
     {
-        Directory dir("/proc/self/fd");
+        Directory dir("/proc/thread-self/fd");
         if (dir == nullptr) {
             send_error_and_exit(errno, "opendir()");
         }

@@ -20,9 +20,9 @@ using std::string;
 using std::vector;
 using std::chrono::duration;
 
-string executable_path(pid_t pid) {
+string executable_path(pid_t tid) {
     array<char, 4096> buff{};
-    string path = concat_tostr("/proc/", pid, "/exe");
+    string path = concat_tostr("/proc/", tid, "/exe");
 
     ssize_t rc = readlink(path.c_str(), buff.data(), buff.size());
     if ((rc == -1 && errno == ENAMETOOLONG) || rc >= static_cast<int>(buff.size())) {
@@ -229,8 +229,8 @@ void kill_processes_by_exec(vector<string> exec_set, optional<duration<double>> 
     }
 }
 
-ArchKind detect_architecture(pid_t pid) {
-    auto filename = concat("/proc/", pid, "/exe");
+ArchKind detect_architecture(pid_t tid) {
+    auto filename = concat("/proc/", tid, "/exe");
     FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
     if (fd == -1) {
         THROW("open('", filename, "')", errmsg());

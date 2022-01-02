@@ -33,7 +33,7 @@ ProcStatFileContents::ProcStatFileContents(string stat_file_contents)
     }
 }
 
-ProcStatFileContents ProcStatFileContents::get(pid_t pid) {
-    string contents = get_file_contents(concat("/proc/", pid, "/stat"));
+ProcStatFileContents ProcStatFileContents::get(pid_t tid) {
+    string contents = get_file_contents(concat("/proc/", tid, "/stat"));
     return ProcStatFileContents{contents};
 }

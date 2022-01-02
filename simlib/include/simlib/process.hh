@@ -7,17 +7,17 @@
 #include <vector>
 
 /**
- * @brief Get absolute path of executable of the process with pid @p pid
+ * @brief Get absolute path of executable of the process with tid @p tid
  * @details executable path is always absolute, notice that if executable is
  *   unlined then path will have additional " (deleted)" suffix
  *
- * @param pid - PID of a process of which the executable path will be obtained
+ * @param tid - thread ID of the thread of which the executable path will be obtained
  *
- * @return absolute path of @p pid executable
+ * @return absolute path of @p tid executable
  *
  * @errors If readlink(2) fails then std::runtime_error will be thrown
  */
-std::string executable_path(pid_t pid);
+std::string executable_path(pid_t tid);
 
 /**
  * @brief Get a vector of processes pids which are instances of one of
@@ -57,14 +57,14 @@ enum class ArchKind : int8_t {
 };
 
 /**
- * @brief Detects architecture of running process @p pid
+ * @brief Detects architecture of running process @p tid
  * @details Currently it only detects i386 and x86_64 (see ArchKind above)
  *
- * @param pid pid of process to detect architecture
+ * @param tid thread ID of process to detect architecture
  *
  * @return detected architecture
  *
  * @errors If architecture is different from allowed or any error occurs
  *   an exception of type std::runtime_error is thrown
  */
-ArchKind detect_architecture(pid_t pid);
+ArchKind detect_architecture(pid_t tid);

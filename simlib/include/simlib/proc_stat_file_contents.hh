@@ -25,8 +25,8 @@ public:
         return ProcStatFileContents{std::move(stat_file_contents)};
     }
 
-    // Returns ProcStatFileContents of /proc/@p pid/stat
-    static ProcStatFileContents get(pid_t pid);
+    // Returns ProcStatFileContents of /proc/@p tid/stat
+    static ProcStatFileContents get(pid_t tid);
 
     [[nodiscard]] auto fields_no() const noexcept { return fields_.size(); }
 
