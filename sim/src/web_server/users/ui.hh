@@ -16,4 +16,6 @@ http::Response edit(web_worker::Context& ctx, decltype(sim::users::User::id) use
 http::Response change_password(
         web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 
+http::Response delete_(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
+
 } // namespace web_server::users::ui

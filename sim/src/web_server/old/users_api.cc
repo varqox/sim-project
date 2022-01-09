@@ -41,36 +41,10 @@ void Sim::api_user() {
     }
 
     next_arg = url_args.extract_next_arg();
-    if (next_arg == "delete") {
-        return api_user_delete();
-    }
     if (next_arg == "merge_into_another") {
         return api_user_merge_into_another();
     }
     return api_error404();
-}
-
-void Sim::api_user_delete() {
-    STACK_UNWINDING_MARK;
-
-    if (uint(~users_perms & UserPermissions::DELETE)) {
-        return api_error403();
-    }
-
-    if (not check_submitted_password()) {
-        return api_error403("Invalid password");
-    }
-
-    // Queue deleting job
-    auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                              " added, aux_id, info, data)"
-                              "VALUES(?, ?, ?, ?, ?, ?, '', '')");
-    stmt.bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-            default_priority(Job::Type::DELETE_USER), EnumVal(Job::Type::DELETE_USER),
-            mysql_date(), users_uid);
-
-    sim::jobs::notify_job_server();
-    append(stmt.insert_id());
 }
 
 void Sim::api_user_merge_into_another() {

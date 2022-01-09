@@ -31,4 +31,9 @@ http::Response change_password(web_worker::Context& ctx, decltype(User::id) user
             intentional_unsafe_string_view(concat("change_user_password(", user_id, ')')));
 }
 
+http::Response delete_(web_worker::Context& ctx, decltype(User::id) user_id) {
+    return ctx.response_ui(intentional_unsafe_string_view(concat("Delete user ", user_id)),
+            intentional_unsafe_string_view(concat("delete_user(", user_id, ')')));
+}
+
 } // namespace web_server::users::ui

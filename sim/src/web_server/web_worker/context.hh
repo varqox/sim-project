@@ -15,6 +15,7 @@ namespace web_server::web_worker {
 struct Context {
     const http::Request& request;
     mysql::Connection& mysql;
+    bool notify_job_server_after_commit = false;
 
     struct Session {
         decltype(sim::sessions::Session::id) id;

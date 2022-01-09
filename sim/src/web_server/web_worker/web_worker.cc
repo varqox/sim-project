@@ -1,4 +1,5 @@
 #include "web_worker.hh"
+#include "sim/jobs/utils.hh"
 #include "simlib/mysql/mysql.hh"
 #include "simlib/string_view.hh"
 #include "src/web_server/contest_entry_tokens/api.hh"
@@ -45,6 +46,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     GET("/sign_out")(users::ui::sign_out);
     GET("/sign_up")(users::ui::sign_up);
     GET("/user/{u64}/change_password")(users::ui::change_password);
+    GET("/user/{u64}/delete")(users::ui::delete_);
     GET("/user/{u64}/edit")(users::ui::edit);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::api::add);
     POST("/api/contest/{u64}/entry_tokens/add_short")(contest_entry_tokens::api::add_short);
@@ -57,6 +59,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     POST("/api/sign_out")(users::api::sign_out);
     POST("/api/sign_up")(users::api::sign_up);
     POST("/api/user/{u64}/change_password")(users::api::change_password);
+    POST("/api/user/{u64}/delete")(users::api::delete_);
     POST("/api/user/{u64}/edit")(users::api::edit);
     POST("/api/users/add")(users::api::add);
     // clang-format on
@@ -104,6 +107,9 @@ Response WebWorker::handler_impl(ResponseMaker&& response_maker) {
         ctx.close_session();
     }
     transaction.commit();
+    if (ctx.notify_job_server_after_commit) {
+        sim::jobs::notify_job_server();
+    }
     return response;
 }
 

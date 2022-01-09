@@ -135,7 +135,7 @@ function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
 function url_submissions() { return '/s'; }
 function url_user(user_id) { return '/u/' + user_id; }
 function url_change_user_password(user_id) { return '/user/' + user_id + '/change_password'; }
-function url_user_delete(user_id) { return '/u/' + user_id + '/delete'; }
+function url_user_delete(user_id) { return '/user/' + user_id + '/delete'; }
 function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
 function url_user_merge(user_id) { return '/u/' + user_id + '/merge'; }
 function url_users() { return '/u'; }
@@ -1182,7 +1182,6 @@ async function delete_user(user_id) {
 	const title = is_me ? 'Delete account' : 'Delete user ' + user.id;
 	const form = new AjaxForm(title, url_api_user_delete(user.id), {
 		css_classes: 'with-notice',
-		response_type: 'text',
 	});
 	if (is_me) {
 		form.append(elem_of('p', 'You are going to delete your account. As it cannot be undone, you have to confirm it with your password.'));
@@ -1199,7 +1198,7 @@ async function delete_user(user_id) {
 		form.success_handler = (response, ctx) => {
 			ctx.keep_submit_button_disabled();
 			ctx.show_status_success(form.success_msg);
-			view_job(true, response);
+			view_job(true, response.job_id);
 		};
 	}
 	form.attach_to(view.content_elem);
@@ -2694,7 +2693,7 @@ ActionsToHTML.user = function(user, user_view /*= false*/) {
 			'btn-small blue', edit_user.bind(null, user.id)));
 	}
 	if (user.capabilities.delete) {
-		res.push(a_view_button('/u/' + user.id + '/delete', 'Delete',
+		res.push(a_view_button(url_user_delete(user.id), 'Delete',
 			'btn-small red', delete_user.bind(null, user.id)));
 	}
 	if (user.capabilities.merge) {

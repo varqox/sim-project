@@ -1,9 +1,13 @@
 #include "src/web_server/users/api.hh"
 
+#include "sim/jobs/job.hh"
 #include "sim/users/user.hh"
 #include "simlib/concat.hh"
 #include "simlib/json_str/json_str.hh"
+#include "simlib/mysql/mysql.hh"
 #include "simlib/string_view.hh"
+#include "simlib/time.hh"
+#include "src/web_server/capabilities/jobs.hh"
 #include "src/web_server/capabilities/user.hh"
 #include "src/web_server/capabilities/users.hh"
 #include "src/web_server/http/form_validation.hh"
@@ -11,6 +15,7 @@
 #include "src/web_server/ui_template.hh"
 #include "src/web_server/web_worker/context.hh"
 
+using sim::jobs::Job;
 using sim::users::User;
 using web_server::http::Response;
 using web_server::web_worker::Context;
@@ -320,6 +325,19 @@ http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
     return ctx.response_ok();
 }
 
+bool password_is_valid(
+        mysql::Connection& mysql, decltype(User::id) user_id, StringView password) {
+    auto stmt = mysql.prepare("SELECT password_salt, password_hash FROM users WHERE id=?");
+    stmt.bind_and_execute(user_id);
+    decltype(User::password_salt) password_salt;
+    decltype(User::password_hash) password_hash;
+    stmt.res_bind_all(password_salt, password_hash);
+    if (not stmt.next()) {
+        return false;
+    }
+    return sim::users::password_matches(password, password_salt, password_hash);
+}
+
 http::Response change_password(web_worker::Context& ctx, decltype(User::id) user_id) {
     auto caps = capabilities::user_for(ctx.session, user_id);
     if (not caps.change_password) {
@@ -335,17 +353,8 @@ http::Response change_password(web_worker::Context& ctx, decltype(User::id) user
         return ctx.response_400("New passwords do not match");
     }
 
-    if (old_password) {
-        auto stmt =
-                ctx.mysql.prepare("SELECT password_salt, password_hash FROM users WHERE id=?");
-        stmt.bind_and_execute(user_id);
-        decltype(User::password_salt) password_salt;
-        decltype(User::password_hash) password_hash;
-        stmt.res_bind_all(password_salt, password_hash);
-        throw_assert(stmt.next());
-        if (!sim::users::password_matches(*old_password, password_salt, password_hash)) {
-            return ctx.response_400("Invalid old password");
-        }
+    if (old_password and !password_is_valid(ctx.mysql, user_id, *old_password)) {
+        return ctx.response_400("Invalid old password");
     }
 
     // Commit password change
@@ -357,6 +366,34 @@ http::Response change_password(web_worker::Context& ctx, decltype(User::id) user
             .bind_and_execute(user_id, ctx.session.value().id);
 
     return ctx.response_ok();
+}
+
+http::Response delete_(web_worker::Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user_for(ctx.session, user_id);
+    if (not caps.delete_) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (password, allow_blank(params::password), REQUIRED)
+    );
+
+    if (!password_is_valid(ctx.mysql, ctx.session.value().user_id, password)) {
+        return ctx.response_400("Invalid password");
+    }
+
+    // Queue the deleting job
+    auto stmt =
+            ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                              "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, '', '')");
+    constexpr auto type = Job::Type::DELETE_USER;
+    stmt.bind_and_execute(ctx.session.value().user_id, EnumVal{type},
+            sim::jobs::default_priority(type), Job::Status::PENDING, mysql_date(), user_id);
+    ctx.notify_job_server_after_commit = true;
+
+    json_str::Object obj;
+    obj.prop("job_id", stmt.insert_id());
+    return ctx.response_json(std::move(obj).into_str());
 }
 
 } // namespace web_server::users::api
