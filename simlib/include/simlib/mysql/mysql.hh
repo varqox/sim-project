@@ -5,6 +5,7 @@
 #include "simlib/enum_val.hh"
 #include "simlib/inplace_buff.hh"
 #include "simlib/meta.hh"
+#include "simlib/string_view.hh"
 
 #include <atomic>
 #include <cstddef>
@@ -478,6 +479,8 @@ public:
                 return InplaceBuff<inplace_buff_size>(arg);
             } else if constexpr (mysql::is_optional<TypeNoRefNoCV>) {
                 return arg.to_opt();
+            } else if constexpr (std::is_enum_v<TypeNoRefNoCV>) {
+                return EnumVal{arg};
             } else if constexpr (std::is_const_v<TypeNoRef>) {
                 return TypeNoRefNoCV(arg); // We need a reference to a non-const
             } else {
@@ -713,10 +716,10 @@ private:
     }
 
     template <class Func2, class Func3, class Func, class... Args>
-    auto call_and_try_reconnecting_on_error_impl(
+    auto do_call_and_try_reconnecting_on_error(
             Func2&& resetter, Func3&& error_msg, Func&& func, Args&&... args) {
         STACK_UNWINDING_MARK;
-        // std::forward is omitted as we may use arguments second time
+        // std::forward is omitted as we may use the arguments second time
         auto rc = func(args...);
         if (ret_val_success(rc)) {
             return rc;
@@ -744,11 +747,14 @@ private:
     }
 
     template <class Func, class... Args>
-    auto call_and_try_reconnecting_on_error(Func&& func, Args&&... args) {
+    auto call_and_try_reconnecting_on_error(
+            StringView operation_kind, StringView sql_str, Func&& func, Args&&... args) {
         STACK_UNWINDING_MARK;
-        return call_and_try_reconnecting_on_error_impl([] {},
-                [&] { return mysql_error(conn_); }, std::forward<Func>(func),
-                std::forward<Args>(args)...);
+        return do_call_and_try_reconnecting_on_error([] {},
+                [&] {
+                    return concat(operation_kind, '(', sql_str, "):\n", mysql_error(conn_));
+                },
+                std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
 public:
@@ -829,9 +835,10 @@ public:
         auto sql_str = concat(std::forward<Args>(sql)...);
         DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ", sql_str);)
         call_and_try_reconnecting_on_error(
-                mysql_real_query, *this, sql_str.data(), sql_str.size);
+                "query", sql_str, mysql_real_query, *this, sql_str.data(), sql_str.size);
 
-        MYSQL_RES* res = call_and_try_reconnecting_on_error(mysql_store_result, *this);
+        MYSQL_RES* res = call_and_try_reconnecting_on_error(
+                "mysql_store_result in query", sql_str, mysql_store_result, *this);
         return {res, referencing_objects_no_};
     }
 
@@ -841,7 +848,7 @@ public:
         auto sql_str = concat(std::forward<Args>(sql)...);
         DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): update -> ", sql_str);)
         call_and_try_reconnecting_on_error(
-                mysql_real_query, *this, sql_str.data(), sql_str.size);
+                "update", sql_str, mysql_real_query, *this, sql_str.data(), sql_str.size);
     }
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
@@ -849,15 +856,19 @@ public:
         STACK_UNWINDING_MARK;
         auto sql_str = concat(std::forward<Args>(sql)...);
         DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): prepare -> ", sql_str);)
-        MYSQL_STMT* stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+        MYSQL_STMT* stmt = call_and_try_reconnecting_on_error(
+                "mysql_stmt_init in prepare", sql_str, mysql_stmt_init, *this);
         try {
-            call_and_try_reconnecting_on_error_impl(
+            do_call_and_try_reconnecting_on_error(
                     [&] {
                         (void)mysql_stmt_close(stmt);
-                        stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+                        stmt = call_and_try_reconnecting_on_error(
+                                "mysql_stmt_init in prepare", sql_str, mysql_stmt_init, *this);
                     },
-                    [&] { return mysql_stmt_error(stmt); }, mysql_stmt_prepare, stmt,
-                    sql_str.data(), sql_str.size);
+                    [&] {
+                        return concat("prepare(", sql_str, "):\n", mysql_stmt_error(stmt));
+                    },
+                    mysql_stmt_prepare, stmt, sql_str.data(), sql_str.size);
 
         } catch (...) {
             (void)mysql_stmt_close(stmt);
