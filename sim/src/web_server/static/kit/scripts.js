@@ -1188,7 +1188,7 @@ async function delete_user(user_id) {
 	} else {
 		form.append(elem_of('p',
 			'You are going to delete the user ',
-			a_view_button('/u/' + user.id, user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
+			a_view_button(url_user(user.id), user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
 			'. As it cannot be undone, you have to confirm it with YOUR password.'));
 	}
 	form.append_input_password('password', 'Your password', 24, false);
@@ -1212,7 +1212,7 @@ async function merge_user(user_id) {
 		response_type: 'text',
 	});
 	form.append(elem_of('p', 'The user ',
-		a_view_button('/u/' + user.id, user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
+		a_view_button(url_user(user.id), user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
 		' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
 		document.createElement('br'),
 		'As this cannot be undone, you have to confirm this with your password.'));
@@ -2685,7 +2685,7 @@ ActionsToHTML.user = function(user, user_view /*= false*/) {
 		user_view = false;
 	var res = [];
 	if (!user_view && user.capabilities.view) {
-		res.push(a_view_button('/u/' + user.id, 'View', 'btn-small',
+		res.push(a_view_button(url_user(user.id), 'View', 'btn-small',
 			view_user.bind(null, true, user.id)));
 	}
 	if (user.capabilities.edit) {
@@ -2697,7 +2697,7 @@ ActionsToHTML.user = function(user, user_view /*= false*/) {
 			'btn-small red', delete_user.bind(null, user.id)));
 	}
 	if (user.capabilities.merge) {
-		res.push(a_view_button('/u/' + user.id + '/merge_into_another',
+		res.push(a_view_button(url_user(user.id) + '/merge_into_another',
 			'Merge', 'btn-small red',
 			merge_user.bind(null, user.id)));
 	}
@@ -2905,7 +2905,7 @@ function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 			html: $('<span>', {
 				style: 'margin: auto 0',
 				html: $('<a>', {
-					href: '/u/' + user.id,
+					href: url_user(user.id),
 					text: user.username
 				})
 			}).append(text_to_safe_html(' (' + user.first_name + ' ' + user.last_name + ')'))
@@ -2960,7 +2960,7 @@ function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 			}
 		]);
 
-	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
+	}, url_user(user_id) + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 
 function tab_users_lister(parent_elem) {
@@ -3014,7 +3014,7 @@ function view_job(as_oldmodal, job_id, opt_hash /*= ''*/) {
 					td.append(a_view_button('/s/' + info[name], info[name],
 						undefined, view_submission.bind(null, true, info[name])));
 				else if (name == "user" || name == "deleted user" || name == "target user")
-					td.append(a_view_button('/u/' + info[name], info[name],
+					td.append(a_view_button(url_user(info[name]), info[name],
 						undefined, view_user.bind(null, true, info[name])));
 				else if (name == "problem" || name == "deleted problem" || name == "target problem")
 					td.append(a_view_button('/p/' + info[name], info[name],
@@ -3069,7 +3069,7 @@ function view_job(as_oldmodal, job_id, opt_hash /*= ''*/) {
 							html: job.creator_id === null ? 'System' :
 								(job.creator_username == null ? 'Deleted (id: ' + job.creator_id + ')'
 								: a_view_button(
-								'/u/' + job.creator_id, job.creator_username, undefined,
+								url_user(job.creator_id), job.creator_username, undefined,
 								view_user.bind(null, true, job.creator_id)))
 						}).add('<td>', {
 							html: info_html(job.info)
@@ -3168,7 +3168,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			}));
 			row.append($('<td>', {
 				html: x.creator_id === null ? 'System' : (x.creator_username == null ? x.creator_id
-					: a_view_button('/u/' + x.creator_id, x.creator_username, undefined,
+					: a_view_button(url_user(x.creator_id), x.creator_username, undefined,
 						view_user.bind(null, true, x.creator_id)))
 			}));
 			// Info
@@ -3192,19 +3192,19 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 				if (info.user !== undefined)
 					append_tag('user',
-						a_view_button('/u/' + info.user,
+						a_view_button(url_user(info.user),
 							info.user, undefined,
 							view_user.bind(null, true, info.user)));
 
 				if (info["deleted user"] !== undefined)
 					append_tag('deleted user',
-						a_view_button('/u/' + info["deleted user"],
+						a_view_button(url_user(info["deleted user"]),
 							info["deleted user"], undefined,
 							view_user.bind(null, true, info["deleted user"])));
 
 				if (info["target user"] !== undefined)
 					append_tag('target user',
-						a_view_button('/u/' + info["target user"],
+						a_view_button(url_user(info["target user"]),
 							info["target user"], undefined,
 							view_user.bind(null, true, info["target user"])));
 
@@ -3506,7 +3506,7 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 								html: [
 									$('<td>', {text: s.language}),
 									(s.owner_id === null ? '' : $('<td>', {
-										html: [a_view_button('/u/' + s.owner_id, s.owner_username,
+										html: [a_view_button(url_user(s.owner_id), s.owner_username,
 												undefined, view_user.bind(null, true, s.owner_id)),
 											' (' + text_to_safe_html(s.owner_first_name) + ' ' +
 												text_to_safe_html(s.owner_last_name) + ')'
@@ -3694,7 +3694,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 					row.appendChild(elem_with_text('td', x.owner_id));
 				else {
 					td = document.createElement('td');
-					td.appendChild(a_view_button('/u/' + x.owner_id, x.owner_first_name + ' ' + x.owner_last_name, undefined,
+					td.appendChild(a_view_button(url_user(x.owner_id), x.owner_first_name + ' ' + x.owner_last_name, undefined,
 							view_user.bind(null, true, x.owner_id)));
 					row.appendChild(td);
 				}
@@ -4426,7 +4426,7 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 					html: [
 						$('<label>', {text: 'Owner'}),
 						(problem.owner_id === null ? '(Deleted)'
-							: a_view_button('/u/' + problem.owner_id,
+							: a_view_button(url_user(problem.owner_id),
 								problem.owner_username, undefined,
 								view_user.bind(null, true, problem.owner_id)))
 					]
@@ -4570,7 +4570,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			if (this_.show_owner)
 				row.append($('<td>', {
 					html: (x.owner_id === null ? '(Deleted)'
-						: a_view_button('/u/' + x.owner_id, x.owner_username,
+						: a_view_button(url_user(x.owner_id), x.owner_username,
 							undefined, view_user.bind(null, true, x.owner_id)))
 				}));
 
@@ -5780,7 +5780,7 @@ function contest_ranking(elem_, id_for_api) {
 					tr.append($('<td>', {text: user_row.name}));
 				else {
 					tr.append($('<td>', {
-						html: a_view_button('/u/' + user_row.id, user_row.name, '',
+						html: a_view_button(url_user(user_row.id), user_row.name, '',
 							view_user.bind(null, true, user_row.id))
 					}));
 				}
@@ -5970,7 +5970,7 @@ function ContestUsersLister(elem, query_suffix /*= ''*/) {
 
 			var row = $('<tr>');
 			row.append($('<td>', {text: x.id}));
-			row.append($('<td>', {html: a_view_button('/u/' + x.id, x.username,
+			row.append($('<td>', {html: a_view_button(url_user(x.id), x.username,
 				'', view_user.bind(null, true, x.id))}));
 				// x.username}));
 			row.append($('<td>', {text: x.first_name}));
@@ -6101,7 +6101,7 @@ function change_contest_user_mode(as_oldmodal, contest_id, user_id) {
 				$('<label>', {
 					html: [
 						'Mode of the user ',
-						a_view_button('/u/' + user_id, data.username, '', view_user.bind(null, true, user_id)),
+						a_view_button(url_user(user_id), data.username, '', view_user.bind(null, true, user_id)),
 						': ',
 						$('<select>', {
 							style: 'margin-left: 4px',
@@ -6171,7 +6171,7 @@ function expel_contest_user(as_oldmodal, contest_id, user_id) {
 				$('<label>', {
 					html: [
 						'Are you sure to expel the user ',
-						a_view_button('/u/' + user_id, data.username,
+						a_view_button(url_user(user_id), data.username,
 							undefined, view_user.bind(null, true, user_id)),
 						'?'
 					]
@@ -6255,7 +6255,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 				if (x.creator_id === null)
 					row.append($('<td>', {text: '(deleted)'}));
 				else
-					row.append($('<td>', {html: a_view_button('/u/' + x.creator_id,
+					row.append($('<td>', {html: a_view_button(url_user(x.creator_id),
 						x.creator_username, '',
 						view_user.bind(null, true, x.creator_id))}));
 			}
