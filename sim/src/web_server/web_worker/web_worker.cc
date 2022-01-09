@@ -48,6 +48,8 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     GET("/user/{u64}/change_password")(users::ui::change_password);
     GET("/user/{u64}/delete")(users::ui::delete_);
     GET("/user/{u64}/edit")(users::ui::edit);
+    GET("/users")(users::ui::list);
+    GET("/users/add")(users::ui::add);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::api::add);
     POST("/api/contest/{u64}/entry_tokens/add_short")(contest_entry_tokens::api::add_short);
     POST("/api/contest/{u64}/entry_tokens/delete")(contest_entry_tokens::api::delete_);

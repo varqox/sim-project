@@ -134,21 +134,12 @@ void Sim::users_handle() {
     STACK_UNWINDING_MARK;
 
     StringView next_arg = url_args.extract_next_arg();
-    if (next_arg == "add") { // Add user
-        page_template("Add user");
-        append("add_user();");
-
-    } else if (auto uid = str2num<decltype(users_uid)>(next_arg)) { // View user
+    if (auto uid = str2num<decltype(users_uid)>(next_arg)) { // View user
         users_uid = *uid;
         return users_user();
-
-    } else if (next_arg.empty()) { // List users
-        page_template("Users");
-        append("user_chooser(false, window.location.hash);");
-
-    } else {
-        return error404();
     }
+
+    return error404();
 }
 
 void Sim::users_user() {

@@ -138,8 +138,8 @@ function url_change_user_password(user_id) { return '/user/' + user_id + '/chang
 function url_user_delete(user_id) { return '/user/' + user_id + '/delete'; }
 function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
 function url_user_merge(user_id) { return '/u/' + user_id + '/merge'; }
-function url_users() { return '/u'; }
-function url_users_add() { return '/u/add'; }
+function url_users() { return '/users'; }
+function url_users_add() { return '/users/add'; }
 
 /* ================================= Humanize ================================= */
 
@@ -2982,7 +2982,7 @@ function tab_users_lister(parent_elem) {
 }
 function user_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
 	view_base((as_oldmodal === undefined ? true : as_oldmodal),
-		'/u' + (opt_hash === undefined ? '' : opt_hash), function() {
+		url_users() + (opt_hash === undefined ? '' : opt_hash), function() {
 			timed_hide($(this).parent().parent().filter('.oldmodal'));
 			$(this).append($('<h1>', {text: 'Users'}));
 			if (global_capabilities.users.add_user) {
@@ -6036,7 +6036,7 @@ function add_contest_user(as_oldmodal, contest_id) {
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				required: true
-			}).append(a_view_button('/u', 'Search users', '', user_chooser))
+			}).append(a_view_button(url_users(), 'Search users', '', user_chooser))
 			.add(Form.field_group('Mode', $('<select>', {
 				name: 'mode',
 				html: function() {

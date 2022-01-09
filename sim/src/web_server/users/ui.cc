@@ -8,6 +8,10 @@ using sim::users::User;
 
 namespace web_server::users::ui {
 
+http::Response list(web_worker::Context& ctx) {
+    return ctx.response_ui("Users", "user_chooser(false, window.location.hash)");
+}
+
 http::Response sign_in(web_worker::Context& ctx) {
     return ctx.response_ui("Sign in", "sign_in()");
 }
@@ -18,6 +22,10 @@ http::Response sign_up(web_worker::Context& ctx) {
 
 http::Response sign_out(web_worker::Context& ctx) {
     return ctx.response_ui("Sign out", "sign_out()");
+}
+
+http::Response add(web_worker::Context& ctx) {
+    return ctx.response_ui("Add user", "add_user()");
 }
 
 http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
