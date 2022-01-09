@@ -22,4 +22,6 @@ http::Response change_password(
 
 http::Response delete_(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 
+http::Response merge_into_another(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
+
 } // namespace web_server::users::ui

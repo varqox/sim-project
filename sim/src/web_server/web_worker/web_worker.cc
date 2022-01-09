@@ -48,6 +48,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     GET("/user/{u64}/change_password")(users::ui::change_password);
     GET("/user/{u64}/delete")(users::ui::delete_);
     GET("/user/{u64}/edit")(users::ui::edit);
+    GET("/user/{u64}/merge_into_another")(users::ui::merge_into_another);
     GET("/users")(users::ui::list);
     GET("/users/add")(users::ui::add);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::api::add);
@@ -63,6 +64,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     POST("/api/user/{u64}/change_password")(users::api::change_password);
     POST("/api/user/{u64}/delete")(users::api::delete_);
     POST("/api/user/{u64}/edit")(users::api::edit);
+    POST("/api/user/{u64}/merge_into_another")(users::api::merge_into_another);
     POST("/api/users/add")(users::api::add);
     // clang-format on
     // Ensure fast query dispatch

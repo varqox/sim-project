@@ -144,8 +144,6 @@ class Sim final {
     // users_api.cc
     void api_user();
 
-    void api_user_merge_into_another();
-
     // submissions_api.cc
     void append_submission_status(sim::submissions::Submission::Status initial_status,
             sim::submissions::Submission::Status full_status, bool show_full_status);

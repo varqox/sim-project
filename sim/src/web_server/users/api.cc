@@ -1,6 +1,7 @@
 #include "src/web_server/users/api.hh"
 
 #include "sim/jobs/job.hh"
+#include "sim/jobs/utils.hh"
 #include "sim/users/user.hh"
 #include "simlib/concat.hh"
 #include "simlib/json_str/json_str.hh"
@@ -13,6 +14,7 @@
 #include "src/web_server/http/form_validation.hh"
 #include "src/web_server/http/response.hh"
 #include "src/web_server/ui_template.hh"
+#include "src/web_server/users/ui.hh"
 #include "src/web_server/web_worker/context.hh"
 
 using sim::jobs::Job;
@@ -61,7 +63,7 @@ Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
                     obj.prop("make_teacher", caps.make_teacher);
                     obj.prop("make_normal", caps.make_normal);
                     obj.prop("delete", caps.delete_);
-                    obj.prop("merge", caps.merge);
+                    obj.prop("merge_into_another_user", caps.merge_into_another_user);
                 });
             });
         }
@@ -156,7 +158,7 @@ Response view(Context& ctx, decltype(User::id) user_id) {
         obj.prop("make_teacher", caps.make_teacher);
         obj.prop("make_normal", caps.make_normal);
         obj.prop("delete", caps.delete_);
-        obj.prop("merge", caps.merge);
+        obj.prop("merge_into_another_user", caps.merge_into_another_user);
     });
     return ctx.response_json(std::move(obj).into_str());
 }
@@ -177,6 +179,7 @@ constexpr http::ApiParam<CStringView> new_password_repeated{
         "new_password_repeated", "New password (repeat)"};
 constexpr http::ApiParam<bool> remember_for_a_month{
         "remember_for_a_month", "Remember for a month"};
+constexpr http::ApiParam target_user_id{&User::id, "target_user_id", "Target user ID"};
 
 } // namespace params
 
@@ -389,6 +392,45 @@ http::Response delete_(web_worker::Context& ctx, decltype(User::id) user_id) {
     constexpr auto type = Job::Type::DELETE_USER;
     stmt.bind_and_execute(ctx.session.value().user_id, EnumVal{type},
             sim::jobs::default_priority(type), Job::Status::PENDING, mysql_date(), user_id);
+    ctx.notify_job_server_after_commit = true;
+
+    json_str::Object obj;
+    obj.prop("job_id", stmt.insert_id());
+    return ctx.response_json(std::move(obj).into_str());
+}
+
+http::Response merge_into_another(web_worker::Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user_for(ctx.session, user_id);
+    if (not caps.merge_into_another_user) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (target_user_id, params::target_user_id, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+    );
+
+    if (!password_is_valid(ctx.mysql, ctx.session.value().user_id, password)) {
+        return ctx.response_400("Invalid password");
+    }
+
+    if (target_user_id == user_id) {
+        return ctx.response_400("You cannot merge the user with themself");
+    }
+
+    auto target_user_caps = capabilities::user_for(ctx.session, target_user_id);
+    if (not target_user_caps.merge_someone_into_this_user) {
+        return ctx.response_400("You cannot merge into this target target user");
+    }
+
+    // Queue the merging job
+    auto stmt =
+            ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                              "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, ?, '')");
+    constexpr auto type = Job::Type::MERGE_USERS;
+    stmt.bind_and_execute(ctx.session.value().user_id, EnumVal{type},
+            sim::jobs::default_priority(type), Job::Status::PENDING, mysql_date(), user_id,
+            sim::jobs::MergeUsersInfo{target_user_id}.dump());
     ctx.notify_job_server_after_commit = true;
 
     json_str::Object obj;

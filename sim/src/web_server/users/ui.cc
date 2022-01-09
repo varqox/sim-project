@@ -44,4 +44,9 @@ http::Response delete_(web_worker::Context& ctx, decltype(User::id) user_id) {
             intentional_unsafe_string_view(concat("delete_user(", user_id, ')')));
 }
 
+http::Response merge_into_another(web_worker::Context& ctx, decltype(User::id) user_id) {
+    return ctx.response_ui(intentional_unsafe_string_view(concat("Merge user ", user_id, " into another")),
+            intentional_unsafe_string_view(concat("merge_user(", user_id, ')')));
+}
+
 } // namespace web_server::users::ui

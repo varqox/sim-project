@@ -28,7 +28,8 @@ User user_for(const decltype(web_worker::Context::session)& session,
             .make_teacher = make_teacher,
             .make_normal = make_normal,
             .delete_ = id != SIM_ROOT_UID and (is_self or is_admin),
-            .merge = id != SIM_ROOT_UID and is_admin,
+            .merge_into_another_user = id != SIM_ROOT_UID and is_admin,
+            .merge_someone_into_this_user = id != SIM_ROOT_UID
     };
 }
 

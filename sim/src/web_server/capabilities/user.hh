@@ -18,7 +18,8 @@ struct User {
     bool make_teacher : 1;
     bool make_normal : 1;
     bool delete_ : 1;
-    bool merge : 1;
+    bool merge_into_another_user : 1;
+    bool merge_someone_into_this_user : 1;
 };
 
 User user_for(const decltype(web_worker::Context::session)& session,

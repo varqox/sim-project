@@ -137,7 +137,7 @@ function url_user(user_id) { return '/u/' + user_id; }
 function url_change_user_password(user_id) { return '/user/' + user_id + '/change_password'; }
 function url_user_delete(user_id) { return '/user/' + user_id + '/delete'; }
 function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
-function url_user_merge(user_id) { return '/u/' + user_id + '/merge'; }
+function url_user_merge_into_another(user_id) { return '/user/' + user_id + '/merge_into_another'; }
 function url_users() { return '/users'; }
 function url_users_add() { return '/users/add'; }
 
@@ -1205,24 +1205,23 @@ async function delete_user(user_id) {
 }
 
 async function merge_user(user_id) {
-	const view = new View(url_user_merge(user_id));
+	const view = new View(url_user_merge_into_another(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
 	const form = new AjaxForm('Merge into another user', url_api_user_merge_into_another(user.id), {
 		css_classes: 'with-notice',
-		response_type: 'text',
 	});
 	form.append(elem_of('p', 'The user ',
 		a_view_button(url_user(user.id), user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
 		' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
 		document.createElement('br'),
 		'As this cannot be undone, you have to confirm this with your password.'));
-	form.append_input_text('target_user', 'Target user ID', '', 6, true, true);
+	form.append_input_text('target_user_id', 'Target user ID', '', 6, true, true);
 	form.append_input_password('password', 'YOUR password', 24, false);
 	const submit_btn = form.append_submit_button('Merge user ' + user.id, 'red');
 	form.success_handler = (response, ctx) => {
 		ctx.keep_submit_button_disabled();
 		ctx.show_status_success('Merging has been scheduled');
-		view_job(true, response);
+		view_job(true, response.job_id);
 	};
 	form.attach_to(view.content_elem);
 }
@@ -2696,8 +2695,8 @@ ActionsToHTML.user = function(user, user_view /*= false*/) {
 		res.push(a_view_button(url_user_delete(user.id), 'Delete',
 			'btn-small red', delete_user.bind(null, user.id)));
 	}
-	if (user.capabilities.merge) {
-		res.push(a_view_button(url_user(user.id) + '/merge_into_another',
+	if (user.capabilities.merge_into_another_user) {
+		res.push(a_view_button(url_user_merge_into_another(user.id),
 			'Merge', 'btn-small red',
 			merge_user.bind(null, user.id)));
 	}
