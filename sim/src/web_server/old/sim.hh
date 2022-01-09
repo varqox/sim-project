@@ -141,9 +141,6 @@ class Sim final {
 
     void api_problem_attaching_contest_problems(sim::problems::Permissions perms);
 
-    // users_api.cc
-    void api_user();
-
     // submissions_api.cc
     void append_submission_status(sim::submissions::Submission::Status initial_status,
             sim::submissions::Submission::Status full_status, bool show_full_status);
