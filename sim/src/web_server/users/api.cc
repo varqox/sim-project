@@ -183,7 +183,7 @@ constexpr http::ApiParam target_user_id{&User::id, "target_user_id", "Target use
 
 } // namespace params
 
-http::Response sign_in(web_worker::Context& ctx) {
+Response sign_in(Context& ctx) {
     auto caps = capabilities::users_for(ctx.session);
     if (not caps.sign_in) {
         return ctx.response_403();
@@ -213,7 +213,7 @@ http::Response sign_in(web_worker::Context& ctx) {
     return ctx.response_400("Invalid username or password");
 }
 
-http::Response sign_up(web_worker::Context& ctx) {
+Response sign_up(Context& ctx) {
     auto caps = capabilities::users_for(ctx.session);
     if (not caps.sign_up) {
         return ctx.response_403();
@@ -250,7 +250,7 @@ http::Response sign_up(web_worker::Context& ctx) {
     return ctx.response_json(sim_template_params(ctx.session));
 }
 
-http::Response sign_out(web_worker::Context& ctx) {
+Response sign_out(Context& ctx) {
     auto caps = capabilities::users_for(ctx.session);
     if (not ctx.session) {
         assert(not caps.sign_out);
@@ -263,7 +263,7 @@ http::Response sign_out(web_worker::Context& ctx) {
     return ctx.response_json(sim_template_params(ctx.session));
 }
 
-http::Response add(web_worker::Context& ctx) {
+Response add(Context& ctx) {
     auto caps = capabilities::users_for(ctx.session);
     if (not caps.add_user) {
         return ctx.response_403();
@@ -301,7 +301,7 @@ http::Response add(web_worker::Context& ctx) {
     return ctx.response_ok(intentional_unsafe_cstring_view(to_string(user_id)));
 }
 
-http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
+Response edit(Context& ctx, decltype(User::id) user_id) {
     auto caps = capabilities::user_for(ctx.session, user_id);
     if (not caps.edit) {
         return ctx.response_403();
@@ -341,7 +341,7 @@ bool password_is_valid(
     return sim::users::password_matches(password, password_salt, password_hash);
 }
 
-http::Response change_password(web_worker::Context& ctx, decltype(User::id) user_id) {
+Response change_password(Context& ctx, decltype(User::id) user_id) {
     auto caps = capabilities::user_for(ctx.session, user_id);
     if (not caps.change_password) {
         return ctx.response_403();
@@ -371,7 +371,7 @@ http::Response change_password(web_worker::Context& ctx, decltype(User::id) user
     return ctx.response_ok();
 }
 
-http::Response delete_(web_worker::Context& ctx, decltype(User::id) user_id) {
+Response delete_(Context& ctx, decltype(User::id) user_id) {
     auto caps = capabilities::user_for(ctx.session, user_id);
     if (not caps.delete_) {
         return ctx.response_403();
@@ -399,7 +399,7 @@ http::Response delete_(web_worker::Context& ctx, decltype(User::id) user_id) {
     return ctx.response_json(std::move(obj).into_str());
 }
 
-http::Response merge_into_another(web_worker::Context& ctx, decltype(User::id) user_id) {
+Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
     auto caps = capabilities::user_for(ctx.session, user_id);
     if (not caps.merge_into_another_user) {
         return ctx.response_403();

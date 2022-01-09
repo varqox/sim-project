@@ -5,47 +5,42 @@
 #include "src/web_server/web_worker/context.hh"
 
 using sim::users::User;
+using web_server::http::Response;
+using web_server::web_worker::Context;
 
 namespace web_server::users::ui {
 
-http::Response list(web_worker::Context& ctx) {
+Response list(Context& ctx) {
     return ctx.response_ui("Users", "user_chooser(false, window.location.hash)");
 }
 
-http::Response sign_in(web_worker::Context& ctx) {
-    return ctx.response_ui("Sign in", "sign_in()");
-}
+Response sign_in(Context& ctx) { return ctx.response_ui("Sign in", "sign_in()"); }
 
-http::Response sign_up(web_worker::Context& ctx) {
-    return ctx.response_ui("Sign up", "sign_up()");
-}
+Response sign_up(Context& ctx) { return ctx.response_ui("Sign up", "sign_up()"); }
 
-http::Response sign_out(web_worker::Context& ctx) {
-    return ctx.response_ui("Sign out", "sign_out()");
-}
+Response sign_out(Context& ctx) { return ctx.response_ui("Sign out", "sign_out()"); }
 
-http::Response add(web_worker::Context& ctx) {
-    return ctx.response_ui("Add user", "add_user()");
-}
+Response add(Context& ctx) { return ctx.response_ui("Add user", "add_user()"); }
 
-http::Response edit(web_worker::Context& ctx, decltype(User::id) user_id) {
+Response edit(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_ui(intentional_unsafe_string_view(concat("Edit user ", user_id)),
             intentional_unsafe_string_view(concat("edit_user(", user_id, ')')));
 }
 
-http::Response change_password(web_worker::Context& ctx, decltype(User::id) user_id) {
+Response change_password(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_ui(
             intentional_unsafe_string_view(concat("Change password of the user ", user_id)),
             intentional_unsafe_string_view(concat("change_user_password(", user_id, ')')));
 }
 
-http::Response delete_(web_worker::Context& ctx, decltype(User::id) user_id) {
+Response delete_(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_ui(intentional_unsafe_string_view(concat("Delete user ", user_id)),
             intentional_unsafe_string_view(concat("delete_user(", user_id, ')')));
 }
 
-http::Response merge_into_another(web_worker::Context& ctx, decltype(User::id) user_id) {
-    return ctx.response_ui(intentional_unsafe_string_view(concat("Merge user ", user_id, " into another")),
+Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
+    return ctx.response_ui(
+            intentional_unsafe_string_view(concat("Merge user ", user_id, " into another")),
             intentional_unsafe_string_view(concat("merge_user(", user_id, ')')));
 }
 
