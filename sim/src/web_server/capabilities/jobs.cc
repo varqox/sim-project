@@ -1,14 +1,12 @@
 #include "src/web_server/capabilities/jobs.hh"
-
-using sim::users::User;
+#include "src/web_server/capabilities/utils.hh"
 
 namespace web_server::capabilities {
 
 Jobs jobs_for(const decltype(web_worker::Context::session)& session) noexcept {
-    bool is_admin = session and session->user_type == User::Type::ADMIN;
     return Jobs{
-            .web_ui_view = is_admin,
-            .view_all = is_admin,
+            .web_ui_view = is_admin(session),
+            .view_all = is_admin(session),
     };
 }
 

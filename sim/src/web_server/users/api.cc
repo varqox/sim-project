@@ -1,5 +1,4 @@
 #include "src/web_server/users/api.hh"
-
 #include "sim/jobs/job.hh"
 #include "sim/jobs/utils.hh"
 #include "sim/users/user.hh"
@@ -9,7 +8,6 @@
 #include "simlib/string_view.hh"
 #include "simlib/time.hh"
 #include "src/web_server/capabilities/jobs.hh"
-#include "src/web_server/capabilities/user.hh"
 #include "src/web_server/capabilities/users.hh"
 #include "src/web_server/http/form_validation.hh"
 #include "src/web_server/http/response.hh"

@@ -4,36 +4,35 @@
 #include "simlib/debug.hh"
 #include "simlib/mysql/mysql.hh"
 #include "simlib/utilities.hh"
+#include "src/web_server/capabilities/utils.hh"
 
 #include <cstdint>
 
 using sim::contest_users::ContestUser;
-using sim::users::User;
 
 namespace web_server::capabilities {
 
 Contest contest_for(const decltype(web_worker::Context::session)& session,
         decltype(sim::contests::Contest::is_public) contest_is_public,
         std::optional<decltype(ContestUser::mode)> contest_user_mode) noexcept {
-    bool is_admin = session and session->user_type == User::Type::ADMIN;
-    bool is_contest_moderator = is_admin or
+    bool is_contest_moderator = is_admin(session) or
             is_one_of(
                     contest_user_mode, ContestUser::Mode::OWNER, ContestUser::Mode::MODERATOR);
-    bool has_access = is_admin or contest_is_public or contest_user_mode;
+    bool has_access = is_admin(session) or contest_is_public or contest_user_mode;
     return Contest{
             .node =
                     {
                             .view = has_access,
                             .edit = is_contest_moderator,
-                            .delete_ =
-                                    is_admin or contest_user_mode == ContestUser::Mode::OWNER,
+                            .delete_ = is_admin(session) or
+                                    contest_user_mode == ContestUser::Mode::OWNER,
                             .view_my_submissions = has_access and session,
                             .view_all_submissions = is_contest_moderator,
                             .view_final_submissions = is_contest_moderator,
                             .view_ranking = has_access,
                             .view_fully_revealed_ranking = is_contest_moderator,
                     },
-            .make_public = is_admin,
+            .make_public = is_admin(session),
             .make_private = is_contest_moderator,
             .change_name = is_contest_moderator,
             .view_all_rounds = is_contest_moderator,
@@ -47,7 +46,8 @@ Contest contest_for(const decltype(web_worker::Context::session)& session,
                     },
             .users{
                     .view = is_contest_moderator,
-                    .add_owner = is_admin or contest_user_mode == ContestUser::Mode::OWNER,
+                    .add_owner =
+                            is_admin(session) or contest_user_mode == ContestUser::Mode::OWNER,
                     .add_moderator = is_contest_moderator,
                     .add_contestant = is_contest_moderator,
             },
