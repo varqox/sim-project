@@ -10,7 +10,7 @@ using web_server::web_worker::Context;
 
 namespace web_server::users::ui {
 
-Response list(Context& ctx) {
+Response list_users(Context& ctx) {
     return ctx.response_ui("Users", "user_chooser(false, window.location.hash)");
 }
 

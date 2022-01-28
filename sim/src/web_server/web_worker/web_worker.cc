@@ -1,5 +1,6 @@
 #include "web_worker.hh"
 #include "sim/jobs/utils.hh"
+#include "sim/users/user.hh"
 #include "simlib/mysql/mysql.hh"
 #include "simlib/string_view.hh"
 #include "src/web_server/contest_entry_tokens/api.hh"
@@ -36,11 +37,11 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     // clang-format off
     GET("/api/contest/{u64}/entry_tokens")(contest_entry_tokens::api::view);
     GET("/api/contest_entry_token/{string}/contest_name")(contest_entry_tokens::api::view_contest_name);
-    GET("/api/user/{u64}")(users::api::view);
-    GET("/api/users")(users::api::list);
-    GET("/api/users/id%3E/{u64}")(users::api::list_above_id);
-    GET("/api/users/type=/{string}")(users::api::list_by_type);
-    GET("/api/users/type=/{string}/id%3E/{u64}")(users::api::list_by_type_above_id);
+    GET("/api/user/{u64}")(users::api::view_user);
+    GET("/api/users")(users::api::list_users);
+    GET("/api/users/id%3E/{u64}")(users::api::list_users_above_id);
+    GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_users_by_type);
+    GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_users_by_type_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
     GET("/sign_in")(users::ui::sign_in);
     GET("/sign_out")(users::ui::sign_out);
@@ -49,7 +50,7 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     GET("/user/{u64}/delete")(users::ui::delete_);
     GET("/user/{u64}/edit")(users::ui::edit);
     GET("/user/{u64}/merge_into_another")(users::ui::merge_into_another);
-    GET("/users")(users::ui::list);
+    GET("/users")(users::ui::list_users);
     GET("/users/add")(users::ui::add);
     POST("/api/contest/{u64}/entry_tokens/add")(contest_entry_tokens::api::add);
     POST("/api/contest/{u64}/entry_tokens/add_short")(contest_entry_tokens::api::add_short);

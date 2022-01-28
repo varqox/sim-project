@@ -5,7 +5,7 @@
 
 namespace web_server::users::ui {
 
-http::Response list(web_worker::Context& ctx);
+http::Response list_users(web_worker::Context& ctx);
 
 http::Response sign_in(web_worker::Context& ctx);
 
@@ -22,6 +22,7 @@ http::Response change_password(
 
 http::Response delete_(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 
-http::Response merge_into_another(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
+http::Response merge_into_another(
+        web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 
 } // namespace web_server::users::ui
