@@ -61,7 +61,7 @@ struct IdsWithTime {
 struct ProblemTagIdCmp {
     bool operator()(const decltype(sim::problem_tags::ProblemTag::id)& a,
             const decltype(sim::problem_tags::ProblemTag::id)& b) const noexcept {
-        return std::pair{a.problem_id, a.tag} < std::pair{b.problem_id, b.tag};
+        return std::pair{a.problem_id, a.name} < std::pair{b.problem_id, b.name};
     }
 };
 

@@ -16,9 +16,9 @@ class ProblemTagsMerger
 
         sim::problem_tags::ProblemTag ptag;
         auto stmt = conn.prepare(
-                "SELECT problem_id, tag, hidden FROM ", record_set.sql_table_name);
+                "SELECT problem_id, name, is_hidden FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
-        stmt.res_bind_all(ptag.id.problem_id, ptag.id.tag, ptag.hidden);
+        stmt.res_bind_all(ptag.id.problem_id, ptag.id.name, ptag.is_hidden);
         while (stmt.next()) {
             ptag.id.problem_id = problems_.new_id(ptag.id.problem_id, record_set.kind);
             // Time does not matter
@@ -43,14 +43,14 @@ public:
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
         auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
-                "(problem_id, tag, hidden) "
+                "(problem_id, name, is_hidden) "
                 "VALUES(?, ?, ?)");
 
         ProgressBar progress_bar("Problem tags saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(x.id.problem_id, x.id.tag, x.hidden);
+            stmt.bind_and_execute(x.id.problem_id, x.id.name, x.is_hidden);
         }
 
         transaction.commit();

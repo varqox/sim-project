@@ -165,7 +165,9 @@ static void update_db_schema(Func&& prepare_database) {
 static int perform_upgrade() {
     STACK_UNWINDING_MARK;
 
-    conn.update("CREATE INDEX problems_owner_type_id ON problems(owner, type, id)");
+    conn.update("ALTER TABLE problem_tags RENAME COLUMN tag TO name");
+    conn.update("ALTER TABLE problem_tags RENAME COLUMN hidden TO is_hidden");
+
     // update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
 
     stdlog("\033[1;32mSim upgrading is complete\033[m");

@@ -276,10 +276,10 @@ int main(int argc, char** argv) {
     try_to_create_table("problem_tags", concat(
         "CREATE TABLE IF NOT EXISTS `problem_tags` ("
             "`problem_id` bigint unsigned NOT NULL,"
-            "`tag` VARBINARY(", decltype(ProblemTag::id.tag)::max_len, ") NOT NULL,"
-            "`hidden` BOOLEAN NOT NULL,"
-            "PRIMARY KEY (problem_id, hidden, tag),"
-            "KEY (tag, problem_id),"
+            "`name` VARBINARY(", decltype(ProblemTag::id.name)::max_len, ") NOT NULL,"
+            "`is_hidden` BOOLEAN NOT NULL,"
+            "PRIMARY KEY (problem_id, is_hidden, name),"
+            "KEY (name, problem_id),"
             "FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE"
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on

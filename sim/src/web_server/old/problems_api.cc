@@ -178,12 +178,12 @@ void Sim::api_problems() {
 
     // Tags selector
     uint64_t pid = 0;
-    decltype(ProblemTag::hidden) hidden;
-    decltype(ProblemTag::id.tag) tag;
-    auto stmt = mysql.prepare("SELECT tag FROM problem_tags "
-                              "WHERE problem_id=? AND hidden=? ORDER BY tag");
-    stmt.bind_all(pid, hidden);
-    stmt.res_bind_all(tag);
+    decltype(ProblemTag::is_hidden) is_hidden;
+    decltype(ProblemTag::id.name) tag_name;
+    auto stmt = mysql.prepare("SELECT name FROM problem_tags "
+                              "WHERE problem_id=? AND is_hidden=? ORDER BY name");
+    stmt.bind_all(pid, is_hidden);
+    stmt.res_bind_all(tag_name);
 
     while (res.next()) {
         EnumVal<Problem::Type> problem_type{
@@ -295,11 +295,11 @@ void Sim::api_problems() {
 
         auto append_tags = [&](bool h) {
             pid = WONT_THROW(str2num<decltype(pid)>(res[PID]).value());
-            hidden = h;
+            is_hidden = h;
             stmt.execute();
             if (stmt.next()) {
                 for (;;) {
-                    append(json_stringify(tag));
+                    append(json_stringify(tag_name));
                     // Select next or break
                     if (stmt.next()) {
                         append(',');
@@ -717,7 +717,7 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
         bool hidden = (request.form_fields.get("hidden") == "true");
         StringView name;
         form_validate_not_blank(
-                name, "name", "Tag name", decltype(ProblemTag::id.tag)::max_len);
+                name, "name", "Tag name", decltype(ProblemTag::id.name)::max_len);
         if (notifications.size) {
             return api_error400(notifications);
         }
@@ -730,7 +730,7 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
         }
 
         auto stmt = mysql.prepare("INSERT IGNORE "
-                                  "INTO problem_tags(problem_id, tag, hidden) "
+                                  "INTO problem_tags(problem_id, name, is_hidden) "
                                   "VALUES(?, ?, ?)");
         stmt.bind_and_execute(problems_pid, name, hidden);
 
@@ -740,19 +740,19 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
     };
 
     auto edit_tag = [&] {
-        bool hidden = (request.form_fields.get("hidden") == "true");
+        bool is_hidden = (request.form_fields.get("hidden") == "true");
         StringView name;
         StringView old_name;
         form_validate_not_blank(
-                name, "name", "Tag name", decltype(ProblemTag::id.tag)::max_len);
+                name, "name", "Tag name", decltype(ProblemTag::id.name)::max_len);
         form_validate_not_blank(
-                old_name, "old_name", "Old tag name", decltype(ProblemTag::id.tag)::max_len);
+                old_name, "old_name", "Old tag name", decltype(ProblemTag::id.name)::max_len);
         if (notifications.size) {
             return api_error400(notifications);
         }
 
         if (uint(~perms &
-                    (hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
+                    (is_hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
                             : sim::problems::Permissions::EDIT_TAGS)))
         {
             return api_error403();
@@ -764,15 +764,15 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
 
         auto transaction = mysql.start_transaction();
         auto stmt = mysql.prepare("SELECT 1 FROM problem_tags "
-                                  "WHERE tag=? AND problem_id=? AND hidden=?");
-        stmt.bind_and_execute(name, problems_pid, hidden);
+                                  "WHERE name=? AND problem_id=? AND is_hidden=?");
+        stmt.bind_and_execute(name, problems_pid, is_hidden);
         if (stmt.next()) {
             return api_error400("Tag already exist");
         }
 
-        stmt = mysql.prepare("UPDATE problem_tags SET tag=? "
-                             "WHERE problem_id=? AND tag=? AND hidden=?");
-        stmt.bind_and_execute(name, problems_pid, old_name, hidden);
+        stmt = mysql.prepare("UPDATE problem_tags SET name=? "
+                             "WHERE problem_id=? AND name=? AND is_hidden=?");
+        stmt.bind_and_execute(name, problems_pid, old_name, is_hidden);
         if (stmt.affected_rows() == 0) {
             return api_error400("Tag does not exist");
         }
@@ -782,23 +782,23 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
 
     auto delete_tag = [&] {
         StringView name;
-        bool hidden = (request.form_fields.get("hidden") == "true");
+        bool is_hidden = (request.form_fields.get("hidden") == "true");
         form_validate_not_blank(
-                name, "name", "Tag name", decltype(ProblemTag::id.tag)::max_len);
+                name, "name", "Tag name", decltype(ProblemTag::id.name)::max_len);
         if (notifications.size) {
             return api_error400(notifications);
         }
 
         if (uint(~perms &
-                    (hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
+                    (is_hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
                             : sim::problems::Permissions::EDIT_TAGS)))
         {
             return api_error403();
         }
 
         mysql.prepare("DELETE FROM problem_tags "
-                      "WHERE problem_id=? AND tag=? AND hidden=?")
-                .bind_and_execute(problems_pid, name, hidden);
+                      "WHERE problem_id=? AND name=? AND is_hidden=?")
+                .bind_and_execute(problems_pid, name, is_hidden);
     };
 
     StringView next_arg = url_args.extract_next_arg();

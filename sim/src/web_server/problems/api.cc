@@ -34,14 +34,14 @@ struct ProblemInfo {
     decltype(Problem::last_edit) updated_at;
 
 private:
-    decltype(ProblemTag::Id::tag) tag_name;
-    decltype(ProblemTag::hidden) tag_is_hidden;
+    decltype(ProblemTag::Id::name) tag_name;
+    decltype(ProblemTag::is_hidden) tag_is_hidden;
     mysql::Statement tags_stmt;
 
 public:
     explicit ProblemInfo(mysql::Connection& mysql)
-    : tags_stmt{mysql.prepare("SELECT tag, hidden FROM problem_tags WHERE problem_id=? ORDER "
-                              "BY hidden, tag")} {
+    : tags_stmt{mysql.prepare("SELECT name, is_hidden FROM problem_tags WHERE problem_id=? "
+                              "ORDER BY is_hidden, name")} {
         tags_stmt.bind_all(id);
         tags_stmt.res_bind_all(tag_name, tag_is_hidden);
     }
