@@ -264,6 +264,7 @@ int main(int argc, char** argv) {
             "`last_edit` datetime NOT NULL,"
             "PRIMARY KEY (id),"
             "KEY (owner, id),"
+            "KEY (owner, type, id),"
             "KEY (type, id),"
             "FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
             "FOREIGN KEY (owner) REFERENCES users(id) ON DELETE SET NULL"

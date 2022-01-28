@@ -165,15 +165,7 @@ static void update_db_schema(Func&& prepare_database) {
 static int perform_upgrade() {
     STACK_UNWINDING_MARK;
 
-    (void)renameat2(AT_FDCWD, concat(sim_build, "logs/server.log").to_string().data(),
-            AT_FDCWD, concat(sim_build, web_server::stdlog_file).to_string().data(),
-            RENAME_NOREPLACE);
-    (void)renameat2(AT_FDCWD, concat(sim_build, "logs/server-error.log").to_string().data(),
-            AT_FDCWD, concat(sim_build, web_server::errlog_file).to_string().data(),
-            RENAME_NOREPLACE);
-
-    conn.update("ALTER TABLE users MODIFY COLUMN type tinyint unsigned NOT NULL AFTER id");
-    conn.update("ALTER TABLE sessions DROP COLUMN IF EXISTS ip");
+    conn.update("CREATE INDEX problems_owner_type_id ON problems(owner, type, id)");
     // update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
 
     stdlog("\033[1;32mSim upgrading is complete\033[m");

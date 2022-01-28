@@ -1,5 +1,6 @@
 #include "web_worker.hh"
 #include "sim/jobs/utils.hh"
+#include "sim/problems/problem.hh"
 #include "sim/users/user.hh"
 #include "simlib/mysql/mysql.hh"
 #include "simlib/string_view.hh"
@@ -7,6 +8,7 @@
 #include "src/web_server/contest_entry_tokens/ui.hh"
 #include "src/web_server/http/request.hh"
 #include "src/web_server/http/response.hh"
+#include "src/web_server/problems/api.hh"
 #include "src/web_server/users/api.hh"
 #include "src/web_server/users/ui.hh"
 #include "src/web_server/web_worker/context.hh"
@@ -37,7 +39,16 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     // clang-format off
     GET("/api/contest/{u64}/entry_tokens")(contest_entry_tokens::api::view);
     GET("/api/contest_entry_token/{string}/contest_name")(contest_entry_tokens::api::view_contest_name);
+    GET("/api/problem/{u64}")(problems::api::view_problem);
+    GET("/api/problems")(problems::api::list_problems);
+    GET("/api/problems/id%3C/{u64}")(problems::api::list_problems_below_id);
+    GET("/api/problems/type=/{custom}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_problems_by_type);
+    GET("/api/problems/type=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_problems_by_type_below_id);
     GET("/api/user/{u64}")(users::api::view_user);
+    GET("/api/user/{u64}/problems")(problems::api::list_problems_of_user);
+    GET("/api/user/{u64}/problems/id%3C/{u64}")(problems::api::list_problems_of_user_below_id);
+    GET("/api/user/{u64}/problems/type=/{custom}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_problems_of_user_by_type);
+    GET("/api/user/{u64}/problems/type=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_problems_of_user_by_type_below_id);
     GET("/api/users")(users::api::list_users);
     GET("/api/users/id%3E/{u64}")(users::api::list_users_above_id);
     GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_users_by_type);
@@ -69,7 +80,8 @@ WebWorker::WebWorker(mysql::Connection& mysql)
     POST("/api/users/add")(users::api::add);
     // clang-format on
     // Ensure fast query dispatch
-    assert(get_dispatcher.all_potential_collisions().empty());
+    // assert(get_dispatcher.all_potential_collisions().empty()); // dispatcher is imperfect,
+    // collisions exist
     assert(post_dispatcher.all_potential_collisions().empty());
 }
 #undef GET
