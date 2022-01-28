@@ -218,7 +218,7 @@ void AddOrReuploadProblemBase::add_problem_to_db() {
     open_package();
 
     auto stmt = mysql.prepare("INSERT INTO problems(file_id, type, name, label,"
-                              " simfile, owner, added, last_edit) "
+                              " simfile, owner_id, created_at, updated_at) "
                               "VALUES(?,?,?,?,?,?,?,?)");
     stmt.bind_and_execute(tmp_file_id_.value(), decltype(Problem::type)(info_.problem_type),
             simfile_.name, simfile_.label, simfile_str_, job_creator_, current_date_,
@@ -248,7 +248,7 @@ void AddOrReuploadProblemBase::replace_problem_in_db() {
     // Update problem
     auto stmt = mysql.prepare("UPDATE problems "
                               "SET file_id=?, type=?, name=?, label=?,"
-                              " simfile=?, last_edit=? "
+                              " simfile=?, updated_at=? "
                               "WHERE id=?");
     stmt.bind_and_execute(tmp_file_id_.value(), decltype(Problem::type)(info_.problem_type),
             simfile_.name, simfile_.label, simfile_str_, current_date_, problem_id_.value());

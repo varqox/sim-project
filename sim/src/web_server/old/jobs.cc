@@ -130,7 +130,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
         return PERM::NONE;
     }
 
-    auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type, cu.mode,"
+    auto stmt = mysql.prepare("SELECT s.type, p.owner_id, p.type, cu.mode,"
                               " c.is_public "
                               "FROM submissions s "
                               "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
@@ -141,11 +141,11 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
     stmt.bind_and_execute(session->user_id, submission_id);
 
     EnumVal<Submission::Type> stype{};
-    mysql::Optional<decltype(Problem::owner)::value_type> problem_owner;
+    mysql::Optional<decltype(Problem::owner_id)::value_type> problem_owner_id;
     decltype(Problem::type) problem_type;
     mysql::Optional<decltype(sim::contest_users::ContestUser::mode)> cu_mode;
     mysql::Optional<decltype(sim::contests::Contest::is_public)> is_public;
-    stmt.res_bind_all(stype, problem_owner, problem_type, cu_mode, is_public);
+    stmt.res_bind_all(stype, problem_owner_id, problem_type, cu_mode, is_public);
     if (stmt.next()) {
         if (is_public.has_value() and // <-- contest exists
                 uint(sim::contests::get_permissions(
@@ -162,7 +162,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
         auto problem_perms = sim::problems::get_permissions(
                 (session.has_value() ? optional{session->user_id} : std::nullopt),
                 (session.has_value() ? optional{session->user_type} : std::nullopt),
-                problem_owner, problem_type);
+                problem_owner_id, problem_type);
         // Give access to the problem's submissions' jobs to the problem's admin
         if (bool(uint(problem_perms & sim::problems::Permissions::EDIT))) {
             return PERM::VIEW | PERM::DOWNLOAD_LOG;

@@ -601,7 +601,7 @@ private:
             decltype(sim::submissions::Submission::owner) submission_owner,
             sim::submissions::Submission::Type stype,
             std::optional<sim::contest_users::ContestUser::Mode> cu_mode,
-            decltype(sim::problems::Problem::owner) problem_owner) noexcept;
+            decltype(sim::problems::Problem::owner_id) problem_owner) noexcept;
 
     StringView submissions_sid;
     uint64_t submissions_file_id{};

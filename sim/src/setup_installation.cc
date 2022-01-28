@@ -259,15 +259,15 @@ int main(int argc, char** argv) {
             "`name` VARBINARY(", decltype(Problem::name)::max_len, ") NOT NULL,"
             "`label` VARBINARY(", decltype(Problem::label)::max_len, ") NOT NULL,"
             "`simfile` mediumblob NOT NULL,"
-            "`owner` bigint unsigned NULL,"
-            "`added` datetime NOT NULL,"
-            "`last_edit` datetime NOT NULL,"
+            "`owner_id` bigint unsigned NULL,"
+            "`created_at` datetime NOT NULL,"
+            "`updated_at` datetime NOT NULL,"
             "PRIMARY KEY (id),"
-            "KEY (owner, id),"
-            "KEY (owner, type, id),"
+            "KEY (owner_id, id),"
+            "KEY (owner_id, type, id),"
             "KEY (type, id),"
             "FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
-            "FOREIGN KEY (owner) REFERENCES users(id) ON DELETE SET NULL"
+            "FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL"
         ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
     // clang-format on
 

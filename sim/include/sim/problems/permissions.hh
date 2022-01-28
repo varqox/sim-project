@@ -54,25 +54,25 @@ DECLARE_ENUM_OPERATOR(Permissions, |)
 DECLARE_ENUM_OPERATOR(Permissions, &)
 
 Permissions get_permissions(std::optional<decltype(users::User::id)> user_id,
-        std::optional<users::User::Type> user_type, decltype(Problem::owner) problem_owner,
+        std::optional<users::User::Type> user_type, decltype(Problem::owner_id) problem_owner_id,
         decltype(Problem::type) problem_type) noexcept;
 
 template <class T>
 std::optional<Permissions> get_permissions(mysql::Connection& mysql, T&& problem_id,
         std::optional<decltype(users::User::id)> user_id,
         std::optional<users::User::Type> user_type) {
-    auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
+    auto stmt = mysql.prepare("SELECT owner_id, type FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 
-    mysql::Optional<decltype(Problem::owner)::value_type> problem_owner;
+    mysql::Optional<decltype(Problem::owner_id)::value_type> problem_owner_id;
     decltype(Problem::type) problem_type;
-    stmt.res_bind_all(problem_owner, problem_type);
+    stmt.res_bind_all(problem_owner_id, problem_type);
 
     if (not stmt.next()) {
         return std::nullopt;
     }
 
-    return get_permissions(user_id, user_type, problem_owner, problem_type);
+    return get_permissions(user_id, user_type, problem_owner_id, problem_type);
 }
 
 } // namespace sim::problems

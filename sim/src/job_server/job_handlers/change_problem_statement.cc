@@ -85,7 +85,7 @@ void ChangeProblemStatement::run() {
                     current_date, problem_id_);
 
     // Use new package as problem file
-    mysql.prepare("UPDATE problems SET file_id=?, simfile=?, last_edit=?"
+    mysql.prepare("UPDATE problems SET file_id=?, simfile=?, updated_at=?"
                   " WHERE id=?")
             .bind_and_execute(new_file_id, simfile_str, current_date, problem_id_);
 

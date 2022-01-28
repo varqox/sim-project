@@ -85,7 +85,7 @@ void MergeUsers::run_impl() {
             .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Transfer problems
-    mysql.prepare("UPDATE problems SET owner=? WHERE owner=?")
+    mysql.prepare("UPDATE problems SET owner_id=? WHERE owner_id=?")
             .bind_and_execute(info_.target_user_id, donor_user_id_);
 
     // Transfer contest_users

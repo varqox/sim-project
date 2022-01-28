@@ -27,7 +27,7 @@ OverallPermissions get_overall_permissions(optional<User::Type> user_type) noexc
     __builtin_unreachable();
 }
 Permissions get_permissions(optional<decltype(User::id)> user_id,
-        optional<User::Type> user_type, decltype(Problem::owner) problem_owner,
+        optional<User::Type> user_type, decltype(Problem::owner_id) problem_owner_id,
         decltype(Problem::type) problem_type) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = Permissions;
@@ -48,7 +48,7 @@ Permissions get_permissions(optional<decltype(User::id)> user_id,
             PERM::RESET_TIME_LIMITS | PERM::EDIT_TAGS | PERM::EDIT_HIDDEN_TAGS | PERM::DELETE |
             PERM::MERGE | PERM::CHANGE_STATEMENT | PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
 
-    if (user_id and problem_owner and *user_id == *problem_owner) {
+    if (user_id and problem_owner_id and *user_id == *problem_owner_id) {
         return admin_perms;
     }
 

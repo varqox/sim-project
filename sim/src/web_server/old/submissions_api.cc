@@ -71,7 +71,7 @@ void Sim::api_submissions() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner,"
+    qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner_id,"
                    " u.username, u.first_name, u.last_name, s.problem_id,"
                    " p.name, s.contest_problem_id, cp.name,"
                    " cp.method_of_choosing_final_submission, cp.score_revealing,"
@@ -96,7 +96,7 @@ void Sim::api_submissions() {
         SLANGUAGE,
         SOWNER,
         CUMODE,
-        POWNER,
+        POWNER_ID,
         SOWN_USERNAME,
         SOWN_FNAME,
         SOWN_LNAME,
@@ -425,11 +425,11 @@ void Sim::api_submissions() {
                                                str2num<decltype(ContestUser::mode)::ValType>(
                                                        res[CUMODE])
                                                        .value())}}),
-                (res.is_null(POWNER)
+                (res.is_null(POWNER_ID)
                                 ? std::nullopt
-                                : optional<decltype(Problem::owner)::value_type>{WONT_THROW(
-                                          str2num<decltype(Problem::owner)::value_type>(
-                                                  res[POWNER])
+                                : optional<decltype(Problem::owner_id)::value_type>{WONT_THROW(
+                                          str2num<decltype(Problem::owner_id)::value_type>(
+                                                  res[POWNER_ID])
                                                   .value())}));
 
         if (perms == PERM::NONE) {
@@ -707,25 +707,25 @@ void Sim::api_submission() {
     submissions_sid = next_arg;
 
     mysql::Optional<decltype(Submission::owner)::value_type> sowner;
-    mysql::Optional<decltype(Problem::owner)::value_type> p_owner;
+    mysql::Optional<decltype(Problem::owner_id)::value_type> p_owner_id;
     EnumVal<Submission::Type> stype{};
     EnumVal<Submission::Language> slang{};
     mysql::Optional<decltype(ContestUser::mode)> cu_mode;
     auto stmt = mysql.prepare("SELECT s.file_id, s.owner, s.type, s.language,"
-                              " cu.mode, p.owner "
+                              " cu.mode, p.owner_id "
                               "FROM submissions s "
                               "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
                               "LEFT JOIN contest_users cu"
                               " ON cu.contest_id=s.contest_id AND cu.user_id=? "
                               "WHERE s.id=?");
     stmt.bind_and_execute(session->user_id, submissions_sid);
-    stmt.res_bind_all(submissions_file_id, sowner, stype, slang, cu_mode, p_owner);
+    stmt.res_bind_all(submissions_file_id, sowner, stype, slang, cu_mode, p_owner_id);
     if (not stmt.next()) {
         return api_error404();
     }
 
     submissions_slang = slang;
-    submissions_perms = submissions_get_permissions(sowner, stype, cu_mode, p_owner);
+    submissions_perms = submissions_get_permissions(sowner, stype, cu_mode, p_owner_id);
 
     // Subpages
     next_arg = url_args.extract_next_arg();

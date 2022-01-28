@@ -26,12 +26,12 @@ struct ProblemInfo {
     decltype(Problem::type) type{};
     decltype(Problem::name) name;
     decltype(Problem::label) label;
-    mysql::Optional<decltype(Problem::owner)::value_type> owner_id;
+    mysql::Optional<decltype(Problem::owner_id)::value_type> owner_id;
     mysql::Optional<decltype(User::username)> owner_username;
     mysql::Optional<decltype(User::first_name)> owner_first_name;
     mysql::Optional<decltype(User::last_name)> owner_last_name;
-    decltype(Problem::added) created_at;
-    decltype(Problem::last_edit) updated_at;
+    decltype(Problem::created_at) created_at;
+    decltype(Problem::updated_at) updated_at;
 
 private:
     decltype(ProblemTag::Id::name) tag_name;
@@ -110,9 +110,9 @@ template <class... BindArgs>
 Response do_list(
         Context& ctx, uint32_t limit, StringView where_str = "", BindArgs&&... bind_args) {
     auto p = ProblemInfo(ctx.mysql);
-    auto stmt = ctx.mysql.prepare("SELECT p.id, p.type, p.name, p.label, p.owner, u.username, "
-                                  "u.first_name, u.last_name, p.added, p.last_edit FROM "
-                                  "problems p LEFT JOIN users u ON u.id=p.owner ",
+    auto stmt = ctx.mysql.prepare("SELECT p.id, p.type, p.name, p.label, p.owner_id, u.username, "
+                                  "u.first_name, u.last_name, p.created_at, p.updated_at FROM "
+                                  "problems p LEFT JOIN users u ON u.id=p.owner_id ",
             where_str, " ORDER BY id DESC LIMIT ", limit);
     stmt.bind_and_execute(std::forward<BindArgs>(bind_args)...);
     stmt.res_bind_all(p.id, p.type, p.name, p.label, p.owner_id, p.owner_username,
@@ -153,7 +153,7 @@ Response list_problems_of_user(Context& ctx, decltype(User::id) user_id) {
     if (not capabilities::list_problems_of_user(ctx.session, user_id)) {
         return ctx.response_403();
     }
-    return do_list(ctx, FIRST_QUERY_LIMIT, "WHERE p.owner=?", user_id);
+    return do_list(ctx, FIRST_QUERY_LIMIT, "WHERE p.owner_id=?", user_id);
 }
 
 Response list_problems_of_user_below_id(
@@ -161,7 +161,7 @@ Response list_problems_of_user_below_id(
     if (not capabilities::list_problems_of_user(ctx.session, user_id)) {
         return ctx.response_403();
     }
-    return do_list(ctx, NEXT_QUERY_LIMIT, "WHERE p.owner=? AND p.id<?", user_id, problem_id);
+    return do_list(ctx, NEXT_QUERY_LIMIT, "WHERE p.owner_id=? AND p.id<?", user_id, problem_id);
 }
 
 Response list_problems_by_type(Context& ctx, decltype(Problem::type) problem_type) {
@@ -186,7 +186,7 @@ Response list_problems_of_user_by_type(
         return ctx.response_403();
     }
     return do_list(
-            ctx, FIRST_QUERY_LIMIT, "WHERE p.owner=? AND p.type=?", user_id, problem_type);
+            ctx, FIRST_QUERY_LIMIT, "WHERE p.owner_id=? AND p.type=?", user_id, problem_type);
 }
 
 Response list_problems_of_user_by_type_below_id(Context& ctx, decltype(User::id) user_id,
@@ -194,14 +194,14 @@ Response list_problems_of_user_by_type_below_id(Context& ctx, decltype(User::id)
     if (not capabilities::list_problems_of_user_by_type(ctx.session, user_id, problem_type)) {
         return ctx.response_403();
     }
-    return do_list(ctx, NEXT_QUERY_LIMIT, "WHERE p.owner=? AND p.type=? AND p.id<?", user_id,
+    return do_list(ctx, NEXT_QUERY_LIMIT, "WHERE p.owner_id=? AND p.type=? AND p.id<?", user_id,
             problem_type, problem_id);
 }
 
 Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
     auto p = ProblemInfo(ctx.mysql);
     p.id = problem_id;
-    auto stmt = ctx.mysql.prepare("SELECT type, owner FROM problems WHERE id=?");
+    auto stmt = ctx.mysql.prepare("SELECT type, owner_id FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
     stmt.res_bind_all(p.type, p.owner_id);
     if (not stmt.next()) {
@@ -212,8 +212,8 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
         return ctx.response_403();
     }
     stmt = ctx.mysql.prepare("SELECT p.name, p.label, u.username, u.first_name, u.last_name, "
-                             "p.added, p.last_edit, p.simfile FROM problems p LEFT JOIN users "
-                             "u ON u.id=p.owner WHERE p.id=?");
+                             "p.created_at, p.updated_at, p.simfile FROM problems p LEFT JOIN users "
+                             "u ON u.id=p.owner_id WHERE p.id=?");
     stmt.bind_and_execute(problem_id);
     decltype(Problem::simfile) simfile;
     stmt.res_bind_all(p.name, p.label, p.owner_username, p.owner_first_name, p.owner_last_name,

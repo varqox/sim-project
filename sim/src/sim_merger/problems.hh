@@ -41,23 +41,23 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
         sim::problems::Problem prob;
-        mysql::Optional<decltype(prob.owner)::value_type> m_owner;
+        mysql::Optional<decltype(prob.owner_id)::value_type> m_owner_id;
         auto stmt = conn.prepare("SELECT id, file_id, type, name, label, "
-                                 "simfile, owner, added, last_edit FROM ",
+                                 "simfile, owner_id, created_at, updated_at FROM ",
                 record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(prob.id, prob.file_id, prob.type, prob.name, prob.label,
-                prob.simfile, m_owner, prob.added, prob.last_edit);
+                prob.simfile, m_owner_id, prob.created_at, prob.updated_at);
         while (stmt.next()) {
             prob.file_id = internal_files_.new_id(prob.file_id, record_set.kind);
-            prob.owner = m_owner.to_opt();
-            if (prob.owner.has_value()) {
-                prob.owner = users_.new_id(prob.owner.value(), record_set.kind);
+            prob.owner_id = m_owner_id.to_opt();
+            if (prob.owner_id.has_value()) {
+                prob.owner_id = users_.new_id(prob.owner_id.value(), record_set.kind);
             }
 
             record_set.add_record(prob,
                     str_to_time_point(
-                            intentional_unsafe_cstring_view(prob.added.to_string())));
+                            intentional_unsafe_cstring_view(prob.created_at.to_string())));
         }
     }
 
@@ -122,15 +122,15 @@ public:
         conn.update("TRUNCATE ", sql_table_name());
         auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
                 "(id, file_id, type, name, label, simfile,"
-                " owner, added, last_edit) "
+                " owner_id, created_at, updated_at) "
                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         ProgressBar progress_bar("Problems saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(x.id, x.file_id, x.type, x.name, x.label, x.simfile, x.owner,
-                    x.added, x.last_edit);
+            stmt.bind_and_execute(x.id, x.file_id, x.type, x.name, x.label, x.simfile, x.owner_id,
+                    x.created_at, x.updated_at);
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);

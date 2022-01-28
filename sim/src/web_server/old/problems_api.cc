@@ -46,9 +46,9 @@ void Sim::api_problems() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT p.id, p.added, p.type, p.name, p.label, p.owner, "
+    qfields.append("SELECT p.id, p.created_at, p.type, p.name, p.label, p.owner_id, "
                    "u.username, s.full_status");
-    qwhere.append(" FROM problems p LEFT JOIN users u ON p.owner=u.id "
+    qwhere.append(" FROM problems p LEFT JOIN users u ON p.owner_id=u.id "
                   "LEFT JOIN submissions s ON s.owner=",
             (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id))
                                  : "''"),
@@ -57,11 +57,11 @@ void Sim::api_problems() {
 
     enum ColumnIdx {
         PID,
-        ADDED,
+        CREATED_AT,
         PTYPE,
         NAME,
         LABEL,
-        OWNER,
+        OWNER_ID,
         OWN_USERNAME,
         SFULL_STATUS,
         SIMFILE
@@ -81,12 +81,12 @@ void Sim::api_problems() {
                     uint(overall_perms & OPERMS::VIEW_WITH_TYPE_CONTEST_ONLY));
             qwhere.append(" AND (p.type=", EnumVal(Problem::Type::PUBLIC).to_int(),
                     " OR p.type=", EnumVal(Problem::Type::CONTEST_ONLY).to_int(),
-                    " OR p.owner=", session->user_id, ')');
+                    " OR p.owner_id=", session->user_id, ')');
 
         } else {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
             qwhere.append(" AND (p.type=", EnumVal(Problem::Type::PUBLIC).to_int(),
-                    " OR p.owner=", session->user_id, ')');
+                    " OR p.owner_id=", session->user_id, ')');
         }
     }
 
@@ -143,7 +143,7 @@ void Sim::api_problems() {
                                     "problems by their user id");
             }
 
-            qwhere.append(" AND p.owner=", arg_id);
+            qwhere.append(" AND p.owner_id=", arg_id);
             mask |= USER_ID_COND;
 
         } else {
@@ -191,10 +191,10 @@ void Sim::api_problems() {
         auto problem_perms = sim::problems::get_permissions(
                 (session.has_value() ? std::optional{session->user_id} : std::nullopt),
                 (session.has_value() ? std::optional{session->user_type} : std::nullopt),
-                (res.is_null(OWNER) ? std::nullopt
-                                    : decltype(Problem::owner)(WONT_THROW(
-                                              str2num<decltype(Problem::owner)::value_type>(
-                                                      res[OWNER])
+                (res.is_null(OWNER_ID) ? std::nullopt
+                                    : decltype(Problem::owner_id)(WONT_THROW(
+                                              str2num<decltype(Problem::owner_id)::value_type>(
+                                                      res[OWNER_ID])
                                                       .value()))),
                 problem_type);
         using PERMS = sim::problems::Permissions;
@@ -204,7 +204,7 @@ void Sim::api_problems() {
 
         // Added
         if (uint(problem_perms & PERMS::VIEW_ADD_TIME)) {
-            append("\"", res[ADDED], "\",");
+            append("\"", res[CREATED_AT], "\",");
         } else {
             append("null,");
         }
@@ -217,8 +217,8 @@ void Sim::api_problems() {
         append(json_stringify(res[LABEL]), ',');
 
         // Owner
-        if (uint(problem_perms & PERMS::VIEW_OWNER) and not res.is_null(OWNER)) {
-            append(res[OWNER], ",\"", res[OWN_USERNAME], "\",");
+        if (uint(problem_perms & PERMS::VIEW_OWNER) and not res.is_null(OWNER_ID)) {
+            append(res[OWNER_ID], ",\"", res[OWN_USERNAME], "\",");
         } else {
             append("null,null,");
         }
@@ -365,16 +365,16 @@ void Sim::api_problem() {
 
     problems_pid = next_arg;
 
-    mysql::Optional<decltype(Problem::owner)::value_type> problem_owner;
+    mysql::Optional<decltype(Problem::owner_id)::value_type> problem_owner_id;
     decltype(Problem::label) problem_label;
     decltype(Problem::simfile) problem_simfile;
     decltype(Problem::type) problem_type;
 
-    auto stmt = mysql.prepare("SELECT file_id, owner, type, label, simfile "
+    auto stmt = mysql.prepare("SELECT file_id, owner_id, type, label, simfile "
                               "FROM problems WHERE id=?");
     stmt.bind_and_execute(problems_pid);
     stmt.res_bind_all(
-            problems_file_id, problem_owner, problem_type, problem_label, problem_simfile);
+            problems_file_id, problem_owner_id, problem_type, problem_label, problem_simfile);
     if (not stmt.next()) {
         return api_error404();
     }
@@ -382,7 +382,7 @@ void Sim::api_problem() {
     auto problem_perms = sim::problems::get_permissions(
             (session.has_value() ? std::optional{session->user_id} : std::nullopt),
             (session.has_value() ? std::optional{session->user_type} : std::nullopt),
-            problem_owner, problem_type);
+            problem_owner_id, problem_type);
 
     next_arg = url_args.extract_next_arg();
     if (next_arg == "statement") {

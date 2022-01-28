@@ -13,7 +13,7 @@ void JudgeOrRejudge::run() {
     // Gather the needed information about the submission
     auto stmt = mysql.prepare("SELECT s.file_id, s.language, s.owner,"
                               " s.contest_problem_id, s.problem_id,"
-                              " s.last_judgment, p.file_id, p.last_edit "
+                              " s.last_judgment, p.file_id, p.updated_at "
                               "FROM submissions s, problems p "
                               "WHERE p.id=problem_id AND s.id=?");
     stmt.bind_and_execute(submission_id_);
@@ -23,10 +23,10 @@ void JudgeOrRejudge::run() {
     mysql::Optional<uint64_t> sowner;
     mysql::Optional<uint64_t> contest_problem_id;
     InplaceBuff<64> last_judgment;
-    InplaceBuff<64> p_last_edit;
+    InplaceBuff<64> p_updated_at;
     EnumVal<Submission::Language> lang{};
     stmt.res_bind_all(submission_file_id, lang, sowner, contest_problem_id, problem_id,
-            last_judgment, problem_file_id, p_last_edit);
+            last_judgment, problem_file_id, p_updated_at);
     // If the submission doesn't exist (probably was removed)
     if (not stmt.next()) {
         return set_failure("Failed the job of judging the submission ", submission_id_,
@@ -35,7 +35,7 @@ void JudgeOrRejudge::run() {
 
     // If the problem wasn't modified since last judgment and submission has
     // already been rejudged after the job was created
-    if (last_judgment > p_last_edit and last_judgment > job_creation_time_) {
+    if (last_judgment > p_updated_at and last_judgment > job_creation_time_) {
         // Skip the job - the submission has already been rejudged
         return job_cancelled("Skipped judging of the submission ", submission_id_,
                 " because it has already been rejudged after this "

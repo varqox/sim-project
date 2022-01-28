@@ -27,7 +27,7 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
         decltype(Submission::owner) submission_owner, Submission::Type stype,
         std::optional<ContestUser::Mode> cu_mode,
-        decltype(Problem::owner) problem_owner) noexcept {
+        decltype(Problem::owner_id) problem_owner) noexcept {
     using PERM = SubmissionPermissions;
     using STYPE = Submission::Type;
     using CUM = ContestUser::Mode;

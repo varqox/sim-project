@@ -24,9 +24,9 @@ struct Problem {
     sql_fields::Varbinary<128> name;
     sql_fields::Varbinary<64> label;
     sql_fields::Blob<4096> simfile;
-    std::optional<decltype(users::User::id)> owner;
-    sql_fields::Datetime added;
-    sql_fields::Datetime last_edit;
+    std::optional<decltype(users::User::id)> owner_id;
+    sql_fields::Datetime created_at;
+    sql_fields::Datetime updated_at;
 
     static constexpr uint64_t new_statement_max_size = 10 << 20; // 10 MiB
 };

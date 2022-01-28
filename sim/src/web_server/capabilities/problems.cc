@@ -44,7 +44,7 @@ bool list_problems_of_user_by_type(const decltype(Context::session)& session,
 
 ProblemCapabilities problem(const decltype(Context::session)& session,
         decltype(Problem::type) problem_type,
-        decltype(Problem::owner) problem_owner_id) noexcept {
+        decltype(Problem::owner_id) problem_owner_id) noexcept {
     bool is_owned = problem_owner_id and is_self(session, *problem_owner_id);
     bool is_public = problem_type == sim::problems::Problem::Type::PUBLIC;
     bool is_contest_only = problem_type == sim::problems::Problem::Type::CONTEST_ONLY;

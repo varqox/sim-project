@@ -58,7 +58,7 @@ void Sim::api_jobs() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
+    qfields.append("SELECT j.id, j.added, j.type, j.status, j.priority, j.aux_id,"
                    " j.info, j.creator, u.username");
     qwhere.append(
             " FROM jobs j LEFT JOIN users u ON creator=u.id WHERE TRUE"); // Needed to easily
