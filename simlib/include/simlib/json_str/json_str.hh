@@ -22,6 +22,18 @@ static constexpr inline bool is_std_optional = false;
 template <class T>
 static constexpr inline bool is_std_optional<std::optional<T>> = true;
 
+namespace detail {
+
+template <class T, class = decltype(std::declval<T>().to_json())>
+constexpr auto has_method_to_json(int) -> std::true_type;
+template <class>
+constexpr auto has_method_to_json(...) -> std::false_type;
+
+} // namespace detail
+
+template <class T>
+constexpr inline bool has_method_to_json = decltype(detail::has_method_to_json<T>(0))::value;
+
 } // namespace detail
 
 class Builder {
@@ -56,6 +68,8 @@ protected:
             append_raw_value(val.to_quoted_str());
         } else if constexpr (is_enum_val_with_string_conversions<DT>) {
             append_raw_value(val.to_enum().to_quoted_str());
+        } else if constexpr (detail::has_method_to_json<DT>) {
+            append_raw_value(val.to_json());
         } else {
             append_stringified_json(str, std::forward<T>(val));
             back_insert(str, ',');
