@@ -37,7 +37,7 @@ public:
 private:
     void log() {
         auto tmplog = stdlog("\033[2K\033[G", header_, ' ', iter_, " / ", iters_num_, " = ",
-                100 * iter_ / iters_num_, "%");
+                iters_num_ > 0 ? 100 * iter_ / iters_num_ : 100, "%");
         if (iter_ < iters_num_) {
             tmplog.flush_no_nl();
         }
