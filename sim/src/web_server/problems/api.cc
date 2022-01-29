@@ -34,7 +34,7 @@ struct ProblemInfo {
     decltype(Problem::updated_at) updated_at;
 
 private:
-    decltype(ProblemTag::Id::name) tag_name;
+    decltype(ProblemTag::name) tag_name;
     decltype(ProblemTag::is_hidden) tag_is_hidden;
     mysql::Statement tags_stmt;
 

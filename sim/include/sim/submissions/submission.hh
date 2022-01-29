@@ -4,6 +4,7 @@
 #include "sim/contest_rounds/contest_round.hh"
 #include "sim/contests/contest.hh"
 #include "sim/internal_files/internal_file.hh"
+#include "sim/primary_key.hh"
 #include "sim/problems/problem.hh"
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
@@ -66,6 +67,8 @@ struct Submission {
     sql_fields::Datetime last_judgment;
     sql_fields::Blob<0> initial_report;
     sql_fields::Blob<0> final_report;
+
+    constexpr static auto primary_key = PrimaryKey{&Submission::id};
 
     static constexpr uint64_t solution_max_size = 100 << 10; // 100 KiB
 };

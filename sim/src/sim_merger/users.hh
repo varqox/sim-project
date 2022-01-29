@@ -77,7 +77,7 @@ public:
         transaction.commit();
     }
 
-    explicit UsersMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
+    explicit UsersMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs)
     : Merger("users", ids_from_both_jobs.main.users, ids_from_both_jobs.other.users) {
         STACK_UNWINDING_MARK;
         initialize();

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sim/primary_key.hh"
 #include "simlib/concat.hh"
 #include "simlib/string_view.hh"
 
@@ -9,6 +10,8 @@ namespace sim::internal_files {
 
 struct InternalFile {
     uint64_t id;
+
+    constexpr static auto primary_key = PrimaryKey{&InternalFile::id};
 };
 
 constexpr CStringView dir = "internal_files/";

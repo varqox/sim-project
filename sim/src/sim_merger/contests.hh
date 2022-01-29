@@ -55,7 +55,7 @@ public:
         transaction.commit();
     }
 
-    explicit ContestsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
+    explicit ContestsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs)
     : Merger("contests", ids_from_both_jobs.main.contests, ids_from_both_jobs.other.contests) {
         STACK_UNWINDING_MARK;
         initialize();

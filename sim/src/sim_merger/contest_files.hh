@@ -48,8 +48,8 @@ class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
                 [&](const sim::contest_files::ContestFile& /*unused*/) { return nullptr; });
     }
 
-    decltype(sim::contest_files::ContestFile::id) pre_merge_record_id_to_post_merge_record_id(
-            const decltype(sim::contest_files::ContestFile::id)& record_id) override {
+    PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
+            const PrimaryKeyType& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_contest_files_ids_.emplace(new_id).second) {
@@ -80,7 +80,7 @@ public:
         transaction.commit();
     }
 
-    ContestFilesMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
+    ContestFilesMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
             const InternalFilesMerger& internal_files, const ContestsMerger& contests,
             const UsersMerger& users)
     : Merger("contest_files", ids_from_both_jobs.main.contest_files,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/is_username.hh"
+#include "sim/primary_key.hh"
 #include "sim/sql_fields/satisfying_predicate.hh"
 #include "sim/sql_fields/varbinary.hh"
 #include "simlib/enum_val.hh"
@@ -35,6 +36,8 @@ struct User {
     sql_fields::Varbinary<60> email;
     sql_fields::Varbinary<64> password_salt;
     sql_fields::Varbinary<128> password_hash;
+
+    constexpr static auto primary_key = PrimaryKey{&User::id};
 };
 
 constexpr decltype(User::id) SIM_ROOT_UID = 1;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/internal_files/internal_file.hh"
+#include "sim/primary_key.hh"
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
 #include "sim/sql_fields/varbinary.hh"
@@ -27,6 +28,8 @@ struct Problem {
     std::optional<decltype(users::User::id)> owner_id;
     sql_fields::Datetime created_at;
     sql_fields::Datetime updated_at;
+
+    constexpr static auto primary_key = PrimaryKey{&Problem::id};
 
     static constexpr uint64_t new_statement_max_size = 10 << 20; // 10 MiB
 };

@@ -144,7 +144,7 @@ public:
         transaction.commit();
     }
 
-    JobsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
+    JobsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
             const InternalFilesMerger& internal_files, const UsersMerger& users,
             const SubmissionsMerger& submissions, const ProblemsMerger& problems,
             const ContestsMerger& contests, const ContestRoundsMerger& contest_rounds,

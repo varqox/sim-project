@@ -65,7 +65,7 @@ public:
     }
 
     ContestRoundsMerger(
-            const IdsFromMainAndOtherJobs& ids_from_both_jobs, const ContestsMerger& contests)
+            const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const ContestsMerger& contests)
     : Merger("contest_rounds", ids_from_both_jobs.main.contest_rounds,
               ids_from_both_jobs.other.contest_rounds)
     , contests_(contests) {

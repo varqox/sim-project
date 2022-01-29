@@ -137,7 +137,7 @@ public:
         transaction.commit();
     }
 
-    ProblemsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
+    ProblemsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
             const InternalFilesMerger& internal_files, const UsersMerger& users,
             bool reset_new_problems_time_limits)
     : Merger("problems", ids_from_both_jobs.main.problems, ids_from_both_jobs.other.problems)

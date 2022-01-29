@@ -102,7 +102,7 @@ public:
         transaction.commit();
     }
 
-    SubmissionsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
+    SubmissionsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
             const InternalFilesMerger& internal_files, const UsersMerger& users,
             const ProblemsMerger& problems, const ContestProblemsMerger& contest_problems,
             const ContestRoundsMerger& contest_rounds, const ContestsMerger& contests)

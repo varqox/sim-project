@@ -233,7 +233,7 @@ static int true_main(int argc, char** argv) {
 
     load_tables_from_other_sim_backup();
 
-    IdsFromMainAndOtherJobs ids_from_both_jobs;
+    PrimaryKeysFromMainAndOtherJobs ids_from_both_jobs;
     vector<MergerBase*> mergers;
 
     stdlog("\033[1;36mMerging internal_files\033[m...");

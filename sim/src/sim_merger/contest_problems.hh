@@ -74,7 +74,7 @@ public:
         transaction.commit();
     }
 
-    ContestProblemsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs,
+    ContestProblemsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
             const ContestRoundsMerger& contest_rounds, const ContestsMerger& contests,
             const ProblemsMerger& problems)
     : Merger("contest_problems", ids_from_both_jobs.main.contest_problems,

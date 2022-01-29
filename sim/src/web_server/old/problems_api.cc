@@ -179,7 +179,7 @@ void Sim::api_problems() {
     // Tags selector
     uint64_t pid = 0;
     decltype(ProblemTag::is_hidden) is_hidden;
-    decltype(ProblemTag::id.name) tag_name;
+    decltype(ProblemTag::name) tag_name;
     auto stmt = mysql.prepare("SELECT name FROM problem_tags "
                               "WHERE problem_id=? AND is_hidden=? ORDER BY name");
     stmt.bind_all(pid, is_hidden);
@@ -717,7 +717,7 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
         bool hidden = (request.form_fields.get("hidden") == "true");
         StringView name;
         form_validate_not_blank(
-                name, "name", "Tag name", decltype(ProblemTag::id.name)::max_len);
+                name, "name", "Tag name", decltype(ProblemTag::name)::max_len);
         if (notifications.size) {
             return api_error400(notifications);
         }
@@ -744,9 +744,9 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
         StringView name;
         StringView old_name;
         form_validate_not_blank(
-                name, "name", "Tag name", decltype(ProblemTag::id.name)::max_len);
+                name, "name", "Tag name", decltype(ProblemTag::name)::max_len);
         form_validate_not_blank(
-                old_name, "old_name", "Old tag name", decltype(ProblemTag::id.name)::max_len);
+                old_name, "old_name", "Old tag name", decltype(ProblemTag::name)::max_len);
         if (notifications.size) {
             return api_error400(notifications);
         }
@@ -784,7 +784,7 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
         StringView name;
         bool is_hidden = (request.form_fields.get("hidden") == "true");
         form_validate_not_blank(
-                name, "name", "Tag name", decltype(ProblemTag::id.name)::max_len);
+                name, "name", "Tag name", decltype(ProblemTag::name)::max_len);
         if (notifications.size) {
             return api_error400(notifications);
         }

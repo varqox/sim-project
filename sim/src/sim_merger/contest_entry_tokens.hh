@@ -16,7 +16,7 @@ struct ContestEntryTokenIdGetter {
 };
 
 class ContestEntryTokensMerger
-: public Merger<sim::contest_entry_tokens::ContestEntryToken, ContestEntryTokenIdGetter> {
+: public Merger<sim::contest_entry_tokens::ContestEntryToken> {
     const ContestsMerger& contests_;
 
     std::set<decltype(sim::contest_entry_tokens::ContestEntryToken::token)> taken_tokens_;
@@ -68,17 +68,14 @@ class ContestEntryTokensMerger
         });
     }
 
-    decltype(sim::contest_entry_tokens::ContestEntryToken::token)
-    pre_merge_record_id_to_post_merge_record_id(
-            const decltype(sim::contest_entry_tokens::ContestEntryToken::token)& record_id)
-            override {
+    PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_tokens_.emplace(new_id).second) {
             new_id = sim::generate_random_token(
                     decltype(sim::contest_entry_tokens::ContestEntryToken::token)::max_len);
         }
-        return decltype(sim::contest_entry_tokens::ContestEntryToken::token)(new_id);
+        return PrimaryKeyType{new_id};
     }
 
 public:
@@ -103,7 +100,7 @@ public:
     }
 
     ContestEntryTokensMerger(
-            const IdsFromMainAndOtherJobs& ids_from_both_jobs, const ContestsMerger& contests)
+            const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const ContestsMerger& contests)
     : Merger("contest_entry_tokens", ids_from_both_jobs.main.contest_entry_tokens,
               ids_from_both_jobs.other.contest_entry_tokens)
     , contests_(contests) {

@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
     try_to_create_table("problem_tags", concat(
         "CREATE TABLE IF NOT EXISTS `problem_tags` ("
             "`problem_id` bigint unsigned NOT NULL,"
-            "`name` VARBINARY(", decltype(ProblemTag::id.name)::max_len, ") NOT NULL,"
+            "`name` VARBINARY(", decltype(ProblemTag::name)::max_len, ") NOT NULL,"
             "`is_hidden` BOOLEAN NOT NULL,"
             "PRIMARY KEY (problem_id, is_hidden, name),"
             "KEY (name, problem_id),"

@@ -2,6 +2,7 @@
 
 #include "sim/contest_rounds/contest_round.hh"
 #include "sim/contests/contest.hh"
+#include "sim/primary_key.hh"
 #include "sim/problems/problem.hh"
 #include "sim/sql_fields/varbinary.hh"
 #include "simlib/enum_val.hh"
@@ -32,6 +33,8 @@ struct ContestProblem {
     uint64_t item;
     EnumVal<MethodOfChoosingFinalSubmission> method_of_choosing_final_submission;
     EnumVal<ScoreRevealing> score_revealing;
+
+    constexpr static auto primary_key = PrimaryKey{&ContestProblem::id};
 };
 
 } // namespace sim::contest_problems

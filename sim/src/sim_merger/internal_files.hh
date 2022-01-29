@@ -126,7 +126,7 @@ public:
         (void)remove_r(trash_path);
     }
 
-    explicit InternalFilesMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs)
+    explicit InternalFilesMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs)
     : Merger("internal_files", ids_from_both_jobs.main.internal_files,
               ids_from_both_jobs.other.internal_files) {
         STACK_UNWINDING_MARK;

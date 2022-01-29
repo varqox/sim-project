@@ -45,8 +45,8 @@ class SessionsMerger : public Merger<sim::sessions::Session> {
         Merger::merge([&](const sim::sessions::Session& /*unused*/) { return nullptr; });
     }
 
-    decltype(sim::sessions::Session::id) pre_merge_record_id_to_post_merge_record_id(
-            const decltype(sim::sessions::Session::id)& record_id) override {
+    PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
+            const PrimaryKeyType& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_sessions_ids_.emplace(new_id).second) {
@@ -75,7 +75,7 @@ public:
         transaction.commit();
     }
 
-    SessionsMerger(const IdsFromMainAndOtherJobs& ids_from_both_jobs, const UsersMerger& users)
+    SessionsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const UsersMerger& users)
     : Merger("sessions", ids_from_both_jobs.main.sessions, ids_from_both_jobs.other.sessions)
     , users_(users) {
         STACK_UNWINDING_MARK;

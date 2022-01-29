@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sim/contests/contest.hh"
+#include "sim/primary_key.hh"
 #include "sim/internal_files/internal_file.hh"
 #include "sim/sql_fields/datetime.hh"
 #include "sim/sql_fields/varbinary.hh"
@@ -19,6 +20,8 @@ struct ContestFile {
     uint64_t file_size;
     sql_fields::Datetime modified;
     std::optional<decltype(users::User::id)> creator;
+
+    constexpr static auto primary_key = PrimaryKey{&ContestFile::id};
 
     static constexpr decltype(file_size) max_size = 128 << 20; // 128 MiB [bytes]
 };
