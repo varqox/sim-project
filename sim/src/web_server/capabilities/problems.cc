@@ -30,6 +30,7 @@ bool list_problems_by_type(const decltype(Context::session)& session,
     case Problem::Type::CONTEST_ONLY: return is_admin(session) or is_teacher(session);
     case Problem::Type::PUBLIC: return true;
     }
+    __builtin_unreachable();
 }
 
 bool list_problems_of_user(
