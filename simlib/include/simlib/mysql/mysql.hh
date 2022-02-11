@@ -5,6 +5,7 @@
 #include "simlib/enum_val.hh"
 #include "simlib/inplace_buff.hh"
 #include "simlib/meta.hh"
+#include "simlib/sql.hh"
 #include "simlib/string_view.hh"
 
 #include <atomic>
@@ -13,7 +14,9 @@
 #include <functional>
 #include <mutex>
 #include <optional>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 #if 0
 #warning "Before committing disable this debug"
@@ -497,6 +500,19 @@ public:
         (void)transform_arg; // Disable GCC warning
     }
 
+private:
+    template <class... Params, size_t... I>
+    void do_bind_and_execute_from_tuple(
+            const std::tuple<Params...>& params, std::index_sequence<I...> /*unused*/) {
+        bind_and_execute(std::get<I>(params)...);
+    }
+
+public:
+    template <class... Params>
+    void bind_and_execute_from_tuple(const std::tuple<Params...>& params) {
+        do_bind_and_execute_from_tuple(params, std::make_index_sequence<sizeof...(Params)>{});
+    }
+
     /* res_bind() need to be called before next() */
 
     template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
@@ -876,6 +892,16 @@ public:
         }
 
         return {stmt, referencing_objects_no_};
+    }
+
+    template <template <class...> class T, class... Params,
+            std::enable_if_t<std::is_convertible_v<T<Params...>, sql::SelectQuery<Params...>>,
+                    int> = 0>
+    Statement prepare_bind_and_execute(T<Params...> select_query) {
+        auto full_select_query = sql::SelectQuery<Params...>{std::move(select_query)};
+        auto stmt = prepare(std::move(full_select_query.sql_str));
+        stmt.bind_and_execute_from_tuple(std::move(full_select_query.params));
+        return stmt;
     }
 
     my_ulonglong insert_id() noexcept { return mysql_insert_id(conn_); }
