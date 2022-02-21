@@ -397,10 +397,9 @@ Sandbox::Sandbox()
     seccomp_rule_add_both_ctx(
             SCMP_ACT_TRACE(add_limiting_callback(1, "execve")), SCMP_SYS(execve), 0);
 
-    // prlimit64() - needed by callback to Sandbox::run_child() to limit the VM
-    // size
-    seccomp_rule_add_both_ctx(
-            SCMP_ACT_TRACE(add_limiting_callback(2, "prlimit64")), SCMP_SYS(prlimit64), 0);
+    // prlimit64() - needed by callback to Sandbox::run_child() to limit the virtual address
+    // space size
+    seccomp_rule_add_both_ctx(SECCOMP_RET_ALLOW, SCMP_SYS(prlimit64), 0);
 
     // access
     seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(access), 0);
@@ -414,6 +413,12 @@ Sandbox::Sandbox()
     seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(uname), 0);
     // set_thread_area
     seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(set_thread_area), 0);
+    // set_tid_address
+    seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(set_tid_address), 0);
+    // set_robust_list
+    seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(set_robust_list), 0);
+    // rseq
+    seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(rseq), 0);
     // arch_prctl
     seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(arch_prctl), 0);
     // readlink
