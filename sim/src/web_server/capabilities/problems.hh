@@ -8,6 +8,7 @@ namespace web_server::capabilities {
 
 struct ProblemsCapabilities {
     bool web_ui_view : 1;
+    bool add_problem : 1;
     bool add_with_type_private : 1;
     bool add_with_type_contest_only : 1;
     bool add_with_type_public : 1;
@@ -15,26 +16,39 @@ struct ProblemsCapabilities {
 
 ProblemsCapabilities problems(const decltype(web_worker::Context::session)& session) noexcept;
 
-bool list_all_problems(const decltype(web_worker::Context::session)& session) noexcept;
+struct ProblemsListCapabilities {
+    bool query_all : 1;
+    bool query_with_type_public : 1;
+    bool query_with_type_contest_only : 1;
+    bool query_with_type_private : 1;
+    bool view_all_with_type_public : 1;
+    bool view_all_with_type_contest_only : 1;
+    bool view_all_with_type_private : 1;
+    bool web_ui_show_owner_column : 1;
+    bool web_ui_show_updated_at_column : 1;
+};
 
-bool list_problems_by_type(const decltype(web_worker::Context::session)& session,
-        decltype(sim::problems::Problem::type) problem_type) noexcept;
+ProblemsListCapabilities list_all_problems(
+        const decltype(web_worker::Context::session)& session) noexcept;
 
-bool list_problems_of_user(const decltype(web_worker::Context::session)& session,
+ProblemsListCapabilities list_user_problems(
+        const decltype(web_worker::Context::session)& session,
         decltype(sim::users::User::id) user_id) noexcept;
-
-bool list_problems_of_user_by_type(const decltype(web_worker::Context::session)& session,
-        decltype(sim::users::User::id) user_id,
-        decltype(sim::problems::Problem::type) problem_type) noexcept;
 
 struct ProblemCapabilities {
     bool view : 1;
     bool view_statement : 1;
     bool view_public_tags : 1;
     bool view_hidden_tags : 1;
-    bool view_owner : 1;
+    bool view_solutions : 1;
     bool view_simfile : 1;
+    bool view_owner : 1;
+    bool view_creation_time : 1;
+    bool view_update_time : 1;
+    bool view_final_submission_full_status : 1;
     bool download : 1;
+    bool create_submission : 1;
+    bool edit : 1;
     bool reupload : 1;
     bool rejudge_all_submissions : 1;
     bool reset_time_limits : 1;

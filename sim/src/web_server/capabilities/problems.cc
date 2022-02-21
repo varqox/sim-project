@@ -11,36 +11,49 @@ using web_server::web_worker::Context;
 namespace web_server::capabilities {
 
 ProblemsCapabilities problems(const decltype(Context::session)& session) noexcept {
-    return ProblemsCapabilities{
+    return {
             .web_ui_view = true,
+            .add_problem = is_admin(session) or is_teacher(session),
             .add_with_type_private = is_admin(session) or is_teacher(session),
             .add_with_type_contest_only = is_admin(session) or is_teacher(session),
             .add_with_type_public = is_admin(session),
     };
 }
 
-bool list_all_problems(const decltype(Context::session)& session) noexcept {
-    return is_admin(session);
+ProblemsListCapabilities list_all_problems(
+        const decltype(Context::session)& session) noexcept {
+    return {
+            .query_all = true,
+            .query_with_type_public = true,
+            .query_with_type_contest_only = is_admin(session) or is_teacher(session) or
+                    (session and
+                            list_user_problems(session, session->user_id)
+                                    .query_with_type_contest_only),
+            .query_with_type_private = is_admin(session) or is_teacher(session) or
+                    (session and
+                            list_user_problems(session, session->user_id)
+                                    .query_with_type_private),
+            .view_all_with_type_public = true,
+            .view_all_with_type_contest_only = is_admin(session) or is_teacher(session),
+            .view_all_with_type_private = is_admin(session),
+            .web_ui_show_owner_column = is_admin(session) or is_teacher(session),
+            .web_ui_show_updated_at_column = is_admin(session) or is_teacher(session),
+    };
 }
 
-bool list_problems_by_type(const decltype(Context::session)& session,
-        decltype(Problem::type) problem_type) noexcept {
-    switch (problem_type) {
-    case Problem::Type::PRIVATE: return is_admin(session);
-    case Problem::Type::CONTEST_ONLY: return is_admin(session) or is_teacher(session);
-    case Problem::Type::PUBLIC: return true;
-    }
-    __builtin_unreachable();
-}
-
-bool list_problems_of_user(
+ProblemsListCapabilities list_user_problems(
         const decltype(Context::session)& session, decltype(User::id) user_id) noexcept {
-    return is_self(session, user_id) or is_admin(session);
-}
-
-bool list_problems_of_user_by_type(const decltype(Context::session)& session,
-        decltype(User::id) user_id, decltype(Problem::type) /*problem_type*/) noexcept {
-    return list_problems_of_user(session, user_id);
+    return {
+            .query_all = is_self(session, user_id) or is_admin(session),
+            .query_with_type_public = is_self(session, user_id) or is_admin(session),
+            .query_with_type_contest_only = is_self(session, user_id) or is_admin(session),
+            .query_with_type_private = is_self(session, user_id) or is_admin(session),
+            .view_all_with_type_public = is_self(session, user_id) or is_admin(session),
+            .view_all_with_type_contest_only = is_self(session, user_id) or is_admin(session),
+            .view_all_with_type_private = is_self(session, user_id) or is_admin(session),
+            .web_ui_show_owner_column = is_admin(session) and !is_self(session, user_id),
+            .web_ui_show_updated_at_column = is_self(session, user_id) or is_admin(session),
+    };
 }
 
 ProblemCapabilities problem(const decltype(Context::session)& session,
@@ -51,18 +64,26 @@ ProblemCapabilities problem(const decltype(Context::session)& session,
     bool is_contest_only = problem_type == sim::problems::Problem::Type::CONTEST_ONLY;
     bool view = is_public or is_owned or is_admin(session) or
             (is_teacher(session) and is_contest_only);
-    return ProblemCapabilities{
+    return {
             .view = view,
             .view_statement = view,
             .view_public_tags = view,
             .view_hidden_tags =
                     view and (is_admin(session) or is_teacher(session) or is_owned),
-            .view_owner = is_admin(session) or is_owned or
-                    (is_teacher(session) and (is_public or is_contest_only)),
+            .view_solutions =
+                    is_admin(session) or is_owned or (is_teacher(session) and is_public),
             .view_simfile = is_admin(session) or is_owned or
                     (is_teacher(session) and (is_public or is_contest_only)),
-            .download =
-                    is_admin(session) or is_owned or (is_teacher(session) and is_public),
+            .view_owner = is_admin(session) or is_owned or
+                    (is_teacher(session) and (is_public or is_contest_only)),
+            .view_creation_time = is_admin(session) or is_owned or
+                    (is_teacher(session) and (is_public or is_contest_only)),
+            .view_update_time = is_admin(session) or is_owned or
+                    (is_teacher(session) and (is_public or is_contest_only)),
+            .view_final_submission_full_status = view and session,
+            .download = is_admin(session) or is_owned or (is_teacher(session) and is_public),
+            .create_submission = view and session,
+            .edit = is_admin(session) or is_owned,
             .reupload = is_admin(session) or is_owned,
             .rejudge_all_submissions = is_admin(session) or is_owned,
             .reset_time_limits = is_admin(session) or is_owned,

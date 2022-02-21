@@ -6,8 +6,6 @@ namespace web_server::capabilities {
 
 struct UsersCapabilities {
     bool web_ui_view : 1;
-    bool view_all : 1;
-    bool view_all_by_type : 1;
     bool add_user : 1;
     bool add_admin : 1;
     bool add_teacher : 1;
@@ -17,7 +15,20 @@ struct UsersCapabilities {
     bool sign_out : 1;
 };
 
-UsersCapabilities users_for(const decltype(web_worker::Context::session)& session) noexcept;
+UsersCapabilities users(const decltype(web_worker::Context::session)& session) noexcept;
+
+struct UsersListCapabilities {
+    bool query_all : 1;
+    bool query_with_type_admin : 1;
+    bool query_with_type_teacher : 1;
+    bool query_with_type_normal : 1;
+    bool view_all_with_type_admin : 1;
+    bool view_all_with_type_teacher : 1;
+    bool view_all_with_type_normal : 1;
+};
+
+UsersListCapabilities list_all_users(
+        const decltype(web_worker::Context::session)& session) noexcept;
 
 struct UserCapabilities {
     bool view : 1;
@@ -37,7 +48,7 @@ struct UserCapabilities {
     bool merge_someone_into_this_user : 1;
 };
 
-UserCapabilities user_for(const decltype(web_worker::Context::session)& session,
+UserCapabilities user(const decltype(web_worker::Context::session)& session,
         decltype(sim::users::User::id) user_id) noexcept;
 
 } // namespace web_server::capabilities

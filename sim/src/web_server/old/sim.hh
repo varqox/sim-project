@@ -106,7 +106,7 @@ class Sim final {
     void api_job_download_uploaded_statement(
             std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type, StringView info);
 
-    // jobs_api.cc
+    // problems_api.cc
     void api_problems();
 
     void api_problem();

@@ -15,9 +15,6 @@ void Sim::problems_handle() {
     if (next_arg == "add") { // Add problem
         page_template("Add problem");
         append("add_problem(false);");
-    } else if (next_arg.empty()) { // List problems
-        page_template("Problems");
-        append("problem_chooser(false, window.location.hash);");
     } else {
         return error404();
     }

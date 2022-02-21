@@ -1061,6 +1061,14 @@ body {
 .navbar .user:focus > .caret {
 	border-top-color: #ffffff;
 }
+.navbar > a.error_counter {
+    padding: 10px;
+    color: #ff0000;
+}
+.navbar > a.error_counter:hover,
+.navbar > a.error_counter:focus {
+  color: #ff5f5f;
+}
 .table {
 	/*display: inline-table;*/
 	margin: 6px auto;
@@ -1176,13 +1184,50 @@ table.stripped > tbody > tr:last-child > td:last-child {
 }
 
 /* Tab menu */
-.tabmenu {
+.tab_menu > .tabs {
+  display: flex;
+  flex-flow: row nowrap;
+  border-bottom: 1px solid #ccc;
+  margin: 8px 0;
+}
+.tab_menu > .tabs > a {
+  padding: 8px 16px;
+  margin: 0 2px -1px 0;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.tab_menu > .tabs > a.active {
+  color: #333;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-bottom: 0;
+  cursor: default;
+}
+.tab_menu > .tabs > a:hover,
+.tab_menu > .tabs > a:focus {
+  background: #f3f3f3;
+  border-bottom: 1px solid #ccc;
+}
+.tab_menu > .tabs > a.active:hover,
+.tab_menu > .tabs > a.active:focus {
+  color: #333;
+  background: #fff;
+  border-bottom: 0;
+}
+
+/* Old tab menu */
+.old_tabmenu {
 	display: flex;
 	flex-flow: row nowrap;
 	border-bottom: 1px solid #ccc;
 	margin: 8px 0;
 }
-.tabmenu > a {
+.old_tabmenu > a {
 	padding: 8px 16px;
 	margin: 0 2px -1px 0;
 	border-top-left-radius: 4px;
@@ -1193,20 +1238,20 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	-moz-user-select: none;
 	-ms-user-select: none;
 }
-.tabmenu > a.active {
+.old_tabmenu > a.active {
 	color: #333;
 	background: #fff;
 	border: 1px solid #ccc;
 	border-bottom: 0;
 	cursor: default;
 }
-.tabmenu > a:hover,
-.tabmenu > a:focus {
+.old_tabmenu > a:hover,
+.old_tabmenu > a:focus {
 	background: #f3f3f3;
 	border-bottom: 1px solid #ccc;
 }
-.tabmenu > a.active:hover,
-.tabmenu > a.active:focus {
+.old_tabmenu > a.active:hover,
+.old_tabmenu > a.active:focus {
 	color: #333;
 	background: #fff;
 	border-bottom: 0;
@@ -1412,7 +1457,8 @@ div.right-flow {
 }
 .compilation-errors,
 .simfile,
-.job-log {
+.job-log,
+.error_log {
 	display: inline-block;
 	align-self: flex-start;
 	padding: 8px;
@@ -1653,7 +1699,7 @@ table.problems td {
 table.problems tr > td:last-child {
 	/*white-space: pre;*/
 }
-table.problems .name-and-tags,
+table.problems .name_and_tags,
 .problem-info .tags-row {
 	display: flex;
 	align-items: center;

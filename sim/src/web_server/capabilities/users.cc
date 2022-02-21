@@ -4,11 +4,9 @@
 
 namespace web_server::capabilities {
 
-UsersCapabilities users_for(const decltype(web_worker::Context::session)& session) noexcept {
-    return UsersCapabilities{
+UsersCapabilities users(const decltype(web_worker::Context::session)& session) noexcept {
+    return {
             .web_ui_view = is_admin(session),
-            .view_all = is_admin(session),
-            .view_all_by_type = is_admin(session),
             .add_user = is_admin(session),
             .add_admin = session and session->user_id == sim::users::SIM_ROOT_UID,
             .add_teacher = is_admin(session),
@@ -19,7 +17,20 @@ UsersCapabilities users_for(const decltype(web_worker::Context::session)& sessio
     };
 }
 
-UserCapabilities user_for(const decltype(web_worker::Context::session)& session,
+UsersListCapabilities list_all_users(
+        const decltype(web_worker::Context::session)& session) noexcept {
+    return {
+            .query_all = is_admin(session),
+            .query_with_type_admin = is_admin(session),
+            .query_with_type_teacher = is_admin(session),
+            .query_with_type_normal = is_admin(session),
+            .view_all_with_type_admin = is_admin(session),
+            .view_all_with_type_teacher = is_admin(session),
+            .view_all_with_type_normal = is_admin(session),
+    };
+}
+
+UserCapabilities user(const decltype(web_worker::Context::session)& session,
         decltype(sim::users::User::id) user_id) noexcept {
     using sim::users::SIM_ROOT_UID;
     bool is_admin_ = is_admin(session);
@@ -28,7 +39,7 @@ UserCapabilities user_for(const decltype(web_worker::Context::session)& session,
     bool make_admin = session and session->user_id == SIM_ROOT_UID;
     bool make_teacher = (user_id != SIM_ROOT_UID) and is_admin_;
     bool make_normal = (user_id != SIM_ROOT_UID) and (is_admin_ or (is_teacher_ and is_self_));
-    return UserCapabilities{.view = is_self_ or is_admin_,
+    return {.view = is_self_ or is_admin_,
             .edit = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID),
             .edit_username = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID),
             .edit_first_name = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID),

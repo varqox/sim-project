@@ -8,15 +8,15 @@
 
 namespace web_server::users::api {
 
-http::Response list_users(web_worker::Context& ctx);
+http::Response list_all_users(web_worker::Context& ctx);
 
-http::Response list_users_above_id(
+http::Response list_all_users_above_id(
         web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 
-http::Response list_users_by_type(
+http::Response list_all_users_with_type(
         web_worker::Context& ctx, decltype(sim::users::User::type) user_type);
 
-http::Response list_users_by_type_above_id(web_worker::Context& ctx,
+http::Response list_all_users_with_type_above_id(web_worker::Context& ctx,
         decltype(sim::users::User::type) user_type, decltype(sim::users::User::id) user_id);
 
 http::Response view_user(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
