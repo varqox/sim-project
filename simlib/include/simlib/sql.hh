@@ -429,12 +429,12 @@ Condition<ParamsA..., ParamsB...> operator and(
         Condition<ParamsA...> a, Condition<ParamsB...> b) {
     if constexpr (sizeof...(ParamsA) == 0) {
         if (a.sql_str == "TRUE") {
-            return std::move(b);
+            return b;
         }
     }
     if constexpr (sizeof...(ParamsB) == 0) {
         if (b.sql_str == "TRUE") {
-            return std::move(a);
+            return a;
         }
     }
     return {
@@ -448,12 +448,12 @@ Condition<ParamsA..., ParamsB...> operator or(
         Condition<ParamsA...> a, Condition<ParamsB...> b) {
     if constexpr (sizeof...(ParamsA) == 0) {
         if (a.sql_str == "FALSE") {
-            return std::move(b);
+            return b;
         }
     }
     if constexpr (sizeof...(ParamsB) == 0) {
         if (b.sql_str == "FALSE") {
-            return std::move(a);
+            return a;
         }
     }
     return {
