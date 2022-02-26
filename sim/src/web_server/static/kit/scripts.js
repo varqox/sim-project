@@ -656,7 +656,7 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	const self = this;
 	self.elem = elem;
 	self.next_query_suffix = initial_next_query_suffix;
-	const oldmodal = self.elem.closest('.oldmodal');
+	const modal = self.elem.closest('.modal') ?? self.elem.closest('.oldmodal');
 	let fetch_lock = false;
 	let is_first_fetch = true;
 	let shutdown = false;
@@ -723,7 +723,7 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	}
 
 	// Start listening for scroll and resize events
-	const elem_to_listen_on_scroll = oldmodal === null ? document : oldmodal;
+	const elem_to_listen_on_scroll = modal === null ? document : modal;
 	elem_to_listen_on_scroll.addEventListener('scroll', scroll_or_resize_event_handler, {passive: true});
 	window.addEventListener('resize', scroll_or_resize_event_handler, {passive: true});
 
