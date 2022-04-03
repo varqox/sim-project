@@ -117,7 +117,7 @@ sip = executable('sip',
             extra_args : 'gen_cc'
         ),
         custom_target('git_commit.cc',
-            command : find_program('src/gen_git_commit_cc.py'),
+            command : [find_program('src/gen_git_commit_cc.py'), '@SOURCE_ROOT@/.git'],
             depend_files : '.git/logs/HEAD',
             output : 'git_commit.cc',
             capture : true,
