@@ -129,7 +129,7 @@
 % proper implementation
 \cs_new_protected:Npn \sip_statement_readcell:n #1
 {
-    % clear the variable containing the cel contents
+    % clear the variable containing the cell contents
     \tl_clear:N \l__sip_statement_cell_content_tl
     % start reading the file
     \ior_open:Nn \g_sip_statement_import_stream { #1 }
