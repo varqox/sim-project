@@ -3,6 +3,8 @@
 #include "simlib/concat_common.hh"
 #include "simlib/string_view.hh"
 
+#include <utility>
+
 class InplaceBuffBase {
 public:
     size_t size = 0;
