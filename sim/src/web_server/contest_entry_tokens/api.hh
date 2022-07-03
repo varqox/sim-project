@@ -11,20 +11,20 @@ http::Response view(web_worker::Context& ctx, decltype(sim::contests::Contest::i
 
 http::Response add(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response
-regen(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response regen(
+        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response
-delete_(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response delete_(
+        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response
-add_short(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response add_short(
+        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response
-regen_short(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response regen_short(
+        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response
-delete_short(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response delete_short(
+        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
 http::Response view_contest_name(web_worker::Context& ctx, StringView token_or_short_token);
 

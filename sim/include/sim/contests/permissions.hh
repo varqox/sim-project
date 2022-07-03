@@ -25,13 +25,12 @@ DECLARE_ENUM_UNARY_OPERATOR(Permissions, ~)
 DECLARE_ENUM_OPERATOR(Permissions, |)
 DECLARE_ENUM_OPERATOR(Permissions, &)
 
-Permissions get_permissions(
-    std::optional<users::User::Type> user_type, bool contest_is_public,
-    std::optional<contest_users::ContestUser::Mode> cu_mode) noexcept;
+Permissions get_permissions(std::optional<users::User::Type> user_type, bool contest_is_public,
+        std::optional<contest_users::ContestUser::Mode> cu_mode) noexcept;
 
 template <class T, class U = uint64_t>
-std::optional<Permissions>
-get_permissions(::mysql::Connection& mysql, T&& contest_id, std::optional<U> user_id) {
+std::optional<Permissions> get_permissions(
+        ::mysql::Connection& mysql, T&& contest_id, std::optional<U> user_id) {
     STACK_UNWINDING_MARK;
 
     uint8_t is_public = false;

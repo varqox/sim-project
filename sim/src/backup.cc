@@ -48,11 +48,9 @@ int main2(int argc, char** argv) {
     }
 
     mysql_cnf_guard.reset(MYSQL_CNF);
-    write_all_throw(
-        fd,
-        intentional_unsafe_string_view(concat(
-            "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd,
-            "\"\n")));
+    write_all_throw(fd,
+            intentional_unsafe_string_view(concat("[client]\nuser=\"", conn.impl()->user,
+                    "\"\npassword=\"", conn.impl()->passwd, "\"\n")));
 
     auto run_command = [](vector<string> args) {
         auto es = Spawner::run(args[0], args);
@@ -72,9 +70,8 @@ int main2(int argc, char** argv) {
         auto transaction = conn.start_transaction();
         auto stmt = conn.prepare("SELECT tmp_file_id FROM jobs "
                                  "WHERE tmp_file_id IS NOT NULL AND status IN (?,?,?)");
-        stmt.bind_and_execute(
-            EnumVal(Job::Status::DONE), EnumVal(Job::Status::FAILED),
-            EnumVal(Job::Status::CANCELED));
+        stmt.bind_and_execute(EnumVal(Job::Status::DONE), EnumVal(Job::Status::FAILED),
+                EnumVal(Job::Status::CANCELED));
         uint64_t tmp_file_id = 0;
         stmt.res_bind_all(tmp_file_id);
 
@@ -83,7 +80,7 @@ int main2(int argc, char** argv) {
         while (stmt.next()) {
             auto file_path = sim::internal_files::path_of(tmp_file_id);
             if (access(file_path, F_OK) == 0 and
-                system_clock::now() - get_modification_time(file_path) > 2h)
+                    system_clock::now() - get_modification_time(file_path) > 2h)
             {
                 deleter.bind_and_execute(tmp_file_id);
                 (void)unlink(file_path);
@@ -95,7 +92,7 @@ int main2(int argc, char** argv) {
         fc.load_from_directory(sim::internal_files::dir);
         std::set<std::string, std::less<>> orphaned_files;
         fc.for_each_with_prefix(
-            "", [&](StringView file) { orphaned_files.emplace(file.to_string()); });
+                "", [&](StringView file) { orphaned_files.emplace(file.to_string()); });
 
         stmt = conn.prepare("SELECT id FROM internal_files");
         stmt.bind_and_execute();
@@ -128,11 +125,11 @@ int main2(int argc, char** argv) {
     }
 
     run_command({
-        "mysqldump",
-        concat_tostr("--defaults-file=", MYSQL_CNF),
-        "--result-file=dump.sql",
-        "--single-transaction",
-        conn.impl()->db,
+            "mysqldump",
+            concat_tostr("--defaults-file=", MYSQL_CNF),
+            "--result-file=dump.sql",
+            "--single-transaction",
+            conn.impl()->db,
     });
 
     if (chmod("dump.sql", S_0600)) {
@@ -167,9 +164,8 @@ int main2(int argc, char** argv) {
     run_command({"git", "add", "--verbose", "logs/"});
     run_command({"git", "add", "--verbose", "sim.conf", ".db.config"});
     run_command({"git", "add", "--verbose", "static/"});
-    run_command(
-        {"git", "commit", "-q", "-m",
-         concat_tostr("Backup ", mysql_localdate(), " (", mysql_date(), " UTC)")});
+    run_command({"git", "commit", "-q", "-m",
+            concat_tostr("Backup ", mysql_localdate(), " (", mysql_date(), " UTC)")});
     run_command({"git", "--no-pager", "show", "--stat"});
 
     return 0;

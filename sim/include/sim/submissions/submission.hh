@@ -4,6 +4,7 @@
 #include "sim/contest_rounds/contest_round.hh"
 #include "sim/contests/contest.hh"
 #include "sim/internal_files/internal_file.hh"
+#include "sim/primary_key.hh"
 #include "sim/problems/problem.hh"
 #include "sim/sql_fields/blob.hh"
 #include "sim/sql_fields/datetime.hh"
@@ -67,6 +68,8 @@ struct Submission {
     sql_fields::Blob<0> initial_report;
     sql_fields::Blob<0> final_report;
 
+    constexpr static auto primary_key = PrimaryKey{&Submission::id};
+
     static constexpr uint64_t solution_max_size = 100 << 10; // 100 KiB
 };
 
@@ -113,20 +116,18 @@ constexpr const char* to_mime(Submission::Language x) {
 }
 
 // Non-fatal statuses
-static_assert(
-    meta::max(
-        Submission::Status::OK, Submission::Status::WA, Submission::Status::TLE,
-        Submission::Status::MLE, Submission::Status::RTE) < Submission::Status::PENDING,
-    "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-    " used during selection of the final submission");
+static_assert(meta::max(Submission::Status::OK, Submission::Status::WA,
+                      Submission::Status::TLE, Submission::Status::MLE,
+                      Submission::Status::RTE) < Submission::Status::PENDING,
+        "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+        " used during selection of the final submission");
 
 // Fatal statuses
-static_assert(
-    meta::min(
-        Submission::Status::COMPILATION_ERROR, Submission::Status::CHECKER_COMPILATION_ERROR,
-        Submission::Status::JUDGE_ERROR) > Submission::Status::PENDING,
-    "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-    " used during selection of the final submission");
+static_assert(meta::min(Submission::Status::COMPILATION_ERROR,
+                      Submission::Status::CHECKER_COMPILATION_ERROR,
+                      Submission::Status::JUDGE_ERROR) > Submission::Status::PENDING,
+        "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+        " used during selection of the final submission");
 
 constexpr bool is_special(Submission::Status status) {
     return (status >= Submission::Status::PENDING);

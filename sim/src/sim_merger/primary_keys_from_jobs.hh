@@ -26,9 +26,9 @@
 namespace sim_merger {
 
 // For each id, we keep the first date that it appeared with
-template <class IdType, class IdCmp = std::less<IdType>>
-struct IdsWithTime {
-    std::map<IdType, std::chrono::system_clock::time_point, IdCmp> ids;
+template <class IdType>
+struct PrimaryKeysWithTime {
+    std::map<IdType, std::chrono::system_clock::time_point> ids;
 
     void add_id(IdType id, std::chrono::system_clock::time_point tp) {
         auto it = ids.find(id);
@@ -58,38 +58,22 @@ struct IdsWithTime {
     }
 };
 
-struct ProblemTagIdCmp {
-    bool operator()(
-        const decltype(sim::problem_tags::ProblemTag::id)& a,
-        const decltype(sim::problem_tags::ProblemTag::id)& b) const noexcept {
-        return std::pair{a.problem_id, a.tag} < std::pair{b.problem_id, b.tag};
-    }
-};
-
-struct ContestUserIdCmp {
-    bool operator()(
-        const decltype(sim::contest_users::ContestUser::id)& a,
-        const decltype(sim::contest_users::ContestUser::id)& b) const noexcept {
-        return std::pair{a.user_id, a.contest_id} < std::pair{b.user_id, b.contest_id};
-    }
-};
-
 // Loads all information about ids from jobs
-struct IdsFromJobs {
-    IdsWithTime<decltype(sim::internal_files::InternalFile::id)> internal_files;
-    IdsWithTime<decltype(sim::users::User::id)> users;
-    IdsWithTime<decltype(sim::sessions::Session::id)> sessions;
-    IdsWithTime<decltype(sim::problems::Problem::id)> problems;
-    IdsWithTime<decltype(sim::problem_tags::ProblemTag::id), ProblemTagIdCmp> problem_tags;
-    IdsWithTime<decltype(sim::contests::Contest::id)> contests;
-    IdsWithTime<decltype(sim::contest_rounds::ContestRound::id)> contest_rounds;
-    IdsWithTime<decltype(sim::contest_problems::ContestProblem::id)> contest_problems;
-    IdsWithTime<decltype(sim::contest_users::ContestUser::id), ContestUserIdCmp> contest_users;
-    IdsWithTime<decltype(sim::contest_files::ContestFile::id)> contest_files;
-    IdsWithTime<decltype(sim::contest_entry_tokens::ContestEntryToken::token)>
-        contest_entry_tokens;
-    IdsWithTime<decltype(sim::submissions::Submission::id)> submissions;
-    IdsWithTime<decltype(sim::jobs::Job::id)> jobs;
+struct PrimaryKeysFromJobs {
+    PrimaryKeysWithTime<decltype(sim::internal_files::InternalFile::primary_key)::Type> internal_files;
+    PrimaryKeysWithTime<decltype(sim::users::User::primary_key)::Type> users;
+    PrimaryKeysWithTime<decltype(sim::sessions::Session::primary_key)::Type> sessions;
+    PrimaryKeysWithTime<decltype(sim::problems::Problem::primary_key)::Type> problems;
+    PrimaryKeysWithTime<decltype(sim::problem_tags::ProblemTag::primary_key)::Type> problem_tags;
+    PrimaryKeysWithTime<decltype(sim::contests::Contest::primary_key)::Type> contests;
+    PrimaryKeysWithTime<decltype(sim::contest_rounds::ContestRound::primary_key)::Type> contest_rounds;
+    PrimaryKeysWithTime<decltype(sim::contest_problems::ContestProblem::primary_key)::Type> contest_problems;
+    PrimaryKeysWithTime<decltype(sim::contest_users::ContestUser::primary_key)::Type> contest_users;
+    PrimaryKeysWithTime<decltype(sim::contest_files::ContestFile::primary_key)::Type> contest_files;
+    PrimaryKeysWithTime<decltype(sim::contest_entry_tokens::ContestEntryToken::primary_key)::Type>
+            contest_entry_tokens;
+    PrimaryKeysWithTime<decltype(sim::submissions::Submission::primary_key)::Type> submissions;
+    PrimaryKeysWithTime<decltype(sim::jobs::Job::primary_key)::Type> jobs;
 
     void initialize(StringView job_table_name) {
         STACK_UNWINDING_MARK;
@@ -104,10 +88,9 @@ struct IdsFromJobs {
         mysql::Optional<decltype(Job::aux_id)::value_type> aux_id;
         sim::sql_fields::Blob<32> info;
 
-        auto stmt = conn.prepare(
-            "SELECT id, creator, type, file_id, "
-            "tmp_file_id, added, aux_id, info FROM ",
-            job_table_name, " ORDER BY id");
+        auto stmt = conn.prepare("SELECT id, creator, type, file_id, "
+                                 "tmp_file_id, added, aux_id, info FROM ",
+                job_table_name, " ORDER BY id");
         stmt.bind_and_execute();
         stmt.res_bind_all(id, creator, type, file_id, tmp_file_id, added_str, aux_id, info);
         while (stmt.next()) {
@@ -179,15 +162,15 @@ struct IdsFromJobs {
         }
     }
 
-    explicit IdsFromJobs(StringView job_table_name) {
+    explicit PrimaryKeysFromJobs(StringView job_table_name) {
         STACK_UNWINDING_MARK;
         initialize(job_table_name);
     }
 };
 
-struct IdsFromMainAndOtherJobs {
-    IdsFromJobs main{intentional_unsafe_string_view(concat(main_sim_table_prefix, "jobs"))};
-    IdsFromJobs other{"jobs"};
+struct PrimaryKeysFromMainAndOtherJobs {
+    PrimaryKeysFromJobs main{intentional_unsafe_string_view(concat(main_sim_table_prefix, "jobs"))};
+    PrimaryKeysFromJobs other{"jobs"};
 };
 
 } // namespace sim_merger

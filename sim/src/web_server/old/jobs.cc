@@ -29,9 +29,8 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
     return PERM::NONE; // Shouldn't happen
 }
 
-Sim::JobPermissions Sim::jobs_get_permissions(
-    std::optional<StringView> creator_id, Job::Type job_type,
-    Job::Status job_status) noexcept {
+Sim::JobPermissions Sim::jobs_get_permissions(std::optional<StringView> creator_id,
+        Job::Type job_type, Job::Status job_status) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
     using JT = Job::Type;
@@ -79,21 +78,21 @@ Sim::JobPermissions Sim::jobs_get_permissions(
         case JS::NOTICED_PENDING:
         case JS::IN_PROGRESS:
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-                PERM::VIEW_ALL | PERM::CANCEL;
+                    PERM::VIEW_ALL | PERM::CANCEL;
 
         case JS::FAILED:
         case JS::CANCELED:
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-                PERM::VIEW_ALL | PERM::RESTART;
+                    PERM::VIEW_ALL | PERM::RESTART;
 
         case JS::DONE:
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-                PERM::VIEW_ALL;
+                    PERM::VIEW_ALL;
         }
     }
 
     if (creator_id.has_value() and
-        session->user_id == str2num<decltype(session->user_id)>(creator_id.value()))
+            session->user_id == str2num<decltype(session->user_id)>(creator_id.value()))
     {
         if (is_one_of(job_status, JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS)) {
             return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
@@ -110,16 +109,14 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
     using PERM = JobPermissions;
     using P_PERMS = sim::problems::Permissions;
 
-    auto problem_perms =
-        sim::problems::get_permissions(
-            mysql, problem_id,
+    auto problem_perms = sim::problems::get_permissions(mysql, problem_id,
             (session.has_value() ? optional{session->user_id} : std::nullopt),
             (session.has_value() ? optional{session->user_type} : std::nullopt))
-            .value_or(P_PERMS::NONE);
+                                 .value_or(P_PERMS::NONE);
 
     if (uint(problem_perms & P_PERMS::VIEW_RELATED_JOBS)) {
         return PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::DOWNLOAD_UPLOADED_PACKAGE |
-            PERM::DOWNLOAD_UPLOADED_STATEMENT;
+                PERM::DOWNLOAD_UPLOADED_STATEMENT;
     }
 
     return PERM::NONE;
@@ -133,7 +130,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
         return PERM::NONE;
     }
 
-    auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type, cu.mode,"
+    auto stmt = mysql.prepare("SELECT s.type, p.owner_id, p.type, cu.mode,"
                               " c.is_public "
                               "FROM submissions s "
                               "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
@@ -144,18 +141,18 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
     stmt.bind_and_execute(session->user_id, submission_id);
 
     EnumVal<Submission::Type> stype{};
-    mysql::Optional<decltype(Problem::owner)::value_type> problem_owner;
+    mysql::Optional<decltype(Problem::owner_id)::value_type> problem_owner_id;
     decltype(Problem::type) problem_type;
     mysql::Optional<decltype(sim::contest_users::ContestUser::mode)> cu_mode;
     mysql::Optional<decltype(sim::contests::Contest::is_public)> is_public;
-    stmt.res_bind_all(stype, problem_owner, problem_type, cu_mode, is_public);
+    stmt.res_bind_all(stype, problem_owner_id, problem_type, cu_mode, is_public);
     if (stmt.next()) {
         if (is_public.has_value() and // <-- contest exists
-            uint(
-                sim::contests::get_permissions(
-                    (session.has_value() ? std::optional{session->user_type} : std::nullopt),
-                    is_public.value(), cu_mode) &
-                sim::contests::Permissions::ADMIN))
+                uint(sim::contests::get_permissions(
+                             (session.has_value() ? std::optional{session->user_type}
+                                                  : std::nullopt),
+                             is_public.value(), cu_mode) &
+                        sim::contests::Permissions::ADMIN))
         {
             return PERM::VIEW | PERM::DOWNLOAD_LOG;
         }
@@ -163,9 +160,9 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
         // The below check has to be done as the last one because it gives the
         // least permissions
         auto problem_perms = sim::problems::get_permissions(
-            (session.has_value() ? optional{session->user_id} : std::nullopt),
-            (session.has_value() ? optional{session->user_type} : std::nullopt), problem_owner,
-            problem_type);
+                (session.has_value() ? optional{session->user_id} : std::nullopt),
+                (session.has_value() ? optional{session->user_type} : std::nullopt),
+                problem_owner_id, problem_type);
         // Give access to the problem's submissions' jobs to the problem's admin
         if (bool(uint(problem_perms & sim::problems::Permissions::EDIT))) {
             return PERM::VIEW | PERM::DOWNLOAD_LOG;

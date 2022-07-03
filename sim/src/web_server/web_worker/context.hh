@@ -15,6 +15,7 @@ namespace web_server::web_worker {
 struct Context {
     const http::Request& request;
     mysql::Connection& mysql;
+    bool notify_job_server_after_commit = false;
 
     struct Session {
         decltype(sim::sessions::Session::id) id;
@@ -33,33 +34,31 @@ struct Context {
     void open_session();
     void close_session();
 
-    void create_session(
-        decltype(Session::user_id) user_id, decltype(Session::user_type) user_type,
-        decltype(Session::username) username, decltype(Session::data) data,
-        bool long_exiration);
+    void create_session(decltype(Session::user_id) user_id,
+            decltype(Session::user_type) user_type, decltype(Session::username) username,
+            decltype(Session::data) data, bool long_exiration);
     void destroy_session();
 
     bool session_has_expired() noexcept;
 
     http::Response response_ok(
-        StringView content = "", StringView content_type = "text/plain; charset=utf-8");
+            StringView content = "", StringView content_type = "text/plain; charset=utf-8");
 
     http::Response response_json(StringView content);
 
-    template <
-        class T,
-        std::enable_if_t<
-            !std::is_convertible_v<T&&, StringView> and std::is_convertible_v<T&, StringView>,
-            int> = 0>
+    template <class T,
+            std::enable_if_t<!std::is_convertible_v<T&&, StringView> and
+                            std::is_convertible_v<T&, StringView>,
+                    int> = 0>
     http::Response response_json(T&& content) {
         return response_json(StringView{content});
     }
 
-    http::Response
-    response_400(StringView content, StringView content_type = "text/plain; charset=utf-8");
+    http::Response response_400(
+            StringView content, StringView content_type = "text/plain; charset=utf-8");
 
     http::Response response_403(
-        StringView content = "", StringView content_type = "text/plain; charset=utf-8");
+            StringView content = "", StringView content_type = "text/plain; charset=utf-8");
 
     http::Response response_404();
 

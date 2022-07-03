@@ -1,12 +1,8 @@
-/* If you add or edit page / lister / tabmenu / chooser or whatever make sure
-   that:
-   - centerize_oldmodal() is put everywhere where needed
-   - timed_hide_show() is also put everywhere where appropriate (to check you
-       could change the timed_hide_delay to something big and see if everything
-       show as soon as it is loaded)
-   - all tabs (from tab-menus) and deeper / subsequent tabs works well with page
-       refreshing
-*/
+function assert(condition, optional_message) {
+	if (!condition) {
+		throw Error('Assertion failed' + optional_message == null ? '' : ': ' + optional_message);
+	}
+}
 function elem_with_text(tag, text) {
 	const elem = document.createElement(tag);
 	elem.innerText = text;
@@ -33,6 +29,12 @@ function elem_of(tag, ...args) {
 	elem.append(...args);
 	return elem;
 }
+function elem_with_class_of(tag, classes, ...args) {
+	const elem = document.createElement(tag);
+	elem.className = classes;
+	elem.append(...args);
+	return elem;
+}
 function elem_request_status_pending() {
 	const elem = elem_with_class('span', 'request-status pending');
 	elem.appendChild(elem_with_class('div', 'spinner'));
@@ -48,10 +50,7 @@ function remove_centered_request_status(parent) {
 	parent.querySelector('.request-status').parentNode.remove();
 }
 function try_remove_centered_request_status(parent) {
-	const request_status = parent.querySelector('.request-status');
-	if (request_status != null) {
-		request_status.parentNode.remove();
-	}
+	parent.querySelector('.request-status')?.parentNode.remove();
 }
 // This is very useful when triggering a CSS transition on just appended elements (see: https://stackoverflow.com/a/24195559)
 function trigger_reflow_on(elem) {
@@ -68,16 +67,21 @@ function append_with_fade_in_slide_down(parent, elem, delay = '0s') {
 	elem.classList.add('fade-in-slide-down');
 	parent.appendChild(elem);
 	trigger_reflow_on(elem);
+	// elem.getBoundingClientRect().height cannot be used as it returns a totally different value here
 	elem.style.maxHeight = elem.scrollHeight + 'px'; // No need for adding borders since .fade-in-slide-down has border: none
 	elem.style.transitionDelay = delay;
 	elem.style.opacity = 1;
 	// Adjust max-height on subtree changes
 	const mo = new MutationObserver((mutation_records) => {
-		if (mutation_records.length === 1 && mutation_records[0].target === elem && mutation_records[0].type === 'attributes') {
-			return; // ignore changes to elem's attributes, e.g. the below maxHeight
+		for (const record of mutation_records) {
+			if (record.target === elem && record.type === 'attributes') {
+				continue; // ignore changes to elem's attributes, e.g. the below max-height change
+			}
+			trigger_reflow_on(elem);
+			// elem.getBoundingClientRect().height cannot be used as it returns a totally different value here
+			elem.style.maxHeight = elem.scrollHeight + 'px';
+			break;
 		}
-		trigger_reflow_on(elem);
-		elem.style.maxHeight = elem.scrollHeight + 'px';
 	});
 	mo.observe(elem, {subtree: true, childList: true, attributes: true, characterData: true});
 }
@@ -111,35 +115,49 @@ function url_api_contest_entry_tokens_regen(contest_id) { return '/api/contest/'
 function url_api_contest_entry_tokens_regen_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regen_short'; }
 function url_api_contest_entry_tokens_view(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens'; }
 function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/contest_name'; }
+function url_api_problems() { return '/api/problems'; }
+function url_api_problems_with_type(problem_type) { return '/api/problems/type=/' + problem_type; }
 function url_api_sign_in() { return '/api/sign_in'; }
 function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
 function url_api_use_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/use'; }
 function url_api_user(user_id) { return '/api/user/' + user_id; }
-function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change-password'; }
+function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change_password'; }
 function url_api_user_delete(user_id) { return '/api/user/' + user_id + '/delete'; }
 function url_api_user_edit(user_id) { return '/api/user/' + user_id + '/edit'; }
 function url_api_user_merge_into_another(user_id) { return '/api/user/' + user_id + '/merge_into_another'; }
-function url_api_users(query_suffix) { return '/api/users' + query_suffix; }
+function url_api_user_problems(user_id) { return '/api/user/' + user_id + '/problems'; }
+function url_api_user_problems_with_type(user_id, problem_type) { return '/api/user/' + user_id + '/problems/type=/' + problem_type; }
+function url_api_users() { return '/api/users'; }
 function url_api_users_add() { return '/api/users/add'; }
+function url_api_users_with_type(user_type) { return '/api/users/type=/' + user_type; }
+function url_change_user_password(user_id) { return '/user/' + user_id + '/change_password'; }
 function url_contests() { return '/c'; }
 function url_enter_contest(contest_entry_token) { return '/enter_contest/' + contest_entry_token; }
 function url_jobs() { return '/jobs'; }
 function url_logs() { return '/logs'; }
 function url_main_page() { return '/'; }
-function url_problems() { return '/p'; }
+function url_problem(problem_id) { return '/p/' + problem_id; }
+function url_problem_create_submission(problem_id) { return '/p/' + problem_id + '/submit'; }
+function url_problem_delete(problem_id) { return '/p/' + problem_id + '/delete'; }
+function url_problem_download(problem_id) { return '/api/download/problem/' + problem_id; }
+function url_problem_edit(problem_id) { return '/p/' + problem_id + '/edit'; }
+function url_problem_merge(problem_id) { return '/p/' + problem_id + '/merge'; }
+function url_problem_reset_time_limits(problem_id) { return '/p/' + problem_id + '/reset_time_limits'; }
+function url_problem_solutions(problem_id) { return '/p/' + problem_id + '#all_submissions#solutions'; }
+function url_problem_statement(problem_id, problem_name) { return '/api/download/statement/problem/' + problem_id + '/' + encodeURIComponent(problem_name); }
+function url_problems() { return '/problems'; }
 function url_sign_in() { return '/sign_in'; }
 function url_sign_out() { return '/sign_out'; }
 function url_sign_up() { return '/sign_up'; }
 function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
 function url_submissions() { return '/s'; }
 function url_user(user_id) { return '/u/' + user_id; }
-function url_user_change_password(user_id) { return '/u/' + user_id + '/change-password'; }
-function url_user_delete(user_id) { return '/u/' + user_id + '/delete'; }
-function url_user_edit(user_id) { return '/u/' + user_id + '/edit'; }
-function url_user_merge(user_id) { return '/u/' + user_id + '/merge'; }
-function url_users() { return '/u'; }
-function url_users_add() { return '/u/add'; }
+function url_user_delete(user_id) { return '/user/' + user_id + '/delete'; }
+function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
+function url_user_merge_into_another(user_id) { return '/user/' + user_id + '/merge_into_another'; }
+function url_users() { return '/users'; }
+function url_users_add() { return '/users/add'; }
 
 /* ================================= Humanize ================================= */
 
@@ -170,7 +188,7 @@ function humanize_file_size(size) {
 	const MIN_3DIGIT_PIB = 112533595688920269;
 	// Bytes
 	if (size < MIN_KIB) {
-		return (size == 1 ? "1 byte" : size + " bytes");
+		return (size === 1 ? "1 byte" : size + " bytes");
 	}
 	// KiB
 	if (size < MIN_3DIGIT_KIB) {
@@ -236,15 +254,15 @@ function humanize_file_size(size) {
  *  the response-status is hidden, @p process_response can show it by calling `request_status.show_success(text_message)`.
  */
 function do_xhr_with_status(method, url, init, parent_elem_for_status, process_response) {
-	if (init.body == null) init.body = null;
-	if (init.timeout == null) init.timeout = 0;
-	if (init.show_upload_progress == null) init.show_upload_progress = false;
-	if (init.response_type == null) init.response_type = 'text';
-	if (init.remove_previous_status == null) init.remove_previous_status = true;
-	if (init.show_abort_button_after == null) init.show_abort_button_after = 1500;
-	if (init.do_before_send == null) init.do_before_send = null;
-	if (init.onloadend == null) init.onloadend = null;
-	if (init.extra_http_headers == null) init.extra_http_headers = [];
+	init.body ??= null;
+	init.timeout ??= 0;
+	init.show_upload_progress ??= false;
+	init.response_type ??= 'text';
+	init.remove_previous_status ??= true;
+	init.show_abort_button_after ??= 1500;
+	init.do_before_send ??= null;
+	init.onloadend ??= null;
+	init.extra_http_headers ??= [];
 
 	const status_center_elem = elem_of('center', elem_request_status_pending());
 	const show_error = (msg) => {
@@ -268,23 +286,23 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	};
 	xhr.onload = () => {
 		// Handle errors
-		if (xhr.status != 200) {
+		if (xhr.status !== 200) {
 			let msg = '';
 			// Status 400 is used for reporting request errors
-			if (xhr.status != 400) {
+			if (xhr.status !== 400) {
 				msg += 'Error: ';
 				msg += xhr.status;
-				// HTTP/2 does not have statusText (on Chrome statusText == '' in such case but
+				// HTTP/2 does not have statusText (on Chrome statusText === '' in such case but
 				// standard says something about 'OK' being the default value)
-				if (xhr.statusText != '' && xhr.statusText != 'OK') {
+				if (xhr.statusText !== '' && xhr.statusText !== 'OK') {
 					msg += ' ';
 					msg += xhr.statusText;
 				}
 			}
 			// Append message only if it is a non-empty text response
 			const content_type = (xhr.getResponseHeader('content-type') || '').split(' ')[0].split(';')[0];
-			if (xhr.response.length > 0 && content_type == 'text/plain') {
-				if (msg != '') {
+			if (xhr.response.length > 0 && content_type === 'text/plain') {
+				if (msg !== '') {
 					msg += '\n';
 				}
 				msg += xhr.response;
@@ -299,7 +317,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 			parsed_response = (() => {
 				switch (init.response_type) {
 					case 'text': return xhr.response;
-					case 'json': return xhr.response.length == 0 ? undefined : JSON.parse(xhr.response);
+					case 'json': return xhr.response.length === 0 ? undefined : JSON.parse(xhr.response);
 					default:
 						invalid_init_response_type = true;
 						return null;
@@ -342,9 +360,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	xhr.ontimeout = () => {
 		show_error('Request timeout');
 	};
-	if (init.onloadend != null) {
-		xhr.onloadend = init.onloadend.bind(null);
-	}
+	xhr.onloadend = init.onloadend?.bind(null);
 
 	let bounded_progress_elem;
 	let unbounded_progress_elem;
@@ -397,14 +413,12 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	setTimeout(() => { abort_btn.style.display = ''; }, init.show_abort_button_after);
 	status_center_elem.appendChild(elem_of('center', abort_btn));
 
-	if (init.do_before_send != null) {
-		init.do_before_send.call(null);
-	}
+	init.do_before_send?.call(null);
 	xhr.send(init.body);
 }
 
 function Select(name, required) {
-	if (this == window) {
+	if (this === window) {
 		throw new Error('Call as "new Select()", not "Select()"');
 	}
 	const self = this;
@@ -428,6 +442,10 @@ function Select(name, required) {
 		}
 		return option;
 	}
+
+	self.disable = () => {
+		select_elem.disabled = true;
+	}
 }
 
 /**
@@ -437,10 +455,10 @@ function Select(name, required) {
  * }
  */
 function AjaxForm(title, destination_api_url, init) {
-	if (init == null) init = {};
-	if (init.css_classes == null) init.css_classes = null;
-	if (init.response_type == null) init.response_type = 'json';
-	if (this == window) {
+	init ??= {};
+	init.css_classes ??= null;
+	init.response_type ??= 'json';
+	if (this === window) {
 		throw new Error('Call as "new AjaxForm()", not "AjaxForm()"');
 	}
 	const self = this;
@@ -582,7 +600,7 @@ function AjaxForm(title, destination_api_url, init) {
 		hidden.value = false;
 		checkbox.addEventListener('change', () => {
 			hidden.value = checkbox.checked;
-		});
+		}, {passive: true});
 		return checkbox;
 	};
 
@@ -594,6 +612,10 @@ function AjaxForm(title, destination_api_url, init) {
 		submit_inputs.push(input);
 		return input;
 	};
+}
+
+function snake_case_to_user_string(snake_case_str) {
+	return snake_case_str[0].toUpperCase() + snake_case_str.slice(1).replaceAll('_', ' ');
 }
 
 /* ================================= Lister ================================= */
@@ -622,24 +644,19 @@ const get_viewport_height = (() => {
 	// For width set .style.left = 0, .style.right = 0 and use .clientWidth
 	return () => viewport_prober.clientHeight;
 })();
-// Scroll: overflowed elements
-function is_overflowed_elem_scrolled_down(elem) {
-	const scroll_distance_to_bottom = elem.scrollHeight - elem.scrollTop - elem.clientHeight;
-	return scroll_distance_to_bottom <= 1; // As of March 2020, I managed to get value 1 in firefox with 80% zoom
-}
 // Scroll: relative to viewport
 function how_much_is_viewport_bottom_above_elem_bottom(elem) {
 	return elem.getBoundingClientRect().bottom - get_viewport_height();
 }
 
 function Lister(elem, query_url, initial_next_query_suffix) {
-	if (this == window) {
+	if (this === window) {
 		throw new Error('Call as "new Lister()", not "Lister()"');
 	}
 	const self = this;
 	self.elem = elem;
 	self.next_query_suffix = initial_next_query_suffix;
-	const oldmodal = self.elem.closest('.oldmodal');
+	const modal = self.elem.closest('.modal') ?? self.elem.closest('.oldmodal');
 	let fetch_lock = false;
 	let is_first_fetch = true;
 	let shutdown = false;
@@ -678,7 +695,7 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 				if (is_first_fetch) {
 					is_first_fetch = false;
 					self.process_first_api_response(data.list);
-				} else if (data.list.length != 0) {
+				} else if (data.list.length !== 0) {
 					self.process_api_response(data.list);
 				}
 
@@ -706,7 +723,7 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	}
 
 	// Start listening for scroll and resize events
-	const elem_to_listen_on_scroll = oldmodal === null ? document : oldmodal;
+	const elem_to_listen_on_scroll = modal === null ? document : modal;
 	elem_to_listen_on_scroll.addEventListener('scroll', scroll_or_resize_event_handler, {passive: true});
 	window.addEventListener('resize', scroll_or_resize_event_handler, {passive: true});
 
@@ -721,11 +738,40 @@ function Lister(elem, query_url, initial_next_query_suffix) {
 	}
 }
 
-/* ================================= History ================================= */
+/* ================================= History and navigation ================================= */
+
+/* The model is as follows:
+ * - each page has a distinct URL and a corresponding View object
+ * - View objects do not nest, they form a stack -- just like the browser history
+ * - each Modal is pinned to some View
+ * - Modals pinned to the same View form a stack
+ * - View are persistent i.e. their existence is saved in the browser history e.g. they survive page reload
+ * - Modals are volatile i.e. they do not survive page reload
+ * - when View disappears it hides its Modals, the same holds for reappearing
+ * - when View is removed, all its Modals are also removed
+ *
+ * E.g. hierarchy state:
+ * - View a
+ *   - Modal x
+ *   - Modal y
+ * - View b
+ * - View c
+ *   - Modal z
+ *
+ * If the current view in history was View b, then:
+ * - going forward would make View c and Modal z appear
+ * - going backward would make View b disappear, so that View a, Modal x and Modal y are visible
+ * - going backward and forward and then forward would make View c and Modal z appear
+ * - reloading and going forwards would make only View c appear
+ */
 
 const History = (() => {
 	let persistent_state;
-	const view_id_prefix = performance.timing.responseStart + '-';
+	// view_id_prefix is needed in case we go backwards in history and encounter view_id in
+	// history.state that has the same value as some View that exists in the DOM tree as an
+	// newer, other history entry: we have View with id=1, View with id=4, we go back to id=1
+	// and then go back once again and encounter id=4 in history.state
+	const view_id_prefix = window.crypto.getRandomValues(new Uint32Array(4)).toString() + '-';
 	let view_id_num = 0;
 	const get_next_view_id = () => {
 		const id = view_id_prefix + view_id_num;
@@ -777,7 +823,79 @@ const History = (() => {
 		}
 	};
 
+	const current_view_url_state_list_from_url_hash = (url_hash) => {
+		let list = [];
+		let cursor = 0;
+
+		let beg = 0;
+		const end = url_hash.length;
+		while (beg < end) {
+			assert(url_hash[beg] === '#');
+			++beg; // Skip hash
+			let next_beg = url_hash.indexOf('#', beg);
+			if (next_beg === -1) {
+				next_beg = end;
+			}
+			list.push(decodeURIComponent(url_hash.substring(beg, next_beg)));
+			beg = next_beg;
+		}
+
+		const list_to_url_hash = (list) => {
+			let url_hash = '';
+			for (const elem of list) {
+				url_hash += '#';
+				url_hash += encodeURIComponent(elem);
+			}
+			return url_hash;
+		};
+
+		const update_history_state = () => {
+			history.replaceState({
+				persistent_state: persistent_state,
+				view_id: history.state.view_id,
+			}, '', History.current_url_without_hash() + list_to_url_hash(list));
+		};
+
+		const url_without_hash = (url) => {
+			let hash_pos = url.indexOf('#');
+			if (hash_pos === -1) {
+				hash_pos = url.length;
+			}
+			return url.substring(0, hash_pos);
+		};
+
+		return {
+			get_curr_elem_and_advance_cursor: () => {
+				if (cursor === list.length) {
+					return [null, cursor];
+				}
+				const res = [list[cursor], cursor];
+				++cursor;
+				return res;
+			},
+			resize_and_append: (new_length, elem) => {
+				assert(new_length <= list.length);
+				list.splice(new_length, list.length - new_length, elem);
+				cursor = new_length + 1;
+				update_history_state();
+			},
+			other_url_with_state: (url) => {
+				return url_without_hash(url) + list_to_url_hash(list);
+			},
+			other_url_with_state_after_resize_and_append: (url, new_length, elem) => {
+				assert(new_length <= list.length);
+				let new_list = list.slice(0, new_length);
+				new_list.push(elem);
+				return url_without_hash(url) + list_to_url_hash(new_list);
+			},
+		};
+	};
+
 	window.onpopstate = (event) => {
+		if (event.state == null) {
+			// This event come from an user, e.g. they modified manually an url like "/#test"
+			return location.reload(); // we are helpless when event.state is null
+		}
 		const view_elem_to_focus = get_view_elem(event.state.view_id);
 		if (view_elem_to_focus == null) {
 			// TODO: dispatch url in js and present appropriate view instead of reloading
@@ -799,29 +917,34 @@ const History = (() => {
 			history.replaceState({
 				persistent_state: persistent_state,
 			}, '', document.URL);
+			History.current_view_url_state_list = current_view_url_state_list_from_url_hash(window.location.hash);
 			return persistent_state;
 		},
 		push: (view_elem, new_location) => {
 			delete_hidden_views_forward_in_history();
-			let view_id = get_next_view_id();
+			const view_id = get_next_view_id();
 			view_elem.setAttribute('view_id', view_id);
 			history.pushState({
 				persistent_state: persistent_state,
 				view_id: view_id,
 			}, '', new_location);
-			url_hash_parser.assign(window.location.hash);
+			History.current_view_url_state_list = current_view_url_state_list_from_url_hash(window.location.hash);
+			old_url_hash_parser.assign(window.location.hash); // TODO: remove after refactor
 		},
 		replace_current: (view_elem, new_location) => {
-			let view_id = get_next_view_id();
+			const view_id = view_elem.getAttribute('view_id') ?? get_next_view_id();
 			view_elem.setAttribute('view_id', view_id);
 			history.replaceState({
 				persistent_state: persistent_state,
 				view_id: view_id,
 			}, '', new_location);
-			url_hash_parser.assign(window.location.hash);
+			History.current_view_url_state_list = current_view_url_state_list_from_url_hash(window.location.hash);
+			old_url_hash_parser.assign(window.location.hash); // TODO: remove after refactor
 		},
 		get_current_view_elem: get_current_view_elem,
 		is_view_elem: (elem) => elem.hasAttribute('view_id'),
+		current_url_without_hash: () => document.URL.substring(0, document.URL.length - window.location.hash.length),
+		current_view_url_state_list: current_view_url_state_list_from_url_hash(window.location.hash),
 	};
 })();
 
@@ -829,7 +952,7 @@ function sim_template(params, server_response_end_ts) {
 	const history_persistent_state = History.init(() => {
 		let server_time_offset;
 		const entries = window.performance.getEntriesByType('navigation');
-		if (entries.length == 0) {
+		if (entries.length === 0) {
 			// For Safari and other unsupporting browsers
 			server_time_offset = server_response_end_ts - window.performance.timing.responseStart;
 		} else {
@@ -844,7 +967,7 @@ function sim_template(params, server_response_end_ts) {
 	});
 	// Close modal or hide the current view on pressing Escape
 	document.addEventListener('keydown', (event) => {
-		if (event.key != 'Escape') {
+		if (event.key !== 'Escape') {
 			return;
 		}
 		const curr_view_elem = History.get_current_view_elem();
@@ -903,7 +1026,7 @@ function sim_template(params, server_response_end_ts) {
 			},
 			remove_listener: (listener) => {
 				const pos = listeners.indexOf(listener);
-				if (pos != -1) {
+				if (pos !== -1) {
 					listeners.splice(pos, 1);
 				}
 			},
@@ -917,8 +1040,8 @@ function handle_session_change(params) {
 	window.global_capabilities = params.capabilities;
 	window.is_signed_in = () => signed_user_id != null;
 
-	window.signed_user_id = params.session != null ? params.session.user_id : null;
-	window.signed_user_type = params.session != null ? params.session.user_type : null; // TODO: remove after refactor or when it becomes unnecessary (also remove it from @p params on the server side)
+	window.signed_user_id = params.session?.user_id;
+	window.signed_user_type = params.session?.user_type; // TODO: remove after refactor or when it becomes unnecessary (also remove it from @p params on the server side)
 
 	const navbar = (() => {
 		const navbar = document.querySelector('.navbar');
@@ -964,6 +1087,31 @@ function handle_session_change(params) {
 		clock.append(h, ':', m, ':', s, elem_with_text('sup', 'UTC' + (tzo >= 0 ? '+' : '') + tzo / 60));
 	});
 	navbar.appendChild(clock);
+	window.onerror = (() => {
+		let error_count = 0;
+		const errors = [];
+		const error_counter_elem = elem_link_with_class_to_modal('error_counter', '', () => {
+			const modal = new Modal();
+			modal.content_elem.appendChild(elem_with_text('h2', 'You are seeing this because something went wrong...'));
+			const issues_link = elem_with_text('a', 'https://github.com/varqox/sim/issues');
+			issues_link.href = 'https://github.com/varqox/sim/issues';
+			issues_link.target = '_blank';
+			issues_link.rel = 'noopener noreferrer';
+			modal.content_elem.appendChild(elem_of('p', 'Please report a bug by going to ', issues_link, ' and creating an issue with the following log:'));
+			const error_log_str = errors.join('\n=================================================\n\n');
+			const code_elem = elem_with_class_and_text('code', 'error_log', error_log_str);
+			code_elem.style.wordWrap = 'wrap';
+			modal.content_elem.append(elem_of('div', copy_to_clipboard_btn(false, 'Copy log to clipboard', () => error_log_str)[0])); // TODO: refactor copy_to_clipboard_btn
+			modal.content_elem.appendChild(code_elem);
+		});
+		return (message, source, lineno, colno, error) => {
+			errors.push(`${message}\nStack trace:\n${error.stack}`);
+			window.x = errors;
+			++error_count;
+			error_counter_elem.textContent = `JS errors: ${error_count}`;
+			clock.before(error_counter_elem);
+		};
+	})();
 
 	if (params.session) {
 		const dropdown_menu = navbar.appendChild(elem_with_class('div', 'dropmenu down'));
@@ -973,7 +1121,7 @@ function handle_session_change(params) {
 		const ul = dropdown_menu.appendChild(document.createElement('ul'));
 		ul.appendChild(elem_with_text('a', 'My profile')).href = url_user(params.session.user_id);
 		ul.appendChild(elem_with_text('a', 'Edit profile')).href = url_user_edit(params.session.user_id);
-		ul.appendChild(elem_with_text('a', 'Change password')).href = url_user_change_password(params.session.user_id);
+		ul.appendChild(elem_with_text('a', 'Change password')).href = url_change_user_password(params.session.user_id);
 		ul.appendChild(elem_link_to_view('Sign out', sign_out, url_sign_out));
 	} else {
 		navbar.appendChild(elem_link_to_view(elem_with_text('strong', 'Sign in'), sign_in, url_sign_in));
@@ -984,19 +1132,68 @@ function handle_session_change(params) {
 /* ================================= Modal ================================= */
 
 function ModalBase() {
-	if (this == window) {
+	if (this === window) {
 		throw new Error('Call as "new ModalBase()", not "ModalBase()"');
 	}
 	const self = this;
 	const modal_elem = elem_with_class('div', 'modal');
 	const centering_div = modal_elem.appendChild(elem_with_class('div', 'centering'));
 	const modal_window_div = centering_div.appendChild(elem_with_class('div', 'window'));
-	const close_elem = elem_with_class('span', 'close');
-	modal_window_div.appendChild(close_elem);
+	const close_elem = modal_window_div.appendChild(elem_with_class('span', 'close'));
 	const content_elem = modal_window_div.appendChild(document.createElement('div'));
+	// Prevent modal from shrinking (this is annoying e.g. when changing tabs in a tab menu)
+	let vertical_scroll_appeared = false;
+	let horizontal_scroll_appeared = false;
+	const update_min_height_and_min_width = () => {
+		const vertical_scrollbar_width = modal_elem.offsetWidth - modal_elem.clientWidth;
+		if (vertical_scrollbar_width > 0) {
+			if (!vertical_scroll_appeared) {
+				vertical_scroll_appeared = true;
+				// Pin the vertical scrollbar, so we won't get glitches (the whole modal
+				// moves slightly to the right if the scrollbar disappears)
+				modal_elem.style.overflowY = 'scroll';
+			}
+		}
+		const horizontal_scrollbar_height = modal_elem.offsetHeight - modal_elem.clientHeight;
+		if (horizontal_scrollbar_height > 0) {
+			if (!horizontal_scroll_appeared) {
+				horizontal_scroll_appeared = true;
+				// Pin the horizontal scrollbar, so we won't get glitches (the whole modal
+				// moves slightly to the top if the scrollbar disappears)
+				modal_elem.style.overflowX = 'scroll';
+			}
+		}
+		// console.log('update_min_height_and_min_width()'); // TODO: use this to track down remaining event listeners
+		const bounding_client_rect = modal_window_div.getBoundingClientRect();
+		// bounding_client_rect will be bounded by previous min-height and min-width,
+		// so there is no need for using max(old_val, new_val). This way, resizing the browser
+		// window may shrink modals, which is good; min() is used to ensure that modal is not
+		// larger than the viewport unless necessary.
+		const computed_styles = getComputedStyle(modal_window_div);
+		modal_window_div.style.minWidth = `min(${bounding_client_rect.width}px, 100% - ${computed_styles['margin-left']} - ${computed_styles['margin-right']})`;
+		// We cannot use 100% because height of the parent element is not specified explicitly,
+		// so 100% would be treated as 0 and it is not what we need. Also 100vh is not what
+		// we need because it does not exclude scrollbars. min() is used to ensure that
+		// modal is not larger than the viewport unless necessary.
+		modal_window_div.style.minHeight = `min(${bounding_client_rect.height}px, ${modal_elem.clientHeight}px - ${computed_styles['margin-top']} - ${computed_styles['margin-bottom']})`;
+	};
+	update_min_height_and_min_width();
+	const mo = new MutationObserver((mutation_records) => {
+		for (const record of mutation_records) {
+			if (record.target === modal_window_div && record.type === 'attributes') {
+				continue; // ignore changes to modal_window_div's attributes, e.g. caused by the below min-height and min-width change
+			}
+			// TODO: check if this object is also destroyed
+			update_min_height_and_min_width();
+			break;
+		}
+	});
+	mo.observe(modal_window_div, {subtree: true, childList: true, attributes: true, characterData: true});
+	// TODO: remove this listener when the modal is removed (but don't remove this listener before the modal becomes attached)
+	window.addEventListener('resize', update_min_height_and_min_width, {passive: true});
 
 	const do_close = () => {
-		if (History.is_view_elem(modal_elem) && modal_elem == History.get_current_view_elem()) {
+		if (History.is_view_elem(modal_elem) && modal_elem === History.get_current_view_elem()) {
 			history.back();
 			return;
 		}
@@ -1004,7 +1201,7 @@ function ModalBase() {
 	};
 	close_elem.addEventListener('click', do_close, {passive: true});
 	centering_div.addEventListener('click', (event) => {
-		if (event.target == centering_div) {
+		if (event.target === centering_div) {
 			do_close();
 		}
 	}, {passive: true});
@@ -1040,7 +1237,7 @@ function set_api_interface(modal_or_view, content_elem) {
 }
 
 function Modal() {
-	if (this == window) {
+	if (this === window) {
 		throw new Error('Call as "new Modal()", not "Modal()"');
 	}
 	const self = this;
@@ -1049,9 +1246,32 @@ function Modal() {
 	append_with_fade_in(History.get_current_view_elem(), self.modal_elem);
 }
 
+function elem_link_to_modal(contents, modal_func) {
+	const elem = elem_of('a', contents);
+	elem.href = 'javascript:;';
+	elem.addEventListener('click', (event) => {
+		event.preventDefault();
+		modal_func();
+	});
+	return elem;
+}
+
+function elem_link_with_class_to_modal(classes, contents, modal_func) {
+	const elem = elem_link_to_modal(contents, modal_func);
+	elem.className = classes;
+	return elem;
+}
+
 function View(new_window_location) {
-	if (this == window) {
+	if (this === window) {
 		throw new Error('Call as "new View()", not "View()"');
+	}
+	// Check if we want to retain the url state
+	{
+		const new_location_with_url_state = History.current_view_url_state_list.other_url_with_state(new_window_location);
+		if (document.URL.endsWith(new_location_with_url_state)) {
+			new_window_location = new_location_with_url_state;
+		}
 	}
 	const self = this;
 	if (document.querySelector('div.view') == null) {
@@ -1084,6 +1304,65 @@ function elem_link_with_class_to_view(classes, contents, view_func, url_func, ..
 	const elem = elem_link_to_view(contents, view_func, url_func, ...url_func_args);
 	elem.className = classes;
 	return elem;
+}
+
+function TabMenuBuilder() {
+	if (this === window) {
+		throw new Error('Call as "new TabMenuBuilder()", not "TabMenuBuilder()"');
+	}
+	const self = this;
+	const outer_div = elem_with_class('div', 'tab_menu');
+	const tabs = [];
+
+	self.active_tab_changed_listener = (tab_name) => {};
+
+	self.add_tab = (tab_name, tab_builder) => {
+		tabs.push({name: tab_name, builder: tab_builder});
+	};
+
+	self.build_and_append_to = (elem) => {
+		elem.appendChild(outer_div);
+		let [url_state_elem_name, url_state_idx] = History.current_view_url_state_list.get_curr_elem_and_advance_cursor();
+		// Check if such tab exists
+		(() => {
+			for (const tab of tabs) {
+				if (tab.name === url_state_elem_name) {
+					return; // exists
+				}
+			}
+			url_state_elem_name = null; // does not exist
+		})();
+
+		const tabs_div = outer_div.appendChild(elem_with_class('div', 'tabs'));
+		const tab_content_div = outer_div.appendChild(elem_with_class('div', 'tab_content'))
+		let active_tab_elem = null;
+		for (const [idx, tab] of tabs.entries()) {
+			const tab_elem = tabs_div.appendChild(elem_with_text('a', tab.name));
+			tab_elem.href = History.current_view_url_state_list.other_url_with_state_after_resize_and_append(document.URL, url_state_idx, tab.name);
+
+			const activate_tab = () => {
+				tab_elem.classList.add('active');
+				active_tab_elem = tab_elem;
+				self.active_tab_changed_listener(tab.name);
+				tab.builder(tab_content_div);
+			};
+			// TODO: make sure this event handler is removed on tabmenu removal
+			tab_elem.addEventListener('click', (event) => {
+				event.preventDefault();
+				active_tab_elem.classList.remove('active');
+				remove_children(tab_content_div);
+				History.current_view_url_state_list.resize_and_append(url_state_idx, tab.name);
+				activate_tab();
+			});
+
+			if ((url_state_elem_name == null && idx === 0) || (url_state_elem_name != null && tab.name === url_state_elem_name)) {
+				if (url_state_elem_name == null) {
+					History.current_view_url_state_list.resize_and_append(url_state_idx, tab.name);
+				}
+				activate_tab();
+			}
+		}
+	};
 }
 
 /* ================================= Pages ================================= */
@@ -1131,41 +1410,60 @@ async function edit_user(user_id) {
 	const view = new View(url_user_edit(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
 	const form = new AjaxForm('Edit user', url_api_user_edit(user.id));
-	form.append_input_text('username', 'Username', user.username, 24, true, true).readOnly = !user.capabilities.edit_username;
 
 	const select = form.append_select('type', 'Type', true);
+	if (!user.capabilities.change_type) {
+		select.disable();
+	}
 	if (user.capabilities.make_admin || user.type === 'admin') {
-		select.add_option('Admin', 'A', user.type === 'admin');
+		select.add_option('Admin', 'admin', user.type === 'admin');
 	}
 	if (user.capabilities.make_teacher || user.type === 'teacher') {
-		select.add_option('Teacher', 'T', user.type === 'teacher');
+		select.add_option('Teacher', 'teacher', user.type === 'teacher');
 	}
 	if (user.capabilities.make_normal || user.type === 'normal') {
-		select.add_option('Normal', 'N', user.type === 'normal');
+		select.add_option('Normal', 'normal', user.type === 'normal');
 	}
 
-	form.append_input_text('first_name', 'First name', user.first_name, 24, true, true).readOnly = !user.capabilities.edit_first_name;
-	form.append_input_text('last_name', 'Last name', user.last_name, 24, true, true).readOnly = !user.capabilities.edit_last_name;
-	form.append_input_email('email', 'Email', user.email, 24, true, true).readOnly = !user.capabilities.edit_email;
+	form.append_input_text('username', 'Username', user.username, 24, true, true).disabled = !user.capabilities.edit_username;
+	form.append_input_text('first_name', 'First name', user.first_name, 24, true, true).disabled = !user.capabilities.edit_first_name;
+	form.append_input_text('last_name', 'Last name', user.last_name, 24, true, true).disabled = !user.capabilities.edit_last_name;
+	form.append_input_email('email', 'Email', user.email, 24, true, true).disabled = !user.capabilities.edit_email;
 	form.append_submit_button('Update', 'blue');
+	form.attach_to(view.content_elem);
+}
+
+async function change_user_password(user_id) {
+	const view = new View(url_change_user_password(user_id));
+	const user = await view.get_from_api(url_api_user(user_id));
+	const is_me = (user.id === signed_user_id);
+	const title = is_me ? 'Change my password'
+	                    : 'Change password of ' + user.first_name + ' ' + user.last_name;
+	const form = new AjaxForm(title, url_api_user_change_password(user.id));
+	if (!user.capabilities.change_password_without_old_password) {
+		form.append_input_password('old_password', 'Old password', 24, false);
+	}
+	form.append_input_password('new_password', 'New password', 24, false);
+	form.append_input_password('new_password_repeated', 'New password (repeat)', 24, false);
+	form.append_submit_button(title, 'blue');
+	form.success_msg = 'Password changed';
 	form.attach_to(view.content_elem);
 }
 
 async function delete_user(user_id) {
 	const view = new View(url_user_delete(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
-	const is_me = (user.id == signed_user_id);
+	const is_me = (user.id === signed_user_id);
 	const title = is_me ? 'Delete account' : 'Delete user ' + user.id;
 	const form = new AjaxForm(title, url_api_user_delete(user.id), {
 		css_classes: 'with-notice',
-		response_type: 'text',
 	});
 	if (is_me) {
 		form.append(elem_of('p', 'You are going to delete your account. As it cannot be undone, you have to confirm it with your password.'));
 	} else {
 		form.append(elem_of('p',
 			'You are going to delete the user ',
-			a_view_button('/u/' + user.id, user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
+			a_view_button(url_user(user.id), user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
 			'. As it cannot be undone, you have to confirm it with YOUR password.'));
 	}
 	form.append_input_password('password', 'Your password', 24, false);
@@ -1175,31 +1473,30 @@ async function delete_user(user_id) {
 		form.success_handler = (response, ctx) => {
 			ctx.keep_submit_button_disabled();
 			ctx.show_status_success(form.success_msg);
-			view_job(true, response);
+			view_job(true, response.job_id);
 		};
 	}
 	form.attach_to(view.content_elem);
 }
 
 async function merge_user(user_id) {
-	const view = new View(url_user_merge(user_id));
+	const view = new View(url_user_merge_into_another(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
 	const form = new AjaxForm('Merge into another user', url_api_user_merge_into_another(user.id), {
 		css_classes: 'with-notice',
-		response_type: 'text',
 	});
 	form.append(elem_of('p', 'The user ',
-		a_view_button('/u/' + user.id, user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
+		a_view_button(url_user(user.id), user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
 		' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
 		document.createElement('br'),
 		'As this cannot be undone, you have to confirm this with your password.'));
-	form.append_input_text('target_user', 'Target user ID', '', 6, true, true);
+	form.append_input_text('target_user_id', 'Target user ID', '', 6, true, true);
 	form.append_input_password('password', 'YOUR password', 24, false);
 	const submit_btn = form.append_submit_button('Merge user ' + user.id, 'red');
 	form.success_handler = (response, ctx) => {
 		ctx.keep_submit_button_disabled();
 		ctx.show_status_success('Merging has been scheduled');
-		view_job(true, response);
+		view_job(true, response.job_id);
 	};
 	form.attach_to(view.content_elem);
 }
@@ -1213,7 +1510,7 @@ async function sign_in() {
 	const old_csrf_token = get_cookie('csrf_token');
 	form.success_handler = (response, ctx) => {
 		const csrf_token = get_cookie('csrf_token');
-		if ((csrf_token == '' || csrf_token == old_csrf_token) && !location.href.startsWith('https://')) {
+		if ((csrf_token === '' || csrf_token === old_csrf_token) && !location.href.startsWith('https://')) {
 			ctx.show_status_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
 		} else {
 			ctx.show_status_success('Signed in successfully');
@@ -1237,7 +1534,7 @@ async function sign_up() {
 	const old_csrf_token = get_cookie('csrf_token');
 	form.success_handler = (response, ctx) => {
 		const csrf_token = get_cookie('csrf_token');
-		if ((csrf_token == '' || csrf_token == old_csrf_token) && !location.href.startsWith('https://')) {
+		if ((csrf_token === '' || csrf_token === old_csrf_token) && !location.href.startsWith('https://')) {
 			ctx.show_status_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
 		} else {
 			ctx.show_status_success('Signed up successfully');
@@ -1258,24 +1555,8 @@ async function sign_out() {
 	});
 }
 
-async function change_user_password(user_id) {
-	const view = new View(url_user_change_password(user_id));
-	const user = await view.get_from_api(url_api_user(user_id));
-	const is_me = (user.id == signed_user_id);
-	const title = is_me ? 'Change my password' : 'Change user password';
-	const form = new AjaxForm(title, url_api_user_change_password(user.id));
-	if (!user.capabilities.change_password_without_old_password) {
-		form.append_input_password('old_pass', 'Old password', 24, false);
-	}
-	form.append_input_password('new_pass', 'New password', 24, false);
-	form.append_input_password('new_pass1', 'New password (repeat)', 24, false);
-	form.append_submit_button(title, 'blue');
-	form.success_msg = 'Password changed';
-	form.attach_to(view.content_elem);
-}
-
-function UsersLister(elem, query_url_suffix) {
-	if (this == window) {
+function UsersLister(elem, query_url) {
+	if (this === window) {
 		throw new Error('Call as "new UsersLister()", not "UsersLister()"');
 	}
 	const self = this;
@@ -1302,6 +1583,7 @@ function UsersLister(elem, query_url_suffix) {
 	self.process_api_response = (list) => {
 		self.next_query_suffix = '/id>/' + list[list.length - 1].id;
 
+		const document_fragment = document.createDocumentFragment();
 		for (const user of list) {
 			const row = document.createElement('tr');
 			row.appendChild(elem_with_text('td', user.id));
@@ -1309,17 +1591,209 @@ function UsersLister(elem, query_url_suffix) {
 			row.appendChild(elem_with_text('td', user.first_name));
 			row.appendChild(elem_with_text('td', user.last_name));
 			row.appendChild(elem_with_text('td', user.email));
-			row.appendChild(elem_with_class_and_text('td', user.type, user.type[0].toUpperCase() + user.type.slice(1)));
+			row.appendChild(elem_with_class_and_text('td', user.type, snake_case_to_user_string(user.type)));
 
 			const td = document.createElement('td');
 			td.append.apply(td, ActionsToHTML.user(user, false));
 			row.appendChild(td);
-
-			self.tbody.appendChild(row);
+			document_fragment.appendChild(row);
 		}
+		self.tbody.appendChild(document_fragment);
 	};
 
-	Lister.call(self, elem, query_url_suffix, '');
+	Lister.call(self, elem, query_url, '');
+}
+
+function list_users() {
+	const view = new View(url_users());
+	view.content_elem.appendChild(elem_with_text('h1', 'Users'));
+	if (global_capabilities.users.add_user) {
+		view.content_elem.appendChild(elem_link_with_class_to_view('btn', 'Add user', add_user, url_users_add));
+	}
+
+	const retab = (url, elem) => {
+		const table = elem.appendChild(elem_with_class('table', 'users stripped'));
+		new UsersLister(table, url);
+	};
+
+	const tabmenu = new TabMenuBuilder();
+	if (global_capabilities.users.list_all.query_all) {
+		tabmenu.add_tab('All', retab.bind(null, url_api_users()));
+	}
+	if (global_capabilities.users.list_all.query_with_type_admin) {
+		tabmenu.add_tab('Admins', retab.bind(null, url_api_users_with_type('admin')));
+	}
+	if (global_capabilities.users.list_all.query_with_type_teacher) {
+		tabmenu.add_tab('Teachers', retab.bind(null, url_api_users_with_type('teacher')));
+	}
+	if (global_capabilities.users.list_all.query_with_type_normal) {
+		tabmenu.add_tab('Normal', retab.bind(null, url_api_users_with_type('normal')));
+	}
+	tabmenu.build_and_append_to(view.content_elem);
+}
+
+function elem_timezone_marker() {
+	const offset = -(new Date()).getTimezoneOffset();
+	const offset_str = (() => {
+		if (offset > 0) {
+			return 'UTC+' + offset / 60;
+		}
+		if (offset < 0) {
+			return 'UTC' + offset / 60;
+		}
+		return 'UTC';
+	})();
+	return elem_with_text('sup', offset_str);
+}
+
+function datetime_to_string(date) {
+	const year = date.getFullYear();
+	const month = date.getMonth() + 1;
+	const day = date.getDate();
+	const hour = date.getHours();
+	const minute = date.getMinutes();
+	const second = date.getSeconds();
+	return String().concat(year, '-', month < 10 ? '0' : '', month, '-', day < 10 ? '0' : '', day,
+		' ', hour < 10 ? '0' : '', hour, ':', minute < 10 ? '0' : '', minute, ':', second < 10 ? '0' : '', second);
+}
+
+function ProblemsLister(elem, query_url, list_capabilties) {
+	if (this === window) {
+		throw new Error('Call as "new ProblemsLister()", not "ProblemsLister()"');
+	}
+	const self = this;
+	self.process_first_api_response = (list) => {
+		if (list.length === 0) {
+			self.elem.parentNode.appendChild(elem_with_text('p', 'There are no problems to show...'));
+			return;
+		}
+
+		const thead = document.createElement('thead');
+		thead.appendChild(elem_with_text('th', 'Id'));
+		thead.appendChild(elem_with_class_and_text('th', 'type', 'Type'));
+		thead.appendChild(elem_with_class_and_text('th', 'label', 'Label'));
+		thead.appendChild(elem_with_class_and_text('th', 'name_and_tags', 'Name and tags'));
+		if (list_capabilties.ui_show_owner_column) {
+			thead.appendChild(elem_with_class_and_text('th', 'owner', 'Owner'));
+		}
+		if (list_capabilties.ui_show_updated_at_column) {
+			thead.appendChild(elem_with_class_of('th', 'added', 'Updated at', elem_timezone_marker()));
+		}
+		thead.appendChild(elem_with_class_and_text('th', 'actions', 'Actions'));
+		self.elem.appendChild(thead);
+		self.tbody = document.createElement('tbody');
+		self.elem.appendChild(self.tbody);
+
+		self.process_api_response(list);
+	};
+	self.process_api_response = (list) => {
+		self.next_query_suffix = '/id</' + list[list.length - 1].id;
+
+		const document_fragment = document.createDocumentFragment();
+		for (const problem of list) {
+			const row = document.createElement('tr');
+			row.appendChild(elem_with_text('td', problem.id));
+			row.appendChild(elem_with_text('td', snake_case_to_user_string(problem.type)));
+			row.appendChild(elem_with_text('td', problem.label));
+
+			const tags_elem = elem_with_class('div', 'tags');
+			row.appendChild(elem_of('td', elem_with_class_of('div', 'name_and_tags', elem_with_text('span', problem.name), tags_elem)));
+			if (problem.capabilities.view_public_tags) {
+				for (const tag_name of problem.tags.public) {
+					tags_elem.appendChild(elem_with_text('label', tag_name));
+				}
+			}
+			if (problem.capabilities.view_hidden_tags) {
+				for (const tag_name of problem.tags.hidden) {
+					tags_elem.appendChild(elem_with_class_and_text('label', 'hidden', tag_name));
+				}
+			}
+
+			if (list_capabilties.ui_show_owner_column) {
+				const owner_td = row.appendChild(document.createElement('td'));
+				if (problem.capabilities.view_owner) {
+					if (problem.owner != null) {
+						owner_td.appendChild(a_view_button(url_user(problem.owner.id), problem.owner.username, undefined, view_user.bind(null, true, problem.owner.id))); // TODO: refactor it
+					} else if (problem.capabilities.view_owner) {
+						owner_td.textContent = '(Deleted)';
+					}
+				}
+			}
+
+			if (list_capabilties.ui_show_updated_at_column) {
+				row.appendChild(elem_with_text('td', problem.capabilities.view_update_time ? datetime_to_string(new Date(problem.updated_at)) : ''));
+			}
+
+			if (problem.capabilities.view_final_submission_full_status && problem.final_submission_full_status != null) {
+				switch (problem.final_submission_full_status) {
+				case 'ok': row.classList.add('status', 'green'); break;
+				case 'wa': row.classList.add('status', 'red'); break;
+				case 'tle': row.classList.add('status', 'yellow'); break;
+				case 'mle': row.classList.add('status', 'yellow'); break;
+				case 'rte': row.classList.add('status', 'intense-red'); break;
+				default: assert(false, 'unexpected final_submission_full_status');
+				}
+			}
+
+			const td = document.createElement('td');
+			td.append.apply(td, ActionsToHTML.problem(problem, false));
+			row.appendChild(td);
+			document_fragment.appendChild(row);
+		}
+		self.tbody.appendChild(document_fragment);
+	};
+
+	Lister.call(self, elem, query_url, '');
+}
+
+function list_problems() {
+	const view = new View(url_problems());
+	view.content_elem.appendChild(elem_with_text('h1', 'Problems'));
+	if (global_capabilities.problems.add_problem) {
+		$(view.content_elem).append(a_view_button('/p/add', 'Add problem', 'btn', add_problem.bind(null, true))); // TODO: refactor
+	}
+
+	const retab = (url_all_func, url_by_type_func, list_capabilities, elem) => {
+		const retab = (url, list_capabilities, elem) => {
+			const table = elem.appendChild(elem_with_class('table', 'problems stripped'));
+			new ProblemsLister(table, url, list_capabilities);
+		};
+
+		const tabmenu = new TabMenuBuilder();
+		if (list_capabilities.query_all) {
+			tabmenu.add_tab('All', retab.bind(null, url_all_func(), list_capabilities));
+		}
+		if (list_capabilities.query_with_type_public) {
+			tabmenu.add_tab('Public', retab.bind(null, url_by_type_func('public'), list_capabilities));
+		}
+		if (list_capabilities.query_with_type_contest_only) {
+			tabmenu.add_tab('Contest only', retab.bind(null, url_by_type_func('contest_only'), list_capabilities));
+		}
+		if (list_capabilities.query_with_type_private) {
+			tabmenu.add_tab('Private', retab.bind(null, url_by_type_func('private'), list_capabilities));
+		}
+		tabmenu.build_and_append_to(elem);
+	};
+
+	const can_list_something = (list_capabilities) => {
+		return list_capabilities.query_all || list_capabilities.query_with_type_public ||
+				list_capabilities.query_with_type_contest_only || list_capabilities.query_with_type_private;
+	};
+
+	const tabmenu = new TabMenuBuilder();
+	if (can_list_something(global_capabilities.problems.list_all)) {
+		tabmenu.add_tab('All problems', retab.bind(null,
+			url_api_problems,
+			url_api_problems_with_type,
+			global_capabilities.problems.list_all));
+	}
+	if (is_signed_in() && can_list_something(global_capabilities.problems.list_my)) {
+		tabmenu.add_tab('My problems', retab.bind(null,
+			url_api_user_problems.bind(null, signed_user_id),
+			url_api_user_problems_with_type.bind(null, signed_user_id),
+			global_capabilities.problems.list_my));
+	}
+	tabmenu.build_and_append_to(view.content_elem);
 }
 
 ////////////////////////// The above code has gone through refactor //////////////////////////
@@ -1383,12 +1857,12 @@ function StaticMap() {
 }
 
 /* ============================ URL hash parser ============================ */
-var url_hash_parser = {};
+var old_url_hash_parser = {};
 (function () {
 	var args = window.location.hash; // Must begin with '#'
 	var beg = 0; // Points to the '#' just before the next argument
 
-	url_hash_parser.next_arg  = function() {
+	old_url_hash_parser.next_arg  = function() {
 		var pos = args.indexOf('#', beg + 1);
 		if (pos === -1)
 			return args.substring(beg + 1);
@@ -1396,7 +1870,7 @@ var url_hash_parser = {};
 		return args.substring(beg + 1, pos);
 	};
 
-	url_hash_parser.extract_next_arg  = function() {
+	old_url_hash_parser.extract_next_arg  = function() {
 		var pos = args.indexOf('#', beg + 1), res;
 		if (pos === -1) {
 			if (beg >= args.length)
@@ -1412,9 +1886,9 @@ var url_hash_parser = {};
 		return res;
 	};
 
-	url_hash_parser.empty = function() { return (beg >= args.length); };
+	old_url_hash_parser.empty = function() { return (beg >= args.length); };
 
-	url_hash_parser.assign = function(new_hash) {
+	old_url_hash_parser.assign = function(new_hash) {
 		beg = 0;
 		if (new_hash.charAt(0) !== '#')
 			args = '#' + new_hash;
@@ -1422,7 +1896,7 @@ var url_hash_parser = {};
 			args = new_hash;
 	};
 
-	url_hash_parser.assign_as_parsed = function(new_hash) {
+	old_url_hash_parser.assign_as_parsed = function(new_hash) {
 		if (new_hash.charAt(0) !== '#')
 			args = '#' + new_hash;
 		else
@@ -1431,14 +1905,14 @@ var url_hash_parser = {};
 	};
 
 
-	url_hash_parser.append = function(next_args) {
+	old_url_hash_parser.append = function(next_args) {
 		if (next_args.charAt(0) !== '#')
 			args += '#' + next_args;
 		else
 			args += next_args;
 	};
 
-	url_hash_parser.parsed_prefix = function() { return args.substring(0, beg); };
+	old_url_hash_parser.parsed_prefix = function() { return args.substring(0, beg); };
 }).call();
 
 
@@ -1996,9 +2470,9 @@ function tabmenu_attacher_with_change_callback(tabmenu_changed_callback, x) {
 	default_tabmenu_attacher.call(this, x);
 }
 /// Triggers 'tabmenuTabHasChanged' event on the result every time an active tab is changed
-function tabmenu(attacher, tabs) {
-	var res = $('<div>', {class: 'tabmenu'});
-	/*const*/ var prior_hash = url_hash_parser.parsed_prefix();
+function old_tabmenu(attacher, tabs) {
+	var res = $('<div>', {class: 'old_tabmenu'});
+	/*const*/ var prior_hash = old_url_hash_parser.parsed_prefix();
 
 	var set_min_width = function(elem) {
 		var tabm = $(elem).parent();
@@ -2047,7 +2521,7 @@ function tabmenu(attacher, tabs) {
 				var elem = this;
 				History.replace_current(History.get_current_view_elem(),
 						document.URL.substring(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(elem).text()));
-				url_hash_parser.assign_as_parsed(window.location.hash);
+				old_url_hash_parser.assign_as_parsed(window.location.hash);
 				res.trigger('tabmenuTabHasChanged', elem);
 				handler.call(elem);
 				centerize_oldmodal($(elem).parents('.oldmodal'), false);
@@ -2064,7 +2538,7 @@ function tabmenu(attacher, tabs) {
 
 	attacher(res);
 
-	var arg = url_hash_parser.extract_next_arg();
+	var arg = old_url_hash_parser.extract_next_arg();
 	var rc = res.children();
 	for (var i = 0; i < rc.length; ++i) {
 		var elem = $(rc[i]);
@@ -2251,7 +2725,7 @@ function OldLister(elem) {
 				data = parse_api_resp(data);
 				this_.process_api_response(data, oldmodal);
 
-				remove_oldloader(this_.elem.parent()[0]);
+				try_remove_oldloader(this_.elem.parent()[0]);
 				timed_hide_show(oldmodal);
 				centerize_oldmodal(oldmodal, false);
 
@@ -2456,6 +2930,11 @@ function colorize(log, end) {
 
 	return res + log.substring(end);
 }
+// Scroll: overflowed elements
+function is_overflowed_elem_scrolled_down(elem) {
+	const scroll_distance_to_bottom = elem.scrollHeight - elem.scrollTop - elem.clientHeight;
+	return scroll_distance_to_bottom <= 1; // As of March 2020, I managed to get value 1 in firefox with 80% zoom
+}
 function Logs(type, elem, auto_refresh_checkbox) {
 	var this_ = this;
 	this.type = type;
@@ -2587,8 +3066,8 @@ function Logs(type, elem, auto_refresh_checkbox) {
 }
 function tab_logs_view(parent_elem) {
 	// Select job server log by default
-	if (url_hash_parser.next_arg() === '')
-		url_hash_parser.assign('#job_server');
+	if (old_url_hash_parser.next_arg() === '')
+		old_url_hash_parser.assign('#job_server');
 
 	parent_elem = $(parent_elem);
 	function retab(log_type, log_name) {
@@ -2620,7 +3099,7 @@ function tab_logs_view(parent_elem) {
 		'Job server error', retab.bind(null, 'jobs_err', "Job server's error")
 	];
 
-	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
+	old_tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 
 /* ============================ Actions buttons ============================ */
@@ -2678,24 +3157,24 @@ ActionsToHTML.user = function(user, user_view /*= false*/) {
 		user_view = false;
 	var res = [];
 	if (!user_view && user.capabilities.view) {
-		res.push(a_view_button('/u/' + user.id, 'View', 'btn-small',
+		res.push(a_view_button(url_user(user.id), 'View', 'btn-small',
 			view_user.bind(null, true, user.id)));
 	}
 	if (user.capabilities.edit) {
-		res.push(a_view_button('/u/' + user.id + '/edit', 'Edit',
+		res.push(a_view_button(url_user_edit(user.id), 'Edit',
 			'btn-small blue', edit_user.bind(null, user.id)));
 	}
 	if (user.capabilities.delete) {
-		res.push(a_view_button('/u/' + user.id + '/delete', 'Delete',
+		res.push(a_view_button(url_user_delete(user.id), 'Delete',
 			'btn-small red', delete_user.bind(null, user.id)));
 	}
-	if (user.capabilities.merge) {
-		res.push(a_view_button('/u/' + user.id + '/merge_into_another',
+	if (user.capabilities.merge_into_another_user) {
+		res.push(a_view_button(url_user_merge_into_another(user.id),
 			'Merge', 'btn-small red',
 			merge_user.bind(null, user.id)));
 	}
 	if (user.capabilities.change_password || user.capabilities.change_password_without_old_password) {
-		res.push(a_view_button('/u/' + user.id + '/change-password',
+		res.push(a_view_button(url_change_user_password(user.id),
 			'Change password', 'btn-small orange',
 			change_user_password.bind(null, user.id)));
 	}
@@ -2741,6 +3220,68 @@ ActionsToHTML.submission = function(submission_id, actions_str, submission_type,
 };
 
 ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
+	if (problem_view === undefined)
+		problem_view = false;
+
+	var res = [];
+	if (!problem_view && problem.capabilities.view) {
+		res.push(a_view_button(url_problem(problem.id), 'View', 'btn-small',
+			view_problem.bind(null, true, problem.id)));
+	}
+
+	if (problem.capabilities.view_statement) {
+		const a = elem_with_class_and_text('a', 'btn-small', 'Statement');
+		a.href = url_problem_statement(problem.id, problem.name);
+		res.push(a);
+	}
+
+	if (problem.capabilities.create_submission) {
+		res.push(a_view_button(url_problem_create_submission(problem.id), 'Submit',
+			'btn-small blue', add_problem_submission.bind(null, true, {id: problem.id})));
+	}
+
+	if (problem.capabilities.view_solutions) {
+		res.push(a_view_button(url_problem_solutions(problem.id),
+			'Solutions', 'btn-small', view_problem.bind(null, true, problem.id,
+				'#all_submissions#solutions')));
+	}
+
+	if (problem_view && problem.capabilities.download) {
+		const a = elem_with_class_and_text('a', 'btn-small', 'Download');
+		a.href = url_problem_download(problem.id);
+		res.push(a);
+	}
+
+	if (problem.capabilities.edit) {
+		res.push(a_view_button(url_problem_edit(problem.id), 'Edit',
+			'btn-small blue', edit_problem.bind(null, true, problem.id)));
+	}
+
+	if (problem_view && problem.capabilities.delete) {
+		res.push(a_view_button(url_problem_delete(problem.id), 'Delete',
+			'btn-small red', delete_problem.bind(null, true, problem.id)));
+	}
+
+	if (problem_view && problem.capabilities.merge) {
+		res.push(a_view_button(url_problem_merge(problem.id), 'Merge',
+			'btn-small red', merge_problem.bind(null, true, problem.id)));
+	}
+
+	if (problem_view && problem.capabilities.rejudge_all_submissions) {
+		const a = elem_with_class_and_text('a', 'btn-small blue', 'Rejudge all submissions');
+		a.addEventListener('click', rejudge_problem_submissions.bind(null, problem.id, problem.name), {passive: true});
+		res.push(a);
+	}
+
+	if (problem_view && problem.capabilities.reset_time_limits) {
+		res.push(a_view_button(url_problem_reset_time_limits(problem.id), 'Reset time limits',
+			'btn-small blue', reset_problem_time_limits.bind(null, true, problem.id)));
+	}
+
+	return res;
+};
+
+ActionsToHTML.oldproblem = function(problem, problem_view /*= false*/) {
 	if (problem_view === undefined)
 		problem_view = false;
 
@@ -2898,7 +3439,7 @@ function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 			html: $('<span>', {
 				style: 'margin: auto 0',
 				html: $('<a>', {
-					href: '/u/' + user.id,
+					href: url_user(user.id),
 					text: user.username
 				})
 			}).append(text_to_safe_html(' (' + user.first_name + ' ' + user.last_name + ')'))
@@ -2937,7 +3478,7 @@ function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 
 		var main = $(this);
 
-		tabmenu(default_tabmenu_attacher.bind(main), [
+		old_tabmenu(default_tabmenu_attacher.bind(main), [
 			'Submissions', function() {
 				main.append($('<div>', {html: "<h2>User's submissions</h2>"}));
 				tab_submissions_lister(main.children().last(), '/u' + user_id, false, !signed_user_is_admin());
@@ -2953,37 +3494,7 @@ function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 			}
 		]);
 
-	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
-}
-
-function tab_users_lister(parent_elem) {
-	parent_elem = $(parent_elem);
-	function retab(tab_qsuff) {
-		var table = elem_with_class('table', 'users stripped');
-		$(parent_elem)[0].appendChild(table);
-		new UsersLister(table, url_api_users(tab_qsuff));
-	}
-
-	var tabs = [
-		'All', retab.bind(null, ''),
-		'Admins', retab.bind(null, '/type=/admin'),
-		'Teachers', retab.bind(null, '/type=/teacher'),
-		'Normal', retab.bind(null, '/type=/normal')
-	];
-
-	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
-}
-function user_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
-	view_base((as_oldmodal === undefined ? true : as_oldmodal),
-		'/u' + (opt_hash === undefined ? '' : opt_hash), function() {
-			timed_hide($(this).parent().parent().filter('.oldmodal'));
-			$(this).append($('<h1>', {text: 'Users'}));
-			if (global_capabilities.users.add_user) {
-				$(this)[0].appendChild(elem_link_with_class_to_view('btn', 'Add user', add_user, url_users_add));
-			}
-
-			tab_users_lister($(this));
-		});
+	}, url_user(user_id) + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 
 /* ================================== Jobs ================================== */
@@ -3007,7 +3518,7 @@ function view_job(as_oldmodal, job_id, opt_hash /*= ''*/) {
 					td.append(a_view_button('/s/' + info[name], info[name],
 						undefined, view_submission.bind(null, true, info[name])));
 				else if (name == "user" || name == "deleted user" || name == "target user")
-					td.append(a_view_button('/u/' + info[name], info[name],
+					td.append(a_view_button(url_user(info[name]), info[name],
 						undefined, view_user.bind(null, true, info[name])));
 				else if (name == "problem" || name == "deleted problem" || name == "target problem")
 					td.append(a_view_button('/p/' + info[name], info[name],
@@ -3062,7 +3573,7 @@ function view_job(as_oldmodal, job_id, opt_hash /*= ''*/) {
 							html: job.creator_id === null ? 'System' :
 								(job.creator_username == null ? 'Deleted (id: ' + job.creator_id + ')'
 								: a_view_button(
-								'/u/' + job.creator_id, job.creator_username, undefined,
+								url_user(job.creator_id), job.creator_username, undefined,
 								view_user.bind(null, true, job.creator_id)))
 						}).add('<td>', {
 							html: info_html(job.info)
@@ -3161,7 +3672,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			}));
 			row.append($('<td>', {
 				html: x.creator_id === null ? 'System' : (x.creator_username == null ? x.creator_id
-					: a_view_button('/u/' + x.creator_id, x.creator_username, undefined,
+					: a_view_button(url_user(x.creator_id), x.creator_username, undefined,
 						view_user.bind(null, true, x.creator_id)))
 			}));
 			// Info
@@ -3185,19 +3696,19 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 				if (info.user !== undefined)
 					append_tag('user',
-						a_view_button('/u/' + info.user,
+						a_view_button(url_user(info.user),
 							info.user, undefined,
 							view_user.bind(null, true, info.user)));
 
 				if (info["deleted user"] !== undefined)
 					append_tag('deleted user',
-						a_view_button('/u/' + info["deleted user"],
+						a_view_button(url_user(info["deleted user"]),
 							info["deleted user"], undefined,
 							view_user.bind(null, true, info["deleted user"])));
 
 				if (info["target user"] !== undefined)
 					append_tag('target user',
-						a_view_button('/u/' + info["target user"],
+						a_view_button(url_user(info["target user"]),
 							info["target user"], undefined,
 							view_user.bind(null, true, info["target user"])));
 
@@ -3273,7 +3784,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 		'My', retab.bind(null, '/u' + signed_user_id)
 	];
 
-	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
+	old_tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 
 /* ============================== Submissions ============================== */
@@ -3499,7 +4010,7 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 								html: [
 									$('<td>', {text: s.language}),
 									(s.owner_id === null ? '' : $('<td>', {
-										html: [a_view_button('/u/' + s.owner_id, s.owner_username,
+										html: [a_view_button(url_user(s.owner_id), s.owner_username,
 												undefined, view_user.bind(null, true, s.owner_id)),
 											' (' + text_to_safe_html(s.owner_first_name) + ' ' +
 												text_to_safe_html(s.owner_last_name) + ')'
@@ -3617,7 +4128,7 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 			}
 		}
 
-		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
+		old_tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
@@ -3687,7 +4198,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 					row.appendChild(elem_with_text('td', x.owner_id));
 				else {
 					td = document.createElement('td');
-					td.appendChild(a_view_button('/u/' + x.owner_id, x.owner_first_name + ' ' + x.owner_last_name, undefined,
+					td.appendChild(a_view_button(url_user(x.owner_id), x.owner_first_name + ' ' + x.owner_last_name, undefined,
 							view_user.bind(null, true, x.owner_id)));
 					row.appendChild(td);
 				}
@@ -3772,7 +4283,7 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 	if (show_solutions_tab)
 		tabs.push('Solutions', retab.bind(null, '/tS'));
 
-	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
+	old_tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 
 /* ================================ Problems ================================ */
@@ -4132,7 +4643,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 			make_row(tags[x]).appendTo(tbody);
 	};
 
-	tabmenu(default_tabmenu_attacher.bind(elem), [
+	old_tabmenu(default_tabmenu_attacher.bind(elem), [
 		'Public', list_tags.bind(null, false),
 		'Hidden', list_tags.bind(null, true)
 	]);
@@ -4225,7 +4736,7 @@ function edit_problem(as_oldmodal, problem_id, opt_hash) {
 				append_reupload_problem.bind(null, elem, as_oldmodal, problem));
 		}
 
-		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
+		old_tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/p/' + problem_id + '/edit' + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
@@ -4372,7 +4883,7 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 			html: $('<h1>', {
 					text: problem.name
 				}).add('<div>', {
-					html: ActionsToHTML.problem(problem, true)
+					html: ActionsToHTML.oldproblem(problem, true)
 				})
 		})).append($('<center>', {
 			class: 'always_in_view',
@@ -4419,7 +4930,7 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 					html: [
 						$('<label>', {text: 'Owner'}),
 						(problem.owner_id === null ? '(Deleted)'
-							: a_view_button('/u/' + problem.owner_id,
+							: a_view_button(url_user(problem.owner_id),
 								problem.owner_username, undefined,
 								view_user.bind(null, true, problem.owner_id)))
 					]
@@ -4481,139 +4992,9 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 				new AttachingContestProblemsLister(acp_table, problem_id).monitor_scroll();
 			});
 
-		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
+		old_tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/p/' + problem_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
-}
-function ProblemsLister(elem, query_suffix /*= ''*/) {
-	var this_ = this;
-	if (query_suffix === undefined)
-		query_suffix = '';
-
-	this.show_owner = signed_user_is_teacher_or_admin();
-	this.show_added = signed_user_is_teacher_or_admin() ||
-		(query_suffix.indexOf('/u') !== -1);
-
-	OldLister.call(this, elem);
-	this.query_url = '/api/problems' + query_suffix;
-	this.query_suffix = '';
-
-	this.process_api_response = function(data, oldmodal) {
-		if (this_.elem.children('thead').length === 0) {
-			if (data.length === 0) {
-				this_.elem.parent().append($('<center>', {
-					class: 'problems always_in_view',
-					// class: 'problems',
-					html: '<p>There are no problems to show...</p>'
-				}));
-				remove_oldloader(this_.elem.parent()[0]);
-				timed_hide_show(oldmodal);
-				return;
-			}
-
-			this_.elem.html('<thead><tr>' +
-					'<th>Id</th>' +
-					'<th class="type">Type</th>' +
-					'<th class="label">Label</th>' +
-					'<th class="name_and_tags">Name and tags</th>' +
-					(this_.show_owner ? '<th class="owner">Owner</th>' : '') +
-					(this_.show_added ? '<th class="added">Added</th>' : '') +
-					'<th class="actions">Actions</th>' +
-				'</tr></thead><tbody></tbody>');
-			add_tz_marker(this_.elem.find('thead th.added'));
-		}
-
-		for (var x in data) {
-			x = data[x];
-			this_.query_suffix = '/<' + x.id;
-
-			var row = $('<tr>');
-			if (x.color_class !== null)
-				row.addClass('status ' + x.color_class);
-
-			// Id
-			row.append($('<td>', {text: x.id}));
-			// Type
-			row.append($('<td>', {text: x.type}));
-			// Label
-			row.append($('<td>', {text: x.label}));
-
-			// Name and tags
-			var tags = [];
-			for (var i in x.tags.public)
-				tags.push($('<label>', {text: x.tags.public[i]}));
-			for (var i in x.tags.hidden)
-				tags.push($('<label>', {
-					class: 'hidden',
-					text: x.tags.hidden[i]
-				}));
-
-			row.append($('<td>', {html: $('<div>', {
-				class: 'name-and-tags',
-				html: [
-					$('<span>', {text: x.name}),
-					$('<div>', {
-						class: 'tags',
-						html: tags
-					})
-				]
-			})}));
-
-			// Owner
-			if (this_.show_owner)
-				row.append($('<td>', {
-					html: (x.owner_id === null ? '(Deleted)'
-						: a_view_button('/u/' + x.owner_id, x.owner_username,
-							undefined, view_user.bind(null, true, x.owner_id)))
-				}));
-
-			// Added
-			if (this_.show_added)
-				row.append(normalize_datetime($('<td>', {
-					datetime: x.added,
-					text: x.added
-				})));
-
-			// Actions
-			row.append($('<td>', {
-				html: ActionsToHTML.problem(x)
-			}));
-
-			this_.elem.children('tbody').append(row);
-		}
-	};
-
-	this.fetch_more();
-}
-function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
-	if (query_suffix === undefined)
-		query_suffix = '';
-
-	function retab(tab_qsuff) {
-		var table = $('<table class="problems stripped"></table>').appendTo(parent_elem);
-		new ProblemsLister(table, query_suffix + tab_qsuff).monitor_scroll();
-	}
-
-	var tabs = [
-		'All', retab.bind(null, '')
-	];
-
-	if (is_signed_in())
-		tabs.push('My', retab.bind(null, '/u' + signed_user_id));
-
-	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
-}
-function problem_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
-	view_base((as_oldmodal === undefined ? true : as_oldmodal),
-		'/p' + (opt_hash === undefined ? '' : opt_hash), function() {
-			timed_hide($(this).parent().parent().filter('.oldmodal'));
-			$(this).append($('<h1>', {text: 'Problems'}));
-			if (signed_user_is_teacher_or_admin())
-				$(this).append(a_view_button('/p/add', 'Add problem', 'btn',
-					add_problem.bind(null, true)));
-
-			tab_problems_lister($(this));
-		});
 }
 function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/) {
 	var this_ = this;
@@ -4754,7 +5135,7 @@ function add_contest(as_oldmodal, opt_hash /*= undefined*/) {
 			text: 'Add contest'
 		}));
 
-		tabmenu(default_tabmenu_attacher.bind(this), [
+		old_tabmenu(default_tabmenu_attacher.bind(this), [
 			'Create new', append_create_contest.bind(null, this, as_oldmodal),
 			'Clone existing', append_clone_contest.bind(null, this, as_oldmodal),
 		]);
@@ -4858,7 +5239,7 @@ function add_contest_round(as_oldmodal, contest_id, opt_hash /*= undefined*/) {
 			text: 'Add contest round'
 		}));
 
-		tabmenu(default_tabmenu_attacher.bind(this), [
+		old_tabmenu(default_tabmenu_attacher.bind(this), [
 			'Create new', append_create_contest_round.bind(null, this, as_oldmodal, contest_id),
 			'Clone existing', append_clone_contest_round.bind(null, this, as_oldmodal, contest_id),
 		]);
@@ -4881,7 +5262,7 @@ function add_contest_problem(as_oldmodal, contest_round_id) {
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				required: true
-			}).append(a_view_button('/p', 'Search problems', '', problem_chooser))
+			}).append(elem_link_to_view('Search problems', list_problems, url_problems))
 			).add(Form.field_group('Final submission to select',
 				$('<select>', {
 					name: 'method_of_choosing_final_submission',
@@ -5603,7 +5984,7 @@ function view_contest_impl(as_oldmodal, id_for_api, opt_hash /*= ''*/) {
 			});
 		};
 
-		tabmenu(tabmenu_attacher_with_change_callback.bind(elem, header_links_updater), tabs);
+		old_tabmenu(tabmenu_attacher_with_change_callback.bind(elem, header_links_updater), tabs);
 
 	}, '/c/' + id_for_api + (opt_hash === undefined ? '' : opt_hash));
 }
@@ -5773,7 +6154,7 @@ function contest_ranking(elem_, id_for_api) {
 					tr.append($('<td>', {text: user_row.name}));
 				else {
 					tr.append($('<td>', {
-						html: a_view_button('/u/' + user_row.id, user_row.name, '',
+						html: a_view_button(url_user(user_row.id), user_row.name, '',
 							view_user.bind(null, true, user_row.id))
 					}));
 				}
@@ -5901,7 +6282,7 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 	// if (is_signed_in())
 		// tabs.push('My', retab.bind(null, '/u' + signed_user_id));
 
-	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
+	old_tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 function contest_chooser(as_oldmodal /*= true*/, opt_hash /*= ''*/) {
 	view_base((as_oldmodal === undefined ? true : as_oldmodal),
@@ -5933,7 +6314,7 @@ function ContestUsersLister(elem, query_suffix /*= ''*/) {
 	this.process_api_response = function(data, oldmodal) {
 		if (this_.elem.children('thead').length === 0) {
 			// Overall actions
-			elem.prev('.tabmenu').prevAll().remove();
+			elem.prev('.old_tabmenu').prevAll().remove();
 			this_.elem.parent().prepend(ActionsToHTML.contest_users(this_.contest_id, data.overall_actions));
 
 			if (data.rows.length == 0) {
@@ -5963,7 +6344,7 @@ function ContestUsersLister(elem, query_suffix /*= ''*/) {
 
 			var row = $('<tr>');
 			row.append($('<td>', {text: x.id}));
-			row.append($('<td>', {html: a_view_button('/u/' + x.id, x.username,
+			row.append($('<td>', {html: a_view_button(url_user(x.id), x.username,
 				'', view_user.bind(null, true, x.id))}));
 				// x.username}));
 			row.append($('<td>', {text: x.first_name}));
@@ -6001,7 +6382,7 @@ function tab_contest_users_lister(parent_elem, query_suffix /*= ''*/) {
 		'Contestants', retab.bind(null, '/mC')
 	];
 
-	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
+	old_tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 function add_contest_user(as_oldmodal, contest_id) {
 	old_view_ajax(as_oldmodal, '/api/contest_users/c' + contest_id + '/<0', function(data) {
@@ -6029,7 +6410,7 @@ function add_contest_user(as_oldmodal, contest_id) {
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				required: true
-			}).append(a_view_button('/u', 'Search users', '', user_chooser))
+			}).append(elem_link_to_view('Search users', list_users, url_users))
 			.add(Form.field_group('Mode', $('<select>', {
 				name: 'mode',
 				html: function() {
@@ -6094,7 +6475,7 @@ function change_contest_user_mode(as_oldmodal, contest_id, user_id) {
 				$('<label>', {
 					html: [
 						'Mode of the user ',
-						a_view_button('/u/' + user_id, data.username, '', view_user.bind(null, true, user_id)),
+						a_view_button(url_user(user_id), data.username, '', view_user.bind(null, true, user_id)),
 						': ',
 						$('<select>', {
 							style: 'margin-left: 4px',
@@ -6164,7 +6545,7 @@ function expel_contest_user(as_oldmodal, contest_id, user_id) {
 				$('<label>', {
 					html: [
 						'Are you sure to expel the user ',
-						a_view_button('/u/' + user_id, data.username,
+						a_view_button(url_user(user_id), data.username,
 							undefined, view_user.bind(null, true, user_id)),
 						'?'
 					]
@@ -6214,7 +6595,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 		var show_creator = (data.overall_actions.indexOf('C') !== -1);
 		if (this_.elem.children('thead').length === 0) {
 			// Overall actions
-			elem.prev('.tabmenu').prevAll().remove();
+			elem.prev('.old_tabmenu').prevAll().remove();
 			this_.elem.parent().prepend(ActionsToHTML.contest_files(this_.contest_id, data.overall_actions));
 
 			if (data.rows.length == 0) {
@@ -6248,7 +6629,7 @@ function ContestFilesLister(elem, query_suffix /*= ''*/) {
 				if (x.creator_id === null)
 					row.append($('<td>', {text: '(deleted)'}));
 				else
-					row.append($('<td>', {html: a_view_button('/u/' + x.creator_id,
+					row.append($('<td>', {html: a_view_button(url_user(x.creator_id),
 						x.creator_username, '',
 						view_user.bind(null, true, x.creator_id))}));
 			}

@@ -42,8 +42,8 @@ static StringView get_hash_of() {
             }
         }();
         return to_string(std::chrono::duration_cast<std::chrono::microseconds>(
-                             get_modification_time(path).time_since_epoch())
-                             .count());
+                get_modification_time(path).time_since_epoch())
+                                 .count());
     }();
     return str;
 }
@@ -55,21 +55,21 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
     resp.headers["X-Frame-Options"] = "DENY";
     resp.headers["x-content-type-options"] = "nosniff";
     resp.headers["Content-Security-Policy"] =
-        "default-src 'none'; "
-        "style-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this requires
-                                             // CppSyntaxHighlighter to be implemented in some
-                                             // different way either in JS or styles in
-                                             // styles.css)
-        "script-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this requires
-                                              // no inline js, so url dispatch in UI is done
-                                              // from scripts.js and we provide required
-                                              // parameters (when generating ui_template
-                                              // response) not inside <script> tag but in some
-                                              // other way)
-        "connect-src 'self'; "
-        "object-src 'self'; "
-        "frame-src 'self'; "
-        "img-src 'self'; ";
+            "default-src 'none'; "
+            "style-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this
+                                                 // requires CppSyntaxHighlighter to be
+                                                 // implemented in some different way either in
+                                                 // JS or styles in styles.css)
+            "script-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this
+                                                  // requires no inline js, so url dispatch in
+                                                  // UI is done from scripts.js and we provide
+                                                  // required parameters (when generating
+                                                  // ui_template response) not inside <script>
+                                                  // tag but in some other way)
+            "connect-src 'self'; "
+            "object-src 'self'; "
+            "frame-src 'self'; "
+            "img-src 'self'; ";
 
     // Disable X-XSS-Protection, as it may be used to misbehave the whole website
     resp.headers["X-XSS-Protection"] = "0";
@@ -110,22 +110,50 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
         obj.prop_obj("jobs", [&](auto& obj) {
             obj.prop("ui_view", capabilities::jobs_for(session).web_ui_view);
         });
-        obj.prop_obj("logs", [&](auto& obj) {
-            obj.prop("ui_view", capabilities::logs_for(session).view);
-        });
+        obj.prop_obj("logs",
+                [&](auto& obj) { obj.prop("ui_view", capabilities::logs_for(session).view); });
         obj.prop_obj("problems", [&](auto& obj) {
-            obj.prop("ui_view", capabilities::problems_for(session).web_ui_view);
+            const auto caps = capabilities::problems(session);
+            obj.prop("ui_view", caps.web_ui_view);
+            obj.prop("add_problem", caps.add_problem);
+            auto fill_with_list_caps =
+                    [&](auto& obj, const capabilities::ProblemsListCapabilities caps) {
+                        obj.prop("query_all", caps.query_all);
+                        obj.prop("query_with_type_public", caps.query_with_type_public);
+                        obj.prop("query_with_type_contest_only",
+                                caps.query_with_type_contest_only);
+                        obj.prop("query_with_type_private", caps.query_with_type_private);
+                        obj.prop("ui_show_owner_column", caps.web_ui_show_owner_column);
+                        obj.prop("ui_show_updated_at_column",
+                                caps.web_ui_show_updated_at_column);
+                    };
+            obj.prop_obj("list_all", [&](auto& obj) {
+                fill_with_list_caps(obj, capabilities::list_all_problems(session));
+            });
+            if (session) {
+                obj.prop_obj("list_my", [&](auto& obj) {
+                    fill_with_list_caps(
+                            obj, capabilities::list_user_problems(session, session->user_id));
+                });
+            }
         });
         obj.prop_obj("submissions", [&](auto& obj) {
             obj.prop("ui_view", capabilities::submissions_for(session).web_ui_view);
         });
         obj.prop_obj("users", [&](auto& obj) {
-            auto caps = capabilities::users_for(session);
-            obj.prop("ui_view", bool{caps.web_ui_view});
-            obj.prop("add_user", bool{caps.add_user});
-            obj.prop("add_admin", bool{caps.add_admin});
-            obj.prop("add_teacher", bool{caps.add_teacher});
-            obj.prop("add_normal_user", bool{caps.add_normal_user});
+            const auto caps = capabilities::users(session);
+            obj.prop("ui_view", caps.web_ui_view);
+            obj.prop("add_user", caps.add_user);
+            obj.prop("add_admin", caps.add_admin);
+            obj.prop("add_teacher", caps.add_teacher);
+            obj.prop("add_normal_user", caps.add_normal_user);
+            obj.prop_obj("list_all", [&](auto& obj) {
+                const auto caps = capabilities::list_all_users(session);
+                obj.prop("query_all", caps.query_all);
+                obj.prop("query_with_type_admin", caps.query_with_type_admin);
+                obj.prop("query_with_type_teacher", caps.query_with_type_teacher);
+                obj.prop("query_with_type_normal", caps.query_with_type_normal);
+            });
         });
         obj.prop_obj("contests", [&](auto& obj) {
             obj.prop("ui_view", capabilities::contests_for(session).web_ui_view);

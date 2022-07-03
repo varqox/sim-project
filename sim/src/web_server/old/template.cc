@@ -6,13 +6,12 @@ namespace web_server::old {
 void Sim::page_template(StringView title) {
     STACK_UNWINDING_MARK;
 
-    begin_ui_template(
-        resp,
-        {
-            .title = title,
-            .session = session,
-            .notifications = notifications,
-        });
+    begin_ui_template(resp,
+            {
+                    .title = title,
+                    .session = session,
+                    .notifications = notifications,
+            });
 
 #ifdef DEBUG
     notifications.clear();

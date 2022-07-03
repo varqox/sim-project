@@ -32,10 +32,9 @@ private:
     void load_job_log_from_db();
 
 protected:
-    AddOrReuploadProblemBase(
-        decltype(sim::jobs::Job::type) job_type, StringView job_creator,
-        sim::jobs::AddProblemInfo info, uint64_t job_file_id,
-        std::optional<uint64_t> tmp_file_id, std::optional<uint64_t> problem_id)
+    AddOrReuploadProblemBase(decltype(sim::jobs::Job::type) job_type, StringView job_creator,
+            sim::jobs::AddProblemInfo info, uint64_t job_file_id,
+            std::optional<uint64_t> tmp_file_id, std::optional<uint64_t> problem_id)
     : job_type_(job_type)
     , job_creator_(job_creator)
     , info_(std::move(info))

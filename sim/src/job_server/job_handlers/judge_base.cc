@@ -72,7 +72,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
         };
 
         report.append(
-            "<td>", html_escape(test.name), "</td>", as_td_string(test.status), "<td>");
+                "<td>", html_escape(test.name), "</td>", as_td_string(test.status), "<td>");
 
         if (test.status == JudgeReport::Test::SKIPPED) {
             report.append('?');
@@ -97,16 +97,15 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
         // First row
         report.append("<tr>");
         append_normal_columns(group.tests[0]);
-        report.append(
-            R"(<td class="groupscore" rowspan=")", group.tests.size(), "\">", group.score,
-            " / ", group.max_score, "</td></tr>");
+        report.append(R"(<td class="groupscore" rowspan=")", group.tests.size(), "\">",
+                group.score, " / ", group.max_score, "</td></tr>");
         // Other rows
-        std::for_each(
-            group.tests.begin() + 1, group.tests.end(), [&](const JudgeReport::Test& test) {
-                report.append("<tr>");
-                append_normal_columns(test);
-                report.append("</tr>");
-            });
+        std::for_each(group.tests.begin() + 1, group.tests.end(),
+                [&](const JudgeReport::Test& test) {
+                    report.append("<tr>");
+                    append_normal_columns(test);
+                    report.append("</tr>");
+                });
 
         for (auto&& test : group.tests) {
             there_are_comments |= !test.comment.empty();
@@ -121,9 +120,8 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
         for (auto&& group : jr.groups) {
             for (auto&& test : group.tests) {
                 if (!test.comment.empty()) {
-                    report.append(
-                        "<li><span class=\"test-id\">", html_escape(test.name), "</span>",
-                        html_escape(test.comment), "</li>");
+                    report.append("<li><span class=\"test-id\">", html_escape(test.name),
+                            "</span>", html_escape(test.comment), "</li>");
                 }
             }
         }
@@ -179,7 +177,7 @@ void JudgeBase::load_problem_package(FilePath problem_pkg_path) {
 
 template <class MethodPtr>
 std::optional<std::string> JudgeBase::compile_solution_impl(
-    FilePath solution_path, sim::SolutionLanguage lang, MethodPtr compile_method) {
+        FilePath solution_path, sim::SolutionLanguage lang, MethodPtr compile_method) {
     STACK_UNWINDING_MARK;
     if (failed()) {
         return std::nullopt;
@@ -189,9 +187,8 @@ std::optional<std::string> JudgeBase::compile_solution_impl(
     tmplog.flush_no_nl();
 
     std::string compilation_errors;
-    if ((jworker_.*compile_method)(
-            solution_path, lang, sim::SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-            sim::COMPILATION_ERRORS_MAX_LENGTH, sim::PROOT_PATH))
+    if ((jworker_.*compile_method)(solution_path, lang, sim::SOLUTION_COMPILATION_TIME_LIMIT,
+                &compilation_errors, sim::COMPILATION_ERRORS_MAX_LENGTH, sim::PROOT_PATH))
     {
         tmplog(" failed:\n", compilation_errors);
         return compilation_errors;
@@ -201,17 +198,17 @@ std::optional<std::string> JudgeBase::compile_solution_impl(
     return std::nullopt;
 }
 
-std::optional<std::string>
-JudgeBase::compile_solution(FilePath solution_path, sim::SolutionLanguage lang) {
+std::optional<std::string> JudgeBase::compile_solution(
+        FilePath solution_path, sim::SolutionLanguage lang) {
     STACK_UNWINDING_MARK;
     return compile_solution_impl(solution_path, lang, &sim::JudgeWorker::compile_solution);
 }
 
 std::optional<std::string> JudgeBase::compile_solution_from_problem_package(
-    FilePath solution_path, sim::SolutionLanguage lang) {
+        FilePath solution_path, sim::SolutionLanguage lang) {
     STACK_UNWINDING_MARK;
     return compile_solution_impl(
-        solution_path, lang, &sim::JudgeWorker::compile_solution_from_package);
+            solution_path, lang, &sim::JudgeWorker::compile_solution_from_package);
 }
 
 std::optional<std::string> JudgeBase::compile_checker() {
@@ -224,9 +221,8 @@ std::optional<std::string> JudgeBase::compile_checker() {
     tmplog.flush_no_nl();
 
     std::string compilation_errors;
-    if (jworker_.compile_checker(
-            sim::SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-            sim::COMPILATION_ERRORS_MAX_LENGTH, sim::PROOT_PATH))
+    if (jworker_.compile_checker(sim::SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
+                sim::COMPILATION_ERRORS_MAX_LENGTH, sim::PROOT_PATH))
     {
         tmplog(" failed:\n", compilation_errors);
         return compilation_errors;

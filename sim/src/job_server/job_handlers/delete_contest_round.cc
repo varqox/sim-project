@@ -23,10 +23,9 @@ void DeleteContestRound::run() {
         InplaceBuff<32> rname;
         stmt.res_bind_all(cname, cid, rname);
         if (not stmt.next()) {
-            return set_failure(
-                "Contest round with id: ", contest_round_id_,
-                " does not exist or the contest hierarchy is "
-                "broken (likely the former).");
+            return set_failure("Contest round with id: ", contest_round_id_,
+                    " does not exist or the contest hierarchy is "
+                    "broken (likely the former).");
         }
 
         job_log("Contest: ", cname, " (", cid, ')');
@@ -34,14 +33,13 @@ void DeleteContestRound::run() {
     }
 
     // Add jobs to delete submission files
-    mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
-                 " FROM submissions WHERE contest_round_id=?")
-        .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING), mysql_date(), contest_round_id_);
+    mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+                  " added, aux_id, info, data) "
+                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
+                  " FROM submissions WHERE contest_round_id=?")
+            .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
+                    default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
+                    mysql_date(), contest_round_id_);
 
     // Delete contest round (all necessary actions will take place thanks to
     // foreign key constrains)

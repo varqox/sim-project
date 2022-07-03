@@ -9,9 +9,8 @@ using std::string;
 
 namespace web_server::http {
 
-void Cookies::set(
-    StringView name, StringView val, std::optional<time_t> expire,
-    std::optional<StringView> path, bool http_only, bool secure) {
+void Cookies::set(StringView name, StringView val, std::optional<time_t> expire,
+        std::optional<StringView> path, bool http_only, bool secure) {
     string value = concat_tostr(val, "; SameSite=Lax");
     if (expire) {
         std::array<char, 64> buff{{}};
@@ -19,7 +18,7 @@ void Cookies::set(
         tm* rc1 = gmtime_r(&*expire, &expire_tm);
         assert(rc1 != nullptr);
         size_t rc2 =
-            strftime(buff.data(), buff.size(), "%a, %d %b %Y %H:%M:%S GMT", &expire_tm);
+                strftime(buff.data(), buff.size(), "%a, %d %b %Y %H:%M:%S GMT", &expire_tm);
         assert(rc2 > 0);
         back_insert(value, "; Expires=", buff.data());
     }

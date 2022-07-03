@@ -25,24 +25,22 @@ void DeleteContest::run() {
     }
 
     // Add jobs to delete submission files
-    mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data)"
-                 " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
-                 " FROM submissions WHERE contest_id=?")
-        .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING), mysql_date(), contest_id_);
+    mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+                  " added, aux_id, info, data)"
+                  " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
+                  " FROM submissions WHERE contest_id=?")
+            .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
+                    default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
+                    mysql_date(), contest_id_);
 
     // Add jobs to delete contest files
-    mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data)"
-                 " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
-                 " FROM contest_files WHERE contest_id=?")
-        .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE), default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING), mysql_date(), contest_id_);
+    mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+                  " added, aux_id, info, data)"
+                  " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
+                  " FROM contest_files WHERE contest_id=?")
+            .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
+                    default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
+                    mysql_date(), contest_id_);
 
     // Delete contest (all necessary actions will take place thanks to foreign
     // key constrains)

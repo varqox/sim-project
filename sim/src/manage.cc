@@ -137,8 +137,8 @@ static void restart(const CmdOptions& cmd_options) {
         }
     };
     std::array<Server, 2> servers = {{
-        {-1, paths.sim_server},
-        {-1, paths.job_server},
+            {-1, paths.sim_server},
+            {-1, paths.job_server},
     }};
 
     if (cmd_options.make_background) {
@@ -171,7 +171,7 @@ static void stop() {
     kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
     // Kill servers
     kill_processes_by_exec(
-        {paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
+            {paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
 }
 
 } // namespace command

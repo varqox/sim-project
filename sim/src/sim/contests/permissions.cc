@@ -6,9 +6,8 @@ using sim::users::User;
 
 namespace sim::contests {
 
-Permissions get_permissions(
-    std::optional<User::Type> user_type, bool contest_is_public,
-    std::optional<ContestUser::Mode> cu_mode) noexcept {
+Permissions get_permissions(std::optional<User::Type> user_type, bool contest_is_public,
+        std::optional<ContestUser::Mode> cu_mode) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = Permissions;
     using CUM = ContestUser::Mode;
@@ -19,8 +18,8 @@ Permissions get_permissions(
 
     if (*user_type == User::Type::ADMIN) {
         return PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN | PERM::DELETE |
-            PERM::MAKE_PUBLIC | PERM::SELECT_FINAL_SUBMISSIONS |
-            PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+                PERM::MAKE_PUBLIC | PERM::SELECT_FINAL_SUBMISSIONS |
+                PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
     }
 
     if (not cu_mode.has_value()) {
@@ -30,12 +29,12 @@ Permissions get_permissions(
     switch (cu_mode.value()) {
     case CUM::OWNER:
         return PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN | PERM::DELETE |
-            PERM::SELECT_FINAL_SUBMISSIONS | PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
-            PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+                PERM::SELECT_FINAL_SUBMISSIONS | PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
+                PERM::MANAGE_CONTEST_ENTRY_TOKEN;
 
     case CUM::MODERATOR:
         return PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN | PERM::SELECT_FINAL_SUBMISSIONS |
-            PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+                PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
 
     case CUM::CONTESTANT: return PERM::VIEW | PERM::PARTICIPATE;
     }

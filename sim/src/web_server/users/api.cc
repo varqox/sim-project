@@ -1,68 +1,146 @@
 #include "src/web_server/users/api.hh"
-
+#include "sim/jobs/job.hh"
+#include "sim/jobs/utils.hh"
 #include "sim/users/user.hh"
 #include "simlib/concat.hh"
+#include "simlib/concat_tostr.hh"
 #include "simlib/json_str/json_str.hh"
+#include "simlib/mysql/mysql.hh"
+#include "simlib/sql.hh"
 #include "simlib/string_view.hh"
-#include "src/web_server/capabilities/user.hh"
+#include "simlib/time.hh"
+#include "src/web_server/capabilities/jobs.hh"
 #include "src/web_server/capabilities/users.hh"
 #include "src/web_server/http/form_validation.hh"
 #include "src/web_server/http/response.hh"
 #include "src/web_server/ui_template.hh"
+#include "src/web_server/users/ui.hh"
 #include "src/web_server/web_worker/context.hh"
 
+#include <cstdint>
+#include <optional>
+#include <utility>
+
+using sim::jobs::Job;
 using sim::users::User;
+using std::optional;
+using web_server::capabilities::UsersListCapabilities;
 using web_server::http::Response;
 using web_server::web_worker::Context;
 
+namespace capabilities = web_server::capabilities;
+
 namespace {
 
-Response do_list(Context& ctx, FilePath where_str, uint32_t limit) {
+struct UserInfo {
     decltype(User::id) id{};
-    decltype(User::type) type;
+    decltype(User::type) type{};
     decltype(User::username) username;
     decltype(User::first_name) first_name;
     decltype(User::last_name) last_name;
     decltype(User::email) email;
-    auto stmt = ctx.mysql.prepare(
-        "SELECT id, type, username, first_name, last_name, email FROM users ", where_str,
-        " ORDER BY id LIMIT ", limit);
-    stmt.bind_and_execute();
-    stmt.res_bind_all(id, type, username, first_name, last_name, email);
+
+    explicit UserInfo() = default;
+
+    UserInfo(const UserInfo&) = delete;
+    UserInfo(UserInfo&&) = delete;
+    UserInfo& operator=(const UserInfo&) = delete;
+    UserInfo& operator=(UserInfo&&) = delete;
+    ~UserInfo() = default;
+
+    void append_to(const decltype(Context::session)& session, json_str::ObjectBuilder& obj) {
+        const auto caps = capabilities::user(session, id);
+        assert(caps.view);
+        obj.prop("id", id);
+        obj.prop("type", type);
+        obj.prop("username", username);
+        obj.prop("first_name", first_name);
+        obj.prop("last_name", last_name);
+        obj.prop("email", email);
+        obj.prop_obj("capabilities", [&](auto& obj) {
+            obj.prop("view", caps.view);
+            obj.prop("edit", caps.edit);
+            obj.prop("edit_username", caps.edit_username);
+            obj.prop("edit_first_name", caps.edit_first_name);
+            obj.prop("edit_last_name", caps.edit_last_name);
+            obj.prop("edit_email", caps.edit_email);
+            obj.prop("change_password", caps.change_password);
+            obj.prop("change_password_without_old_password",
+                    caps.change_password_without_old_password);
+            obj.prop("change_type", caps.change_type);
+            obj.prop("make_admin", caps.make_admin);
+            obj.prop("make_teacher", caps.make_teacher);
+            obj.prop("make_normal", caps.make_normal);
+            obj.prop("delete", caps.delete_);
+            obj.prop("merge_into_another_user", caps.merge_into_another_user);
+            obj.prop("merge_someone_into_this_user", caps.merge_someone_into_this_user);
+        });
+    }
+};
+
+template <class... Params>
+Response do_list(Context& ctx, uint32_t limit, sql::Condition<Params...> where_cond) {
+    UserInfo u;
+    auto stmt = ctx.mysql.prepare_bind_and_execute(
+            sql::Select("id, type, username, first_name, last_name, email")
+                    .from("users")
+                    .where(where_cond)
+                    .order_by("id")
+                    .limit("?", limit));
+    stmt.res_bind_all(u.id, u.type, u.username, u.first_name, u.last_name, u.email);
 
     json_str::Object obj;
     obj.prop("may_be_more", stmt.rows_num() == limit);
     obj.prop_arr("list", [&](auto& arr) {
         while (stmt.next()) {
-            arr.val_obj([&](auto& obj) {
-                obj.prop("id", id);
-                obj.prop("type", type);
-                obj.prop("username", username);
-                obj.prop("first_name", first_name);
-                obj.prop("last_name", last_name);
-                obj.prop("email", email);
-                obj.prop_obj("capabilities", [&](auto& obj) {
-                    const auto caps = web_server::capabilities::user_for(ctx.session, id);
-                    obj.prop("view", caps.view);
-                    obj.prop("edit", caps.edit);
-                    obj.prop("edit_username", caps.edit_username);
-                    obj.prop("edit_first_name", caps.edit_first_name);
-                    obj.prop("edit_last_name", caps.edit_last_name);
-                    obj.prop("edit_email", caps.edit_email);
-                    obj.prop("change_password", caps.change_password);
-                    obj.prop(
-                        "change_password_without_old_password",
-                        caps.change_password_without_old_password);
-                    obj.prop("make_admin", caps.make_admin);
-                    obj.prop("make_teacher", caps.make_teacher);
-                    obj.prop("make_normal", caps.make_normal);
-                    obj.prop("delete", caps.delete_);
-                    obj.prop("merge", caps.merge);
-                });
-            });
+            arr.val_obj([&](auto& obj) { u.append_to(ctx.session, obj); });
         }
     });
     return ctx.response_json(std::move(obj).into_str());
+}
+
+constexpr bool is_query_allowed(
+        UsersListCapabilities caps, optional<decltype(User::type)> user_type) noexcept {
+    if (not user_type) {
+        return caps.query_all;
+    }
+    switch (*user_type) {
+    case User::Type::ADMIN: return caps.query_with_type_admin;
+    case User::Type::TEACHER: return caps.query_with_type_teacher;
+    case User::Type::NORMAL: return caps.query_with_type_normal;
+    }
+    __builtin_unreachable();
+}
+
+sql::Condition<> caps_to_condition(
+        UsersListCapabilities caps, optional<decltype(User::type)> user_type) {
+    auto res = sql::FALSE;
+    if (caps.view_all_with_type_admin and (!user_type or user_type == User::Type::ADMIN)) {
+        res = res or
+                sql::Condition{concat_tostr(
+                        "type=", decltype(User::type){User::Type::ADMIN}.to_int())};
+    }
+    if (caps.view_all_with_type_teacher and (!user_type or user_type == User::Type::TEACHER)) {
+        res = res or
+                sql::Condition{concat_tostr(
+                        "type=", decltype(User::type){User::Type::TEACHER}.to_int())};
+    }
+    if (caps.view_all_with_type_normal and (!user_type or user_type == User::Type::NORMAL)) {
+        res = res or
+                sql::Condition{concat_tostr(
+                        "type=", decltype(User::type){User::Type::NORMAL}.to_int())};
+    }
+    return res;
+}
+
+template <class... Params>
+Response do_list_all_users(Context& ctx, uint32_t limit,
+        optional<decltype(User::type)> user_type, sql::Condition<Params...> where_cond) {
+    auto caps = capabilities::list_all_users(ctx.session);
+    if (not is_query_allowed(caps, user_type)) {
+        return ctx.response_403();
+    }
+    return do_list(ctx, limit, where_cond and caps_to_condition(caps, user_type));
 }
 
 } // namespace
@@ -72,87 +150,44 @@ namespace web_server::users::api {
 constexpr inline uint32_t FIRST_QUERY_LIMIT = 64;
 constexpr inline uint32_t NEXT_QUERY_LIMIT = 200;
 
-Response list(Context& ctx) {
-    auto caps = capabilities::users_for(ctx.session);
-    if (not caps.view_all) {
-        return ctx.response_403();
-    }
-    return do_list(ctx, "", FIRST_QUERY_LIMIT);
+Response list_all_users(Context& ctx) {
+    return do_list_all_users(ctx, FIRST_QUERY_LIMIT, std::nullopt, sql::TRUE);
 }
 
-Response list_above_id(Context& ctx, decltype(User::id) user_id) {
-    auto caps = capabilities::users_for(ctx.session);
-    if (not caps.view_all) {
-        return ctx.response_403();
-    }
-    return do_list(ctx, concat("WHERE id>", user_id), NEXT_QUERY_LIMIT);
+Response list_all_users_above_id(Context& ctx, decltype(User::id) user_id) {
+    return do_list_all_users(
+            ctx, NEXT_QUERY_LIMIT, std::nullopt, sql::Condition{"id>?", user_id});
 }
 
-Response list_by_type(Context& ctx, StringView user_type_str) {
-    auto caps = capabilities::users_for(ctx.session);
-    if (not caps.view_all_by_type) {
-        return ctx.response_403();
-    }
-    if (auto opt = decltype(User::type)::from_str(user_type_str)) {
-        return do_list(ctx, concat("WHERE type=", opt->to_int()), FIRST_QUERY_LIMIT);
-    }
-    return ctx.response_400("Invalid user type");
+Response list_all_users_with_type(Context& ctx, decltype(User::type) user_type) {
+    return do_list_all_users(ctx, FIRST_QUERY_LIMIT, user_type, sql::TRUE);
 }
 
-Response
-list_by_type_above_id(Context& ctx, StringView user_type_str, decltype(User::id) user_id) {
-    auto caps = capabilities::users_for(ctx.session);
-    if (not caps.view_all_by_type) {
-        return ctx.response_403();
-    }
-    if (auto opt = decltype(User::type)::from_str(user_type_str)) {
-        return do_list(
-            ctx, concat("WHERE type=", opt->to_int(), " AND id>", user_id), NEXT_QUERY_LIMIT);
-    }
-    return ctx.response_400("Invalid user type");
+Response list_all_users_with_type_above_id(
+        Context& ctx, decltype(User::type) user_type, decltype(User::id) user_id) {
+    return do_list_all_users(
+            ctx, NEXT_QUERY_LIMIT, user_type, sql::Condition{"id>?", user_id});
 }
 
-Response view(Context& ctx, decltype(User::id) user_id) {
-    const auto caps = capabilities::user_for(ctx.session, user_id);
+Response view_user(Context& ctx, decltype(User::id) user_id) {
+    const auto caps = capabilities::user(ctx.session, user_id);
     if (not caps.view) {
         return ctx.response_403();
     }
 
-    decltype(User::username) username;
-    decltype(User::first_name) first_name;
-    decltype(User::last_name) last_name;
-    decltype(User::email) email;
-    decltype(User::type) type;
-    auto stmt = ctx.mysql.prepare(
-        "SELECT username, first_name, last_name, email, type FROM users WHERE id=?");
-    stmt.bind_and_execute(user_id);
-    stmt.res_bind_all(username, first_name, last_name, email, type);
+    UserInfo u;
+    u.id = user_id;
+    auto stmt = ctx.mysql.prepare_bind_and_execute(
+            sql::Select("type, username, first_name, last_name, email")
+                    .from("users")
+                    .where("id=?", user_id));
+    stmt.res_bind_all(u.type, u.username, u.first_name, u.last_name, u.email);
     if (not stmt.next()) {
         return ctx.response_404();
     }
 
     json_str::Object obj;
-    obj.prop("id", user_id);
-    obj.prop("username", username);
-    obj.prop("first_name", first_name);
-    obj.prop("last_name", last_name);
-    obj.prop("email", email);
-    obj.prop("type", type);
-    obj.prop_obj("capabilities", [&](auto& obj) {
-        obj.prop("edit", caps.edit);
-        obj.prop("edit_username", caps.edit_username);
-        obj.prop("edit_first_name", caps.edit_first_name);
-        obj.prop("edit_last_name", caps.edit_last_name);
-        obj.prop("edit_email", caps.edit_email);
-        obj.prop("change_password", caps.change_password);
-        obj.prop(
-            "change_password_without_old_password", caps.change_password_without_old_password);
-        obj.prop("make_admin", caps.make_admin);
-        obj.prop("make_teacher", caps.make_teacher);
-        obj.prop("make_normal", caps.make_normal);
-        obj.prop("delete", caps.delete_);
-        obj.prop("merge", caps.merge);
-    });
+    u.append_to(ctx.session, obj);
     return ctx.response_json(std::move(obj).into_str());
 }
 
@@ -165,27 +200,33 @@ constexpr http::ApiParam last_name{&User::last_name, "last_name", "Last name"};
 constexpr http::ApiParam email{&User::email, "email", "Email"};
 constexpr http::ApiParam<CStringView> password{"password", "Password"};
 constexpr http::ApiParam<CStringView> password_repeated{
-    "password_repeated", "Password (repeat)"};
+        "password_repeated", "Password (repeat)"};
+constexpr http::ApiParam<CStringView> old_password{"old_password", "Old password"};
+constexpr http::ApiParam<CStringView> new_password{"new_password", "New password"};
+constexpr http::ApiParam<CStringView> new_password_repeated{
+        "new_password_repeated", "New password (repeat)"};
 constexpr http::ApiParam<bool> remember_for_a_month{
-    "remember_for_a_month", "Remember for a month"};
+        "remember_for_a_month", "Remember for a month"};
+constexpr http::ApiParam target_user_id{&User::id, "target_user_id", "Target user ID"};
 
 } // namespace params
 
-http::Response sign_in(web_worker::Context& ctx) {
-    auto caps = capabilities::users_for(ctx.session);
+Response sign_in(Context& ctx) {
+    auto caps = capabilities::users(ctx.session);
     if (not caps.sign_in) {
         return ctx.response_403();
     }
 
     VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (username, params::username)
-        (password, params::password, ALLOW_BLANK)
-        (remember_for_a_month, params::remember_for_a_month)
+        (username, params::username, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+        (remember_for_a_month, params::remember_for_a_month, REQUIRED)
     );
 
-    auto stmt = ctx.mysql.prepare(
-        "SELECT id, password_salt, password_hash, type FROM users WHERE username=?");
-    stmt.bind_and_execute(username);
+    auto stmt = ctx.mysql.prepare_bind_and_execute(
+            sql::Select("id, password_salt, password_hash, type")
+                    .from("users")
+                    .where("username=?", username));
     decltype(User::id) user_id{};
     decltype(User::password_salt) password_salt;
     decltype(User::password_hash) password_hash;
@@ -201,18 +242,18 @@ http::Response sign_in(web_worker::Context& ctx) {
     return ctx.response_400("Invalid username or password");
 }
 
-http::Response sign_up(web_worker::Context& ctx) {
-    auto caps = capabilities::users_for(ctx.session);
+Response sign_up(Context& ctx) {
+    auto caps = capabilities::users(ctx.session);
     if (not caps.sign_up) {
         return ctx.response_403();
     }
     VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (username, params::username)
-        (first_name, params::first_name)
-        (last_name, params::last_name)
-        (email, params::email)
-        (password, params::password, ALLOW_BLANK)
-        (password_repeated, params::password_repeated, ALLOW_BLANK)
+        (username, params::username, REQUIRED)
+        (first_name, params::first_name, REQUIRED)
+        (last_name, params::last_name, REQUIRED)
+        (email, params::email, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+        (password_repeated, allow_blank(params::password_repeated), REQUIRED)
     );
     if (password != password_repeated) {
         return ctx.response_400("Passwords do not match");
@@ -221,10 +262,10 @@ http::Response sign_up(web_worker::Context& ctx) {
     auto [password_salt, password_hash] = sim::users::salt_and_hash_password(password);
     decltype(User::type) user_type = User::Type::NORMAL;
     auto stmt = ctx.mysql.prepare(
-        "INSERT IGNORE INTO users(type, username, first_name, last_name, email, "
-        "password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+            "INSERT IGNORE INTO users(type, username, first_name, last_name, email, "
+            "password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
     stmt.bind_and_execute(
-        user_type, username, first_name, last_name, email, password_salt, password_hash);
+            user_type, username, first_name, last_name, email, password_salt, password_hash);
     if (stmt.affected_rows() != 1) {
         return ctx.response_400("Username taken");
     }
@@ -238,8 +279,8 @@ http::Response sign_up(web_worker::Context& ctx) {
     return ctx.response_json(sim_template_params(ctx.session));
 }
 
-http::Response sign_out(web_worker::Context& ctx) {
-    auto caps = capabilities::users_for(ctx.session);
+Response sign_out(Context& ctx) {
+    auto caps = capabilities::users(ctx.session);
     if (not ctx.session) {
         assert(not caps.sign_out);
         return ctx.response_400("You are already signed out");
@@ -251,33 +292,33 @@ http::Response sign_out(web_worker::Context& ctx) {
     return ctx.response_json(sim_template_params(ctx.session));
 }
 
-http::Response add(web_worker::Context& ctx) {
-    auto caps = capabilities::users_for(ctx.session);
+Response add(Context& ctx) {
+    auto caps = capabilities::users(ctx.session);
     if (not caps.add_user) {
         return ctx.response_403();
     }
 
     VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (username, params::username)
-        (type, params::type, ENUM_CAPS(
+        (type, params::type, REQUIRED_ENUM_CAPS(
             (ADMIN, caps.add_admin)
             (TEACHER, caps.add_teacher)
             (NORMAL, caps.add_normal_user)
         ))
-        (first_name, params::first_name)
-        (last_name, params::last_name)
-        (email, params::email)
-        (password, params::password, ALLOW_BLANK)
-        (password_repeated, params::password_repeated, ALLOW_BLANK)
+        (username, params::username, REQUIRED)
+        (first_name, params::first_name, REQUIRED)
+        (last_name, params::last_name, REQUIRED)
+        (email, params::email, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+        (password_repeated, allow_blank(params::password_repeated), REQUIRED)
     );
     if (password != password_repeated) {
         return ctx.response_400("Passwords do not match");
     }
 
     auto [salt, hash] = sim::users::salt_and_hash_password(password);
-    auto stmt =
-        ctx.mysql.prepare("INSERT IGNORE INTO users(type, username, first_name, last_name, "
-                          "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+    auto stmt = ctx.mysql.prepare(
+            "INSERT IGNORE INTO users(type, username, first_name, last_name, "
+            "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
     stmt.bind_and_execute(type, username, first_name, last_name, email, salt, hash);
     if (stmt.affected_rows() != 1) {
         return ctx.response_400("Username taken");
@@ -287,6 +328,143 @@ http::Response add(web_worker::Context& ctx) {
     stdlog("New user: {id: ", user_id, ", username: ", json_stringify(username), '}');
 
     return ctx.response_ok(intentional_unsafe_cstring_view(to_string(user_id)));
+}
+
+Response edit(Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user(ctx.session, user_id);
+    if (not caps.edit) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (type, params::type, ALLOWED_ONLY_IF_ENUM_CAPS(caps.change_type,
+            (ADMIN, caps.make_admin)
+            (TEACHER, caps.make_teacher)
+            (NORMAL, caps.make_normal)
+        ))
+        (username, params::username, ALLOWED_ONLY_IF(caps.edit_username))
+        (first_name, params::first_name, ALLOWED_ONLY_IF(caps.edit_first_name))
+        (last_name, params::last_name, ALLOWED_ONLY_IF(caps.edit_last_name))
+        (email, params::email, ALLOWED_ONLY_IF(caps.edit_email))
+    );
+
+    auto stmt = ctx.mysql.prepare(
+            "UPDATE users SET type=COALESCE(?, type), username=COALESCE(?, username), "
+            "first_name=COALESCE(?, first_name), last_name=COALESCE(?, last_name), "
+            "email=COALESCE(?, email) WHERE id=?");
+    stmt.bind_and_execute(type, username, first_name, last_name, email, user_id);
+
+    return ctx.response_ok();
+}
+
+bool password_is_valid(
+        mysql::Connection& mysql, decltype(User::id) user_id, StringView password) {
+    auto stmt = mysql.prepare_bind_and_execute(
+            sql::Select("password_salt, password_hash").from("users").where("id=?", user_id));
+    decltype(User::password_salt) password_salt;
+    decltype(User::password_hash) password_hash;
+    stmt.res_bind_all(password_salt, password_hash);
+    if (not stmt.next()) {
+        return false;
+    }
+    return sim::users::password_matches(password, password_salt, password_hash);
+}
+
+Response change_password(Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user(ctx.session, user_id);
+    if (not caps.change_password) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (old_password, allow_blank(params::old_password), REQUIRED_AND_ALLOWED_ONLY_IF(!caps.change_password_without_old_password))
+        (new_password, allow_blank(params::new_password), REQUIRED)
+        (new_password_repeated, allow_blank(params::new_password_repeated), REQUIRED)
+    );
+    if (new_password != new_password_repeated) {
+        return ctx.response_400("New passwords do not match");
+    }
+
+    if (old_password and !password_is_valid(ctx.mysql, user_id, *old_password)) {
+        return ctx.response_400("Invalid old password");
+    }
+
+    // Commit password change
+    auto [password_salt, password_hash] = sim::users::salt_and_hash_password(new_password);
+    ctx.mysql.prepare("UPDATE users SET password_salt=?, password_hash=? WHERE id=?")
+            .bind_and_execute(password_salt, password_hash, user_id);
+    // Remove other sessions (for security reasons)
+    ctx.mysql.prepare("DELETE FROM sessions WHERE user_id=? AND id!=?")
+            .bind_and_execute(user_id, ctx.session.value().id);
+
+    return ctx.response_ok();
+}
+
+Response delete_(Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user(ctx.session, user_id);
+    if (not caps.delete_) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (password, allow_blank(params::password), REQUIRED)
+    );
+
+    if (!password_is_valid(ctx.mysql, ctx.session.value().user_id, password)) {
+        return ctx.response_400("Invalid password");
+    }
+
+    // Queue the deleting job
+    auto stmt =
+            ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                              "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, '', '')");
+    constexpr auto type = Job::Type::DELETE_USER;
+    stmt.bind_and_execute(ctx.session.value().user_id, EnumVal{type},
+            sim::jobs::default_priority(type), Job::Status::PENDING, mysql_date(), user_id);
+    ctx.notify_job_server_after_commit = true;
+
+    json_str::Object obj;
+    obj.prop("job_id", stmt.insert_id());
+    return ctx.response_json(std::move(obj).into_str());
+}
+
+Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
+    auto caps = capabilities::user(ctx.session, user_id);
+    if (not caps.merge_into_another_user) {
+        return ctx.response_403();
+    }
+
+    VALIDATE(ctx.request.form_fields, ctx.response_400,
+        (target_user_id, params::target_user_id, REQUIRED)
+        (password, allow_blank(params::password), REQUIRED)
+    );
+
+    if (!password_is_valid(ctx.mysql, ctx.session.value().user_id, password)) {
+        return ctx.response_400("Invalid password");
+    }
+
+    if (target_user_id == user_id) {
+        return ctx.response_400("You cannot merge the user with themself");
+    }
+
+    auto target_user_caps = capabilities::user(ctx.session, target_user_id);
+    if (not target_user_caps.merge_someone_into_this_user) {
+        return ctx.response_400("You cannot merge into this target target user");
+    }
+
+    // Queue the merging job
+    auto stmt =
+            ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                              "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, ?, '')");
+    constexpr auto type = Job::Type::MERGE_USERS;
+    stmt.bind_and_execute(ctx.session.value().user_id, EnumVal{type},
+            sim::jobs::default_priority(type), Job::Status::PENDING, mysql_date(), user_id,
+            sim::jobs::MergeUsersInfo{target_user_id}.dump());
+    ctx.notify_job_server_after_commit = true;
+
+    json_str::Object obj;
+    obj.prop("job_id", stmt.insert_id());
+    return ctx.response_json(std::move(obj).into_str());
 }
 
 } // namespace web_server::users::api

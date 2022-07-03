@@ -33,20 +33,16 @@ TEST(jobs, append_dumped_string) {
     ASSERT_EQ(buff, StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0", 20));
 
     append_dumped(buff, "12213");
-    ASSERT_EQ(
-        buff,
-        StringView(
-            "\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
-            "12213",
-            29));
+    ASSERT_EQ(buff,
+            StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
+                       "12213",
+                    29));
 
     append_dumped(buff, "qdsp\x03l\xffr3");
-    ASSERT_EQ(
-        buff,
-        StringView(
-            "\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
-            "12213\0\0\0\x09qdsp\x03l\xffr3",
-            42));
+    ASSERT_EQ(buff,
+            StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
+                       "12213\0\0\0\x09qdsp\x03l\xffr3",
+                    42));
 }
 
 // NOLINTNEXTLINE
@@ -94,26 +90,21 @@ TEST(jobs, extract_dumped_int2) {
 
 // NOLINTNEXTLINE
 TEST(jobs, extract_dumped_string) {
-    StringView buff(
-        "\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
-        "12213\0\0\0\x09qdsp\x03l\xffr3",
-        42);
+    StringView buff("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
+                    "12213\0\0\0\x09qdsp\x03l\xffr3",
+            42);
 
     ASSERT_EQ(extract_dumped_string(buff), "te2i0j192jeo");
-    ASSERT_EQ(
-        buff,
-        StringView(
-            "\0\0\0\0\0\0\0\x05"
-            "12213\0\0\0\x09qdsp\x03l\xffr3",
-            26));
+    ASSERT_EQ(buff,
+            StringView("\0\0\0\0\0\0\0\x05"
+                       "12213\0\0\0\x09qdsp\x03l\xffr3",
+                    26));
 
     ASSERT_EQ(extract_dumped_string(buff), "");
-    ASSERT_EQ(
-        buff,
-        StringView(
-            "\0\0\0\x05"
-            "12213\0\0\0\x09qdsp\x03l\xffr3",
-            22));
+    ASSERT_EQ(buff,
+            StringView("\0\0\0\x05"
+                       "12213\0\0\0\x09qdsp\x03l\xffr3",
+                    22));
 
     ASSERT_EQ(extract_dumped_string(buff), "12213");
     ASSERT_EQ(buff, StringView("\0\0\0\x09qdsp\x03l\xffr3", 13));
