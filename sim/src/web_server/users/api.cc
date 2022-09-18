@@ -348,6 +348,15 @@ Response edit(Context& ctx, decltype(User::id) user_id) {
         (email, params::email, ALLOWED_ONLY_IF(caps.edit_email))
     );
 
+    // Check if username is taken
+    if (username) {
+        auto stmt = ctx.mysql.prepare("SELECT id FROM users WHERE username=? AND id!=?");
+        stmt.bind_and_execute(username, user_id);
+        if (stmt.next()) {
+            return ctx.response_400("Username taken");
+        }
+    }
+
     auto stmt = ctx.mysql.prepare(
             "UPDATE users SET type=COALESCE(?, type), username=COALESCE(?, username), "
             "first_name=COALESCE(?, first_name), last_name=COALESCE(?, last_name), "
