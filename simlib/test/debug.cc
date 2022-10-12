@@ -74,13 +74,13 @@ TEST(debug, THROW_MACRO) {
 
 // NOLINTNEXTLINE
 TEST(debug, errmsg) {
-    EXPECT_EQ(concat(" - ", EPERM, ": Operation not permitted"), errmsg(EPERM));
-    EXPECT_EQ(concat(" - ", ENOENT, ": No such file or directory"), errmsg(ENOENT));
+    EXPECT_EQ(concat(" - Operation not permitted (os error ", EPERM, ')'), errmsg(EPERM));
+    EXPECT_EQ(concat(" - No such file or directory (os error ", ENOENT, ')'), errmsg(ENOENT));
 
     errno = EPERM;
-    EXPECT_EQ(concat(" - ", EPERM, ": Operation not permitted"), errmsg());
+    EXPECT_EQ(concat(" - Operation not permitted (os error ", EPERM, ')'), errmsg());
     errno = ENOENT;
-    EXPECT_EQ(concat(" - ", ENOENT, ": No such file or directory"), errmsg());
+    EXPECT_EQ(concat(" - No such file or directory (os error ", ENOENT, ')'), errmsg());
 }
 
 namespace {

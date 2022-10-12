@@ -55,20 +55,19 @@ inline const char* what_of(const std::exception& e) { return e.what(); }
 
 inline auto errmsg(int errnum) noexcept {
     constexpr StringView s1 = " - ";
-    auto errnum_str = to_string(errnum);
-    constexpr StringView s2 = ": ";
     constexpr auto bytes_for_error_description =
             64; // At the time of writing, longest error description is 50 bytes in
                 // size (including null terminator)
-    StaticCStringBuff<s1.size() + decltype(errnum_str)::max_size() + s2.size() +
-            bytes_for_error_description>
+    constexpr StringView s2 = " (os error ";
+    auto errnum_str = to_string(errnum);
+    constexpr StringView s3 = ")";
+    StaticCStringBuff<s1.size() + bytes_for_error_description + s2.size() +
+            decltype(errnum_str)::max_size() + s3.size()>
             res;
     size_t pos = 0;
     // Prefix
-    for (auto s : {s1, StringView{errnum_str}, s2}) {
-        for (auto c : s) {
-            res[pos++] = c;
-        }
+    for (auto c : s1) {
+        res[pos++] = c;
     }
     // Error description
     const char* errstr = strerror_r(errnum, res.data() + pos, decltype(res)::max_size() - pos);
@@ -82,6 +81,14 @@ inline auto errmsg(int errnum) noexcept {
         }
         while (pos < decltype(res)::max_size() and *errstr != '\0') {
             res[pos++] = *(errstr++);
+        }
+    }
+    // Ensure the suffix will fit
+    pos = std::min(pos, decltype(res)::max_size() - s2.size() - errnum_str.size() - s3.size());
+    // Suffix
+    for (auto s : {s2, StringView{errnum_str}, s3}) {
+        for (auto c : s) {
+            res[pos++] = c;
         }
     }
     // Null terminator
