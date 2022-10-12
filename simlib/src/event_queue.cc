@@ -68,8 +68,7 @@ handler_id_t EventQueue::add_time_handler(
         time_point::duration duration, std::function<void()> handler) {
     STACK_UNWINDING_MARK;
     assert(duration >= decltype(duration)::zero());
-    return add_time_handler_impl(
-            std::chrono::system_clock::now() + duration, std::move(handler));
+    return add_time_handler_impl(std::chrono::system_clock::now() + duration, std::move(handler));
 }
 
 void EventQueue::add_repeating_handler(
@@ -180,8 +179,7 @@ void EventQueue::run() {
         }
 
         auto file_handlers_quantum_start = std::chrono::system_clock::now();
-        size_t new_poll_events_size =
-                0; // Expired events are removed and the array is compressed
+        size_t new_poll_events_size = 0; // Expired events are removed and the array is compressed
 
         // poll_events_ may get new elements as we process event handler, even
         // get reallocated, we need to be careful about pointers and references
@@ -211,8 +209,7 @@ void EventQueue::run() {
                 continue;
             }
 
-            if (std::chrono::system_clock::now() > file_handlers_quantum_start + TIME_QUANTUM)
-            {
+            if (std::chrono::system_clock::now() > file_handlers_quantum_start + TIME_QUANTUM) {
                 // Needed to ensure low latency
                 process_timed_handlers();
                 if (immediate_pause_was_requested()) {

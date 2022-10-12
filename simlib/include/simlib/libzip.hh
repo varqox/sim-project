@@ -267,9 +267,7 @@ public:
     }
 
     // It invalid to call this method on a closed archive
-    index_t entries_no(zip_flags_t flags = 0) noexcept {
-        return zip_get_num_entries(zip_, flags);
-    }
+    index_t entries_no(zip_flags_t flags = 0) noexcept { return zip_get_num_entries(zip_, flags); }
 
     void stat(index_t index, zip_stat_t& sb, zip_flags_t flags = 0) {
         STACK_UNWINDING_MARK;
@@ -446,8 +444,7 @@ public:
         }
 
         if (zip_file_set_external_attributes(
-                    zip_, index, 0, source.opsys_, source.external_attributes_))
-        {
+                    zip_, index, 0, source.opsys_, source.external_attributes_)) {
             THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
         }
 

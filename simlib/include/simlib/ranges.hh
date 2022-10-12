@@ -43,8 +43,7 @@ struct enumerate_view_iter {
 
     using IterTraits = std::iterator_traits<Iter>;
 
-    std::conditional_t<
-            std::is_const_v<std::remove_reference_t<typename IterTraits::reference>>,
+    std::conditional_t<std::is_const_v<std::remove_reference_t<typename IterTraits::reference>>,
             const enumerate_view_iter&, enumerate_view_iter&>
     operator*() {
         return *this;

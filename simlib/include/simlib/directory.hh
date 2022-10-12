@@ -93,8 +93,7 @@ template <class DirType, class Func, class ErrFunc,
         std::enable_if_t<meta::is_one_of<std::invoke_result_t<Func, dirent*>, void, repeating>,
                 int> = 0>
 void for_each_dir_component(DirType&& dir, Func&& func, ErrFunc&& readdir_failed) {
-    static_assert(
-            std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
+    static_assert(std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
 
     if constexpr (not std::is_convertible_v<DirType, DIR*>) {
         Directory directory{dir};
@@ -133,10 +132,9 @@ void for_each_dir_component(DirType&& dir, Func&& func, ErrFunc&& readdir_failed
 
 template <class DirType, class Func>
 auto for_each_dir_component(DirType&& dir, Func&& func) {
+    static_assert(std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
     static_assert(
-            std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
-    static_assert(std::is_invocable_r_v<repeating, Func, dirent*> or
-            std::is_invocable_v<Func, dirent*>);
+            std::is_invocable_r_v<repeating, Func, dirent*> or std::is_invocable_v<Func, dirent*>);
     return for_each_dir_component(std::forward<DirType>(dir), std::forward<Func>(func),
             [] { THROW("readdir()", errmsg()); });
 }

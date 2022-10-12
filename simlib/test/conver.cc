@@ -67,9 +67,7 @@ static TestConfig load_config_from_file(FilePath file) {
         return var;
     };
 
-    auto get_string = [&](StringView name) -> const string& {
-        return get_var(name).as_string();
-    };
+    auto get_string = [&](StringView name) -> const string& { return get_var(name).as_string(); };
 
     auto get_optional_string = [&](const StringView& name,
                                        bool error_if_unset = true) -> optional<string> {
@@ -100,8 +98,7 @@ static TestConfig load_config_from_file(FilePath file) {
         return duration_cast<nanoseconds>(duration<double>(get_double(name)));
     };
 
-    auto get_optional_duration =
-            [&](const StringView& name) -> optional<std::chrono::nanoseconds> {
+    auto get_optional_duration = [&](const StringView& name) -> optional<std::chrono::nanoseconds> {
         if (get_var(name).as_string() == "null") {
             return std::nullopt;
         }
@@ -130,8 +127,7 @@ static TestConfig load_config_from_file(FilePath file) {
 
     TestConfig conf;
     conf.pkg_path = get_string("package");
-    conf.override_main_solution_with =
-            get_optional_string("override_main_solution_with", false);
+    conf.override_main_solution_with = get_optional_string("override_main_solution_with", false);
 
     conf.opts.name = get_optional_string("name");
     conf.opts.label = get_optional_string("label");
@@ -146,8 +142,7 @@ static TestConfig load_config_from_file(FilePath file) {
     conf.opts.reset_scoring = get_bool("reset_scoring");
     conf.opts.require_statement = get_bool("require_statement");
     conf.opts.rtl_opts.min_time_limit = get_duration("min_time_limit");
-    conf.opts.rtl_opts.solution_runtime_coefficient =
-            get_double("solution_runtime_coefficient");
+    conf.opts.rtl_opts.solution_runtime_coefficient = get_double("solution_runtime_coefficient");
 
     return conf;
 }
@@ -167,8 +162,7 @@ class TestingJudgeLogger : public sim::JudgeLogger {
                 " KiB ]  Status: ", JudgeReport::simple_span_status(test_report.status));
 
         if (test_report.status == JudgeReport::Test::RTE) {
-            log(" (",
-                    std::regex_replace(es.message, std::regex("killed and dumped"), "killed"),
+            log(" (", std::regex_replace(es.message, std::regex("killed and dumped"), "killed"),
                     ')');
         }
         func();
@@ -183,8 +177,7 @@ public:
         log("Judging (", (final ? "final" : "initial"), "): {\n");
     }
 
-    void test(StringView test_name, JudgeReport::Test test_report,
-            Sandbox::ExitStat es) override {
+    void test(StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es) override {
         log_test(test_name, test_report, es, [] {});
     }
 
@@ -249,8 +242,7 @@ public:
             generate_result();
         } catch (const std::exception& e) {
             conver_report_ = concat_tostr(conver_.report(), "\n>>>> Exception caught <<<<\n",
-                    std::regex_replace(e.what(),
-                            std::regex(R"=(\(thrown at (\w|\.|/)+:\d+\))="),
+                    std::regex_replace(e.what(), std::regex(R"=(\(thrown at (\w|\.|/)+:\d+\))="),
                             "(thrown at ...)"));
         }
 
@@ -284,8 +276,8 @@ private:
         initial_judge_report_ = jworker.judge(false, judge_logger),
         final_judge_report_ = jworker.judge(true, judge_logger);
 
-        Conver::reset_time_limits_using_jugde_reports(post_judge_simfile_,
-                initial_judge_report_, final_judge_report_, conf_.opts.rtl_opts);
+        Conver::reset_time_limits_using_jugde_reports(post_judge_simfile_, initial_judge_report_,
+                final_judge_report_, conf_.opts.rtl_opts);
     }
 
     void compile_checker_and_solution(JudgeWorker& jworker) {
@@ -299,8 +291,7 @@ private:
             time_point tp;
             if (not pre_judge_simfile_.checker) {
                 path = "default_checker";
-                tp = get_modification_time(
-                        concat(tests_dir_, "../../src/sim/default_checker.c"));
+                tp = get_modification_time(concat(tests_dir_, "../../src/sim/default_checker.c"));
             } else if (is_directory(conver_.package_path())) {
                 path = concat_tostr(conver_.package_path(), *pre_judge_simfile_.checker);
                 tp = get_modification_time(path);
@@ -358,8 +349,8 @@ private:
             for (auto& test : group.tests) {
                 // Time limits should not have been set to 0
                 EXPECT_GT(test.time_limit, 0s) << "^ test " << test_case_name_;
-                test.time_limit = std::chrono::duration_cast<std::chrono::seconds>(
-                        test.time_limit + 0.5s);
+                test.time_limit =
+                        std::chrono::duration_cast<std::chrono::seconds>(test.time_limit + 0.5s);
             }
         }
     }
@@ -370,16 +361,15 @@ private:
             overwrite_test_output_files();
         }
 
-        EXPECT_EQ(get_file_contents(
-                          concat_tostr(test_case_dir_, test_filenames::pre_judge_simfile)),
+        EXPECT_EQ(
+                get_file_contents(concat_tostr(test_case_dir_, test_filenames::pre_judge_simfile)),
                 pre_judge_simfile_.dump())
                 << "^ test " << test_case_name_;
-        EXPECT_EQ(get_file_contents(
-                          concat_tostr(test_case_dir_, test_filenames::post_judge_simfile)),
+        EXPECT_EQ(
+                get_file_contents(concat_tostr(test_case_dir_, test_filenames::post_judge_simfile)),
                 post_judge_simfile_.dump())
                 << "^ test " << test_case_name_;
-        EXPECT_EQ(
-                get_file_contents(concat_tostr(test_case_dir_, test_filenames::conver_report)),
+        EXPECT_EQ(get_file_contents(concat_tostr(test_case_dir_, test_filenames::conver_report)),
                 conver_report_)
                 << "^ test " << test_case_name_;
         EXPECT_EQ(get_file_contents(concat_tostr(test_case_dir_, test_filenames::judge_log)),
@@ -442,8 +432,7 @@ TEST(Conver, construct_simfile) {
     stdlog.use(stdout);
 
     for (const auto& path : {string{"."}, executable_path(getpid())}) {
-        auto tests_dir_opt =
-                deepest_ancestor_dir_with_subpath(path, "test/conver_test_cases/");
+        auto tests_dir_opt = deepest_ancestor_dir_with_subpath(path, "test/conver_test_cases/");
         if (tests_dir_opt) {
             ConverTestsRunner(*tests_dir_opt).run();
             return;

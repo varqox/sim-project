@@ -37,13 +37,12 @@ public:
             THROW("stat64()", errmsg());
         }
 
-        auto cached_mtime =
-                std::chrono::system_clock::time_point(to_duration(cached_stat.st_mtim));
+        auto cached_mtime = std::chrono::system_clock::time_point(to_duration(cached_stat.st_mtim));
         if (cached_mtime < file_mtime) {
             return false; // Cached file is older than the source file
         }
-        if (valid_duration_ and
-                std::chrono::system_clock::now() - cached_mtime > *valid_duration_) {
+        if (valid_duration_ and std::chrono::system_clock::now() - cached_mtime > *valid_duration_)
+        {
             return false; // Cached file has expired
         }
         return true;

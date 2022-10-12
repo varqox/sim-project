@@ -34,13 +34,9 @@ class RandomDevice {
 public:
     using result_type = uint64_t;
 
-    constexpr static result_type min() noexcept {
-        return std::numeric_limits<result_type>::min();
-    }
+    constexpr static result_type min() noexcept { return std::numeric_limits<result_type>::min(); }
 
-    constexpr static result_type max() noexcept {
-        return std::numeric_limits<result_type>::max();
-    }
+    constexpr static result_type max() noexcept { return std::numeric_limits<result_type>::max(); }
 
 private:
     std::array<result_type, 256 / sizeof(result_type)> buff{};

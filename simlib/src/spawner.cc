@@ -38,8 +38,7 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
     switch (si.si_code) {
     case CLD_EXITED: message = concat_tostr("exited with ", si.si_status); break;
     case CLD_KILLED:
-        message = concat_tostr(
-                "killed by signal ", si.si_status, " - ", strsignal(si.si_status));
+        message = concat_tostr("killed by signal ", si.si_status, " - ", strsignal(si.si_status));
         break;
     case CLD_DUMPED:
         message = concat_tostr(
@@ -64,8 +63,7 @@ timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
                                   // expired
                                   itimerspec new_its{{0, 0}, {0, 0}};
                                   itimerspec old_its{};
-                                  int rc =
-                                          timer_settime(state.timer_id, 0, &new_its, &old_its);
+                                  int rc = timer_settime(state.timer_id, 0, &new_its, &old_its);
                                   assert(rc == 0);
                                   if (old_its.it_value == timespec{0, 0}) {
                                       // timer is already disarmed => the
@@ -83,8 +81,8 @@ timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
             state_);
 }
 
-Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
-        clockid_t clock_id, int timeout_signal, int timer_signal)
+Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit, clockid_t clock_id,
+        int timeout_signal, int timer_signal)
 : clock_id_(clock_id)
 , creator_thread_id_(syscalls::gettid())
 , state_([&]() -> decltype(state_) {
@@ -98,8 +96,7 @@ Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
         return WithoutTimeout{curr_clock_time};
     }
 
-    return WithTimeout{
-            to_timespec(time_limit), {}, false, {watched_pid, timeout_signal, false}};
+    return WithTimeout{to_timespec(time_limit), {}, false, {watched_pid, timeout_signal, false}};
 }()) {
 
     if (std::holds_alternative<WithoutTimeout>(state_)) {
@@ -115,8 +112,7 @@ Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
         }
 
         int errnum = errno;
-        SignalHandlerContext& context =
-                *static_cast<SignalHandlerContext*>(si->si_value.sival_ptr);
+        SignalHandlerContext& context = *static_cast<SignalHandlerContext*>(si->si_value.sival_ptr);
         (void)kill(context.watched_pid, context.timeout_signal); // signal safe
         context.timeout_signal_was_sent = true;
         errno = errnum;
@@ -161,8 +157,7 @@ std::chrono::nanoseconds Spawner::Timer::deactivate_and_get_runtime() noexcept {
                            return to_nanoseconds(curr_clock_time - state.start_clock_time);
                        },
                     [&](WithTimeout& state) {
-                        assert(state.timer_is_active and
-                                "You can call this function only once");
+                        assert(state.timer_is_active and "You can call this function only once");
                         return to_nanoseconds(
                                 state.time_limit - delete_timer_and_get_remaning_time());
                     }},
@@ -186,8 +181,7 @@ bool Spawner::Timer::timeout_signal_was_sent() const noexcept {
 }
 
 Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
-        const Spawner::Options& opts,
-        const std::function<void(pid_t)>& do_in_parent_after_fork) {
+        const Spawner::Options& opts, const std::function<void(pid_t)>& do_in_parent_after_fork) {
     STACK_UNWINDING_MARK;
 
     using std::chrono_literals::operator""ns;
@@ -337,8 +331,8 @@ void Spawner::run_child(FilePath exec, const std::vector<std::string>& exec_args
     auto set_cpu_rlimit = [&](nanoseconds cpu_tl) {
         // Limit below is useful when spawned process becomes orphaned
         rlimit limit{};
-        limit.rlim_cur = limit.rlim_max = duration_cast<seconds>(cpu_tl + 1.5s)
-                                                  .count(); // + 1.5 to avoid premature death
+        limit.rlim_cur = limit.rlim_max =
+                duration_cast<seconds>(cpu_tl + 1.5s).count(); // + 1.5 to avoid premature death
 
         if (setrlimit(RLIMIT_CPU, &limit)) {
             send_error_and_exit(errno, "setrlimit(RLIMIT_CPU)");
@@ -435,8 +429,7 @@ void Spawner::run_child(FilePath exec, const std::vector<std::string>& exec_args
     // execvp() failed
     if (exec.size() <= PATH_MAX) {
         send_error_and_exit(errnum,
-                intentional_unsafe_cstring_view(
-                        concat<PATH_MAX + 20>("execvp('", exec, "')")));
+                intentional_unsafe_cstring_view(concat<PATH_MAX + 20>("execvp('", exec, "')")));
     } else {
         send_error_and_exit(errnum,
                 intentional_unsafe_cstring_view(concat<PATH_MAX + 20>(

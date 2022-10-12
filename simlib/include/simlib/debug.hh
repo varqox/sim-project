@@ -138,8 +138,7 @@ public:
     ~StackGuard() {
         if (std::uncaught_exceptions() == 1 and uncaught_counter_ == 0 and not inside_catch_) {
             // Remove stack marks that are from earlier exceptions
-            if (marks_collected.size() > 0 and marks_collected.back().stamp < creation_stamp_)
-            {
+            if (marks_collected.size() > 0 and marks_collected.back().stamp < creation_stamp_) {
                 marks_collected.clear();
             }
 
@@ -160,9 +159,9 @@ public:
 #define STACK_UNWINDING_MARK_CONCATENATE_DETAIL(x, y) x##y
 #define STACK_UNWINDING_MARK_CONCAT(x, y) STACK_UNWINDING_MARK_CONCATENATE_DETAIL(x, y)
 
-#define STACK_UNWINDING_MARK                                   \
-    ::stack_unwinding::StackGuard STACK_UNWINDING_MARK_CONCAT( \
-            stack_unwind_mark_no_, __COUNTER__)(__FILE__, __LINE__, __PRETTY_FUNCTION__)
+#define STACK_UNWINDING_MARK                                                                       \
+    ::stack_unwinding::StackGuard STACK_UNWINDING_MARK_CONCAT(stack_unwind_mark_no_, __COUNTER__)( \
+            __FILE__, __LINE__, __PRETTY_FUNCTION__)
 
 #define ERRLOG_CATCH(...)                                                            \
     do {                                                                             \

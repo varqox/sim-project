@@ -103,8 +103,7 @@ public:
     SelectJoin<Params...> join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -112,8 +111,7 @@ public:
     SelectJoin<Params...> left_join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> left_join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -121,8 +119,7 @@ public:
     SelectJoin<Params...> inner_join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> inner_join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -174,8 +171,7 @@ public:
     SelectJoin<Params...> join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -183,8 +179,7 @@ public:
     SelectJoin<Params...> left_join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> left_join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -192,8 +187,7 @@ public:
     SelectJoin<Params...> inner_join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> inner_join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -239,8 +233,7 @@ public:
     SelectJoin<Params...> join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -248,8 +241,7 @@ public:
     SelectJoin<Params...> left_join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> left_join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -257,8 +249,7 @@ public:
     SelectJoin<Params...> inner_join(StringView table_name) &&;
 
     template <template <class...> class T, class... OtherParams,
-            std::enable_if_t<
-                    std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
+            std::enable_if_t<std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,
                     int> = 0>
     SelectJoin<Params..., OtherParams...> inner_join(
             T<OtherParams...> select_query, StringView table_name) &&;
@@ -425,8 +416,7 @@ Condition<Params...>::Condition(std::string condition_sql_str, std::tuple<Params
 , params{std::move(params)} {}
 
 template <class... ParamsA, class... ParamsB>
-Condition<ParamsA..., ParamsB...> operator and(
-        Condition<ParamsA...> a, Condition<ParamsB...> b) {
+Condition<ParamsA..., ParamsB...> operator and(Condition<ParamsA...> a, Condition<ParamsB...> b) {
     if constexpr (sizeof...(ParamsA) == 0) {
         if (a.sql_str == "TRUE") {
             return b;
@@ -444,8 +434,7 @@ Condition<ParamsA..., ParamsB...> operator and(
 }
 
 template <class... ParamsA, class... ParamsB>
-Condition<ParamsA..., ParamsB...> operator or(
-        Condition<ParamsA...> a, Condition<ParamsB...> b) {
+Condition<ParamsA..., ParamsB...> operator or(Condition<ParamsA...> a, Condition<ParamsB...> b) {
     if constexpr (sizeof...(ParamsA) == 0) {
         if (a.sql_str == "FALSE") {
             return b;
@@ -529,24 +518,22 @@ SelectFrom<Params...> Select<Params...>::from(StringView table_name) && {
                 Condition{condition.to_string(), std::forward<CondParam>(cond_param)}); \
     }
 
-#define DEFINE_ORDER_BY(ClassName)                                                        \
-    template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */           \
-    SelectOrderBy<Params...> ClassName<Params...>::order_by(StringView order_sql_str)&& { \
-        return SelectOrderBy<Params...>{                                                  \
-                concat_tostr(std::move(sql_str), " ORDER BY ", order_sql_str),            \
-                std::move(params)};                                                       \
+#define DEFINE_ORDER_BY(ClassName)                                                                 \
+    template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                    \
+    SelectOrderBy<Params...> ClassName<Params...>::order_by(StringView order_sql_str)&& {          \
+        return SelectOrderBy<Params...>{                                                           \
+                concat_tostr(std::move(sql_str), " ORDER BY ", order_sql_str), std::move(params)}; \
     }
 
-#define DEFINE_LIMIT(ClassName)                                                      \
-    template <class... Params>                                                       \
-    template <class... LimitParams> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */ \
-    SelectLimit<Params..., LimitParams...> ClassName<Params...>::limit(              \
-            std::string limit_sql_str, LimitParams&&... limit_params)&& {            \
-        return SelectLimit<Params..., LimitParams...>{                               \
-                concat_tostr(std::move(sql_str), " LIMIT ", limit_sql_str),          \
-                std::tuple_cat(std::move(params),                                    \
-                        std::tuple<LimitParams...>{                                  \
-                                std::forward<LimitParams>(limit_params)...})};       \
+#define DEFINE_LIMIT(ClassName)                                                                   \
+    template <class... Params>                                                                    \
+    template <class... LimitParams> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */              \
+    SelectLimit<Params..., LimitParams...> ClassName<Params...>::limit(                           \
+            std::string limit_sql_str, LimitParams&&... limit_params)&& {                         \
+        return SelectLimit<Params..., LimitParams...>{                                            \
+                concat_tostr(std::move(sql_str), " LIMIT ", limit_sql_str),                       \
+                std::tuple_cat(std::move(params),                                                 \
+                        std::tuple<LimitParams...>{std::forward<LimitParams>(limit_params)...})}; \
     }
 
 #define DEFINE_OPERATOR_SELECT_QUERY(ClassName)                                 \

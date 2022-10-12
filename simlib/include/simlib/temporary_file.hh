@@ -17,8 +17,7 @@ public:
 
     /// The last six characters of template must be "XXXXXX" and these are
     /// replaced with a string that makes the filename unique.
-    explicit TemporaryFile(
-            std::string templ, mode_t mode = S_IRUSR | S_IWUSR /* -rw------- */);
+    explicit TemporaryFile(std::string templ, mode_t mode = S_IRUSR | S_IWUSR /* -rw------- */);
 
     TemporaryFile(const TemporaryFile&) = delete;
     TemporaryFile& operator=(const TemporaryFile&) = delete;

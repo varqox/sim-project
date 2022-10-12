@@ -182,8 +182,7 @@ int blast(int infd, int outfd) noexcept {
     array<char, 65536> buff{};
     ssize_t len = 0;
     ssize_t written = 0;
-    while (len = read(infd, buff.data(), buff.size()),
-            len > 0 || (len == -1 && errno == EINTR)) {
+    while (len = read(infd, buff.data(), buff.size()), len > 0 || (len == -1 && errno == EINTR)) {
         ssize_t pos = 0;
         while (pos < len) {
             written = write(outfd, buff.data() + pos, len - pos);
@@ -214,8 +213,8 @@ int copyat_using_rename(
         InplaceBuff<PATH_MAX> tmp_dest{std::in_place, dest, '.'};
         tmp_dest.resize(tmp_dest.size + suffix_len + 1); // +1 for trailing '\0'
         tmp_dest[--tmp_dest.size] = '\0';
-        auto opt_fd = create_unique_file(dest_dirfd, tmp_dest.data(), tmp_dest.size,
-                suffix_len, O_WRONLY | O_CLOEXEC, mode);
+        auto opt_fd = create_unique_file(
+                dest_dirfd, tmp_dest.data(), tmp_dest.size, suffix_len, O_WRONLY | O_CLOEXEC, mode);
         if (not opt_fd) {
             return -1; // errno is already set
         }

@@ -9,8 +9,8 @@
 #if __has_include(<archive.h>) and __has_include(<archive_entry.h>)
 
 template <class Func>
-static void update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
-        FilePath zip_filename, bool easy_case = false) {
+static void update_add_file_to_zip_impl(
+        Func&& apply_file, StringView new_filename, FilePath zip_filename, bool easy_case = false) {
     constexpr const char* command = "zip";
 
     Spawner::ExitStat es;
@@ -33,8 +33,7 @@ static void update_add_file_to_zip_impl(Func&& apply_file, StringView new_filena
         auto pos = new_filename.rfind('/');
         // If we have to create directories first
         if (pos != StringView::npos and
-                mkdir_r(concat_tostr(tmpdir.path(), new_filename.substr(0, pos))))
-        {
+                mkdir_r(concat_tostr(tmpdir.path(), new_filename.substr(0, pos)))) {
             THROW("mkdir() failed", errmsg());
         }
 
@@ -71,8 +70,7 @@ static void update_add_file_to_zip_impl(Func&& apply_file, StringView new_filena
     }
 }
 
-void update_add_file_to_zip(
-        FilePath filename, StringView new_filename, FilePath zip_filename) {
+void update_add_file_to_zip(FilePath filename, StringView new_filename, FilePath zip_filename) {
     if (new_filename.empty()) {
         return update_add_file_to_zip_impl([](auto&& /*unused*/, auto&& /*unused*/) {},
                 StringView(filename), zip_filename, true);

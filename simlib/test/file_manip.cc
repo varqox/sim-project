@@ -223,9 +223,7 @@ TEST(file_manip, copy_r) {
             return std::pair(path, data) < std::pair(fi.path, fi.data);
         }
 
-        bool operator==(const FileInfo& fi) const {
-            return (path == fi.path and data == fi.data);
-        }
+        bool operator==(const FileInfo& fi) const { return (path == fi.path and data == fi.data); }
     };
 
     vector<FileInfo> orig_files = {
@@ -285,8 +283,8 @@ TEST(file_manip, copy_r) {
                     curr_path.append('/');
                     self(self);
                 } else {
-                    res.push_back({curr_path.to_string(),
-                            get_file_contents(concat(prefix, curr_path))});
+                    res.push_back(
+                            {curr_path.to_string(), get_file_contents(concat(prefix, curr_path))});
                 }
             });
         };

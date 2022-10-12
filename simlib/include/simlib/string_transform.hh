@@ -95,8 +95,8 @@ InplaceBuff<N> decode_uri(StringView str) {
         char c = 0;
         if (str[i] == '%' and i + 2 < str.size() and is_xdigit(str[i + 1]) and
                 is_xdigit(str[i + 2])) {
-            c = static_cast<char>(static_cast<unsigned char>(
-                    (hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2])));
+            c = static_cast<char>(
+                    static_cast<unsigned char>((hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2])));
             i += 2;
         } else if (str[i] == '+') {
             c = ' ';
@@ -175,8 +175,7 @@ std::string json_stringify(Arg&&... arg) {
 // Converts whole @p str to @p T or returns std::nullopt on errors like value
 // represented in @p str is too big or invalid
 template <class T,
-        std::enable_if_t<std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>,
-                int> = 0>
+        std::enable_if_t<std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> = 0>
 constexpr std::optional<T> str2num(StringView str) noexcept {
     if constexpr (std::is_same_v<T, bool>) {
         auto opt = str2num<uint8_t>(str);

@@ -37,7 +37,5 @@ public:
         return buff[0];
     }
 
-    [[nodiscard]] off64_t curr_offset() const noexcept {
-        return buff_end_offset - (len - pos);
-    }
+    [[nodiscard]] off64_t curr_offset() const noexcept { return buff_end_offset - (len - pos); }
 };

@@ -84,13 +84,11 @@ public:
 
     handler_id_t add_time_handler(time_point tp, std::function<void()> handler);
 
-    handler_id_t add_time_handler(
-            time_point::duration duration, std::function<void()> handler);
+    handler_id_t add_time_handler(time_point::duration duration, std::function<void()> handler);
 
     // Will repeat @p handler with pauses of @p interval until it @p handler
     // returns repeating::STOP.
-    void add_repeating_handler(
-            time_point::duration interval, std::function<repeating()> handler);
+    void add_repeating_handler(time_point::duration interval, std::function<repeating()> handler);
 
 private:
     handler_id_t add_time_handler_impl(time_point tp, std::function<void()> handler);

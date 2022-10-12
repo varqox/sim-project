@@ -33,9 +33,7 @@ static string date_impl(CStringView format, time_t curr_time, F func) {
     return buff;
 }
 
-string date(CStringView format, time_t curr_time) {
-    return date_impl(format, curr_time, gmtime_r);
-}
+string date(CStringView format, time_t curr_time) { return date_impl(format, curr_time, gmtime_r); }
 
 string localdate(CStringView format, time_t curr_time) {
     return date_impl(format, curr_time, localtime_r);

@@ -125,16 +125,7 @@ public:
     [[nodiscard]] std::string pretty_dump() const { return pretty_dump(&simple_span_status); }
 };
 
-enum class SolutionLanguage {
-    UNKNOWN,
-    C11,
-    C = C11,
-    CPP11,
-    CPP14,
-    CPP17,
-    CPP = CPP17,
-    PASCAL
-};
+enum class SolutionLanguage { UNKNOWN, C11, C = C11, CPP11, CPP14, CPP17, CPP = CPP17, PASCAL };
 
 inline bool is_source(StringView file) noexcept {
     return has_one_of_suffixes(file, ".c", ".cc", ".cpp", ".cxx", ".pas");
@@ -182,9 +173,9 @@ public:
     virtual void test(
             StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es) = 0;
 
-    virtual void test(StringView test_name, JudgeReport::Test test_report,
-            Sandbox::ExitStat es, Sandbox::ExitStat checker_es,
-            std::optional<uint64_t> checker_mem_limit, StringView checker_error_str) = 0;
+    virtual void test(StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es,
+            Sandbox::ExitStat checker_es, std::optional<uint64_t> checker_mem_limit,
+            StringView checker_error_str) = 0;
 
     virtual void group_score(int64_t score, int64_t max_score, double score_ratio) = 0;
 
@@ -264,8 +255,7 @@ public:
         log("Judging (", (final ? "final" : "initial"), "): {");
     }
 
-    void test(StringView test_name, JudgeReport::Test test_report,
-            Sandbox::ExitStat es) override {
+    void test(StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es) override {
         log_test(test_name, test_report, es, [](auto& /*unused*/) {});
     }
 
@@ -414,8 +404,8 @@ private:
 
 public:
     /// Compiles checker (using sim::compile())
-    int compile_checker(std::optional<std::chrono::nanoseconds> time_limit,
-            std::string* c_errors, size_t c_errors_max_len, const std::string& proot_path);
+    int compile_checker(std::optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
+            size_t c_errors_max_len, const std::string& proot_path);
 
     /// Compiles solution (using sim::compile())
     int compile_solution(FilePath source, SolutionLanguage lang,
@@ -435,8 +425,8 @@ public:
             size_t c_errors_max_len, const std::string& proot_path) {
         STACK_UNWINDING_MARK;
         auto solution_path = package_loader->load_as_file(source, "source");
-        return compile_impl(solution_path, lang, time_limit, c_errors, c_errors_max_len,
-                proot_path, "source", SOLUTION_FILENAME);
+        return compile_impl(solution_path, lang, time_limit, c_errors, c_errors_max_len, proot_path,
+                "source", SOLUTION_FILENAME);
     }
 
     void load_compiled_checker(FilePath compiled_checker) {
@@ -447,8 +437,8 @@ public:
 
     void load_compiled_solution(FilePath compiled_solution) {
         STACK_UNWINDING_MARK;
-        thread_fork_safe_copy(compiled_solution,
-                concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755);
+        thread_fork_safe_copy(
+                compiled_solution, concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755);
     }
 
     void save_compiled_checker(
@@ -462,8 +452,7 @@ public:
     void save_compiled_solution(
             FilePath destination, int (*copy_fn)(FilePath, FilePath, mode_t) = copy) const {
         STACK_UNWINDING_MARK;
-        if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), destination, S_0755))
-        {
+        if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), destination, S_0755)) {
             THROW("copy()", errmsg());
         }
     }
@@ -485,13 +474,12 @@ public:
 private:
     template <class Func>
     JudgeReport process_tests(bool final, JudgeLogger& judge_log,
-            const std::optional<std::function<void(const JudgeReport&)>>&
-                    partial_report_callback,
+            const std::optional<std::function<void(const JudgeReport&)>>& partial_report_callback,
             Func&& judge_on_test) const;
 
     JudgeReport judge_interactive(bool final, JudgeLogger& judge_log,
-            const std::optional<std::function<void(const JudgeReport&)>>&
-                    partial_report_callback = std::nullopt) const;
+            const std::optional<std::function<void(const JudgeReport&)>>& partial_report_callback =
+                    std::nullopt) const;
 
 public:
     /**
@@ -503,8 +491,8 @@ public:
      * @return Judge report
      */
     JudgeReport judge(bool final, JudgeLogger& judge_log,
-            const std::optional<std::function<void(const JudgeReport&)>>&
-                    partial_report_callback = std::nullopt) const;
+            const std::optional<std::function<void(const JudgeReport&)>>& partial_report_callback =
+                    std::nullopt) const;
 
     [[nodiscard]] JudgeReport judge(bool final) const {
         VerboseJudgeLogger logger;

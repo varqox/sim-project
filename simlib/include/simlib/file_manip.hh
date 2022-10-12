@@ -259,8 +259,7 @@ inline void thread_fork_safe_copy(FilePath src, FilePath dest, mode_t mode) {
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-[[nodiscard]] int copy_rat(
-        int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
+[[nodiscard]] int copy_rat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -297,8 +296,7 @@ inline void thread_fork_safe_copy(FilePath src, FilePath dest, mode_t mode) {
  *
  * @return Return value of rename(2) or copy_r() or remove_r()
  */
-[[nodiscard]] int move(
-        FilePath oldpath, FilePath newpath, bool create_subdirs = true) noexcept;
+[[nodiscard]] int move(FilePath oldpath, FilePath newpath, bool create_subdirs = true) noexcept;
 
 /**
  * @brief Creates file pathname with access mode @p mode

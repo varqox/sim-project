@@ -39,9 +39,7 @@ uint AhoCorasick::son(uint id, char c) {
 
     if (beg == nodes[id].sons.size() || nodes[id].sons[beg].first != c) {
         nodes.emplace_back();
-        return nodes[id]
-                .sons.emplace(nodes[id].sons.begin() + beg, c, nodes.size() - 1)
-                ->second;
+        return nodes[id].sons.emplace(nodes[id].sons.begin() + beg, c, nodes.size() - 1)->second;
     }
 
     return nodes[id].sons[beg].second;

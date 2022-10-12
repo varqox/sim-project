@@ -35,8 +35,7 @@ inline int pidfd_getfd(int pidfd, int targetfd, unsigned int flags) noexcept {
 #endif
 
 #ifdef SYS_pidfd_send_signal
-inline int pidfd_send_signal(
-        int pidfd, int sig, siginfo_t* info, unsigned int flags) noexcept {
+inline int pidfd_send_signal(int pidfd, int sig, siginfo_t* info, unsigned int flags) noexcept {
     return static_cast<int>(syscall(SYS_pidfd_send_signal, pidfd, sig, info, flags));
 }
 #endif

@@ -48,9 +48,7 @@ public:
 
     void read_failed(int errnum) override { stdlog("warning: read()", errmsg(errnum)); }
 
-    void started_watching(const std::string& file) override {
-        stdlog("Started watching: ", file);
-    }
+    void started_watching(const std::string& file) override { stdlog("Started watching: ", file); }
 };
 
 class FileModificationMonitor {

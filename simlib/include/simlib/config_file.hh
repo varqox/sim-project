@@ -20,8 +20,7 @@ public:
 
         template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
         ParseError(size_t line, size_t pos, Args&&... msg)
-        : runtime_error(
-                  concat_tostr("line ", line, ':', pos, ": ", std::forward<Args>(msg)...)) {}
+        : runtime_error(concat_tostr("line ", line, ':', pos, ": ", std::forward<Args>(msg)...)) {}
 
         ParseError(const ParseError& pe) = default;
         ParseError(ParseError&&) noexcept = default;
@@ -82,9 +81,7 @@ public:
         [[nodiscard]] const std::string& as_string() const noexcept { return str_; }
 
         // Returns value as array (empty if not an array or variable isn't set)
-        [[nodiscard]] const std::vector<std::string>& as_array() const noexcept {
-            return arr_;
-        }
+        [[nodiscard]] const std::vector<std::string>& as_array() const noexcept { return arr_; }
 
         [[nodiscard]] ValueSpan value_span() const noexcept { return value_span_; }
 

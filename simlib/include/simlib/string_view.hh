@@ -129,21 +129,13 @@ public:
 
     constexpr auto rend() noexcept { return reverse_iterator(begin()); }
 
-    [[nodiscard]] constexpr auto rbegin() const noexcept {
-        return const_reverse_iterator(end());
-    }
+    [[nodiscard]] constexpr auto rbegin() const noexcept { return const_reverse_iterator(end()); }
 
-    [[nodiscard]] constexpr auto rend() const noexcept {
-        return const_reverse_iterator(begin());
-    }
+    [[nodiscard]] constexpr auto rend() const noexcept { return const_reverse_iterator(begin()); }
 
-    [[nodiscard]] constexpr auto crbegin() const noexcept {
-        return const_reverse_iterator(cend());
-    }
+    [[nodiscard]] constexpr auto crbegin() const noexcept { return const_reverse_iterator(cend()); }
 
-    [[nodiscard]] constexpr auto crend() const noexcept {
-        return const_reverse_iterator(cbegin());
-    }
+    [[nodiscard]] constexpr auto crend() const noexcept { return const_reverse_iterator(cbegin()); }
 
     // Returns reference to first element
     constexpr reference front() noexcept { return str[0]; }
@@ -222,8 +214,7 @@ public:
         return rc != 0 ? rc : (len == s.len ? 0 : ((len < s.len) ? -1 : 1));
     }
 
-    [[nodiscard]] constexpr int compare(
-            size_type pos, size_type count, const StringBase& s) const {
+    [[nodiscard]] constexpr int compare(size_type pos, size_type count, const StringBase& s) const {
         return substr(pos, count).compare(s);
     }
 
@@ -303,8 +294,7 @@ public:
         return npos;
     }
 
-    [[nodiscard]] constexpr size_type find(
-            Char c, size_type beg, size_type endi) const noexcept {
+    [[nodiscard]] constexpr size_type find(Char c, size_type beg, size_type endi) const noexcept {
         if (endi > len) {
             endi = len;
         }
@@ -395,8 +385,7 @@ public:
         return npos;
     }
 
-    [[nodiscard]] constexpr size_type rfind(
-            Char c, size_type beg, size_type endi) const noexcept {
+    [[nodiscard]] constexpr size_type rfind(Char c, size_type beg, size_type endi) const noexcept {
         if (endi > len) {
             endi = len;
         }
@@ -783,9 +772,7 @@ constexpr StringView substring(const StringView& str, StringView::size_type beg,
 }
 
 // Like string::find() but searches in [beg, end)
-constexpr size_t find(const StringView& str, char c, size_t beg = 0) {
-    return str.find(c, beg);
-}
+constexpr size_t find(const StringView& str, char c, size_t beg = 0) { return str.find(c, beg); }
 
 // Like string::find() but searches in [beg, end)
 constexpr size_t find(const StringView& str, char c, size_t beg, size_t end) {

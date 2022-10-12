@@ -28,16 +28,14 @@ TEST(http, UrlParser) {
     // Parsing
     static_assert(UrlParser<url, is_xyz>::try_parse("/-8/abcxyz/42/hohyha/7/xyz") ==
             std::tuple(-8, 42, "hohyha", 7, std::tuple()));
-    static_assert(
-            UrlParser<url, is_xyz>::try_parse("/-8/abcxyz/42/hohyha/-7/xyz") == std::nullopt);
+    static_assert(UrlParser<url, is_xyz>::try_parse("/-8/abcxyz/42/hohyha/-7/xyz") == std::nullopt);
     static_assert(std::is_same_v<typename UrlParser<url, is_xyz>::HandlerArgsTuple,
             std::tuple<int64_t, int64_t, StringView, uint64_t, std::tuple<>>>);
     // Prefixes and suffixes
     static constexpr char url1[] = "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}";
     static_assert(UrlParser<url1, is_xyz>::literal_prefix == "/a/bc/def/hijk/");
     static_assert(UrlParser<url1, is_xyz>::literal_suffix.empty());
-    static constexpr char url2[] =
-            "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}/";
+    static constexpr char url2[] = "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}/";
     static_assert(UrlParser<url2, is_xyz>::literal_prefix == "/a/bc/def/hijk/");
     static_assert(UrlParser<url2, is_xyz>::literal_suffix == "/");
     static constexpr char url3[] =
@@ -62,8 +60,7 @@ TEST(http, UrlParser) {
     static constexpr char url8[] = "/{i64}/x/{string}";
     static_assert(UrlParser<url8>::try_parse("/123/x/") == std::tuple(123, ""));
     static_assert(UrlParser<url8>::try_parse("/123/x/4a02bc") == std::tuple(123, "4a02bc"));
-    static_assert(
-            UrlParser<url8>::try_parse("/123/x") == std::nullopt); // Every '/' is required
+    static_assert(UrlParser<url8>::try_parse("/123/x") == std::nullopt); // Every '/' is required
 }
 
 // NOLINTNEXTLINE

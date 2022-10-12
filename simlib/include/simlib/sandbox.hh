@@ -125,8 +125,6 @@ public:
      */
     ExitStat run(
             FilePath exec, const std::vector<std::string>& exec_args,
-            const Options& opts = Options(),
-            const std::vector<AllowedFile>& allowed_files = {},
-            const std::function<void(pid_t)>& do_in_parent_after_fork = [](pid_t /*unused*/) {
-            });
+            const Options& opts = Options(), const std::vector<AllowedFile>& allowed_files = {},
+            const std::function<void(pid_t)>& do_in_parent_after_fork = [](pid_t /*unused*/) {});
 };

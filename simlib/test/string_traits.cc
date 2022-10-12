@@ -80,14 +80,11 @@ TEST(string_traits, is_alpha) {
 
 // NOLINTNEXTLINE
 TEST(string_traits, is_alnum) {
-    EXPECT_EQ(
-            true, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+    EXPECT_EQ(true, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
 
     EXPECT_EQ(false, is_alnum(""));
-    EXPECT_EQ(false,
-            is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH-IJKLMNOPQRSTUVWXYZ"));
-    EXPECT_EQ(
-            false, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG#IJKLMNOPQRSTUVWXYZ"));
+    EXPECT_EQ(false, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH-IJKLMNOPQRSTUVWXYZ"));
+    EXPECT_EQ(false, is_alnum("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG#IJKLMNOPQRSTUVWXYZ"));
 }
 
 // NOLINTNEXTLINE

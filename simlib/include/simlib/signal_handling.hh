@@ -130,8 +130,8 @@ public:
 
             if (pfds[signal_efd_idx].revents & POLLIN) {
                 uint64_t packed_signum = 0;
-                auto read_bytes = read(HandleSignalsWhileRunning::signal_eventfd,
-                        &packed_signum, sizeof(packed_signum));
+                auto read_bytes = read(HandleSignalsWhileRunning::signal_eventfd, &packed_signum,
+                        sizeof(packed_signum));
                 assert(read_bytes == sizeof(packed_signum));
                 int signum = HandleSignalsWhileRunning::unpack_signum(packed_signum);
 

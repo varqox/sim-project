@@ -69,9 +69,7 @@ public:
     /// it)
     [[nodiscard]] int fileno() const noexcept { return ::fileno(f_); }
 
-    [[nodiscard]] bool label() const noexcept {
-        return label_.load(std::memory_order_relaxed);
-    }
+    [[nodiscard]] bool label() const noexcept { return label_.load(std::memory_order_relaxed); }
 
     bool label(bool add_label) noexcept { return label_.exchange(add_label); }
 
@@ -99,8 +97,7 @@ public:
         }
 
         /// Deeply integrated with flush() and flush_no_nl()
-        void flush_impl(
-                const char* format1, const char* format2, const char* format3) noexcept;
+        void flush_impl(const char* format1, const char* format2, const char* format3) noexcept;
 
     public:
         Appender(const Appender&) = delete;

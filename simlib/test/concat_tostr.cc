@@ -18,8 +18,8 @@ TEST(concat_tostr, concat_tostr) {
     EXPECT_NE(StringView("a\0\0abc", 6), concat_tostr('a', '\0', '\0', "abcd"));
 
     EXPECT_EQ("abc true 0 1 -1 2 3 -3 false",
-            concat_tostr("abc ", true, " ", 0, ' ', 1, ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ',
-                    false));
+            concat_tostr(
+                    "abc ", true, " ", 0, ' ', 1, ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ', false));
 
     EXPECT_EQ(" bac-1234567890123456789\t", concat_tostr(" bac", -1234567890123456789, '\t'));
 }
@@ -57,12 +57,10 @@ TEST(concat_tostr, back_insert) {
     test_back_insert_on(__LINE__, "", "", "", "", "");
     test_back_insert_on(__LINE__, "ab c de", "a", 'b', ' ', "c ", "de");
     test_back_insert_on(__LINE__, "ab c de", "a", 'b', ' ', CStringView("c "), string("de"));
-    test_back_insert_on(
-            __LINE__, StringView("a\0\0abc", 6), 'a', '\0', '\0', StringView("abc"));
+    test_back_insert_on(__LINE__, StringView("a\0\0abc", 6), 'a', '\0', '\0', StringView("abc"));
 
-    test_back_insert_on(__LINE__, "abc true 0 1 -1 2 3 -3 false", "abc ", true, " ", 0, ' ', 1,
-            ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ', false);
+    test_back_insert_on(__LINE__, "abc true 0 1 -1 2 3 -3 false", "abc ", true, " ", 0, ' ', 1, ' ',
+            -1, " ", 2, ' ', 3, ' ', -3, ' ', false);
 
-    test_back_insert_on(
-            __LINE__, " bac-1234567890123456789\t", " bac", -1234567890123456789, '\t');
+    test_back_insert_on(__LINE__, " bac-1234567890123456789\t", " bac", -1234567890123456789, '\t');
 }

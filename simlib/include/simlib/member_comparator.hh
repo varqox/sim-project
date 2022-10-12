@@ -20,9 +20,7 @@ public:
     explicit MemberComparator(std::in_place_t /*unused*/, Args&&... args)
     : compare(std::forward<Args>(args)...) {}
 
-    bool operator()(const Class& a, const Class& b) const {
-        return compare(a.*member, b.*member);
-    }
+    bool operator()(const Class& a, const Class& b) const { return compare(a.*member, b.*member); }
 };
 
 #define MEMBER_COMPARATOR(Class, member) \

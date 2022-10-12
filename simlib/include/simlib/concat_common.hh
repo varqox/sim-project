@@ -14,9 +14,7 @@ constexpr auto string_length(const char* str) noexcept {
     return std::char_traits<char>::length(str);
 }
 
-constexpr auto string_length(char* str) noexcept {
-    return std::char_traits<char>::length(str);
-}
+constexpr auto string_length(char* str) noexcept { return std::char_traits<char>::length(str); }
 
 template <class T, std::enable_if_t<meta::has_method_data<const T&>, int> = 0>
 constexpr auto data(const T& x) noexcept {
@@ -38,8 +36,7 @@ constexpr decltype(auto) stringify(T&& x) {
 
 namespace detail {
 
-template <class T,
-        class = decltype(string_length(stringify(std::forward<T>(std::declval<T>()))))>
+template <class T, class = decltype(string_length(stringify(std::forward<T>(std::declval<T>()))))>
 constexpr auto is_string_argument(int) -> std::true_type;
 
 template <class>

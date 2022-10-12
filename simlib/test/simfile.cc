@@ -675,8 +675,7 @@ TEST(Simfile, validate_files) {
 
                 sf = sim::Simfile{contents};
                 sf.load_solutions();
-                EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error)
-                        << "i: " << i;
+                EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error) << "i: " << i;
             };
 
             string val = std::move(sols[i]);
@@ -714,15 +713,13 @@ TEST(Simfile, validate_files) {
                                 std::tuple_size<decltype(files)>::value,
                         "Each test has one in and one out file");
                 for (uint j = 0; j < files.size(); j += 2) {
-                    back_insert(
-                            contents, tests[j >> 1], ' ', files[j], ' ', files[j + 1], '\n');
+                    back_insert(contents, tests[j >> 1], ' ', files[j], ' ', files[j + 1], '\n');
                 }
                 contents += "\n]";
 
                 sf = sim::Simfile{contents};
                 sf.load_tests_with_files();
-                EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error)
-                        << "i: " << i;
+                EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error) << "i: " << i;
             };
 
             string val = std::move(files[i]);

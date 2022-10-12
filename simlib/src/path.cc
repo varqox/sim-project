@@ -63,8 +63,7 @@ string path_absolute(StringView path, string curr_dir) {
     return curr_path;
 }
 
-std::optional<std::string> deepest_ancestor_dir_with_subpath(
-        std::string path, StringView subpath) {
+std::optional<std::string> deepest_ancestor_dir_with_subpath(std::string path, StringView subpath) {
     subpath.remove_leading('/');
     while (true) {
         size_t path_len = path_dirpath(path).size();

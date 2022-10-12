@@ -36,8 +36,8 @@ public:
 
         ExitStat() = default;
 
-        ExitStat(std::chrono::nanoseconds rt, std::chrono::nanoseconds cpu_time, int sic,
-                int sis, const struct rusage& rus, uint64_t vp, std::string msg = {})
+        ExitStat(std::chrono::nanoseconds rt, std::chrono::nanoseconds cpu_time, int sic, int sis,
+                const struct rusage& rus, uint64_t vp, std::string msg = {})
         : runtime(rt)
         , cpu_runtime(cpu_time)
         , si{sic, sis}
@@ -130,8 +130,7 @@ public:
     static ExitStat run(
             FilePath exec, const std::vector<std::string>& exec_args,
             const Options& opts = Options(),
-            const std::function<void(pid_t)>& do_in_parent_after_fork = [](pid_t /*unused*/) {
-            });
+            const std::function<void(pid_t)>& do_in_parent_after_fork = [](pid_t /*unused*/) {});
 
 protected:
     // Sends @p str through @p fd and _exits with -1

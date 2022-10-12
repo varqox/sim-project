@@ -171,8 +171,7 @@ TEST(path, path_dirpath) {
 // NOLINTNEXTLINE
 TEST(path, deepest_ancestor_dir_with_subpath_absolute_path) {
     TemporaryDirectory tmp_dir("/tmp/path.test.XXXXXX");
-    StringView tmp_dir_pathname =
-            StringView(tmp_dir.path()).without_trailing('/').remove_prefix(5);
+    StringView tmp_dir_pathname = StringView(tmp_dir.path()).without_trailing('/').remove_prefix(5);
     assert(has_prefix(tmp_dir_pathname, "path.test."));
     assert(tmp_dir_pathname.size() == 16);
 
@@ -209,8 +208,7 @@ TEST(path, deepest_ancestor_dir_with_subpath_absolute_path) {
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "tmp"), "/tmp");
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c/", "tmp/"), "/tmp/");
 
-    EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "d/file"),
-            std::nullopt);
+    EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "d/file"), std::nullopt);
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "e/file"),
             tmp_dir.path() + "a/b/e/file");
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "f/file"),
@@ -225,8 +223,8 @@ TEST(path, deepest_ancestor_dir_with_subpath_absolute_path) {
             tmp_dir.path() + "a/b/");
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "/f/file"),
             tmp_dir.path() + "a/f/file");
-    EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "xxxxxxxxx"),
-            std::nullopt);
+    EXPECT_EQ(
+            deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "xxxxxxxxx"), std::nullopt);
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", tmp_dir_pathname),
             concat_tostr("/tmp/", tmp_dir_pathname));
     EXPECT_EQ(deepest_ancestor_dir_with_subpath(tmp_dir.path() + "a/b/c", "tmp"), "/tmp");

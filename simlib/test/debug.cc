@@ -243,8 +243,7 @@ TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
                 errlog("BUG");
                 (void)WONT_THROW(abc.at(42));
             },
-            ::testing::KilledBySignal(SIGABRT),
-            "^BUG\nBUG: this was expected to not throw\n$");
+            ::testing::KilledBySignal(SIGABRT), "^BUG\nBUG: this was expected to not throw\n$");
 }
 
 // NOLINTNEXTLINE

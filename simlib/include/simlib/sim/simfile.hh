@@ -102,8 +102,8 @@ public:
         std::chrono::nanoseconds time_limit;
         uint64_t memory_limit; // in bytes
 
-        explicit Test(std::string n = "",
-                std::chrono::nanoseconds tl = std::chrono::nanoseconds(0), uint64_t ml = 0)
+        explicit Test(std::string n = "", std::chrono::nanoseconds tl = std::chrono::nanoseconds(0),
+                uint64_t ml = 0)
         : name(std::move(n))
         , time_limit(tl)
         , memory_limit(ml) {}
@@ -277,8 +277,7 @@ private:
      * @param item - the item to parse
      * @return (test name, path to input file, path to output file)
      */
-    static std::tuple<StringView, StringView, StringView> parse_test_files_item(
-            StringView item);
+    static std::tuple<StringView, StringView, StringView> parse_test_files_item(StringView item);
 
 public:
     /**

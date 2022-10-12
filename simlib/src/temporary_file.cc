@@ -10,8 +10,8 @@
 
 TemporaryFile::TemporaryFile(std::string templ, mode_t mode) {
     assert(has_suffix(templ, "XXXXXX"));
-    auto opt_fd = create_unique_file(
-            AT_FDCWD, templ.data(), templ.size(), 6, O_RDONLY | O_CLOEXEC, mode);
+    auto opt_fd =
+            create_unique_file(AT_FDCWD, templ.data(), templ.size(), 6, O_RDONLY | O_CLOEXEC, mode);
     if (not opt_fd) {
         THROW("create_unique_file()", errmsg());
     }

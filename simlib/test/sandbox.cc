@@ -60,14 +60,12 @@ private:
     static bool killed_or_dumped_by_abort(
             const ExitStatSiCode& si_code, const ExitStatMessage& message) {
         return ((si_code == CLD_KILLED and message == "killed by signal 6 - Aborted") or
-                (si_code == CLD_DUMPED and
-                        message == "killed and dumped by signal 6 - Aborted"));
+                (si_code == CLD_DUMPED and message == "killed and dumped by signal 6 - Aborted"));
     }
 
     static bool killed_or_dumped_by_segv(
             const ExitStatSiCode& si_code, const ExitStatMessage& message) {
-        return ((si_code == CLD_KILLED and
-                        message == "killed by signal 11 - Segmentation fault") or
+        return ((si_code == CLD_KILLED and message == "killed by signal 11 - Segmentation fault") or
                 (si_code == CLD_DUMPED and
                         message == "killed and dumped by signal 11 - Segmentation fault"));
     }
@@ -152,8 +150,7 @@ public:
         EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
         // compile_test_case("6.c"); // not needed
-        es = Sandbox().run(
-                executable_.path(), {}, SANDBOX_OPTIONS, {{"/tmp", OpenAccess::RDONLY}});
+        es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS, {{"/tmp", OpenAccess::RDONLY}});
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, "");
@@ -451,8 +448,8 @@ private:
         FileDescriptor dev_null("/dev/null", O_RDWR | O_CLOEXEC);
         throw_assert(dev_null != -1);
         return {std::move(dev_null),
-                Sandbox::Options(dev_null, dev_null, dev_null, REAL_TIME_LIMIT, MEM_LIMIT,
-                        CPU_TIME_LIMIT)};
+                Sandbox::Options(
+                        dev_null, dev_null, dev_null, REAL_TIME_LIMIT, MEM_LIMIT, CPU_TIME_LIMIT)};
     }
 
 public:
@@ -560,8 +557,7 @@ TEST(Sandbox, run) {
     stdlog.label(false);
 
     for (const auto& path : {string{"."}, executable_path(getpid())}) {
-        auto tests_dir_opt =
-                deepest_ancestor_dir_with_subpath(path, "test/sandbox_test_cases/");
+        auto tests_dir_opt = deepest_ancestor_dir_with_subpath(path, "test/sandbox_test_cases/");
         if (tests_dir_opt) {
             SandboxTestRunner(*tests_dir_opt).run();
             return;

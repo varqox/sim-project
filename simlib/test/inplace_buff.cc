@@ -93,8 +93,7 @@ void test_constructors(size_t size) {
         // Inplace construct from string two times
         auto str1 = random_bytes(size);
         auto str2 = random_bytes(size);
-        auto ibuff =
-                InplaceBuff<N>{std::in_place, string{str1}, string{str2}}; // use string copies
+        auto ibuff = InplaceBuff<N>{std::in_place, string{str1}, string{str2}}; // use string copies
         auto str = str1 + str2;
         EXPECT_EQ(StringView{ibuff}, StringView{str});
         random_check(ibuff, std::move(str));
@@ -113,8 +112,7 @@ void test_constructors(size_t size) {
         auto str1 = random_bytes(size);
         auto str2 = random_bytes(size);
         auto str3 = random_bytes(size);
-        auto ibuff =
-                InplaceBuff<N>{string{str1}, string{str2}, string{str3}}; // use string copies
+        auto ibuff = InplaceBuff<N>{string{str1}, string{str2}, string{str3}}; // use string copies
         auto str = str1 + str2 + str3;
         EXPECT_EQ(StringView{ibuff}, StringView{str});
         random_check(ibuff, std::move(str));

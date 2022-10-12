@@ -92,9 +92,7 @@ inline void write_all_throw(int fd, const void* buff, size_t count) {
  *
  * @errors If any error occurs then an exception is thrown
  */
-inline void write_all_throw(int fd, StringView str) {
-    write_all_throw(fd, str.data(), str.size());
-}
+inline void write_all_throw(int fd, StringView str) { write_all_throw(fd, str.data(), str.size()); }
 
 /**
  * @brief Reads until end of file

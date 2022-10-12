@@ -25,9 +25,7 @@ public:
     explicit MutexedValue(Args&&... args)
     : value_(std::forward<Args>(args)...) {}
 
-    std::pair<std::lock_guard<std::mutex>, T&> get() {
-        return {std::lock_guard(mtx_), value_};
-    }
+    std::pair<std::lock_guard<std::mutex>, T&> get() { return {std::lock_guard(mtx_), value_}; }
 
     template <class Func>
     auto perform(Func&& operation) {

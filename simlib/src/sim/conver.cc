@@ -191,8 +191,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
         return has_one_of_suffixes(file, ".pdf", ".md", ".txt");
     };
 
-    if (sf.statement and exists_in_pkg(sf.statement.value()) and
-            is_statement(sf.statement.value()))
+    if (sf.statement and exists_in_pkg(sf.statement.value()) and is_statement(sf.statement.value()))
     {
         // OK
     } else {
@@ -315,14 +314,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
         assert(has_prefix(path, main_dir));
         path.remove_prefix(main_dir.size());
 
-        if (not(has_suffix(path, ".in") or (has_suffix(path, ".out") and not sf.interactive)))
-        {
+        if (not(has_suffix(path, ".in") or (has_suffix(path, ".out") and not sf.interactive))) {
             return;
         }
 
-        StringView test_name = path.substr(0, path.rfind('.')).extract_trailing([](char c) {
-            return c != '/';
-        });
+        StringView test_name =
+                path.substr(0, path.rfind('.')).extract_trailing([](char c) { return c != '/'; });
 
         auto it = opts.seek_for_new_tests ? tests.try_emplace(test_name).first
                                           : tests.find(test_name);
@@ -344,8 +341,8 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
             assert(not sf.interactive);
             if (test.out.has_value()) {
                 report_.append("\033[1;35mwarning\033[m: output file for test `", test_name,
-                        "` was found in more than one location: `", test.out.value(),
-                        "` and `", path, "`, choosing the latter");
+                        "` was found in more than one location: `", test.out.value(), "` and `",
+                        path, "`, choosing the latter");
             }
             test.out = path;
         }
@@ -511,8 +508,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
     // Load scoring
     auto const& scoring = sf.config["scoring"];
     if (not opts.ignore_simfile and not opts.reset_scoring and scoring.is_set() and
-            scoring.is_array())
-    {
+            scoring.is_array()) {
         for (auto const& str : scoring.as_array()) {
             StringView gid;
             int64_t score = 0;
@@ -551,12 +547,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 
         // Group 0 always has score equal to 0
         if (auto it = tests_groups.find("0");
-                it != tests_groups.end() and !it->second.score.has_value())
-        {
+                it != tests_groups.end() and !it->second.score.has_value()) {
             it->second.score = 0;
             --unscored_tests;
-            report_.append(
-                    "Auto-scoring: score of the group with id `", it->first, "` set to 0");
+            report_.append("Auto-scoring: score of the group with id `", it->first, "` set to 0");
         }
 
         // Distribute scoring

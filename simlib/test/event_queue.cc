@@ -463,8 +463,7 @@ TEST(EventQueue_DeathTest, time_handler_removes_itself) {
             {
                 EventQueue eq;
                 EventQueue::handler_id_t hid;
-                hid = eq.add_time_handler(
-                        system_clock::now(), [&] { eq.remove_handler(hid); });
+                hid = eq.add_time_handler(system_clock::now(), [&] { eq.remove_handler(hid); });
                 eq.run();
             },
             ::testing::KilledBySignal(SIGABRT), "BUG");

@@ -242,8 +242,8 @@ void Simfile::load_global_memory_limit_only() {
         };
 
         if (!is_digit_not_greater_than<(
-                        std::numeric_limits<decltype(global_mem_limit)::value_type>::max() >>
-                        20)>(ml.as_string()))
+                        std::numeric_limits<decltype(global_mem_limit)::value_type>::max() >> 20)>(
+                    ml.as_string()))
         {
             if (!is_digit(ml.as_string())) {
                 throw invalid_mem_limit();
@@ -307,8 +307,7 @@ Simfile::parse_limits_item(StringView item) {
     auto memory_limit_opt = str2num<MemLimitType>(sp, 1, max_mem_limit);
     if (not memory_limit_opt) {
         throw std::runtime_error(concat_tostr("Simfile: invalid memory limit for the test `",
-                test_name, "` - it has to be a positive integer not greater than",
-                max_mem_limit));
+                test_name, "` - it has to be a positive integer not greater than", max_mem_limit));
     }
 
     auto memory_limit = *memory_limit_opt << 20; // Convert from MiB to bytes
@@ -403,9 +402,8 @@ void Simfile::load_tests() {
             auto [gid, score] = parse_scoring_item(str);
 
             if (tests_groups.find(gid) == tests_groups.end()) {
-                throw std::runtime_error{
-                        concat_tostr("Simfile: scoring of the invalid group `", gid,
-                                "` - there is no test belonging to this group")};
+                throw std::runtime_error{concat_tostr("Simfile: scoring of the invalid group `",
+                        gid, "` - there is no test belonging to this group")};
             }
 
             auto&& it = gid_to_score.emplace(gid, 0);
@@ -438,14 +436,12 @@ void Simfile::load_tests() {
 
     // Sort tests in groups
     for (auto& group : tgroups) {
-        sort(group.tests, [](const Test& a, const Test& b) {
-            return TestNameComparator()(a.name, b.name);
-        });
+        sort(group.tests,
+                [](const Test& a, const Test& b) { return TestNameComparator()(a.name, b.name); });
     }
 }
 
-std::tuple<StringView, StringView, StringView> Simfile::parse_test_files_item(
-        StringView item) {
+std::tuple<StringView, StringView, StringView> Simfile::parse_test_files_item(StringView item) {
     SimpleParser sp(item);
     StringView name = sp.extract_next_non_empty(is_space<char>);
     StringView input = sp.extract_next_non_empty(is_space<char>);
@@ -454,8 +450,8 @@ std::tuple<StringView, StringView, StringView> Simfile::parse_test_files_item(
     sp.remove_leading(is_space<char>);
     if (not sp.empty()) {
         throw std::runtime_error{
-                concat_tostr("Simfile: `tests_files`: invalid format of entry for test `",
-                        name, "` - excess part: ", sp)};
+                concat_tostr("Simfile: `tests_files`: invalid format of entry for test `", name,
+                        "` - excess part: ", sp)};
     }
 
     return {name, input, output};
@@ -489,9 +485,9 @@ void Simfile::load_tests_files() {
         }
 
         if (interactive and not out_file.empty()) {
-            throw std::runtime_error(concat_tostr(
-                    "Simfile: `test_files`: output file specified for test `", test_name,
-                    "`, but interactive problems have no test output files"));
+            throw std::runtime_error(
+                    concat_tostr("Simfile: `test_files`: output file specified for test `",
+                            test_name, "`, but interactive problems have no test output files"));
         }
 
         if (not interactive and out_file.empty()) {
@@ -511,8 +507,8 @@ void Simfile::load_tests_files() {
         for (Test& test : group.tests) {
             auto it = files.find(test.name);
             if (it == files.end()) {
-                throw std::runtime_error{concat_tostr(
-                        "Simfile: no files specified for the test `", test.name, '`')};
+                throw std::runtime_error{
+                        concat_tostr("Simfile: no files specified for the test `", test.name, '`')};
             }
 
             // Secure paths, so that it is not going outside the package
@@ -533,8 +529,7 @@ void Simfile::load_tests_files() {
 void Simfile::validate_files(StringView package_path) const {
     // Checker
     if (checker.has_value() and
-            (checker->empty() or
-                    not is_regular_file(concat(package_path, '/', checker.value()))))
+            (checker->empty() or not is_regular_file(concat(package_path, '/', checker.value()))))
     {
         throw std::runtime_error{
                 concat_tostr("Simfile: invalid checker file `", checker.value(), '`')};
@@ -549,8 +544,7 @@ void Simfile::validate_files(StringView package_path) const {
     // Solutions
     for (auto&& str : solutions) {
         if (!is_regular_file(concat(package_path, '/', str))) {
-            throw std::runtime_error{
-                    concat_tostr("Simfile: invalid solution file `", str, '`')};
+            throw std::runtime_error{concat_tostr("Simfile: invalid solution file `", str, '`')};
         }
     }
 
@@ -563,8 +557,8 @@ void Simfile::validate_files(StringView package_path) const {
             }
             if (test.out.has_value() and
                     !is_regular_file(concat(package_path, '/', test.out.value()))) {
-                throw std::runtime_error{concat_tostr(
-                        "Simfile: invalid test output file `", test.out.value(), '`')};
+                throw std::runtime_error{
+                        concat_tostr("Simfile: invalid test output file `", test.out.value(), '`')};
             }
         }
     }

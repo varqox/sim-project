@@ -15,8 +15,7 @@ TEST(concat, concat) {
     EXPECT_NE(StringView("a\0\0abc", 6), concat('a', '\0', '\0', "abcd"));
 
     EXPECT_EQ("abc true 0 1 -1 2 3 -3 false",
-            concat("abc ", true, " ", 0, ' ', 1, ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ',
-                    false));
+            concat("abc ", true, " ", 0, ' ', 1, ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ', false));
 
     EXPECT_EQ(" bac-1234567890123456789\t", concat(" bac", -1234567890123456789, '\t'));
 }

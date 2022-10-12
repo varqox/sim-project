@@ -98,8 +98,8 @@ void skim_zip(int fd, UnaryFunc&& entry_callback) {
  */
 template <class UnaryFunc>
 void skim_zip(FilePath filename, UnaryFunc&& entry_callback) {
-    return skim_archive(filename, archive_read_support_format_zip,
-            std::forward<UnaryFunc>(entry_callback));
+    return skim_archive(
+            filename, archive_read_support_format_zip, std::forward<UnaryFunc>(entry_callback));
 }
 
 /**
@@ -310,8 +310,7 @@ inline void extract_zip(
 }
 
 /// Extracts zip, for details see extract() documentation
-inline void extract_zip(
-        int zip_fd, int flags = ARCHIVE_EXTRACT_TIME, StringView dest_dir = ".") {
+inline void extract_zip(int zip_fd, int flags = ARCHIVE_EXTRACT_TIME, StringView dest_dir = ".") {
     return extract_zip(
             zip_fd, flags, [](archive_entry* /*unused*/) { return true; }, dest_dir);
 }
@@ -488,16 +487,14 @@ inline void compress(
  */
 template <class Container>
 void compress_into_zip(Container&& filenames, FilePath zip_archive_filename) {
-    return compress(std::forward<Container>(filenames), zip_archive_filename,
-            archive_write_set_format_zip);
+    return compress(
+            std::forward<Container>(filenames), zip_archive_filename, archive_write_set_format_zip);
 }
 
 /// Specialization of compress_into_zip()
 template <class T>
-inline void compress_into_zip(
-        std::initializer_list<T> filenames, FilePath zip_archive_filename) {
-    return compress_into_zip<std::initializer_list<T>>(
-            std::move(filenames), zip_archive_filename);
+inline void compress_into_zip(std::initializer_list<T> filenames, FilePath zip_archive_filename) {
+    return compress_into_zip<std::initializer_list<T>>(std::move(filenames), zip_archive_filename);
 }
 
 #endif // __has_include(<archive.h>) and __has_include(<archive_entry.h>)
@@ -510,5 +507,4 @@ void update_add_file_to_zip(FilePath filename, StringView new_filename, FilePath
 /// Places data @p data (within a file @p new_filename) into zip
 /// file @p zip_filename. If new_filename ends with '/' data is ignored and
 /// only directory @p new_filename is created.
-void update_add_data_to_zip(
-        StringView data, const StringView& new_filename, FilePath zip_filename);
+void update_add_data_to_zip(StringView data, const StringView& new_filename, FilePath zip_filename);

@@ -30,8 +30,8 @@ TEST(strongly_typed_function, constructor_checks_arguments) {
     (void)strongly_typed_function<void(int)>([&](auto /*unused*/) noexcept {});
     (void)strongly_typed_function<void(int)>([&](auto /*unused*/) mutable noexcept {});
 
-    static_assert(not std::is_constructible_v<strongly_typed_function<void(int)>,
-                  decltype(uint_foo)>);
+    static_assert(
+            not std::is_constructible_v<strongly_typed_function<void(int)>, decltype(uint_foo)>);
     static_assert(not std::is_constructible_v<strongly_typed_function<void(int)>,
                   decltype(uint_noexcept_foo)>);
 
@@ -39,8 +39,8 @@ TEST(strongly_typed_function, constructor_checks_arguments) {
     static_assert(
             not std::is_constructible_v<strongly_typed_function<void(int)>, decltype(lambda)>);
     auto lambda_mut = [&](uint /*unused*/) mutable {};
-    static_assert(not std::is_constructible_v<strongly_typed_function<void(int)>,
-                  decltype(lambda_mut)>);
+    static_assert(
+            not std::is_constructible_v<strongly_typed_function<void(int)>, decltype(lambda_mut)>);
 }
 
 static int ret_int() { return -42; }
@@ -58,14 +58,12 @@ TEST(strongly_typed_function, constructor_checks_return_value) {
     (void)strongly_typed_function<int()>([&]() mutable { return 17; });
     (void)strongly_typed_function<int()>([&]() mutable noexcept { return 17; });
 
-    static_assert(
-            not std::is_constructible_v<strongly_typed_function<int()>, decltype(ret_uint)>);
+    static_assert(not std::is_constructible_v<strongly_typed_function<int()>, decltype(ret_uint)>);
     static_assert(not std::is_constructible_v<strongly_typed_function<int()>,
                   decltype(ret_uint_noexcept)>);
 
     auto lambda = [&]() -> uint { return 17; };
-    static_assert(
-            not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda)>);
+    static_assert(not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda)>);
     auto lambda_mut = [&]() mutable -> uint { return 17; };
     static_assert(
             not std::is_constructible_v<strongly_typed_function<int()>, decltype(lambda_mut)>);

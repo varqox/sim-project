@@ -105,8 +105,7 @@ struct StrVersionCompare {
             return true;
         }
 
-        return a_leading_zeros == b_leading_zeros ? numa < numb
-                                                  : a_leading_zeros > b_leading_zeros;
+        return a_leading_zeros == b_leading_zeros ? numa < numb : a_leading_zeros > b_leading_zeros;
     }
 };
 
@@ -130,8 +129,7 @@ struct LowerStrCompare : public SpecialStrCompare<int (*)(int)> {
 };
 
 // Compares two strings: @p str[beg, end) and @p s
-constexpr int compare(
-        const StringView& str, size_t beg, size_t end, const StringView& s) noexcept {
+constexpr int compare(const StringView& str, size_t beg, size_t end, const StringView& s) noexcept {
     if (end > str.size()) {
         end = str.size();
     }
@@ -143,8 +141,7 @@ constexpr int compare(
 }
 
 // Compares @p str[pos, str.find(c, pos)) and @p s
-constexpr int compare_to(
-        const StringView& str, size_t pos, char c, const StringView& s) noexcept {
+constexpr int compare_to(const StringView& str, size_t pos, char c, const StringView& s) noexcept {
     return compare(str, pos, str.find(c, pos), s);
 }
 

@@ -75,10 +75,8 @@ struct TesterInheriting {};
 
 // NOLINTNEXTLINE
 TEST(constructor_traits, is_inheriting_explicit_constructor_ok) {
-    static_assert(
-            !is_inheriting_explicit_constructor_ok<TesterInheriting, TesterDefaultImplicit>);
-    static_assert(
-            is_inheriting_explicit_constructor_ok<TesterInheriting, TesterDefaultExplicit>);
+    static_assert(!is_inheriting_explicit_constructor_ok<TesterInheriting, TesterDefaultImplicit>);
+    static_assert(is_inheriting_explicit_constructor_ok<TesterInheriting, TesterDefaultExplicit>);
     static_assert(!is_inheriting_explicit_constructor_ok<TesterInheriting, Tester>);
     static_assert(!is_inheriting_explicit_constructor_ok<TesterInheriting, Tester, A>);
     static_assert(!is_inheriting_explicit_constructor_ok<TesterInheriting, Tester, A, A>);
@@ -90,10 +88,8 @@ TEST(constructor_traits, is_inheriting_explicit_constructor_ok) {
 
 // NOLINTNEXTLINE
 TEST(constructor_traits, is_inheriting_implicit_constructor_ok) {
-    static_assert(
-            is_inheriting_implicit_constructor_ok<TesterInheriting, TesterDefaultImplicit>);
-    static_assert(
-            !is_inheriting_implicit_constructor_ok<TesterInheriting, TesterDefaultExplicit>);
+    static_assert(is_inheriting_implicit_constructor_ok<TesterInheriting, TesterDefaultImplicit>);
+    static_assert(!is_inheriting_implicit_constructor_ok<TesterInheriting, TesterDefaultExplicit>);
     static_assert(!is_inheriting_implicit_constructor_ok<TesterInheriting, Tester>);
     static_assert(is_inheriting_implicit_constructor_ok<TesterInheriting, Tester, A>);
     static_assert(is_inheriting_implicit_constructor_ok<TesterInheriting, Tester, A, A>);

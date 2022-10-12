@@ -232,8 +232,7 @@ public:
         if (n > max_size_) {
             size_t new_max_size = std::max(max_size_ << 1, n);
             auto new_p = std::make_unique<Elem[]>(new_max_size);
-            std::uninitialized_move(
-                    iterator(new_p.get()), iterator(new_p.get() + size_), begin());
+            std::uninitialized_move(iterator(new_p.get()), iterator(new_p.get() + size_), begin());
             deallocate();
             p_ = new_p.release();
             max_size_ = new_max_size;
@@ -348,9 +347,7 @@ private:
 
         friend bool operator>=(Iterator a, Iterator b) noexcept { return (a.p >= b.p); }
 
-        friend difference_type operator-(Iterator a, Iterator b) noexcept {
-            return (a.p - b.p);
-        }
+        friend difference_type operator-(Iterator a, Iterator b) noexcept { return (a.p - b.p); }
 
         friend Iterator operator+(difference_type n, Iterator b) noexcept {
             return Iterator(n + b.p);

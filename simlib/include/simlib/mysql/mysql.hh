@@ -362,8 +362,7 @@ public:
         bind(idx, static_cast<typename T::int_type&>(x));
     }
 
-    void bind(unsigned idx, char* str, size_t& length, size_t max_size)
-            NO_DEBUG_MYSQL(noexcept) {
+    void bind(unsigned idx, char* str, size_t& length, size_t max_size) NO_DEBUG_MYSQL(noexcept) {
         DEBUG_MYSQL(throw_assert(idx < binds_size_);)
         clear_bind(idx);
         binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
@@ -470,8 +469,8 @@ public:
 
             if constexpr (std::is_same_v<TypeNoRefNoCV, bool>) {
                 return static_cast<unsigned char>(arg);
-            } else if constexpr (std::is_pointer_v<Type> and
-                    std::is_same_v<TypeNoRef, const char*>) {
+            } else if constexpr (std::is_pointer_v<Type> and std::is_same_v<TypeNoRef, const char*>)
+            {
                 return InplaceBuff<inplace_buff_size>(arg);
             } else if constexpr (std::is_array_v<TypeNoRef> and
                     std::is_same_v<ArrayType, const char>) {
@@ -589,8 +588,7 @@ public:
             for (unsigned idx = 0; idx < res_binds_size_; ++idx) {
                 auto is_null = res_binds_[idx].is_null;
                 if (is_null and *is_null and is_null == &res_binds_[idx].is_null_value) {
-                    THROW("Encountered NULL at column ", idx,
-                            " that did not expect nullable data");
+                    THROW("Encountered NULL at column ", idx, " that did not expect nullable data");
                 }
             }
 
@@ -741,8 +739,8 @@ private:
             return rc;
         }
 
-        if (not is_one_of(static_cast<int>(mysql_errno(conn_)), CR_SERVER_GONE_ERROR,
-                    CR_SERVER_LOST)) {
+        if (not is_one_of(
+                    static_cast<int>(mysql_errno(conn_)), CR_SERVER_GONE_ERROR, CR_SERVER_LOST)) {
             THROW(error_msg());
         }
 
@@ -767,9 +765,7 @@ private:
             StringView operation_kind, StringView sql_str, Func&& func, Args&&... args) {
         STACK_UNWINDING_MARK;
         return do_call_and_try_reconnecting_on_error([] {},
-                [&] {
-                    return concat(operation_kind, '(', sql_str, "):\n", mysql_error(conn_));
-                },
+                [&] { return concat(operation_kind, '(', sql_str, "):\n", mysql_error(conn_)); },
                 std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
@@ -881,9 +877,7 @@ public:
                         stmt = call_and_try_reconnecting_on_error(
                                 "mysql_stmt_init in prepare", sql_str, mysql_stmt_init, *this);
                     },
-                    [&] {
-                        return concat("prepare(", sql_str, "):\n", mysql_stmt_error(stmt));
-                    },
+                    [&] { return concat("prepare(", sql_str, "):\n", mysql_stmt_error(stmt)); },
                     mysql_stmt_prepare, stmt, sql_str.data(), sql_str.size);
 
         } catch (...) {

@@ -67,8 +67,8 @@ TEST(handle_signals_while_running_DeathTest, try_to_run_two_times_simultaneously
                 handle_signals_while_running(
                         [] {
                             eputs(",main@");
-                            handle_signals_while_running([] { eputs(",main2"); },
-                                    [](int) { eputs(",sig2"); }, SIGQUIT);
+                            handle_signals_while_running(
+                                    [] { eputs(",main2"); }, [](int) { eputs(",sig2"); }, SIGQUIT);
                         },
                         [](int) { eputs(",sig"); }, SIGINT, SIGTERM);
                 eputs(",end");

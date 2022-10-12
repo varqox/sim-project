@@ -52,9 +52,7 @@ public:
     [[nodiscard]] uint find_node(const StringView& str) const noexcept;
 
     // Returns id of the pattern which ends in node @p node_id
-    [[nodiscard]] uint pattern_id(uint node_id) const noexcept {
-        return nodes[node_id].patt_id;
-    }
+    [[nodiscard]] uint pattern_id(uint node_id) const noexcept { return nodes[node_id].patt_id; }
 
     // Returns id of next pattern node for pattern which ends in node @p
     // node_id

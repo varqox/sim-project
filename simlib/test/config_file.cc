@@ -94,8 +94,8 @@ TEST(ConfigFile, is_string_literal) {
     t[0] = '\0';
     for (int a = 0; a < 256; t[0] = ++a) {
         // One character
-        EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 1}),
-                is_beginning(t[0]) && is_ending(t[0]))
+        EXPECT_EQ(
+                ConfigFile::is_string_literal({t.data(), 1}), is_beginning(t[0]) && is_ending(t[0]))
                 << dump(a) << endl;
 
         t[1] = '\0';
@@ -109,8 +109,7 @@ TEST(ConfigFile, is_string_literal) {
             t[2] = '\0';
             for (int c = 0; c < 256; t[2] = ++c) {
                 // Three characters
-                if (ConfigFile::is_string_literal({t.data(), 3}) != cached_res &&
-                        is_ending(t[2])) {
+                if (ConfigFile::is_string_literal({t.data(), 3}) != cached_res && is_ending(t[2])) {
                     EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 3}),
                             is_beginning(t[0]) && is_interior(t[1]) && is_ending(t[2]))
                             << dump(a, b, c) << endl;
@@ -124,8 +123,7 @@ TEST(ConfigFile, is_string_literal) {
         for (int b = 0; b < 256; ++b) {
             t = {{static_cast<char>(a), ' ', '#', static_cast<char>(b)}};
             EXPECT_EQ(ConfigFile::is_string_literal(StringView(t.data(), 4)), false)
-                    << "a: " << a << " b: " << b << " str: " << StringView(t.data(), 4)
-                    << endl;
+                    << "a: " << a << " b: " << b << " str: " << StringView(t.data(), 4) << endl;
         }
     }
 }
@@ -278,8 +276,7 @@ TEST(ConfigFile, escape_to_double_quoted_string) {
     EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("\x02\x03\tśćąłź\x11"),
             R"===("\x02\x03\tśćąłź\x11")===");
     EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("ś"), R"===("ś")===");
-    EXPECT_EQ(
-            ConfigFile::escape_to_double_quoted_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
+    EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
     // Escaping unprintable characters
     EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string("\x07\x0e\n\x15\x1f"),
             R"===("\a\x0e\n\x15\x1f")===");
@@ -355,8 +352,7 @@ TEST(ConfigFile, escape_string) {
 
     for (auto&& p : cases) {
         // First version
-        EXPECT_EQ(ConfigFile::escape_string(p.first), p.second)
-                << "p.first: " << p.first << endl;
+        EXPECT_EQ(ConfigFile::escape_string(p.first), p.second) << "p.first: " << p.first << endl;
         // Second version
         EXPECT_EQ(ConfigFile::full_escape_string(p.first), p.second)
                 << "p.first: " << p.first << endl;
@@ -364,15 +360,13 @@ TEST(ConfigFile, escape_string) {
 
     // Escaping control characters
     EXPECT_EQ(ConfigFile::escape_string("\x07\x0e\n\x15\x1f"), R"===("\a\x0e\n\x15\x1f")===");
-    EXPECT_EQ(ConfigFile::escape_string("\x02\x03\tśćąłź\x11"),
-            R"===("\x02\x03\tśćąłź\x11")===");
+    EXPECT_EQ(ConfigFile::escape_string("\x02\x03\tśćąłź\x11"), R"===("\x02\x03\tśćąłź\x11")===");
 
     EXPECT_EQ(ConfigFile::escape_string("ś"), R"===(ś)===");
     EXPECT_EQ(ConfigFile::escape_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
 
     // Escaping unprintable characters
-    EXPECT_EQ(ConfigFile::full_escape_string("\x07\x0e\n\x15\x1f"),
-            R"===("\a\x0e\n\x15\x1f")===");
+    EXPECT_EQ(ConfigFile::full_escape_string("\x07\x0e\n\x15\x1f"), R"===("\a\x0e\n\x15\x1f")===");
     EXPECT_EQ(ConfigFile::full_escape_string("\x02\x03\tśćąłź\x11"),
             R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
 
@@ -387,8 +381,7 @@ string dump_config(const ConfigFile& cf) {
         if (p.second.is_array()) { // Array
             back_insert(res, p.first, ": [\n");
             for (auto&& s : p.second.as_array()) {
-                back_insert(
-                        res, "  ", ConfigFile::full_escape_to_double_quoted_string(s), '\n');
+                back_insert(res, "  ", ConfigFile::full_escape_to_double_quoted_string(s), '\n');
             }
             res += ']';
 
@@ -398,8 +391,7 @@ string dump_config(const ConfigFile& cf) {
         }
 
         // Include the value position
-        back_insert(
-                res, " # [", p.second.value_span().beg, ",", p.second.value_span().end, ")\n");
+        back_insert(res, " # [", p.second.value_span().beg, ",", p.second.value_span().end, ")\n");
     };
     return res;
 }

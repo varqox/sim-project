@@ -81,5 +81,4 @@ constexpr inline StringView path_dirpath(const StringView& path) noexcept {
  *     "/a/x/y/"
  *     "/x/y/"
  */
-std::optional<std::string> deepest_ancestor_dir_with_subpath(
-        std::string path, StringView subpath);
+std::optional<std::string> deepest_ancestor_dir_with_subpath(std::string path, StringView subpath);

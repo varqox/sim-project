@@ -27,7 +27,7 @@ TEST(fd_pread_buff, fd_pread_buff) {
             }
             str += static_cast<char>(*opt);
         }
-        EXPECT_EQ(str,
-                StringView(data).substring(offset, std::min<int>(offset + len, data.size())));
+        EXPECT_EQ(
+                str, StringView(data).substring(offset, std::min<int>(offset + len, data.size())));
     }
 }

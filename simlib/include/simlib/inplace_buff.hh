@@ -127,9 +127,7 @@ protected:
     InplaceBuffBase& operator=(const InplaceBuffBase&) noexcept = default;
     InplaceBuffBase& operator=(InplaceBuffBase&&) noexcept = default;
 
-    [[nodiscard]] bool is_allocated() const noexcept {
-        return (p_ != p_value_when_unallocated_);
-    }
+    [[nodiscard]] bool is_allocated() const noexcept { return (p_ != p_value_when_unallocated_); }
 
     void deallocate() noexcept {
         if (is_allocated()) {
@@ -224,9 +222,8 @@ public:
     }
 
     template <class Arg1, class Arg2, class... Args,
-            std::enable_if_t<
-                    not std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg1>>,
-                            std::in_place_t>,
+            std::enable_if_t<not std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg1>>,
+                                     std::in_place_t>,
                     int> = 0>
     constexpr InplaceBuff(Arg1&& arg1, Arg2&& arg2, Args&&... args)
     : InplaceBuff(std::in_place, std::forward<Arg1>(arg1), std::forward<Arg2>(arg2),
@@ -260,8 +257,7 @@ public:
         return *this;
     }
 
-    template <class T,
-            std::enable_if_t<not std::is_same_v<std::decay_t<T>, InplaceBuff>, int> = 0>
+    template <class T, std::enable_if_t<not std::is_same_v<std::decay_t<T>, InplaceBuff>, int> = 0>
     // NOLINTNEXTLINE(misc-unconventional-assign-operator)
     constexpr InplaceBuff& operator=(T&& str) {
         make_copy_of(::data(str), string_length(str));
@@ -320,8 +316,7 @@ constexpr auto string_length(const InplaceBuff<T>& buff) -> decltype(buff.size) 
     return buff.size;
 }
 
-template <size_t N, class... Args,
-        std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+template <size_t N, class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 InplaceBuff<N>& back_insert(InplaceBuff<N>& buff, Args&&... args) {
     buff.append(std::forward<Args>(args)...);
     return buff;
