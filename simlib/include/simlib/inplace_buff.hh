@@ -145,13 +145,14 @@ public:
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
     constexpr InplaceBuffBase& append(Args&&... args) {
         [this](auto&&... str) {
-            size_t k = size;
+            size_t pos = size;
             size_t final_len = (size + ... + string_length(str));
             resize(final_len);
             auto append_impl = [&](auto&& s) {
-                auto sl = string_length(s);
-                std::copy(::data(s), ::data(s) + sl, data() + k);
-                k += sl;
+                auto slen = string_length(s);
+                auto sdata = ::data(s);
+                std::copy(sdata, sdata + slen, data() + pos);
+                pos += slen;
             };
             (void)append_impl; // Fix GCC warning
             (append_impl(std::forward<decltype(str)>(str)), ...);

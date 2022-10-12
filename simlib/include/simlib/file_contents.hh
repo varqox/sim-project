@@ -14,7 +14,7 @@
  * @param buff where place read bytes
  * @param count number of bytes to read
  *
- * @return number of bytes read, if error occurs then errno is > 0
+ * @return number of bytes read, if error occurs then errno != 0
  *
  * @errors The same as for read(2) except EINTR
  */
@@ -30,7 +30,7 @@
  * @param buff where to place read bytes
  * @param count number of bytes to read
  *
- * @return number of bytes read, if error occurs then errno is > 0; note that
+ * @return number of bytes read, if error occurs then errno != 0; note that
  *   a successful call may read less bytes than @p count e.g. because an EOF was
  *   encountered
  *
@@ -46,7 +46,7 @@
  * @param buff where write bytes from
  * @param count number of bytes to write
  *
- * @return number of bytes written, if error occurs then errno is > 0
+ * @return number of bytes written, if error occurs then errno != 0
  *
  * @errors The same as for write(2) except EINTR
  */
@@ -75,7 +75,7 @@ inline void write_all_throw(int fd, const void* buff, size_t count) {
  * @param fd file descriptor
  * @param str where write bytes from
  *
- * @return number of bytes written, if error occurs then errno is > 0
+ * @return number of bytes written, if error occurs then errno != 0
  *
  * @errors The same as for write(2) except EINTR
  */
