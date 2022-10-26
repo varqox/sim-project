@@ -3,6 +3,7 @@ project('simlib',
     license: 'MIT',
     meson_version : '>=0.52.1',
     default_options : meson.get_cross_property('project_configuration', [
+        'c_std=gnu17',
         'cpp_std=gnu++17',
         'warning_level=3',
     ])
