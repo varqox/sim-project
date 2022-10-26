@@ -3,6 +3,7 @@ project('sip',
     license: 'MIT',
     meson_version : '>=0.52.1',
     default_options : meson.get_cross_property('project_configuration', [
+        'c_std=gnu17',
         'cpp_std=c++17',
         'warning_level=3',
     ])
@@ -39,14 +40,10 @@ if get_option('static')
     static_dep = declare_dependency(link_args : '-static')
 endif
 
-dump_file_as_c_array = generator(find_program('subprojects/simlib/dump_file_as_c_array.py'),
-    output : ['@BASENAME@_dump.c'],
-    arguments : ['@INPUT@', '@EXTRA_ARGS@'],
-    capture : true,
-)
-
 simlib_proj = subproject('simlib')
 simlib_dep = simlib_proj.get_variable('simlib_dep')
+
+dump_file_as_c_array_gen = simlib_proj.get_variable('dump_file_as_c_array_gen')
 
 if host_machine.cpu_family() == 'x86'
     proot_bin = 'bin/proot-x86'
@@ -92,27 +89,27 @@ sip = executable('sip',
         'src/templates/templates.cc',
         'src/tests_files.cc',
         'src/utils.cc',
-        dump_file_as_c_array.process(
+        dump_file_as_c_array_gen.process(
             proot_bin,
             extra_args : 'proot_dump'
         ),
-        dump_file_as_c_array.process(
+        dump_file_as_c_array_gen.process(
             'templates/checker.cc',
             extra_args : 'checker_cc'
         ),
-        dump_file_as_c_array.process(
+        dump_file_as_c_array_gen.process(
             'templates/interactive_checker.cc',
             extra_args : 'interactive_checker_cc'
         ),
-        dump_file_as_c_array.process(
+        dump_file_as_c_array_gen.process(
             'templates/sim-statement.cls',
             extra_args : 'sim_statement_cls'
         ),
-        dump_file_as_c_array.process(
+        dump_file_as_c_array_gen.process(
             'templates/statement.tex',
             extra_args : 'statement_tex'
         ),
-        dump_file_as_c_array.process(
+        dump_file_as_c_array_gen.process(
             'templates/gen.cc',
             extra_args : 'gen_cc'
         ),
