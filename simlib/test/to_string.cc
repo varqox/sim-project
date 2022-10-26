@@ -28,8 +28,14 @@ TEST(DISABLED_StaticCStringBuff, move_constructor) {
 }
 
 // NOLINTNEXTLINE
-TEST(DISABLED_StaticCStringBuff, constructor_from_const_char_array) {
-    // TODO: implement it
+TEST(StaticCStringBuff, constructor_from_const_char_array) {
+    static_assert(StaticCStringBuff<3>("abc") == "abc");
+    static_assert(StaticCStringBuff<42>("abc") == "abc");
+    static_assert(StaticCStringBuff<42>("") == "");
+    // NOLINTNEXTLINE(bugprone-string-literal-with-embedded-nul)
+    static_assert(StaticCStringBuff<42>("\0a\0b\0c") == "\0a\0b\0c");
+    // NOLINTNEXTLINE(bugprone-string-literal-with-embedded-nul)
+    static_assert(StaticCStringBuff<1>("\0") == "\0");
 }
 
 // NOLINTNEXTLINE
@@ -88,8 +94,13 @@ TEST(DISABLED_StaticCStringBuff, operator_subscript) {
 }
 
 // NOLINTNEXTLINE
-TEST(DISABLED_to_string, to_string_with_integral) {
-    // TODO: implement it
+TEST(StaticCStringBuff, operator_equals) {
+    static_assert(StaticCStringBuff<3>("abc") == "abc");
+    static_assert(!(StaticCStringBuff<3>("abc") == "abd"));
+    // NOLINTNEXTLINE(bugprone-string-literal-with-embedded-nul)
+    static_assert(StaticCStringBuff<4>("ab\0c") == "ab\0c");
+    // NOLINTNEXTLINE(bugprone-string-literal-with-embedded-nul)
+    static_assert(!(StaticCStringBuff<4>("ab\0c") == "ab\0d"));
 }
 
 // NOLINTNEXTLINE

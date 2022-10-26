@@ -31,13 +31,11 @@ private:
 public:
     template <size_t M, std::enable_if_t<M <= N + 1, int> = 0>
     explicit constexpr StaticCStringBuff(const char (&str)[M]) {
-        while (str[len_]) {
+        while (len_ < M - 1) {
             str_[len_] = str[len_];
             ++len_;
         }
-
         str_[len_] = '\0';
-        assert(len_ <= M);
     }
 
     StaticCStringBuff(const StaticCStringBuff&) noexcept = default;
@@ -60,6 +58,8 @@ public:
 
     ~StaticCStringBuff() = default;
 
+    [[nodiscard]] constexpr bool is_empty() const noexcept { return len_ == 0; }
+
     [[nodiscard]] constexpr size_t size() const noexcept { return len_; }
 
     [[nodiscard]] constexpr static size_t max_size() noexcept { return N; }
@@ -81,6 +81,14 @@ public:
     constexpr char& operator[](size_t n) noexcept { return str_[n]; }
 
     constexpr const char& operator[](size_t n) const noexcept { return str_[n]; }
+
+    template <size_t M>
+    constexpr bool operator==(const char (&other)[M]) noexcept {
+        if (len_ != M - 1) {
+            return false;
+        }
+        return std::char_traits<char>::compare(data(), other, M) == 0;
+    }
 };
 
 template <size_t N>
