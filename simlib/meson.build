@@ -53,7 +53,12 @@ if get_option('static')
     static_kwargs = {'static': true}
 endif
 
-dump_file_as_c_array = generator(find_program('dump_file_as_c_array.py'),
+dump_file_as_c_array = executable('dump_file_as_c_array',
+    sources : 'src/dump_file_as_c_array.c',
+    install : false,
+)
+
+dump_file_as_c_array_gen = generator(dump_file_as_c_array,
     output : ['@BASENAME@_dump.c'],
     arguments : ['@INPUT@', '@EXTRA_ARGS@'],
     capture : true,
@@ -119,7 +124,7 @@ simlib_libsources = files([
 
 simlib = library('simlib', sources : [
         simlib_libsources,
-        dump_file_as_c_array.process(
+        dump_file_as_c_array_gen.process(
             'src/sim/default_checker.c',
             extra_args : 'default_checker_c'
         ),
