@@ -171,8 +171,9 @@ constexpr bool operator>=(timeval a, timeval b) noexcept { return b <= a; }
 
 namespace detail {
 
-template<class T>
-constexpr size_t append_decimal_point_with_digits(char* buff, uint max_precision, uint precision, bool trim_zeros, T val) noexcept {
+template <class T>
+constexpr size_t append_decimal_point_with_digits(
+        char* buff, uint max_precision, uint precision, bool trim_zeros, T val) noexcept {
     assert(precision <= max_precision);
     buff[0] = '.';
     for (size_t i = max_precision; i > 0; --i) {
@@ -194,20 +195,20 @@ constexpr size_t append_decimal_point_with_digits(char* buff, uint max_precision
 
 } // namespace detail
 
-constexpr auto timespec_to_string(
-        timespec ts, uint precision, bool trim_zeros = true) noexcept {
+constexpr auto timespec_to_string(timespec ts, uint precision, bool trim_zeros = true) noexcept {
     auto sec_str = to_string(ts.tv_sec);
     StaticCStringBuff<decltype(sec_str)::max_size() + 10> res = sec_str;
-    res.len_ += detail::append_decimal_point_with_digits(res.end(), 9, precision, trim_zeros, ts.tv_nsec);
+    res.len_ += detail::append_decimal_point_with_digits(
+            res.end(), 9, precision, trim_zeros, ts.tv_nsec);
     *res.end() = '\0';
     return res;
 }
 
-constexpr auto timeval_to_string(
-        timeval tv, uint precision, bool trim_zeros = true) noexcept {
+constexpr auto timeval_to_string(timeval tv, uint precision, bool trim_zeros = true) noexcept {
     auto sec_str = to_string(tv.tv_sec);
     StaticCStringBuff<decltype(sec_str)::max_size() + 7> res = sec_str;
-    res.len_ += detail::append_decimal_point_with_digits(res.end(), 6, precision, trim_zeros, tv.tv_usec);
+    res.len_ += detail::append_decimal_point_with_digits(
+            res.end(), 6, precision, trim_zeros, tv.tv_usec);
     *res.end() = '\0';
     return res;
 }

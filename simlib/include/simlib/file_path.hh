@@ -22,7 +22,7 @@ public:
     : str_(str)
     , size_(std::char_traits<char>::length(str)) {}
 
-    template<size_t N>
+    template <size_t N>
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr FilePath(const StaticCStringBuff<N>& str) noexcept
     : str_(str.data())
