@@ -3,6 +3,9 @@
 #include "simlib/string_view.hh"
 
 template <size_t N>
+class StaticCStringBuff;
+
+template <size_t N>
 class InplaceBuff;
 
 // This type should NOT be returned from a function call
@@ -18,6 +21,12 @@ public:
     constexpr FilePath(const char* str) noexcept
     : str_(str)
     , size_(std::char_traits<char>::length(str)) {}
+
+    template<size_t N>
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr FilePath(const StaticCStringBuff<N>& str) noexcept
+    : str_(str.data())
+    , size_(str.size()) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr FilePath(const CStringView& str) noexcept
