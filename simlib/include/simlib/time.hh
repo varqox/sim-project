@@ -2,6 +2,7 @@
 
 #include "simlib/debug.hh"
 #include "simlib/string_view.hh"
+#include "simlib/to_string.hh"
 
 #include <chrono>
 #include <sys/time.h>
@@ -168,66 +169,45 @@ constexpr bool operator<=(timeval a, timeval b) noexcept {
 
 constexpr bool operator>=(timeval a, timeval b) noexcept { return b <= a; }
 
-template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-                11> // +11
-                    // for terminating null and decimal point and the
-                    // fraction part
-constexpr StaticCStringBuff<N> timespec_to_string(
-        timespec x, uint prec, bool trim_zeros = true) noexcept {
-    auto res = to_string<uint64_t, N>(x.tv_sec);
-    res[res.len_++] = '.';
-    for (unsigned i = res.len_ + 8; i >= res.len_; --i) {
-        res[i] = '0' + x.tv_nsec % 10;
-        x.tv_nsec /= 10;
-    }
+namespace detail {
 
+template<class T>
+constexpr size_t append_decimal_point_with_digits(char* buff, uint max_precision, uint precision, bool trim_zeros, T val) noexcept {
+    assert(precision <= max_precision);
+    buff[0] = '.';
+    for (size_t i = max_precision; i > 0; --i) {
+        buff[i] = static_cast<char>('0' + val % 10);
+        val /= 10;
+    }
     // Truncate trailing zeros
-    unsigned i = res.len_ + std::min(8, int(prec) - 1);
-    // i will point to the last character of the result
+    size_t i = precision;
     if (trim_zeros) {
-        while (i >= res.len_ && res[i] == '0') {
+        while (i > 0 && buff[i] == '0') {
             --i;
         }
     }
-
-    if (i == res.len_ - 1) {
-        res.len_ = i; // Trim trailing '.'
-    } else {
-        res.len_ = ++i;
+    if (i == 0) {
+        return 0;
     }
+    return i + 1;
+}
 
+} // namespace detail
+
+constexpr auto timespec_to_string(
+        timespec ts, uint precision, bool trim_zeros = true) noexcept {
+    auto sec_str = to_string(ts.tv_sec);
+    StaticCStringBuff<decltype(sec_str)::max_size() + 10> res = sec_str;
+    res.len_ += detail::append_decimal_point_with_digits(res.end(), 9, precision, trim_zeros, ts.tv_nsec);
     *res.end() = '\0';
     return res;
 }
 
-template <size_t N = decltype(to_string(std::declval<uintmax_t>()))::max_size() +
-                8> // +8
-                   // for terminating null and decimal point and the
-                   // fraction part
-constexpr StaticCStringBuff<N> timeval_to_string(
-        timeval x, uint prec, bool trim_zeros = true) noexcept {
-    auto res = to_string<uint64_t, N>(x.tv_sec);
-    res[res.len_++] = '.';
-    for (unsigned i = res.len_ + 5; i >= res.len_; --i) {
-        res[i] = '0' + x.tv_usec % 10;
-        x.tv_usec /= 10;
-    }
-
-    // Truncate trailing zeros
-    unsigned i = res.len_ + std::min(5, int(prec) - 1);
-    // i will point to the last character of the result
-    if (trim_zeros) {
-        while (i >= res.len_ && res[i] == '0') {
-            --i;
-        }
-    }
-
-    if (i == res.len_ - 1) {
-        res.len_ = i; // Trim trailing '.'
-    } else {
-        res.len_ = ++i;
-    }
-
+constexpr auto timeval_to_string(
+        timeval tv, uint precision, bool trim_zeros = true) noexcept {
+    auto sec_str = to_string(tv.tv_sec);
+    StaticCStringBuff<decltype(sec_str)::max_size() + 7> res = sec_str;
+    res.len_ += detail::append_decimal_point_with_digits(res.end(), 6, precision, trim_zeros, tv.tv_usec);
     *res.end() = '\0';
     return res;
 }

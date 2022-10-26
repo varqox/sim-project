@@ -178,13 +178,122 @@ TEST(DISABLED_time, timeval_operator_not_less) {
 }
 
 // NOLINTNEXTLINE
-TEST(DISABLED_time, timespec_to_string) {
-    // TODO: implement it
+TEST(time, timespec_to_string) {
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 9, false) ==
+            "1234567890.123456789");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 8, false) ==
+            "1234567890.12345678");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 7, false) ==
+            "1234567890.1234567");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 6, false) ==
+            "1234567890.123456");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 5, false) ==
+            "1234567890.12345");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 4, false) ==
+            "1234567890.1234");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 3, false) ==
+            "1234567890.123");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 2, false) ==
+            "1234567890.12");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 1, false) ==
+            "1234567890.1");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 0, false) ==
+            "1234567890");
+
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 9, true) ==
+            "1234567890.123456789");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 8, true) ==
+            "1234567890.12345678");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 7, true) ==
+            "1234567890.1234567");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 6, true) ==
+            "1234567890.123456");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 5, true) ==
+            "1234567890.12345");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 4, true) ==
+            "1234567890.1234");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 3, true) ==
+            "1234567890.123");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 2, true) ==
+            "1234567890.12");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 1, true) ==
+            "1234567890.1");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456789}, 0, true) ==
+            "1234567890");
+
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456780}, 9, true) ==
+            "1234567890.12345678");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456709}, 8, true) ==
+            "1234567890.1234567");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123456089}, 7, true) ==
+            "1234567890.123456");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123450789}, 6, true) ==
+            "1234567890.12345");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123406789}, 5, true) ==
+            "1234567890.1234");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 123056789}, 4, true) ==
+            "1234567890.123");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 120456789}, 3, true) ==
+            "1234567890.12");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 103456789}, 2, true) ==
+            "1234567890.1");
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 23456789}, 1, true) ==
+            "1234567890");
+
+    static_assert(timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 100000000}, 9, true) ==
+            "1234567890.1");
+    static_assert(
+            timespec_to_string({.tv_sec = 1234567890, .tv_nsec = 0}, 9, true) == "1234567890");
 }
 
 // NOLINTNEXTLINE
-TEST(DISABLED_time, timeval_to_string) {
-    // TODO: implement it
+TEST(time, timeval_to_string) {
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 6, false) ==
+            "1234567890.123456");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 5, false) ==
+            "1234567890.12345");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 4, false) ==
+            "1234567890.1234");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 3, false) ==
+            "1234567890.123");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 2, false) ==
+            "1234567890.12");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 1, false) ==
+            "1234567890.1");
+    static_assert(
+            timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 0, false) == "1234567890");
+
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 6, true) ==
+            "1234567890.123456");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 5, true) ==
+            "1234567890.12345");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 4, true) ==
+            "1234567890.1234");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 3, true) ==
+            "1234567890.123");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 2, true) ==
+            "1234567890.12");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 1, true) ==
+            "1234567890.1");
+    static_assert(
+            timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123456}, 0, true) == "1234567890");
+
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123450}, 6, true) ==
+            "1234567890.12345");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123406}, 5, true) ==
+            "1234567890.1234");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 123056}, 4, true) ==
+            "1234567890.123");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 120456}, 3, true) ==
+            "1234567890.12");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 103456}, 2, true) ==
+            "1234567890.1");
+    static_assert(
+            timeval_to_string({.tv_sec = 1234567890, .tv_usec = 23456}, 1, true) == "1234567890");
+
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 100000}, 6, true) ==
+            "1234567890.1");
+    static_assert(timeval_to_string({.tv_sec = 1234567890, .tv_usec = 0}, 6, true) == "1234567890");
 }
 
 // NOLINTNEXTLINE
