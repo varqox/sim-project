@@ -49,7 +49,7 @@ struct UserInfo {
     ~UserInfo() = default;
 
     void append_to(const decltype(Context::session)& session, json_str::ObjectBuilder& obj) {
-        const auto caps = capabilities::user(session, id);
+        const auto caps = capabilities::user(session, id, type);
         assert(caps.view);
         obj.prop("id", id);
         obj.prop("type", type);
@@ -117,30 +117,41 @@ sql::Condition<> caps_to_condition(
     auto res = sql::FALSE;
     if (caps.view_all_with_type_admin and (!user_type or user_type == User::Type::ADMIN)) {
         res = res or
-                sql::Condition{concat_tostr(
-                        "type=", decltype(User::type){User::Type::ADMIN}.to_int())};
+                sql::Condition{
+                        concat_tostr("type=", decltype(User::type){User::Type::ADMIN}.to_int())};
     }
     if (caps.view_all_with_type_teacher and (!user_type or user_type == User::Type::TEACHER)) {
         res = res or
-                sql::Condition{concat_tostr(
-                        "type=", decltype(User::type){User::Type::TEACHER}.to_int())};
+                sql::Condition{
+                        concat_tostr("type=", decltype(User::type){User::Type::TEACHER}.to_int())};
     }
     if (caps.view_all_with_type_normal and (!user_type or user_type == User::Type::NORMAL)) {
         res = res or
-                sql::Condition{concat_tostr(
-                        "type=", decltype(User::type){User::Type::NORMAL}.to_int())};
+                sql::Condition{
+                        concat_tostr("type=", decltype(User::type){User::Type::NORMAL}.to_int())};
     }
     return res;
 }
 
 template <class... Params>
-Response do_list_all_users(Context& ctx, uint32_t limit,
-        optional<decltype(User::type)> user_type, sql::Condition<Params...> where_cond) {
+Response do_list_all_users(Context& ctx, uint32_t limit, optional<decltype(User::type)> user_type,
+        sql::Condition<Params...> where_cond) {
     auto caps = capabilities::list_all_users(ctx.session);
     if (not is_query_allowed(caps, user_type)) {
         return ctx.response_403();
     }
     return do_list(ctx, limit, where_cond and caps_to_condition(caps, user_type));
+}
+
+optional<decltype(User::type)> get_user_type(Context& ctx, decltype(User::id) user_id) {
+    auto stmt = ctx.mysql.prepare_bind_and_execute(
+            sql::Select("type").from("users").where("id=?", user_id));
+    decltype(User::type) user_type;
+    stmt.res_bind_all(user_type);
+    if (stmt.next()) {
+        return user_type;
+    }
+    return std::nullopt;
 }
 
 } // namespace
@@ -155,8 +166,7 @@ Response list_all_users(Context& ctx) {
 }
 
 Response list_all_users_above_id(Context& ctx, decltype(User::id) user_id) {
-    return do_list_all_users(
-            ctx, NEXT_QUERY_LIMIT, std::nullopt, sql::Condition{"id>?", user_id});
+    return do_list_all_users(ctx, NEXT_QUERY_LIMIT, std::nullopt, sql::Condition{"id>?", user_id});
 }
 
 Response list_all_users_with_type(Context& ctx, decltype(User::type) user_type) {
@@ -165,12 +175,15 @@ Response list_all_users_with_type(Context& ctx, decltype(User::type) user_type) 
 
 Response list_all_users_with_type_above_id(
         Context& ctx, decltype(User::type) user_type, decltype(User::id) user_id) {
-    return do_list_all_users(
-            ctx, NEXT_QUERY_LIMIT, user_type, sql::Condition{"id>?", user_id});
+    return do_list_all_users(ctx, NEXT_QUERY_LIMIT, user_type, sql::Condition{"id>?", user_id});
 }
 
 Response view_user(Context& ctx, decltype(User::id) user_id) {
-    const auto caps = capabilities::user(ctx.session, user_id);
+    auto user_type_opt = get_user_type(ctx, user_id);
+    if (not user_type_opt) {
+        return ctx.response_404();
+    }
+    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
     if (not caps.view) {
         return ctx.response_403();
     }
@@ -199,14 +212,12 @@ constexpr http::ApiParam first_name{&User::first_name, "first_name", "First name
 constexpr http::ApiParam last_name{&User::last_name, "last_name", "Last name"};
 constexpr http::ApiParam email{&User::email, "email", "Email"};
 constexpr http::ApiParam<CStringView> password{"password", "Password"};
-constexpr http::ApiParam<CStringView> password_repeated{
-        "password_repeated", "Password (repeat)"};
+constexpr http::ApiParam<CStringView> password_repeated{"password_repeated", "Password (repeat)"};
 constexpr http::ApiParam<CStringView> old_password{"old_password", "Old password"};
 constexpr http::ApiParam<CStringView> new_password{"new_password", "New password"};
 constexpr http::ApiParam<CStringView> new_password_repeated{
         "new_password_repeated", "New password (repeat)"};
-constexpr http::ApiParam<bool> remember_for_a_month{
-        "remember_for_a_month", "Remember for a month"};
+constexpr http::ApiParam<bool> remember_for_a_month{"remember_for_a_month", "Remember for a month"};
 constexpr http::ApiParam target_user_id{&User::id, "target_user_id", "Target user ID"};
 
 } // namespace params
@@ -223,10 +234,10 @@ Response sign_in(Context& ctx) {
         (remember_for_a_month, params::remember_for_a_month, REQUIRED)
     );
 
-    auto stmt = ctx.mysql.prepare_bind_and_execute(
-            sql::Select("id, password_salt, password_hash, type")
-                    .from("users")
-                    .where("username=?", username));
+    auto stmt =
+            ctx.mysql.prepare_bind_and_execute(sql::Select("id, password_salt, password_hash, type")
+                                                       .from("users")
+                                                       .where("username=?", username));
     decltype(User::id) user_id{};
     decltype(User::password_salt) password_salt;
     decltype(User::password_hash) password_hash;
@@ -316,9 +327,9 @@ Response add(Context& ctx) {
     }
 
     auto [salt, hash] = sim::users::salt_and_hash_password(password);
-    auto stmt = ctx.mysql.prepare(
-            "INSERT IGNORE INTO users(type, username, first_name, last_name, "
-            "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+    auto stmt =
+            ctx.mysql.prepare("INSERT IGNORE INTO users(type, username, first_name, last_name, "
+                              "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
     stmt.bind_and_execute(type, username, first_name, last_name, email, salt, hash);
     if (stmt.affected_rows() != 1) {
         return ctx.response_400("Username taken");
@@ -331,7 +342,11 @@ Response add(Context& ctx) {
 }
 
 Response edit(Context& ctx, decltype(User::id) user_id) {
-    auto caps = capabilities::user(ctx.session, user_id);
+    auto user_type_opt = get_user_type(ctx, user_id);
+    if (not user_type_opt) {
+        return ctx.response_404();
+    }
+    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
     if (not caps.edit) {
         return ctx.response_403();
     }
@@ -366,8 +381,7 @@ Response edit(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_ok();
 }
 
-bool password_is_valid(
-        mysql::Connection& mysql, decltype(User::id) user_id, StringView password) {
+bool password_is_valid(mysql::Connection& mysql, decltype(User::id) user_id, StringView password) {
     auto stmt = mysql.prepare_bind_and_execute(
             sql::Select("password_salt, password_hash").from("users").where("id=?", user_id));
     decltype(User::password_salt) password_salt;
@@ -380,7 +394,11 @@ bool password_is_valid(
 }
 
 Response change_password(Context& ctx, decltype(User::id) user_id) {
-    auto caps = capabilities::user(ctx.session, user_id);
+    auto user_type_opt = get_user_type(ctx, user_id);
+    if (not user_type_opt) {
+        return ctx.response_404();
+    }
+    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
     if (not caps.change_password) {
         return ctx.response_403();
     }
@@ -410,7 +428,11 @@ Response change_password(Context& ctx, decltype(User::id) user_id) {
 }
 
 Response delete_(Context& ctx, decltype(User::id) user_id) {
-    auto caps = capabilities::user(ctx.session, user_id);
+    auto user_type_opt = get_user_type(ctx, user_id);
+    if (not user_type_opt) {
+        return ctx.response_404();
+    }
+    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
     if (not caps.delete_) {
         return ctx.response_403();
     }
@@ -424,9 +446,8 @@ Response delete_(Context& ctx, decltype(User::id) user_id) {
     }
 
     // Queue the deleting job
-    auto stmt =
-            ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
-                              "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, '', '')");
+    auto stmt = ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                                  "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, '', '')");
     constexpr auto type = Job::Type::DELETE_USER;
     stmt.bind_and_execute(ctx.session.value().user_id, EnumVal{type},
             sim::jobs::default_priority(type), Job::Status::PENDING, mysql_date(), user_id);
@@ -438,7 +459,11 @@ Response delete_(Context& ctx, decltype(User::id) user_id) {
 }
 
 Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
-    auto caps = capabilities::user(ctx.session, user_id);
+    auto user_type_opt = get_user_type(ctx, user_id);
+    if (not user_type_opt) {
+        return ctx.response_404();
+    }
+    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
     if (not caps.merge_into_another_user) {
         return ctx.response_403();
     }
@@ -456,15 +481,18 @@ Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
         return ctx.response_400("You cannot merge the user with themself");
     }
 
-    auto target_user_caps = capabilities::user(ctx.session, target_user_id);
+    auto target_user_type_opt = get_user_type(ctx, target_user_id);
+    if (not target_user_type_opt) {
+        return ctx.response_404();
+    }
+    auto target_user_caps = capabilities::user(ctx.session, target_user_id, *target_user_type_opt);
     if (not target_user_caps.merge_someone_into_this_user) {
         return ctx.response_400("You cannot merge into this target target user");
     }
 
     // Queue the merging job
-    auto stmt =
-            ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
-                              "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, ?, '')");
+    auto stmt = ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                                  "added, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, ?, '')");
     constexpr auto type = Job::Type::MERGE_USERS;
     stmt.bind_and_execute(ctx.session.value().user_id, EnumVal{type},
             sim::jobs::default_priority(type), Job::Status::PENDING, mysql_date(), user_id,
