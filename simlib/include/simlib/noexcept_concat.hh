@@ -38,8 +38,8 @@ constexpr auto noexcept_string_length(const StaticCStringBuff<N>& str) noexcept 
 }
 
 template <size_t N>
-constexpr auto noexcept_string_length(const char (&str)[N]) noexcept {
-    return std::char_traits<char>::length(str);
+constexpr auto noexcept_string_length(const char (&/*str*/)[N]) noexcept {
+    return N - 1;
 }
 
 template <size_t N>
