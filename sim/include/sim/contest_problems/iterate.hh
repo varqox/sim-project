@@ -67,10 +67,9 @@ void iterate(mysql::Connection& mysql, IterateIdKind id_kind, T&& id,
     mysql::Optional<EnumVal<sim::submissions::Submission::Status>> m_final_status;
     mysql::Optional<decltype(problems::Problem::owner_id)::value_type> m_problem_owner_id;
     decltype(problems::Problem::type) m_problem_type;
-    stmt.res_bind_all(cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name,
-            cp.item, cp.method_of_choosing_final_submission, cp.score_revealing,
-            extra_data.problem_label, m_initial_final_status, m_final_status, m_problem_owner_id,
-            m_problem_type);
+    stmt.res_bind_all(cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item,
+            cp.method_of_choosing_final_submission, cp.score_revealing, extra_data.problem_label,
+            m_initial_final_status, m_final_status, m_problem_owner_id, m_problem_type);
 
     while (stmt.next()) {
         extra_data.initial_final_submission_initial_status = m_initial_final_status;

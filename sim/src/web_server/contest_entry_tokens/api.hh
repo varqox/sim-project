@@ -11,14 +11,11 @@ http::Response view(web_worker::Context& ctx, decltype(sim::contests::Contest::i
 
 http::Response add(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response regen(
-        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response regen(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response delete_(
-        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response delete_(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response add_short(
-        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response add_short(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
 http::Response regen_short(
         web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);

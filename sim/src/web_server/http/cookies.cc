@@ -17,8 +17,7 @@ void Cookies::set(StringView name, StringView val, std::optional<time_t> expire,
         tm expire_tm = {};
         tm* rc1 = gmtime_r(&*expire, &expire_tm);
         assert(rc1 != nullptr);
-        size_t rc2 =
-                strftime(buff.data(), buff.size(), "%a, %d %b %Y %H:%M:%S GMT", &expire_tm);
+        size_t rc2 = strftime(buff.data(), buff.size(), "%a, %d %b %Y %H:%M:%S GMT", &expire_tm);
         assert(rc2 > 0);
         back_insert(value, "; Expires=", buff.data());
     }

@@ -134,9 +134,7 @@ void AddOrReuploadProblemBase::job_done(bool& job_was_canceled) {
     if (need_main_solution_judge_report_) {
         status = Job::Status::PENDING;
         switch (job_type_) {
-        case Job::Type::ADD_PROBLEM:
-            type = Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION;
-            break;
+        case Job::Type::ADD_PROBLEM: type = Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION; break;
 
         case Job::Type::REUPLOAD_PROBLEM:
             type = Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION;

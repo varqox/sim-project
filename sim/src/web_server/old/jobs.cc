@@ -29,8 +29,8 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
     return PERM::NONE; // Shouldn't happen
 }
 
-Sim::JobPermissions Sim::jobs_get_permissions(std::optional<StringView> creator_id,
-        Job::Type job_type, Job::Status job_status) noexcept {
+Sim::JobPermissions Sim::jobs_get_permissions(
+        std::optional<StringView> creator_id, Job::Type job_type, Job::Status job_status) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
     using JT = Job::Type;
@@ -77,17 +77,16 @@ Sim::JobPermissions Sim::jobs_get_permissions(std::optional<StringView> creator_
         case JS::PENDING:
         case JS::NOTICED_PENDING:
         case JS::IN_PROGRESS:
-            return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-                    PERM::VIEW_ALL | PERM::CANCEL;
+            return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
+                    PERM::CANCEL;
 
         case JS::FAILED:
         case JS::CANCELED:
-            return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-                    PERM::VIEW_ALL | PERM::RESTART;
+            return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
+                    PERM::RESTART;
 
         case JS::DONE:
-            return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-                    PERM::VIEW_ALL;
+            return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL;
         }
     }
 

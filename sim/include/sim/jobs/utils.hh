@@ -203,8 +203,8 @@ struct ChangeProblemStatementInfo {
 
 struct MergeUsersInfo {
     decltype(sim::users::User::id) target_user_id{};
-    static_assert(sizeof(target_user_id) == 8,
-            "Changing size needs updating column info in jobs table");
+    static_assert(
+            sizeof(target_user_id) == 8, "Changing size needs updating column info in jobs table");
 
     MergeUsersInfo() = default;
 

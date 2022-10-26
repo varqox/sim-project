@@ -99,8 +99,7 @@ public:
             } else {
                 // Copy other's files
                 throw_assert(not new_record.other_ids.empty());
-                auto src = concat(
-                        other_sim_build, "internal_files/", new_record.other_ids.front());
+                auto src = concat(other_sim_build, "internal_files/", new_record.other_ids.front());
                 auto dest = concat(dest_path, x.id);
                 if (copy(src, dest)) {
                     THROW("copy(", src, ", ", dest, ')', errmsg());

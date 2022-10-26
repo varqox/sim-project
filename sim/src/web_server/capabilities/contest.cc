@@ -16,8 +16,7 @@ Contest contest_for(const decltype(web_worker::Context::session)& session,
         decltype(sim::contests::Contest::is_public) contest_is_public,
         std::optional<decltype(ContestUser::mode)> contest_user_mode) noexcept {
     bool is_contest_moderator = is_admin(session) or
-            is_one_of(
-                    contest_user_mode, ContestUser::Mode::OWNER, ContestUser::Mode::MODERATOR);
+            is_one_of(contest_user_mode, ContestUser::Mode::OWNER, ContestUser::Mode::MODERATOR);
     bool has_access = is_admin(session) or contest_is_public or contest_user_mode;
     return Contest{
             .node =
@@ -46,8 +45,7 @@ Contest contest_for(const decltype(web_worker::Context::session)& session,
                     },
             .users{
                     .view = is_contest_moderator,
-                    .add_owner =
-                            is_admin(session) or contest_user_mode == ContestUser::Mode::OWNER,
+                    .add_owner = is_admin(session) or contest_user_mode == ContestUser::Mode::OWNER,
                     .add_moderator = is_contest_moderator,
                     .add_contestant = is_contest_moderator,
             },
@@ -58,8 +56,7 @@ Contest contest_for(const decltype(web_worker::Context::session)& session,
     };
 }
 
-std::optional<
-        std::pair<Contest, std::optional<decltype(sim::contest_users::ContestUser::mode)>>>
+std::optional<std::pair<Contest, std::optional<decltype(sim::contest_users::ContestUser::mode)>>>
 contest_for(mysql::Connection& mysql, const decltype(web_worker::Context::session)& session,
         decltype(sim::contests::Contest::id) contest_id) {
     STACK_UNWINDING_MARK;
@@ -68,10 +65,9 @@ contest_for(mysql::Connection& mysql, const decltype(web_worker::Context::sessio
     mysql::Optional<decltype(ContestUser::mode)> contest_user_mode;
     mysql::Statement stmt;
     if (session) {
-        stmt = mysql.prepare(
-                "SELECT c.is_public, cu.mode FROM contests c "
-                "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
-                "WHERE c.id=?");
+        stmt = mysql.prepare("SELECT c.is_public, cu.mode FROM contests c "
+                             "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
+                             "WHERE c.id=?");
         stmt.bind_and_execute(session->user_id, contest_id);
         stmt.res_bind_all(is_public, contest_user_mode);
     } else {

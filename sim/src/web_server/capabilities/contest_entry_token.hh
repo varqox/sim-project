@@ -24,7 +24,6 @@ enum class ContestEntryTokenKind {
 
 ContestEntryToken contest_entry_token_for(ContestEntryTokenKind token_kind,
         const decltype(web_worker::Context::session)& session, const Contest& caps_contest,
-        std::optional<decltype(sim::contest_users::ContestUser::mode)>
-                contest_user_mode) noexcept;
+        std::optional<decltype(sim::contest_users::ContestUser::mode)> contest_user_mode) noexcept;
 
 } // namespace web_server::capabilities

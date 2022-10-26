@@ -171,8 +171,8 @@ int main(int argc, char** argv) {
         conn.update("SET foreign_key_checks=1"); // Just for sure
 
     } catch (const std::exception& e) {
-        errlog("\033[31mFailed to connect to database, please edit or remove '",
-                db_config_path, "' file and try again\033[m");
+        errlog("\033[31mFailed to connect to database, please edit or remove '", db_config_path,
+                "' file and try again\033[m");
         ERRLOG_CATCH(e);
         return 4;
     }
@@ -228,8 +228,8 @@ int main(int argc, char** argv) {
                              "last_name, "
                              "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, "
                              "?, ?)")
-                        .bind_and_execute(sim::users::SIM_ROOT_UID, sim_root_type, "sim",
-                                "sim", "sim", "sim@sim", salt, hash);
+                        .bind_and_execute(sim::users::SIM_ROOT_UID, sim_root_type, "sim", "sim",
+                                "sim", "sim@sim", salt, hash);
             });
 
     using sim::sessions::Session;

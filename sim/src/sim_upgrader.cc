@@ -156,8 +156,8 @@ static void update_db_schema(Func&& prepare_database) {
                     concat_tostr("--defaults-file=", mysql_cnf.path()),
                     conn.impl()->db,
             },
-            Spawner::Options{FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO,
-                    STDERR_FILENO, "."});
+            Spawner::Options{
+                    FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO, "."});
     done = true;
     drop_backup_tables();
 }

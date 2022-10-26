@@ -28,8 +28,7 @@ struct User {
 
     uint64_t id;
     EnumVal<Type> type;
-    sql_fields::SatisfyingPredicate<sql_fields::Varbinary<30>, is_username,
-            is_username_description>
+    sql_fields::SatisfyingPredicate<sql_fields::Varbinary<30>, is_username, is_username_description>
             username;
     sql_fields::Varbinary<60> first_name;
     sql_fields::Varbinary<60> last_name;

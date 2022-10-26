@@ -7,8 +7,7 @@
 
 namespace sim_merger {
 
-class ContestUsersMerger
-: public Merger<sim::contest_users::ContestUser> {
+class ContestUsersMerger : public Merger<sim::contest_users::ContestUser> {
     const UsersMerger& users_;
     const ContestsMerger& contests_;
 
@@ -16,8 +15,8 @@ class ContestUsersMerger
         STACK_UNWINDING_MARK;
 
         sim::contest_users::ContestUser cu{};
-        auto stmt = conn.prepare(
-                "SELECT user_id, contest_id, mode FROM ", record_set.sql_table_name);
+        auto stmt =
+                conn.prepare("SELECT user_id, contest_id, mode FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(cu.user_id, cu.contest_id, cu.mode);
         while (stmt.next()) {
@@ -30,8 +29,7 @@ class ContestUsersMerger
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge(
-                [&](const sim::contest_users::ContestUser& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contest_users::ContestUser& /*unused*/) { return nullptr; });
     }
 
     PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(

@@ -30,8 +30,7 @@ private:
 
 protected:
     // Iff compilation failed, compilation errors are returned
-    std::optional<std::string> compile_solution(
-            FilePath solution_path, sim::SolutionLanguage lang);
+    std::optional<std::string> compile_solution(FilePath solution_path, sim::SolutionLanguage lang);
 
     // Iff compilation failed, compilation errors are returned
     std::optional<std::string> compile_solution_from_problem_package(

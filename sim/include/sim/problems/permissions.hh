@@ -20,8 +20,7 @@ DECLARE_ENUM_UNARY_OPERATOR(OverallPermissions, ~)
 DECLARE_ENUM_OPERATOR(OverallPermissions, |)
 DECLARE_ENUM_OPERATOR(OverallPermissions, &)
 
-OverallPermissions get_overall_permissions(
-        std::optional<users::User::Type> user_type) noexcept;
+OverallPermissions get_overall_permissions(std::optional<users::User::Type> user_type) noexcept;
 
 enum class Permissions : uint32_t {
     NONE = 0,

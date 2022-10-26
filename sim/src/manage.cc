@@ -170,8 +170,7 @@ static void stop() {
     // First kill manage so that it won't restart servers
     kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
     // Kill servers
-    kill_processes_by_exec(
-            {paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
+    kill_processes_by_exec({paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
 }
 
 } // namespace command

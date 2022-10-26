@@ -95,8 +95,7 @@ public:
         EXPECT_EQ(validate_optional(nullopt), Ok{nullopt});
         EXPECT_EQ(validate_allowed_only_if(true, nullopt), Ok{nullopt});
         EXPECT_EQ(validate_allowed_only_if(false, nullopt), Ok{nullopt});
-        EXPECT_EQ(validate_required_and_allowed_only_if(true, nullopt),
-                Err{"abc: ABC is not set"});
+        EXPECT_EQ(validate_required_and_allowed_only_if(true, nullopt), Err{"abc: ABC is not set"});
         EXPECT_EQ(validate_required_and_allowed_only_if(false, nullopt), Ok{nullopt});
     }
 
@@ -105,8 +104,7 @@ public:
         SCOPED_TRACE(__PRETTY_FUNCTION__);
         EXPECT_EQ(validate_required(form_field_value), expected_validation_result);
         EXPECT_EQ(validate_optional(form_field_value), expected_validation_result);
-        EXPECT_EQ(
-                validate_allowed_only_if(true, form_field_value), expected_validation_result);
+        EXPECT_EQ(validate_allowed_only_if(true, form_field_value), expected_validation_result);
         EXPECT_EQ(validate_allowed_only_if(false, form_field_value),
                 Err{"abc: ABC should not be sent in the request at all"});
         EXPECT_EQ(validate_required_and_allowed_only_if(true, form_field_value),
@@ -267,8 +265,7 @@ TEST(form_validation, satisfying_predicate_bool) {
     static constexpr char predicate_description[] = "false";
     using sim::sql_fields::Bool;
     using sim::sql_fields::SatisfyingPredicate;
-    test_bool<
-            sim::sql_fields::SatisfyingPredicate<Bool, always_true, predicate_description>>();
+    test_bool<sim::sql_fields::SatisfyingPredicate<Bool, always_true, predicate_description>>();
 
     ValidationTest t{api_param<SatisfyingPredicate<Bool, is_false, predicate_description>>};
     VALIDATE_CHECK(t, "false", Ok{false});
@@ -285,9 +282,8 @@ TEST(form_validation, satisfying_predicate_string) {
     using sim::sql_fields::SatisfyingPredicate;
     static constexpr char predicate_description[] = "a string ending with \"xd\"";
     constexpr size_t varbinary_max_len = 14;
-    test_str<
-            sim::sql_fields::SatisfyingPredicate<sim::sql_fields::Varbinary<varbinary_max_len>,
-                    always_true, predicate_description>>(varbinary_max_len);
+    test_str<sim::sql_fields::SatisfyingPredicate<sim::sql_fields::Varbinary<varbinary_max_len>,
+            always_true, predicate_description>>(varbinary_max_len);
     test_str<sim::sql_fields::SatisfyingPredicate<CStringView, always_true,
             predicate_description>>();
     test_str<sim::sql_fields::SatisfyingPredicate<sim::sql_fields::Blob<>, always_true,
@@ -421,8 +417,8 @@ public:
         SCOPED_TRACE(__PRETTY_FUNCTION__);
         EXPECT_EQ(validate_required(caps, form_field_value), expected_validation_result);
         EXPECT_EQ(validate_optional(caps, form_field_value), expected_validation_result);
-        EXPECT_EQ(validate_allowed_only_if(true, caps, form_field_value),
-                expected_validation_result);
+        EXPECT_EQ(
+                validate_allowed_only_if(true, caps, form_field_value), expected_validation_result);
         EXPECT_EQ(validate_allowed_only_if(false, caps, form_field_value),
                 Err{"abc: ABC should not be sent in the request at all"});
         EXPECT_EQ(validate_required_and_allowed_only_if(true, caps, form_field_value),

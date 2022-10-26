@@ -116,9 +116,9 @@ constexpr const char* to_mime(Submission::Language x) {
 }
 
 // Non-fatal statuses
-static_assert(meta::max(Submission::Status::OK, Submission::Status::WA,
-                      Submission::Status::TLE, Submission::Status::MLE,
-                      Submission::Status::RTE) < Submission::Status::PENDING,
+static_assert(
+        meta::max(Submission::Status::OK, Submission::Status::WA, Submission::Status::TLE,
+                Submission::Status::MLE, Submission::Status::RTE) < Submission::Status::PENDING,
         "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
         " used during selection of the final submission");
 

@@ -73,23 +73,22 @@ void JudgeOrRejudge::run() {
                                  "WHERE id=?");
 
             if (is_fatal(full_status)) {
-                stmt.bind_and_execute(false, initial_status, full_status, nullptr,
-                        judging_began, initial_report, final_report, submission_id_);
+                stmt.bind_and_execute(false, initial_status, full_status, nullptr, judging_began,
+                        initial_report, final_report, submission_id_);
             } else {
-                stmt.bind_and_execute((stype == ST::NORMAL and score.has_value()),
-                        initial_status, full_status, score, judging_began, initial_report,
-                        final_report, submission_id_);
+                stmt.bind_and_execute((stype == ST::NORMAL and score.has_value()), initial_status,
+                        full_status, score, judging_began, initial_report, final_report,
+                        submission_id_);
             }
 
-            sim::submissions::update_final(
-                    mysql, sowner, problem_id, contest_problem_id, false);
+            sim::submissions::update_final(mysql, sowner, problem_id, contest_problem_id, false);
 
             transaction.commit();
         }
     };
 
-    auto compilation_errors = compile_solution(
-            sim::internal_files::path_of(submission_file_id), to_sol_lang(lang));
+    auto compilation_errors =
+            compile_solution(sim::internal_files::path_of(submission_file_id), to_sol_lang(lang));
     if (compilation_errors.has_value()) {
         update_submission(Submission::Status::COMPILATION_ERROR,
                 Submission::Status::COMPILATION_ERROR, std::nullopt,
@@ -126,8 +125,8 @@ void JudgeOrRejudge::run() {
 
         // Log reports
         auto job_log_len = job_log_holder_.size;
-        job_log("Job ", job_id_, " -> submission ", submission_id_, " (problem ", problem_id,
-                ")\n", (partial ? "Partial j" : "J"), "udge report: ", jreport.judge_log);
+        job_log("Job ", job_id_, " -> submission ", submission_id_, " (problem ", problem_id, ")\n",
+                (partial ? "Partial j" : "J"), "udge report: ", jreport.judge_log);
 
         stmt = mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
         stmt.bind_and_execute(get_log(), job_id_);
@@ -139,15 +138,14 @@ void JudgeOrRejudge::run() {
             initial_report = rep;
             initial_status = status;
             initial_score = score;
-            return update_submission(
-                    status, Submission::Status::PENDING, std::nullopt, rep, "");
+            return update_submission(status, Submission::Status::PENDING, std::nullopt, rep, "");
         }
 
         // Final
         score += initial_score;
         // If initial tests haven't passed
-        if (initial_status != Submission::Status::OK and
-                status != Submission::Status::JUDGE_ERROR) {
+        if (initial_status != Submission::Status::OK and status != Submission::Status::JUDGE_ERROR)
+        {
             status = initial_status;
         }
 
@@ -158,16 +156,12 @@ void JudgeOrRejudge::run() {
         // Judge
         sim::VerboseJudgeLogger logger(true);
 
-        sim::JudgeReport initial_jrep =
-                jworker_.judge(false, logger, [&](const sim::JudgeReport& partial) {
-                    send_judge_report(partial, false, true);
-                });
+        sim::JudgeReport initial_jrep = jworker_.judge(false, logger,
+                [&](const sim::JudgeReport& partial) { send_judge_report(partial, false, true); });
         send_judge_report(initial_jrep, false, false);
 
-        sim::JudgeReport final_jrep =
-                jworker_.judge(true, logger, [&](const sim::JudgeReport& partial) {
-                    send_judge_report(partial, true, true);
-                });
+        sim::JudgeReport final_jrep = jworker_.judge(true, logger,
+                [&](const sim::JudgeReport& partial) { send_judge_report(partial, true, true); });
         send_judge_report(final_jrep, true, false);
 
         // Log checker errors
@@ -186,8 +180,8 @@ void JudgeOrRejudge::run() {
         for (auto&& rep : {initial_jrep, final_jrep}) {
             for (auto&& group : rep.groups) {
                 for (auto&& test : group.tests) {
-                    if (has_one_of_prefixes(test.comment, "Runtime error (Error: ",
-                                "Runtime error (failed to get syscall",
+                    if (has_one_of_prefixes(test.comment,
+                                "Runtime error (Error: ", "Runtime error (failed to get syscall",
                                 "Runtime error (forbidden syscall"))
                     {
                         errlog("Submission ", submission_id_, " (problem ", problem_id,

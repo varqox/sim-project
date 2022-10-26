@@ -17,9 +17,9 @@ Permissions get_permissions(std::optional<User::Type> user_type, bool contest_is
     }
 
     if (*user_type == User::Type::ADMIN) {
-        return PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN | PERM::DELETE |
-                PERM::MAKE_PUBLIC | PERM::SELECT_FINAL_SUBMISSIONS |
-                PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+        return PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN | PERM::DELETE | PERM::MAKE_PUBLIC |
+                PERM::SELECT_FINAL_SUBMISSIONS | PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
+                PERM::MANAGE_CONTEST_ENTRY_TOKEN;
     }
 
     if (not cu_mode.has_value()) {

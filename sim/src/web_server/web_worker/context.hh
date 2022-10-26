@@ -34,9 +34,9 @@ struct Context {
     void open_session();
     void close_session();
 
-    void create_session(decltype(Session::user_id) user_id,
-            decltype(Session::user_type) user_type, decltype(Session::username) username,
-            decltype(Session::data) data, bool long_exiration);
+    void create_session(decltype(Session::user_id) user_id, decltype(Session::user_type) user_type,
+            decltype(Session::username) username, decltype(Session::data) data,
+            bool long_exiration);
     void destroy_session();
 
     bool session_has_expired() noexcept;

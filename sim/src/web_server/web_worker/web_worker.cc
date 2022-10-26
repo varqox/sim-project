@@ -133,13 +133,11 @@ Response WebWorker::handler_impl(ResponseMaker&& response_maker) {
 }
 
 template <const char* url_pattern, auto... CustomParsers, class... Params>
-void WebWorker::do_add_get_handler(
-        strongly_typed_function<Response(Context&, Params...)> handler) {
+void WebWorker::do_add_get_handler(strongly_typed_function<Response(Context&, Params...)> handler) {
     get_dispatcher.add_handler<url_pattern, CustomParsers...>(
             [&, handler = std::move(handler)](Params... args) {
-                return handler_impl([&](Context& ctx) {
-                    return handler(ctx, std::forward<Params>(args)...);
-                });
+                return handler_impl(
+                        [&](Context& ctx) { return handler(ctx, std::forward<Params>(args)...); });
             });
 }
 

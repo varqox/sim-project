@@ -21,9 +21,9 @@ void Context::open_session() {
         return; // Optimization (no mysql query) for empty or nonexistent cookie
     }
     Session s;
-    auto stmt = mysql.prepare(
-            "SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
-            "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
+    auto stmt =
+            mysql.prepare("SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
+                          "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
     stmt.bind_and_execute(session_id, mysql_date());
     stmt.res_bind_all(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
     if (not stmt.next()) {

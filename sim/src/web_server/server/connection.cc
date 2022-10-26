@@ -254,8 +254,7 @@ void Connection::read_post(http::Request& req) {
 
                     while ((c = reader.get_char()) != -1) {
                         // Found CRLF
-                        if (c == '\n' && !field_content.empty() &&
-                                field_content.back() == '\r') {
+                        if (c == '\n' && !field_content.empty() && field_content.back() == '\r') {
                             field_content.pop_back();
                             break;
                         }
@@ -743,8 +742,7 @@ void Connection::send_response(const http::Response& res) {
         filename_s.append(res.content, '\0');
         CStringView filename(filename_s.data(), filename_s.size - 1);
 
-        FileRemover remover(
-                res.content_type == http::Response::FILE_TO_REMOVE ? filename : "");
+        FileRemover remover(res.content_type == http::Response::FILE_TO_REMOVE ? filename : "");
         FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
         if (fd == -1) {
             return error404();

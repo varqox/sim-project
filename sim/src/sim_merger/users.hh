@@ -45,8 +45,8 @@ class UsersMerger : public Merger<sim::users::User> {
                 NewRecord& res = new_table_[it->second];
                 stdlog("\nMerging: ", x.username, '\t', x.first_name, '\t', x.last_name, '\t',
                         x.email, ' ', id_info(x, kind), "\n   into: ", res.data.username, '\t',
-                        res.data.first_name, '\t', res.data.last_name, '\t', res.data.email,
-                        ' ', id_info(res));
+                        res.data.first_name, '\t', res.data.last_name, '\t', res.data.email, ' ',
+                        id_info(res));
                 return &res;
             }
 

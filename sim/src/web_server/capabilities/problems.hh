@@ -31,8 +31,7 @@ struct ProblemsListCapabilities {
 ProblemsListCapabilities list_all_problems(
         const decltype(web_worker::Context::session)& session) noexcept;
 
-ProblemsListCapabilities list_user_problems(
-        const decltype(web_worker::Context::session)& session,
+ProblemsListCapabilities list_user_problems(const decltype(web_worker::Context::session)& session,
         decltype(sim::users::User::id) user_id) noexcept;
 
 struct ProblemCapabilities {

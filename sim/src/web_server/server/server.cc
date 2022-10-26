@@ -31,8 +31,8 @@ static void* worker(void* ptr) {
 
         for (;;) {
             // accept the connection
-            FileDescriptor client_socket_fd{accept4(socket_fd,
-                    reinterpret_cast<sockaddr*>(&name), &client_name_len, SOCK_CLOEXEC)};
+            FileDescriptor client_socket_fd{accept4(
+                    socket_fd, reinterpret_cast<sockaddr*>(&name), &client_name_len, SOCK_CLOEXEC)};
             if (client_socket_fd == -1) {
                 continue;
             }
@@ -191,8 +191,7 @@ int main() {
         };
         for (int try_no = 1; try_no <= FAST_SILENT_TRIES; ++try_no) {
             if (try_no > 1) {
-                std::this_thread::sleep_for(
-                        std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
             }
 
             if (call_bind() == 0) {

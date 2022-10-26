@@ -26,8 +26,8 @@ class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
                                  "file_size, modified, creator FROM ",
                 record_set.sql_table_name);
         stmt.bind_and_execute();
-        stmt.res_bind_all(cf.id, cf.file_id, cf.contest_id, cf.name, cf.description,
-                cf.file_size, cf.modified, m_creator);
+        stmt.res_bind_all(cf.id, cf.file_id, cf.contest_id, cf.name, cf.description, cf.file_size,
+                cf.modified, m_creator);
         while (stmt.next()) {
             cf.creator = m_creator.to_opt();
 
@@ -44,8 +44,7 @@ class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge(
-                [&](const sim::contest_files::ContestFile& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contest_files::ContestFile& /*unused*/) { return nullptr; });
     }
 
     PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
@@ -73,8 +72,8 @@ public:
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(x.id, x.file_id, x.contest_id, x.name, x.description,
-                    x.file_size, x.modified, x.creator);
+            stmt.bind_and_execute(x.id, x.file_id, x.contest_id, x.name, x.description, x.file_size,
+                    x.modified, x.creator);
         }
 
         transaction.commit();

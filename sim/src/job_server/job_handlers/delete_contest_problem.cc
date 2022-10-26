@@ -52,8 +52,7 @@ void DeleteContestProblem::run() {
 
     // Delete contest problem (all necessary actions will take place thanks to
     // foreign key constrains)
-    mysql.prepare("DELETE FROM contest_problems WHERE id=?")
-            .bind_and_execute(contest_problem_id_);
+    mysql.prepare("DELETE FROM contest_problems WHERE id=?").bind_and_execute(contest_problem_id_);
 
     job_done();
 

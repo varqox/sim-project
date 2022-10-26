@@ -60,14 +60,17 @@ struct PrimaryKeysWithTime {
 
 // Loads all information about ids from jobs
 struct PrimaryKeysFromJobs {
-    PrimaryKeysWithTime<decltype(sim::internal_files::InternalFile::primary_key)::Type> internal_files;
+    PrimaryKeysWithTime<decltype(sim::internal_files::InternalFile::primary_key)::Type>
+            internal_files;
     PrimaryKeysWithTime<decltype(sim::users::User::primary_key)::Type> users;
     PrimaryKeysWithTime<decltype(sim::sessions::Session::primary_key)::Type> sessions;
     PrimaryKeysWithTime<decltype(sim::problems::Problem::primary_key)::Type> problems;
     PrimaryKeysWithTime<decltype(sim::problem_tags::ProblemTag::primary_key)::Type> problem_tags;
     PrimaryKeysWithTime<decltype(sim::contests::Contest::primary_key)::Type> contests;
-    PrimaryKeysWithTime<decltype(sim::contest_rounds::ContestRound::primary_key)::Type> contest_rounds;
-    PrimaryKeysWithTime<decltype(sim::contest_problems::ContestProblem::primary_key)::Type> contest_problems;
+    PrimaryKeysWithTime<decltype(sim::contest_rounds::ContestRound::primary_key)::Type>
+            contest_rounds;
+    PrimaryKeysWithTime<decltype(sim::contest_problems::ContestProblem::primary_key)::Type>
+            contest_problems;
     PrimaryKeysWithTime<decltype(sim::contest_users::ContestUser::primary_key)::Type> contest_users;
     PrimaryKeysWithTime<decltype(sim::contest_files::ContestFile::primary_key)::Type> contest_files;
     PrimaryKeysWithTime<decltype(sim::contest_entry_tokens::ContestEntryToken::primary_key)::Type>
@@ -115,17 +118,13 @@ struct PrimaryKeysFromJobs {
                 break;
 
             case Job::Type::JUDGE_SUBMISSION:
-            case Job::Type::REJUDGE_SUBMISSION:
-                submissions.add_id(aux_id.value(), added);
-                break;
+            case Job::Type::REJUDGE_SUBMISSION: submissions.add_id(aux_id.value(), added); break;
 
             case Job::Type::DELETE_PROBLEM:
             case Job::Type::REUPLOAD_PROBLEM:
             case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-            case Job::Type::CHANGE_PROBLEM_STATEMENT:
-                problems.add_id(aux_id.value(), added);
-                break;
+            case Job::Type::CHANGE_PROBLEM_STATEMENT: problems.add_id(aux_id.value(), added); break;
 
             case Job::Type::MERGE_PROBLEMS:
                 problems.add_id(aux_id.value(), added);

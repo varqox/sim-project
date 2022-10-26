@@ -13,8 +13,7 @@ namespace web_server::capabilities {
 
 ContestEntryToken contest_entry_token_for(ContestEntryTokenKind token_kind,
         const decltype(web_worker::Context::session)& session, const Contest& caps_contest,
-        std::optional<decltype(sim::contest_users::ContestUser::mode)>
-                contest_user_mode) noexcept {
+        std::optional<decltype(sim::contest_users::ContestUser::mode)> contest_user_mode) noexcept {
     bool is_contest_moderator = caps_contest.node.view and
             (is_admin(session) or
                     is_one_of(contest_user_mode, ContestUser::Mode::OWNER,

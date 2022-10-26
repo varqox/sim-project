@@ -108,8 +108,7 @@ struct ProblemInfo {
             obj.prop("view_owner", caps.view_owner);
             obj.prop("view_creation_time", caps.view_creation_time);
             obj.prop("view_update_time", caps.view_update_time);
-            obj.prop("view_final_submission_full_status",
-                    caps.view_final_submission_full_status);
+            obj.prop("view_final_submission_full_status", caps.view_final_submission_full_status);
             obj.prop("download", caps.download);
             obj.prop("create_submission", caps.create_submission);
             obj.prop("edit", caps.edit);
@@ -136,8 +135,7 @@ Response do_list(Context& ctx, uint32_t limit, sql::Condition<Params...> where_c
                     .left_join("submissions s")
                     .on(sql::Condition{"s.problem_id=p.id"} and
                             sql::Condition{"s.owner=?",
-                                    ctx.session ? optional{ctx.session->user_id}
-                                                : std::nullopt} and
+                                    ctx.session ? optional{ctx.session->user_id} : std::nullopt} and
                             sql::Condition{"s.problem_final IS TRUE"})
                     .where(where_cond)
                     .order_by("p.id DESC")
@@ -181,16 +179,15 @@ Response do_list(Context& ctx, uint32_t limit, sql::Condition<Params...> where_c
     obj.prop_arr("list", [&](auto& arr) {
         while (stmt.next()) {
             fill_tags_for_problem(p.id);
-            arr.val_obj([&](auto& obj) {
-                p.append_to(ctx.session, obj, public_tags, hidden_tags);
-            });
+            arr.val_obj(
+                    [&](auto& obj) { p.append_to(ctx.session, obj, public_tags, hidden_tags); });
         }
     });
     return ctx.response_json(std::move(obj).into_str());
 }
 
-constexpr bool is_query_allowed(ProblemsListCapabilities caps,
-        optional<decltype(Problem::type)> problem_type) noexcept {
+constexpr bool is_query_allowed(
+        ProblemsListCapabilities caps, optional<decltype(Problem::type)> problem_type) noexcept {
     if (not problem_type) {
         return caps.query_all;
     }
@@ -205,8 +202,7 @@ constexpr bool is_query_allowed(ProblemsListCapabilities caps,
 sql::Condition<> caps_to_condition(
         ProblemsListCapabilities caps, optional<decltype(Problem::type)> problem_type) {
     auto res = sql::FALSE;
-    if (caps.view_all_with_type_public and
-            (!problem_type or problem_type == Problem::Type::PUBLIC))
+    if (caps.view_all_with_type_public and (!problem_type or problem_type == Problem::Type::PUBLIC))
     {
         res = res or
                 sql::Condition{concat_tostr(
@@ -216,12 +212,11 @@ sql::Condition<> caps_to_condition(
             (!problem_type or problem_type == Problem::Type::CONTEST_ONLY))
     {
         res = res or
-                sql::Condition(concat_tostr("p.type=",
-                        decltype(Problem::type){Problem::Type::CONTEST_ONLY}.to_int()));
+                sql::Condition(concat_tostr(
+                        "p.type=", decltype(Problem::type){Problem::Type::CONTEST_ONLY}.to_int()));
     }
     if (caps.view_all_with_type_private and
-            (!problem_type or problem_type == Problem::Type::PRIVATE))
-    {
+            (!problem_type or problem_type == Problem::Type::PRIVATE)) {
         res = res or
                 sql::Condition(concat_tostr(
                         "p.type=", decltype(Problem::type){Problem::Type::PRIVATE}.to_int()));
@@ -291,8 +286,8 @@ Response list_user_problems(Context& ctx, decltype(User::id) user_id) {
 
 Response list_user_problems_below_id(
         Context& ctx, decltype(User::id) user_id, decltype(Problem::id) problem_id) {
-    return do_list_user_problems(ctx, NEXT_QUERY_LIMIT, user_id, std::nullopt,
-            sql::Condition("p.id<?", problem_id));
+    return do_list_user_problems(
+            ctx, NEXT_QUERY_LIMIT, user_id, std::nullopt, sql::Condition("p.id<?", problem_id));
 }
 
 Response list_user_problems_with_type(
@@ -302,8 +297,8 @@ Response list_user_problems_with_type(
 
 Response list_user_problems_with_type_below_id(Context& ctx, decltype(User::id) user_id,
         decltype(Problem::type) problem_type, decltype(Problem::id) problem_id) {
-    return do_list_user_problems(ctx, NEXT_QUERY_LIMIT, user_id, problem_type,
-            sql::Condition("p.id<?", problem_id));
+    return do_list_user_problems(
+            ctx, NEXT_QUERY_LIMIT, user_id, problem_type, sql::Condition("p.id<?", problem_id));
 }
 
 Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
@@ -328,8 +323,7 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
                     .left_join("submissions s")
                     .on(sql::Condition{"s.problem_id=p.id"} and
                             sql::Condition{"s.owner=?",
-                                    ctx.session ? optional{ctx.session->user_id}
-                                                : std::nullopt} and
+                                    ctx.session ? optional{ctx.session->user_id} : std::nullopt} and
                             sql::Condition{"s.problem_final IS TRUE"})
                     .where("p.id=?", problem_id));
     decltype(Problem::simfile) simfile;
@@ -340,11 +334,10 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
     std::vector<decltype(ProblemTag::name)> public_tags;
     std::vector<decltype(ProblemTag::name)> hidden_tags;
     {
-        auto tags_stmt =
-                ctx.mysql.prepare_bind_and_execute(sql::Select("name, is_hidden")
-                                                           .from("problem_tags")
-                                                           .where("problem_id=?", p.id)
-                                                           .order_by("is_hidden, name"));
+        auto tags_stmt = ctx.mysql.prepare_bind_and_execute(sql::Select("name, is_hidden")
+                                                                    .from("problem_tags")
+                                                                    .where("problem_id=?", p.id)
+                                                                    .order_by("is_hidden, name"));
         decltype(ProblemTag::name) tag_name;
         decltype(ProblemTag::is_hidden) tag_is_hidden;
         tags_stmt.res_bind_all(tag_name, tag_is_hidden);

@@ -116,17 +116,15 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             const auto caps = capabilities::problems(session);
             obj.prop("ui_view", caps.web_ui_view);
             obj.prop("add_problem", caps.add_problem);
-            auto fill_with_list_caps =
-                    [&](auto& obj, const capabilities::ProblemsListCapabilities caps) {
-                        obj.prop("query_all", caps.query_all);
-                        obj.prop("query_with_type_public", caps.query_with_type_public);
-                        obj.prop("query_with_type_contest_only",
-                                caps.query_with_type_contest_only);
-                        obj.prop("query_with_type_private", caps.query_with_type_private);
-                        obj.prop("ui_show_owner_column", caps.web_ui_show_owner_column);
-                        obj.prop("ui_show_updated_at_column",
-                                caps.web_ui_show_updated_at_column);
-                    };
+            auto fill_with_list_caps = [&](auto& obj,
+                                               const capabilities::ProblemsListCapabilities caps) {
+                obj.prop("query_all", caps.query_all);
+                obj.prop("query_with_type_public", caps.query_with_type_public);
+                obj.prop("query_with_type_contest_only", caps.query_with_type_contest_only);
+                obj.prop("query_with_type_private", caps.query_with_type_private);
+                obj.prop("ui_show_owner_column", caps.web_ui_show_owner_column);
+                obj.prop("ui_show_updated_at_column", caps.web_ui_show_updated_at_column);
+            };
             obj.prop_obj("list_all", [&](auto& obj) {
                 fill_with_list_caps(obj, capabilities::list_all_problems(session));
             });

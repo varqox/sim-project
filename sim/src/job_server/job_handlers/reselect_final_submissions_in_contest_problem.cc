@@ -9,11 +9,10 @@ void ReselectFinalSubmissionsInContestProblem::run() {
 
     auto transaction = mysql.start_transaction();
 
-    auto stmt = mysql.prepare(
-            "SELECT DISTINCT owner, problem_id "
-            "FROM submissions WHERE contest_problem_id=? AND final_candidate=1 "
-            "ORDER by id"); // Order is important so that if the two such jobs are
-                            // running, one would block until the other finishes
+    auto stmt = mysql.prepare("SELECT DISTINCT owner, problem_id "
+                              "FROM submissions WHERE contest_problem_id=? AND final_candidate=1 "
+                              "ORDER by id"); // Order is important so that if the two such jobs are
+                                              // running, one would block until the other finishes
     stmt.bind_and_execute(contest_problem_id_);
 
     mysql::Optional<uint64_t> sowner;

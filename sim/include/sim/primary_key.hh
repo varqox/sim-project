@@ -11,8 +11,8 @@ class PrimaryKey {
     std::tuple<T Class::*...> member_ptrs;
 
 public:
-    using Type = std::conditional_t<sizeof...(T) == 1,
-            std::tuple_element_t<0, std::tuple<T...>>, std::tuple<T...>>;
+    using Type = std::conditional_t<sizeof...(T) == 1, std::tuple_element_t<0, std::tuple<T...>>,
+            std::tuple<T...>>;
 
     constexpr explicit PrimaryKey(T Class::*... member_ptrs)
     : member_ptrs{member_ptrs...} {}
@@ -22,8 +22,7 @@ public:
     }
 
     void set(Class& obj, Type val) const {
-        std::apply(do_set, std::tuple_cat(std::tie(obj), member_ptrs)) =
-                std::tuple{std::move(val)};
+        std::apply(do_set, std::tuple_cat(std::tie(obj), member_ptrs)) = std::tuple{std::move(val)};
     }
 
 private:

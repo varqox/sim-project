@@ -69,8 +69,8 @@ void ChangeProblemStatement::run() {
     }
 
     // Add new statement file entry
-    dest_zip.file_add(new_statement_path,
-            dest_zip.source_file(sim::internal_files::path_of(job_file_id_)));
+    dest_zip.file_add(
+            new_statement_path, dest_zip.source_file(sim::internal_files::path_of(job_file_id_)));
 
     dest_zip.close(); // Write all data to the dest_zip
 

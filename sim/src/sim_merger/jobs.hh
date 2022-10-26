@@ -42,8 +42,7 @@ class JobsMerger : public Merger<sim::jobs::Job> {
                 job.file_id = internal_files_.new_id(job.file_id.value(), record_set.kind);
             }
             if (job.tmp_file_id) {
-                job.tmp_file_id =
-                        internal_files_.new_id(job.tmp_file_id.value(), record_set.kind);
+                job.tmp_file_id = internal_files_.new_id(job.tmp_file_id.value(), record_set.kind);
             }
             if (job.creator) {
                 job.creator = users_.new_id(job.creator.value(), record_set.kind);
@@ -71,8 +70,7 @@ class JobsMerger : public Merger<sim::jobs::Job> {
             case Job::Type::MERGE_PROBLEMS: {
                 job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
                 auto info = sim::jobs::MergeProblemsInfo(job.info);
-                info.target_problem_id =
-                        problems_.new_id(info.target_problem_id, record_set.kind);
+                info.target_problem_id = problems_.new_id(info.target_problem_id, record_set.kind);
                 job.info = info.dump();
                 break;
             }
@@ -112,8 +110,8 @@ class JobsMerger : public Merger<sim::jobs::Job> {
             case Job::Type::EDIT_PROBLEM: THROW("TODO");
             }
 
-            record_set.add_record(job,
-                    str_to_time_point(intentional_unsafe_cstring_view(job.added.to_string())));
+            record_set.add_record(
+                    job, str_to_time_point(intentional_unsafe_cstring_view(job.added.to_string())));
         }
     }
 
@@ -136,8 +134,8 @@ public:
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(x.id, x.file_id, x.tmp_file_id, x.creator, x.type,
-                    x.priority, x.status, x.added, x.aux_id, x.info, x.data);
+            stmt.bind_and_execute(x.id, x.file_id, x.tmp_file_id, x.creator, x.type, x.priority,
+                    x.status, x.added, x.aux_id, x.info, x.data);
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);

@@ -41,17 +41,17 @@ struct TokensInfo {
 
 std::optional<TokensInfo> tokens_info_for(Context& ctx, decltype(Contest::id) contest_id) {
     TokensInfo ti;
-    auto stmt = ctx.mysql.prepare(
-            "SELECT c.is_public, cu.mode, cet.token, cet.short_token, "
-            "cet.short_token_expiration "
-            "FROM contests c "
-            "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
-            "LEFT JOIN contest_entry_tokens cet ON cet.contest_id=c.id "
-            "WHERE c.id=?");
+    auto stmt =
+            ctx.mysql.prepare("SELECT c.is_public, cu.mode, cet.token, cet.short_token, "
+                              "cet.short_token_expiration "
+                              "FROM contests c "
+                              "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
+                              "LEFT JOIN contest_entry_tokens cet ON cet.contest_id=c.id "
+                              "WHERE c.id=?");
     stmt.bind_and_execute(
             ctx.session ? std::optional{ctx.session->user_id} : std::nullopt, contest_id);
-    stmt.res_bind_all(ti.contest_is_public, ti.cu_mode, ti.token, ti.short_token,
-            ti.short_token_expiration);
+    stmt.res_bind_all(
+            ti.contest_is_public, ti.cu_mode, ti.token, ti.short_token, ti.short_token_expiration);
     if (not stmt.next()) {
         return std::nullopt;
     }
@@ -61,8 +61,8 @@ std::optional<TokensInfo> tokens_info_for(Context& ctx, decltype(Contest::id) co
         ti.short_token = std::nullopt;
         ti.short_token_expiration = std::nullopt;
     }
-    ti.caps_contest = web_server::capabilities::contest_for(
-            ctx.session, ti.contest_is_public, ti.cu_mode);
+    ti.caps_contest =
+            web_server::capabilities::contest_for(ctx.session, ti.contest_is_public, ti.cu_mode);
     return ti;
 }
 
@@ -93,8 +93,7 @@ std::optional<TokenContestInfo> token_contest_info_for(
             "These cannot be equal because this would cause conflict in selecting the token "
             "in "
             "the below query");
-    auto token_kind =
-            token_or_short_token.size() == decltype(ContestEntryToken::token)::max_len
+    auto token_kind = token_or_short_token.size() == decltype(ContestEntryToken::token)::max_len
             ? ContestEntryTokenKind::NORMAL
             : ContestEntryTokenKind::SHORT;
     auto stmt = ctx.mysql.prepare(
@@ -163,9 +162,9 @@ Response view(Context& ctx, decltype(Contest::id) contest_id) {
             });
         }
 
-        auto short_token_caps = capabilities::contest_entry_token_for(
-                capabilities::ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest,
-                ti.cu_mode);
+        auto short_token_caps =
+                capabilities::contest_entry_token_for(capabilities::ContestEntryTokenKind::SHORT,
+                        ctx.session, ti.caps_contest, ti.cu_mode);
         if (short_token_caps.view) {
             obj.prop_obj("short_token", [&](auto& obj) {
                 obj.prop("value", ti.short_token);
@@ -188,9 +187,9 @@ Response add(Context& ctx, decltype(Contest::id) contest_id) {
         if (ti.token) {
             return ctx.response_400("Contest already has an entry token");
         }
-        auto stmt = ctx.mysql.prepare(
-                "INSERT IGNORE contest_entry_tokens(token, contest_id, "
-                "short_token, short_token_expiration) VALUES(?, ?, NULL, NULL)");
+        auto stmt =
+                ctx.mysql.prepare("INSERT IGNORE contest_entry_tokens(token, contest_id, "
+                                  "short_token, short_token_expiration) VALUES(?, ?, NULL, NULL)");
         do {
             stmt.bind_and_execute(random_token(), contest_id);
         } while (stmt.affected_rows() == 0);
@@ -233,8 +232,7 @@ Response delete_(Context& ctx, decltype(Contest::id) contest_id) {
     });
 }
 
-static void set_or_regen_short_token(
-        mysql::Connection& mysql, decltype(Contest::id) contest_id) {
+static void set_or_regen_short_token(mysql::Connection& mysql, decltype(Contest::id) contest_id) {
     auto stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens SET short_token=?, "
                               "short_token_expiration=? WHERE "
                               "contest_id=? AND (short_token IS NULL or short_token!=?)");

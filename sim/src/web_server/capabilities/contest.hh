@@ -51,12 +51,10 @@ struct Contest {
 
 Contest contest_for(const decltype(web_worker::Context::session)& session,
         decltype(sim::contests::Contest::is_public) contest_is_public,
-        std::optional<decltype(sim::contest_users::ContestUser::mode)>
-                contest_user_mode) noexcept;
+        std::optional<decltype(sim::contest_users::ContestUser::mode)> contest_user_mode) noexcept;
 
 // Returns std::nullopt if such contest does not exist
-std::optional<
-        std::pair<Contest, std::optional<decltype(sim::contest_users::ContestUser::mode)>>>
+std::optional<std::pair<Contest, std::optional<decltype(sim::contest_users::ContestUser::mode)>>>
 contest_for(mysql::Connection& mysql, const decltype(web_worker::Context::session)& session,
         decltype(sim::contests::Contest::id) contest_id);
 

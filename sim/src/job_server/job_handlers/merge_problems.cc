@@ -75,8 +75,7 @@ void MergeProblems::run_impl() {
                   "type=?")
             .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
                     default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
-                    mysql_date(), donor_problem_id_,
-                    EnumVal(Submission::Type::PROBLEM_SOLUTION));
+                    mysql_date(), donor_problem_id_, EnumVal(Submission::Type::PROBLEM_SOLUTION));
 
     // Delete problem solutions
     mysql.prepare("DELETE FROM submissions "
@@ -109,8 +108,8 @@ void MergeProblems::run_impl() {
                 .bind_and_execute(EnumVal(Job::Status::PENDING),
                         default_priority(Job::Type::REJUDGE_SUBMISSION),
                         EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(),
-                        sim::jobs::dump_string(intentional_unsafe_string_view(
-                                to_string(info_.target_problem_id))),
+                        sim::jobs::dump_string(
+                                intentional_unsafe_string_view(to_string(info_.target_problem_id))),
                         donor_problem_id_);
     }
 
@@ -121,8 +120,8 @@ void MergeProblems::run_impl() {
     // Update finals (both contest and problem finals are being taken care of)
     for (auto const& ftu_elem : finals_to_update) {
         sim::submissions::update_final_lock(mysql, ftu_elem.owner, info_.target_problem_id);
-        sim::submissions::update_final(mysql, ftu_elem.owner, info_.target_problem_id,
-                ftu_elem.contest_problem_id, false);
+        sim::submissions::update_final(
+                mysql, ftu_elem.owner, info_.target_problem_id, ftu_elem.contest_problem_id, false);
     }
 
     // Transfer problem tags (duplicates will not be transferred - they will be

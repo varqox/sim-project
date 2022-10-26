@@ -19,8 +19,7 @@ static constexpr const char* job_type_str(Job::Type type) noexcept {
     case JT::ADD_PROBLEM: return "Add problem";
     case JT::REUPLOAD_PROBLEM: return "Reupload problem";
     case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return "Add problem - set time limits";
-    case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-        return "Reupload problem - set time limits";
+    case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return "Reupload problem - set time limits";
     case JT::EDIT_PROBLEM: return "Edit problem";
     case JT::DELETE_PROBLEM: return "Delete problem";
     case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
@@ -365,8 +364,8 @@ void Sim::api_jobs() {
         // Append what buttons to show
         append('"', actions);
 
-        auto perms = granted_perms |
-                jobs_get_permissions(res.to_opt(CREATOR), job_type, job_status);
+        auto perms =
+                granted_perms | jobs_get_permissions(res.to_opt(CREATOR), job_type, job_status);
         if (uint(perms & PERM::VIEW)) {
             append('v');
         }
@@ -382,8 +381,7 @@ void Sim::api_jobs() {
             append('u'); // TODO: ^ that is very nasty
         }
         if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and
-                job_type == JT::CHANGE_PROBLEM_STATEMENT)
-        {
+                job_type == JT::CHANGE_PROBLEM_STATEMENT) {
             append('s'); // TODO: ^ that is very nasty
         }
         if (uint(perms & PERM::CANCEL)) {
@@ -527,8 +525,7 @@ void Sim::api_job_download_log() {
     throw_assert(stmt.next());
 }
 
-void Sim::api_job_download_uploaded_package(
-        std::optional<uint64_t> file_id, Job::Type job_type) {
+void Sim::api_job_download_uploaded_package(std::optional<uint64_t> file_id, Job::Type job_type) {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
     using JT = Job::Type;
@@ -541,8 +538,7 @@ void Sim::api_job_download_uploaded_package(
         return api_error403(); // TODO: ^ that is very nasty
     }
 
-    resp.headers["Content-Disposition"] =
-            concat_tostr("attachment; filename=", jobs_jid, ".zip");
+    resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=", jobs_jid, ".zip");
     resp.content_type = http::Response::FILE;
     resp.content = sim::internal_files::path_of(file_id.value());
 }
@@ -560,9 +556,8 @@ void Sim::api_job_download_uploaded_statement(
     }
 
     resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=",
-            encode_uri(intentional_unsafe_string_view(path_filename(
-                    intentional_unsafe_string_view(sim::jobs::ChangeProblemStatementInfo(info)
-                                                           .new_statement_path)))));
+            encode_uri(intentional_unsafe_string_view(path_filename(intentional_unsafe_string_view(
+                    sim::jobs::ChangeProblemStatementInfo(info).new_statement_path)))));
     resp.content_type = http::Response::FILE;
     resp.content = sim::internal_files::path_of(file_id.value());
 }

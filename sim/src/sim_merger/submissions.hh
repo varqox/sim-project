@@ -50,8 +50,8 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
             }
             s.problem_id = problems_.new_id(s.problem_id, record_set.kind);
             if (s.contest_problem_id) {
-                s.contest_problem_id = contest_problems_.new_id(
-                        s.contest_problem_id.value(), record_set.kind);
+                s.contest_problem_id =
+                        contest_problems_.new_id(s.contest_problem_id.value(), record_set.kind);
             }
             if (s.contest_round_id) {
                 s.contest_round_id =
@@ -62,8 +62,7 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
             }
 
             record_set.add_record(s,
-                    str_to_time_point(
-                            intentional_unsafe_cstring_view(s.submit_time.to_string())));
+                    str_to_time_point(intentional_unsafe_cstring_view(s.submit_time.to_string())));
         }
     }
 
@@ -93,9 +92,9 @@ public:
             const auto& x = new_record.data;
             stmt.bind_and_execute(x.id, x.file_id, x.owner, x.problem_id, x.contest_problem_id,
                     x.contest_round_id, x.contest_id, x.type, x.language, x.final_candidate,
-                    x.problem_final, x.contest_final, x.contest_initial_final,
-                    x.initial_status, x.full_status, x.submit_time, x.score, x.last_judgment,
-                    x.initial_report, x.final_report);
+                    x.problem_final, x.contest_final, x.contest_initial_final, x.initial_status,
+                    x.full_status, x.submit_time, x.score, x.last_judgment, x.initial_report,
+                    x.final_report);
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);

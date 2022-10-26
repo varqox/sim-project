@@ -5,8 +5,7 @@
 
 namespace job_server::job_handlers {
 
-class ReuploadProblemJudgeModelSolution final
-: public AddOrReuploadProblemJudgeModelSolutionBase {
+class ReuploadProblemJudgeModelSolution final : public AddOrReuploadProblemJudgeModelSolutionBase {
 public:
     ReuploadProblemJudgeModelSolution(uint64_t job_id, StringView job_creator,
             const sim::jobs::AddProblemInfo& info, uint64_t job_file_id,

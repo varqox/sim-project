@@ -10,9 +10,7 @@ using web_server::web_worker::Context;
 
 namespace web_server::users::ui {
 
-Response list_users(Context& ctx) {
-    return ctx.response_ui("Users", "list_users()");
-}
+Response list_users(Context& ctx) { return ctx.response_ui("Users", "list_users()"); }
 
 Response sign_in(Context& ctx) { return ctx.response_ui("Sign in", "sign_in()"); }
 

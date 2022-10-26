@@ -41,8 +41,7 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath pac
         opts.min_time_limit = sim::MIN_TIME_LIMIT;
         opts.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
 
-        sim::Conver::reset_time_limits_using_jugde_reports(
-                simfile, initial_rep, final_rep, opts);
+        sim::Conver::reset_time_limits_using_jugde_reports(simfile, initial_rep, final_rep, opts);
 
     } catch (const std::exception& e) {
         return set_failure("Conver failed: ", e.what());

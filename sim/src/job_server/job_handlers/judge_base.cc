@@ -71,8 +71,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
             throw_assert(false); // We shouldn't get here
         };
 
-        report.append(
-                "<td>", html_escape(test.name), "</td>", as_td_string(test.status), "<td>");
+        report.append("<td>", html_escape(test.name), "</td>", as_td_string(test.status), "<td>");
 
         if (test.status == JudgeReport::Test::SKIPPED) {
             report.append('?');
@@ -97,11 +96,11 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
         // First row
         report.append("<tr>");
         append_normal_columns(group.tests[0]);
-        report.append(R"(<td class="groupscore" rowspan=")", group.tests.size(), "\">",
-                group.score, " / ", group.max_score, "</td></tr>");
+        report.append(R"(<td class="groupscore" rowspan=")", group.tests.size(), "\">", group.score,
+                " / ", group.max_score, "</td></tr>");
         // Other rows
-        std::for_each(group.tests.begin() + 1, group.tests.end(),
-                [&](const JudgeReport::Test& test) {
+        std::for_each(
+                group.tests.begin() + 1, group.tests.end(), [&](const JudgeReport::Test& test) {
                     report.append("<tr>");
                     append_normal_columns(test);
                     report.append("</tr>");
@@ -120,8 +119,8 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
         for (auto&& group : jr.groups) {
             for (auto&& test : group.tests) {
                 if (!test.comment.empty()) {
-                    report.append("<li><span class=\"test-id\">", html_escape(test.name),
-                            "</span>", html_escape(test.comment), "</li>");
+                    report.append("<li><span class=\"test-id\">", html_escape(test.name), "</span>",
+                            html_escape(test.comment), "</li>");
                 }
             }
         }
