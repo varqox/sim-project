@@ -49,6 +49,7 @@ struct UserCapabilities {
 };
 
 UserCapabilities user(const decltype(web_worker::Context::session)& session,
-        decltype(sim::users::User::id) user_id) noexcept;
+        decltype(sim::users::User::id) user_id,
+        decltype(sim::users::User::type) user_type) noexcept;
 
 } // namespace web_server::capabilities

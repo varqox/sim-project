@@ -31,16 +31,22 @@ UsersListCapabilities list_all_users(
 }
 
 UserCapabilities user(const decltype(web_worker::Context::session)& session,
-        decltype(sim::users::User::id) user_id) noexcept {
+        decltype(sim::users::User::id) user_id,
+        decltype(sim::users::User::type) user_type) noexcept {
     using sim::users::SIM_ROOT_UID;
+    using Type = sim::users::User::Type;
     bool is_admin_ = is_admin(session);
     bool is_teacher_ = is_teacher(session);
     bool is_self_ = is_self(session, user_id);
-    bool make_admin = session and session->user_id == SIM_ROOT_UID;
-    bool make_teacher = (user_id != SIM_ROOT_UID) and is_admin_;
-    bool make_normal = (user_id != SIM_ROOT_UID) and (is_admin_ or (is_teacher_ and is_self_));
+    bool edit = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID);
+    bool make_admin =
+            (session and session->user_id == SIM_ROOT_UID) or (edit and user_type == Type::ADMIN);
+    bool make_teacher =
+            (user_id != SIM_ROOT_UID) and (is_admin_ or (edit and user_type == Type::TEACHER));
+    bool make_normal = (user_id != SIM_ROOT_UID) and
+            (is_admin_ or (is_teacher_ and is_self_) or (edit and user_type == Type::NORMAL));
     return {.view = is_self_ or is_admin_,
-            .edit = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID),
+            .edit = edit,
             .edit_username = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID),
             .edit_first_name = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID),
             .edit_last_name = is_self_ or (is_admin_ and user_id != SIM_ROOT_UID),
