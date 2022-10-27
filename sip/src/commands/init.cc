@@ -14,8 +14,7 @@ void init(ArgvParser args) {
 
     auto specified_dir = args.extract_next();
     if (mkdir_r(specified_dir.to_string()) == -1 and errno != EEXIST) {
-        throw SipError(
-            "failed to create directory: ", specified_dir, " (mkdir_r()", errmsg(), ')');
+        throw SipError("failed to create directory: ", specified_dir, " (mkdir_r()", errmsg(), ')');
     }
 
     if (chdir(specified_dir.data()) == -1) {

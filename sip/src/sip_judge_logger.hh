@@ -55,27 +55,22 @@ class SipJudgeLogger : public sim::JudgeLogger {
     }
 
     template <class Func>
-    void log_test(
-        StringView test_name, const sim::JudgeReport::Test& test_report, OldSandbox::ExitStat es,
-        Func&& func) {
+    void log_test(StringView test_name, const sim::JudgeReport::Test& test_report,
+            OldSandbox::ExitStat es, Func&& func) {
         assert(test_name.size() <= test_name_max_len_);
         ++status_count_[test_report.status];
-        auto tmplog =
-            log(' ', padded_string(test_name, test_name_max_len_, LEFT), "  ",
-                padded_string(
-                    intentional_unsafe_string_view(
-                        to_string(floor_to_10ms(test_report.runtime), false)),
-                    4),
-                " / ", to_string(floor_to_10ms(test_report.time_limit), false),
-                "\033[2ms\033[m ", mem_to_str(test_report.memory_consumed), " / ",
+        auto tmplog = log(' ', padded_string(test_name, test_name_max_len_, LEFT), "  ",
+                padded_string(intentional_unsafe_string_view(
+                                      to_string(floor_to_10ms(test_report.runtime), false)),
+                        4),
+                " / ", to_string(floor_to_10ms(test_report.time_limit), false), "\033[2ms\033[m ",
+                mem_to_str(test_report.memory_consumed), " / ",
                 mem_to_str(test_report.memory_limit, false), ' ');
         // Status
         switch (test_report.status) {
         case sim::JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;
         case sim::JudgeReport::Test::MLE: tmplog("\033[1;33mMLE\033[m"); break;
-        case sim::JudgeReport::Test::RTE:
-            tmplog("\033[1;31mRTE\033[m (", es.message, ')');
-            break;
+        case sim::JudgeReport::Test::RTE: tmplog("\033[1;31mRTE\033[m (", es.message, ')'); break;
         case sim::JudgeReport::Test::OK: tmplog("\033[1;32mOK\033[m"); break;
         case sim::JudgeReport::Test::WA: tmplog("\033[1;31mWA\033[m"); break;
         case sim::JudgeReport::Test::CHECKER_ERROR:
@@ -103,15 +98,14 @@ public:
 
     void begin(bool final) override { final_ = final; }
 
-    void test(StringView test_name, sim::JudgeReport::Test test_report, OldSandbox::ExitStat es)
-        override {
+    void test(StringView test_name, sim::JudgeReport::Test test_report,
+            OldSandbox::ExitStat es) override {
         log_test(test_name, test_report, es, [](auto& /*unused*/) {});
     }
 
-    void test(
-        StringView test_name, sim::JudgeReport::Test test_report, OldSandbox::ExitStat es,
-        OldSandbox::ExitStat checker_es, std::optional<uint64_t> checker_mem_limit,
-        StringView checker_error_str) override {
+    void test(StringView test_name, sim::JudgeReport::Test test_report, OldSandbox::ExitStat es,
+            OldSandbox::ExitStat checker_es, std::optional<uint64_t> checker_mem_limit,
+            StringView checker_error_str) override {
         log_test(test_name, test_report, es, [&](auto& tmplog) {
             // Checker status
             if (test_report.status == sim::JudgeReport::Test::OK) {
@@ -131,9 +125,8 @@ public:
             }
 
             if (test_report.status == sim::JudgeReport::Test::CHECKER_ERROR or sip_verbose) {
-                tmplog(
-                    " \033[2m[RT: ", to_string(floor_to_10ms(checker_es.runtime), false),
-                    "]\033[m ", mem_to_str(checker_es.vm_peak));
+                tmplog(" \033[2m[RT: ", to_string(floor_to_10ms(checker_es.runtime), false),
+                        "]\033[m ", mem_to_str(checker_es.vm_peak));
                 if (checker_mem_limit.has_value()) {
                     tmplog(" / ", mem_to_str(checker_mem_limit.value(), false));
                 }

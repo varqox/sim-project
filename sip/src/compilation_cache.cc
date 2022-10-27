@@ -50,8 +50,7 @@ void cache_proot(FilePath dest_file) {
         throw SipError("create_subdirectories(", dest_file, ')', errmsg());
     }
 
-    put_file_contents(
-        dest_file, reinterpret_cast<const char*>(proot_dump), proot_dump_len, S_0700);
+    put_file_contents(dest_file, reinterpret_cast<const char*>(proot_dump), proot_dump_len, S_0700);
 }
 
 decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
@@ -67,10 +66,9 @@ decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
     string compilation_errors;
     stdlog("Compiling ", source, "...").flush_no_nl();
 
-    if (jworker.compile_solution(
-            concat(source), sim::filename_to_lang(source), SOLUTION_COMPILATION_TIME_LIMIT,
-            &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH,
-            cached_path(PROOT_PATH).to_string()))
+    if (jworker.compile_solution(concat(source), sim::filename_to_lang(source),
+                SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH,
+                cached_path(PROOT_PATH).to_string()))
     {
         stdlog(" \033[1;31mfailed\033[m.");
         errlog(compilation_errors);
@@ -105,9 +103,8 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
     string compilation_errors;
     stdlog("Compiling checker...").flush_no_nl();
 
-    if (jworker.compile_checker(
-            CHECKER_COMPILATION_TIME_LIMIT, &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH,
-            cached_path(PROOT_PATH).to_string()))
+    if (jworker.compile_checker(CHECKER_COMPILATION_TIME_LIMIT, &compilation_errors,
+                COMPILATION_ERRORS_MAX_LENGTH, cached_path(PROOT_PATH).to_string()))
     {
         stdlog(" \033[1;31mfailed\033[m.");
         errlog(compilation_errors);
@@ -116,7 +113,7 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 
     stdlog(" done.");
     auto cached_exec =
-        (checker.has_value() ? cached_path(checker.value()) : cached_default_checker);
+            (checker.has_value() ? cached_path(checker.value()) : cached_default_checker);
     if (create_subdirectories(cached_exec) == -1) {
         throw SipError("create_subdirectories(", cached_exec, ')', errmsg());
     }
@@ -124,8 +121,7 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
     jworker.save_compiled_checker(cached_exec);
 }
 
-void SipPackage::CompilationCache::load_solution(
-    sim::JudgeWorker& jworker, StringView solution) {
+void SipPackage::CompilationCache::load_solution(sim::JudgeWorker& jworker, StringView solution) {
     STACK_UNWINDING_MARK;
     jworker.load_compiled_solution(compile(solution));
 }

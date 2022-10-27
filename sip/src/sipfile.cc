@@ -100,16 +100,15 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
     auto end_test = sim::Simfile::TestNameComparator::split(end);
     // The part before group id
     StringView prefix =
-        begin.substring(0, begin.size() - begin_test.gid.size() - begin_test.tid.size());
+            begin.substring(0, begin.size() - begin_test.gid.size() - begin_test.tid.size());
     {
         // Allow e.g. test4a-5c
         StringView end_prefix =
-            end.substring(0, end.size() - end_test.gid.size() - end_test.tid.size());
+                end.substring(0, end.size() - end_test.gid.size() - end_test.tid.size());
         if (not end_prefix.empty() and end_prefix != prefix) {
-            throw SipError(
-                "invalid test range (test prefix of the end test is not empty "
-                "and does not match the begin test prefix): ",
-                test_range);
+            throw SipError("invalid test range (test prefix of the end test is not empty "
+                           "and does not match the begin test prefix): ",
+                    test_range);
         }
     }
 
@@ -145,10 +144,9 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
     }
 
     if (begin_tid > end_tid) {
-        throw SipError(
-            "invalid test range (begin test ID is greater than end"
-            " test ID): ",
-            test_range);
+        throw SipError("invalid test range (begin test ID is greater than end"
+                       " test ID): ",
+                test_range);
     }
 
     // Increments tid by one
@@ -185,18 +183,16 @@ void Sipfile::load_static_tests() {
         StringView test_range = entry.extract_leading(not_fn(is_space<char>));
         entry.extract_leading(is_space<char>);
         if (not entry.empty()) {
-            log_warning(
-                "Sipfile (static): ignoring invalid suffix: `", entry,
-                "` of the entry with test range: ", test_range);
+            log_warning("Sipfile (static): ignoring invalid suffix: `", entry,
+                    "` of the entry with test range: ", test_range);
         }
 
         for_each_test_in_range(test_range, [&](StringView test) {
             auto [_, inserted] = static_tests->emplace(test);
             if (not inserted) {
-                log_warning(
-                    "Sipfile (static): test `", test,
-                    "` is specified"
-                    " in more than one test range");
+                log_warning("Sipfile (static): test `", test,
+                        "` is specified"
+                        " in more than one test range");
             }
         });
     }
@@ -204,8 +200,8 @@ void Sipfile::load_static_tests() {
 
 /// @p pkg_contents should contain all files that @p pattern will be watched
 /// with
-static InplaceBuff<32>
-matching_generator(StringView pattern, const sim::PackageContents& pkg_contents) {
+static InplaceBuff<32> matching_generator(
+        StringView pattern, const sim::PackageContents& pkg_contents) {
     STACK_UNWINDING_MARK;
 
     // Generators specified by path always match
@@ -217,9 +213,8 @@ matching_generator(StringView pattern, const sim::PackageContents& pkg_contents)
     pkg_contents.for_each_with_prefix("utils/", [&](StringView file) {
         if (matches_pattern(pattern, file) and sim::is_source(file)) {
             if (res.has_value()) {
-                throw SipError(
-                    "Sipfile: specified generator `", pattern,
-                    "` matches more than one file: `", res.value(), "` and `", file, '`');
+                throw SipError("Sipfile: specified generator `", pattern,
+                        "` matches more than one file: `", res.value(), "` and `", file, '`');
             }
 
             res = file;
@@ -230,15 +225,14 @@ matching_generator(StringView pattern, const sim::PackageContents& pkg_contents)
         return InplaceBuff<32>(*res);
     }
 
-    log_warning(
-        "Sipfile (gen): no file in utils/ matches specified generator: `", pattern,
-        "`. It will be treated as a shell command.\n"
-        "  To remove this warning you have to choose one of the following "
-        "options:\n"
-        "    1. Provide full path to the generator file e.g. "
-        "generators/gen1.cpp\n"
-        "    2. If it is a shell command, prefix the generator with sh: - e.g. "
-        "sh:echo");
+    log_warning("Sipfile (gen): no file in utils/ matches specified generator: `", pattern,
+            "`. It will be treated as a shell command.\n"
+            "  To remove this warning you have to choose one of the following "
+            "options:\n"
+            "    1. Provide full path to the generator file e.g. "
+            "generators/gen1.cpp\n"
+            "    2. If it is a shell command, prefix the generator with sh: - e.g. "
+            "sh:echo");
     return concat<32>("sh:", pattern);
 }
 
@@ -267,14 +261,13 @@ void Sipfile::load_gen_tests() {
 
         if (specified_generator.empty()) {
             throw SipError(
-                "Sipfile (gen): missing generator for the test range `", test_range, '`');
+                    "Sipfile (gen): missing generator for the test range `", test_range, '`');
         }
 
         // Match generator
         InplaceBuff<32> generator;
         if (has_prefix(specified_generator, "sh:") or
-            access(path_absolute(specified_generator), F_OK) == 0)
-        {
+                access(path_absolute(specified_generator), F_OK) == 0) {
             generator = specified_generator;
         } else {
             generator = matching_generator(specified_generator, pkg_contents);
@@ -283,9 +276,8 @@ void Sipfile::load_gen_tests() {
         for_each_test_in_range(test_range, [&](StringView test) {
             auto [_, inserted] = gen_tests->emplace(test, generator, generator_args);
             if (not inserted) {
-                throw SipError(
-                    "Sipfile (gen): test `", test,
-                    "` is specified in more than one test range");
+                throw SipError("Sipfile (gen): test `", test,
+                        "` is specified in more than one test range");
             }
         });
     }

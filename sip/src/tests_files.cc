@@ -19,10 +19,9 @@ TestsFiles::TestsFiles() {
             if (it == tests.end()) {
                 tests.emplace(test_name, file);
             } else if (it->second.in.has_value()) {
-                throw SipError(
-                    "input file of test ", it->first,
-                    " was found in more than one location: ", it->second.in.value(), " and ",
-                    file);
+                throw SipError("input file of test ", it->first,
+                        " was found in more than one location: ", it->second.in.value(), " and ",
+                        file);
             } else {
                 it->second.in = file;
             }
@@ -33,10 +32,9 @@ TestsFiles::TestsFiles() {
             if (it == tests.end()) {
                 tests.emplace(test_name, file);
             } else if (it->second.out.has_value()) {
-                throw SipError(
-                    "output file of test ", it->first,
-                    " was found in more than one location: ", it->second.out.value(), " and ",
-                    file);
+                throw SipError("output file of test ", it->first,
+                        " was found in more than one location: ", it->second.out.value(), " and ",
+                        file);
             } else {
                 it->second.out = file;
             }

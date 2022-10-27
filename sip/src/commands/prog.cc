@@ -11,11 +11,9 @@ std::set<std::string> parse_args_to_solutions(const sim::Simfile& simfile, ArgvP
     for (auto const& sol : simfile.solutions) {
         solutions.emplace(sol);
     }
-    return files_matching_patterns(
-        [solutions = std::move(solutions)](StringView path) {
-            return solutions.count(path) == 1;
-        },
-        args);
+    return files_matching_patterns([solutions = std::move(solutions)](
+                                           StringView path) { return solutions.count(path) == 1; },
+            args);
 }
 
 void prog(ArgvParser args) {

@@ -20,8 +20,7 @@ T arg(int n) {
     auto argn_end = argn + strlen(argn);
     if constexpr (std::is_integral_v<T>) {
         T res;
-        if (auto [p, ec] = from_chars(argn, argn_end, res);
-            ec == std::errc() and p == argn_end) {
+        if (auto [p, ec] = from_chars(argn, argn_end, res); ec == std::errc() and p == argn_end) {
             return res;
         }
     }
@@ -33,9 +32,8 @@ T arg(int n) {
         if (errno == 0 and ptr != argn and ptr == argn_end) {
             return res;
         }
-        fprintf(
-            stderr, "Invalid argument no %i: cannot convert to %s\n", n,
-            std::is_integral_v<T> ? "integer" : "floating point number");
+        fprintf(stderr, "Invalid argument no %i: cannot convert to %s\n", n,
+                std::is_integral_v<T> ? "integer" : "floating point number");
         exit(1);
     } else {
         return T{argn};
@@ -60,7 +58,7 @@ std::mt19937_64& generator() {
         }
         uint64_t seed{};
         if (auto [p, ec] = from_chars(seed_str, seed_str + strlen(seed_str), seed);
-            ec != std::errc()) {
+                ec != std::errc()) {
             fputs("SIP_TEST_SEED environment variable is not a valid integer\n", stderr);
             exit(1);
         }

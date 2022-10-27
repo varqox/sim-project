@@ -15,12 +15,11 @@ using namespace std;
 #ifdef NDEBUG
 #define my_assert(...) ((void)0)
 #else
-#define my_assert(expr)                                                              \
-    ((expr) ? (void)0                                                                \
-            : (fprintf(                                                              \
-                   stderr, "%s:%i %s: Assertion `%s' failed.\n", __FILE__, __LINE__, \
-                   __PRETTY_FUNCTION__, #expr),                                      \
-               exit(1)))
+#define my_assert(expr)                                                                  \
+    ((expr) ? (void)0                                                                    \
+            : (fprintf(stderr, "%s:%i %s: Assertion `%s' failed.\n", __FILE__, __LINE__, \
+                       __PRETTY_FUNCTION__, #expr),                                      \
+                      exit(1)))
 #endif
 
 struct Verdict {
@@ -56,8 +55,7 @@ struct Verdict {
     }
 
     // 100% points
-    template <
-        class Arg1, class... Args, enable_if_t<not is_convertible_v<Arg1, double>, int> = 0>
+    template <class Arg1, class... Args, enable_if_t<not is_convertible_v<Arg1, double>, int> = 0>
     [[noreturn]] void ok(Arg1&& message_part1, Args&&... message_part2) {
         out << "OK\n\n" << std::forward<Arg1>(message_part1);
         (out << ... << std::forward<Args>(message_part2)) << endl;
@@ -69,16 +67,16 @@ struct Verdict {
     template <class... Args>
     [[noreturn]] void wrong(Args&&... message) {
         std::visit(
-            [&](auto&& wr) {
-                using T = decay_t<decltype(wr)>;
-                if constexpr (is_same_v<T, OK>) {
-                    out << "OK\n" << wr.score << "\n";
-                } else if constexpr (is_same_v<T, WRONG>) {
-                    out << "WRONG\n\n";
-                }
-                out << wr.message_prefix;
-            },
-            wrong_override);
+                [&](auto&& wr) {
+                    using T = decay_t<decltype(wr)>;
+                    if constexpr (is_same_v<T, OK>) {
+                        out << "OK\n" << wr.score << "\n";
+                    } else if constexpr (is_same_v<T, WRONG>) {
+                        out << "WRONG\n\n";
+                    }
+                    out << wr.message_prefix;
+                },
+                wrong_override);
 
         (out << ... << std::forward<Args>(message)) << endl;
         exit(0);
@@ -286,34 +284,28 @@ public:
         }
 
         if (exp_ch and ch != *exp_ch) {
-            fatal(
-                "Read ", char_description(ch), ", expected EOF or ",
-                char_description(*exp_ch));
+            fatal("Read ", char_description(ch), ", expected EOF or ", char_description(*exp_ch));
         }
 
         return *this;
     }
 
 private:
-    static string space_char_description(unsigned char ch) {
-        return ' ' + char_description(ch);
-    }
+    static string space_char_description(unsigned char ch) { return ' ' + char_description(ch); }
 
     template <size_t N, size_t... Idx>
     void read_character(character<N> c, std::index_sequence<Idx...> /*unused*/) {
         static_assert(N == sizeof...(Idx));
         int ch = 0;
         if (not getchar(ch)) {
-            fatal(
-                "Read EOF, expected one of characters:",
-                space_char_description(c.options[Idx])...);
+            fatal("Read EOF, expected one of characters:",
+                    space_char_description(c.options[Idx])...);
         }
 
         bool matches = ((ch == c.options[Idx]) or ...);
         if (not matches) {
-            fatal(
-                "Read ", char_description(ch),
-                ", expected one of characters:", space_char_description(c.options[Idx])...);
+            fatal("Read ", char_description(ch),
+                    ", expected one of characters:", space_char_description(c.options[Idx])...);
         }
 
         c.val = ch;
@@ -389,8 +381,7 @@ public:
     Scanner& operator>>(integer<T>&& integer) {
         scan_integer(integer.val);
         if (integer.val < integer.min_val) {
-            fatal(
-                "Integer ", integer.val, " is too small (smaller than ", integer.min_val, ')');
+            fatal("Integer ", integer.val, " is too small (smaller than ", integer.min_val, ')');
         }
         if (integer.val > integer.max_val) {
             fatal("Integer ", integer.val, " is too big (bigger than ", integer.max_val, ')');

@@ -38,16 +38,16 @@ bool matches_pattern(StringView pattern, StringView str) noexcept {
     return is_subsequence(pattern, str.substring(0, pos));
 }
 
-set<string>
-files_matching_patterns(std::function<bool(StringView)> file_qualifies, ArgvParser cmd_args) {
+set<string> files_matching_patterns(
+        std::function<bool(StringView)> file_qualifies, ArgvParser cmd_args) {
     set<string> res;
     sim::PackageContents pc;
     pc.load_from_directory(".");
 
     vector<StringView> patterns;
     while (cmd_args.size() > 0) {
-        if (auto pattern = cmd_args.extract_next();
-            pc.exists(pattern) and file_qualifies(pattern)) {
+        if (auto pattern = cmd_args.extract_next(); pc.exists(pattern) and file_qualifies(pattern))
+        {
             res.emplace(pattern.to_string()); // Exact path to file
         } else {
             patterns.emplace_back(pattern);
