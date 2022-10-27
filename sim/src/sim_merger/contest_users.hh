@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sim/contest_users/contest_user.hh"
-#include "src/sim_merger/contests.hh"
-#include "src/sim_merger/merger.hh"
-#include "src/sim_merger/users.hh"
+#include "contests.hh"
+#include "merger.hh"
+#include "users.hh"
+#include <sim/contest_users/contest_user.hh>
 
 namespace sim_merger {
 

@@ -1,7 +1,6 @@
-#include "sim/jobs/utils.hh"
-#include "simlib/time.hh"
-#include "src/job_server/notify_file.hh"
-
+#include "../../job_server/notify_file.hh"
+#include <sim/jobs/utils.hh>
+#include <simlib/time.hh>
 #include <utime.h>
 
 namespace sim::jobs {

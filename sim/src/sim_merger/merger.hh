@@ -1,11 +1,10 @@
 #pragma once
 
-#include "sim/primary_key.hh"
-#include "src/sim_merger/primary_keys_from_jobs.hh"
-#include "src/sim_merger/sim_merger.hh"
-#include "src/sql_tables.hh"
-
+#include "../sql_tables.hh"
+#include "primary_keys_from_jobs.hh"
+#include "sim_merger.hh"
 #include <map>
+#include <sim/primary_key.hh>
 #include <type_traits>
 #include <utility>
 #include <vector>

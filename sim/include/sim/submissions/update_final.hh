@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/mysql/mysql.hh"
-
 #include <cstdint>
 #include <optional>
+#include <simlib/mysql/mysql.hh>
 
 namespace sim::submissions {
 

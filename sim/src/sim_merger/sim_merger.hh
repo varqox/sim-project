@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/mysql/mysql.hh"
-
 #include <array>
 #include <climits>
+#include <simlib/mysql/mysql.hh>
 
 namespace sim_merger {
 

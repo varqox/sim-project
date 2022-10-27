@@ -1,6 +1,6 @@
-#include "src/web_server/capabilities/contests.hh"
-#include "sim/users/user.hh"
-#include "src/web_server/capabilities/utils.hh"
+#include "contests.hh"
+#include "utils.hh"
+#include <sim/users/user.hh>
 
 namespace web_server::capabilities {
 

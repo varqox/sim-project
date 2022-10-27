@@ -1,10 +1,10 @@
 #pragma once
 
-#include "sim/submissions/submission.hh"
-#include "sim/submissions/update_final.hh"
-#include "sim/users/user.hh"
-#include "simlib/defer.hh"
-#include "src/sim_merger/merger.hh"
+#include "merger.hh"
+#include <sim/submissions/submission.hh>
+#include <sim/submissions/update_final.hh>
+#include <sim/users/user.hh>
+#include <simlib/defer.hh>
 
 namespace sim_merger {
 

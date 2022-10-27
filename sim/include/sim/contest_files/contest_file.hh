@@ -1,13 +1,12 @@
 #pragma once
 
-#include "sim/contests/contest.hh"
-#include "sim/internal_files/internal_file.hh"
-#include "sim/primary_key.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "sim/sql_fields/varbinary.hh"
-#include "sim/users/user.hh"
-
 #include <cstdio>
+#include <sim/contests/contest.hh>
+#include <sim/internal_files/internal_file.hh>
+#include <sim/primary_key.hh>
+#include <sim/sql_fields/datetime.hh>
+#include <sim/sql_fields/varbinary.hh>
+#include <sim/users/user.hh>
 
 namespace sim::contest_files {
 

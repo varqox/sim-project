@@ -1,7 +1,8 @@
-#include "src/job_server/job_handlers/judge_or_rejudge.hh"
-#include "sim/submissions/submission.hh"
-#include "sim/submissions/update_final.hh"
-#include "src/job_server/main.hh"
+#include "judge_or_rejudge.hh"
+#include "../main.hh"
+
+#include <sim/submissions/submission.hh>
+#include <sim/submissions/update_final.hh>
 
 using sim::submissions::Submission;
 

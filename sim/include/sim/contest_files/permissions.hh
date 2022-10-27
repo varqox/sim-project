@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sim/contests/permissions.hh"
+#include <sim/contests/permissions.hh>
 
 namespace sim::contest_files {
 

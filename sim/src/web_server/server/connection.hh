@@ -1,10 +1,9 @@
 #pragma once
 
-#include "simlib/likely.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-
+#include "../http/request.hh"
+#include "../http/response.hh"
 #include <cstdint>
+#include <simlib/likely.hh>
 
 namespace web_server::server {
 

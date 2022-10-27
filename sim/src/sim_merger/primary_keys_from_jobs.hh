@@ -1,27 +1,26 @@
 #pragma once
 
-#include "sim/contest_entry_tokens/contest_entry_token.hh"
-#include "sim/contest_files/contest_file.hh"
-#include "sim/contest_problems/contest_problem.hh"
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/contest_users/contest_user.hh"
-#include "sim/contests/contest.hh"
-#include "sim/internal_files/internal_file.hh"
-#include "sim/jobs/job.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/problem_tags/problem_tag.hh"
-#include "sim/problems/problem.hh"
-#include "sim/sessions/session.hh"
-#include "sim/sql_fields/blob.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "sim/submissions/submission.hh"
-#include "sim/users/user.hh"
-#include "simlib/ranges.hh"
-#include "simlib/time.hh"
-#include "src/sim_merger/sim_merger.hh"
-
+#include "sim_merger.hh"
 #include <chrono>
 #include <map>
+#include <sim/contest_entry_tokens/contest_entry_token.hh>
+#include <sim/contest_files/contest_file.hh>
+#include <sim/contest_problems/contest_problem.hh>
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contest_users/contest_user.hh>
+#include <sim/contests/contest.hh>
+#include <sim/internal_files/internal_file.hh>
+#include <sim/jobs/job.hh>
+#include <sim/jobs/utils.hh>
+#include <sim/problem_tags/problem_tag.hh>
+#include <sim/problems/problem.hh>
+#include <sim/sessions/session.hh>
+#include <sim/sql_fields/blob.hh>
+#include <sim/sql_fields/datetime.hh>
+#include <sim/submissions/submission.hh>
+#include <sim/users/user.hh>
+#include <simlib/ranges.hh>
+#include <simlib/time.hh>
 
 namespace sim_merger {
 

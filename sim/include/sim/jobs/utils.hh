@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/jobs/job.hh"
-#include "sim/problems/problem.hh"
-#include "sim/users/user.hh"
-#include "simlib/mysql/mysql.hh"
-
+#include <sim/jobs/job.hh>
+#include <sim/problems/problem.hh>
+#include <sim/users/user.hh>
+#include <simlib/mysql/mysql.hh>
 #include <utility>
 
 namespace sim::jobs {

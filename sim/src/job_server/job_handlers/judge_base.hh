@@ -1,8 +1,9 @@
 #pragma once
 
-#include "sim/submissions/submission.hh"
-#include "simlib/sim/judge_worker.hh"
-#include "src/job_server/job_handlers/job_handler.hh"
+#include "job_handler.hh"
+
+#include <sim/submissions/submission.hh>
+#include <simlib/sim/judge_worker.hh>
 
 namespace job_server::job_handlers {
 

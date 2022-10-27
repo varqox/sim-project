@@ -1,5 +1,5 @@
-#include "sim/problems/permissions.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/problems/permissions.hh>
 
 namespace web_server::old {
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sim/jobs/utils.hh"
-#include "src/sim_merger/internal_files.hh"
-#include "src/sim_merger/submissions.hh"
-#include "src/sim_merger/users.hh"
+#include "internal_files.hh"
+#include "submissions.hh"
+#include "users.hh"
+#include <sim/jobs/utils.hh>
 
 namespace sim_merger {
 

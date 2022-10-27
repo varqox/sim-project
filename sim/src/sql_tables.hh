@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/string_view.hh"
-
 #include <array>
+#include <simlib/string_view.hh>
 
 // Tables in topological order (every table depends only on the previous tables)
 constexpr std::array<CStringView, 13> tables = {{

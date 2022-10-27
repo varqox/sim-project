@@ -75,6 +75,8 @@ libsim_dependencies = [
 
 libsim_incdir = include_directories('include', is_system : false)
 libsim = library('sim',
+    implicit_include_directories : false,
+    include_directories : libsim_incdir,
     sources : [
         'src/sim/contest_files/permissions.cc',
         'src/sim/contests/permissions.cc',
@@ -86,18 +88,18 @@ libsim = library('sim',
         'src/sim/submissions/update_final.cc',
         'src/sim/users/user.cc',
     ],
-    include_directories : libsim_incdir,
     dependencies : libsim_dependencies,
     install : true,
 )
 
 libsim_dep = declare_dependency(
     include_directories : libsim_incdir,
-    link_with : libsim,
     dependencies : libsim_dependencies,
+    link_with : libsim,
 )
 
 job_server = executable('job-server',
+    implicit_include_directories : false,
     sources : [
         'src/job_server/dispatcher.cc',
         'src/job_server/job_handlers/add_or_reupload_problem__judge_main_solution_base.cc',
@@ -130,6 +132,7 @@ job_server = executable('job-server',
 )
 
 sim_merger = executable('sim-merger',
+    implicit_include_directories : false,
     sources : [
         'src/sim_merger/sim_merger.cc',
     ],
@@ -142,6 +145,7 @@ sim_merger = executable('sim-merger',
 )
 
 sim_upgrader = executable('sim-upgrader',
+    implicit_include_directories : false,
     sources : [
         'src/sim_upgrader.cc',
     ],
@@ -154,6 +158,7 @@ sim_upgrader = executable('sim-upgrader',
 )
 
 setup_installation = executable('setup-installation',
+    implicit_include_directories : false,
     sources : [
         'src/setup_installation.cc',
     ],
@@ -166,6 +171,7 @@ setup_installation = executable('setup-installation',
 )
 
 backup = executable('backup',
+    implicit_include_directories : false,
     sources : [
         'src/backup.cc',
     ],
@@ -178,6 +184,7 @@ backup = executable('backup',
 )
 
 sim_server = executable('sim-server',
+    implicit_include_directories : false,
     sources : [
         'src/web_server/capabilities/contest.cc',
         'src/web_server/capabilities/contest_entry_token.cc',
@@ -227,6 +234,7 @@ sim_server = executable('sim-server',
 )
 
 manage = executable('manage',
+    implicit_include_directories : false,
     sources : [
         'src/manage.cc'
     ],
@@ -286,10 +294,15 @@ tests = [
 ]
 foreach test : tests
     name = test[0].underscorify()
-    exe = executable(name, sources : test[0], dependencies : [
-        gtest_main_dep,
-        libsim_dep,
-        test[1],
-    ], build_by_default : false)
+    exe = executable(name,
+        implicit_include_directories : false,
+        sources : test[0],
+        dependencies : [
+            gtest_main_dep,
+            libsim_dep,
+            test[1],
+        ],
+        build_by_default : false,
+    )
     test(name, exe, timeout : 300, kwargs : test[2], workdir : meson.current_source_dir())
 endforeach

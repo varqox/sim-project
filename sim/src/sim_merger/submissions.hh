@@ -1,8 +1,8 @@
 #pragma once
 
-#include "src/sim_merger/contest_problems.hh"
-#include "src/sim_merger/internal_files.hh"
-#include "src/sim_merger/problems.hh"
+#include "contest_problems.hh"
+#include "internal_files.hh"
+#include "problems.hh"
 
 namespace sim_merger {
 

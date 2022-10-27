@@ -1,10 +1,10 @@
-#include "src/job_server/job_handlers/merge_users.hh"
-#include "sim/contest_users/contest_user.hh"
-#include "sim/submissions/update_final.hh"
-#include "simlib/utilities.hh"
-#include "src/job_server/main.hh"
+#include "merge_users.hh"
+#include "../main.hh"
 
 #include <deque>
+#include <sim/contest_users/contest_user.hh>
+#include <sim/submissions/update_final.hh>
+#include <simlib/utilities.hh>
 
 using sim::users::User;
 

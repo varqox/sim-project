@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/primary_key.hh"
-#include "simlib/concat.hh"
-#include "simlib/string_view.hh"
-
 #include <cstdint>
+#include <sim/primary_key.hh>
+#include <simlib/concat.hh>
+#include <simlib/string_view.hh>
 
 namespace sim::internal_files {
 

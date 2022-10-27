@@ -1,12 +1,11 @@
 #pragma once
 
-#include "sim/contest_files/contest_file.hh"
-#include "sim/random.hh"
-#include "src/sim_merger/contests.hh"
-#include "src/sim_merger/internal_files.hh"
-#include "src/sim_merger/users.hh"
-
+#include "contests.hh"
+#include "internal_files.hh"
+#include "users.hh"
 #include <set>
+#include <sim/contest_files/contest_file.hh>
+#include <sim/random.hh>
 
 namespace sim_merger {
 

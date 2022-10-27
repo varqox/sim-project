@@ -1,11 +1,12 @@
-#include "src/job_server/job_handlers/add_or_reupload_problem_base.hh"
-#include "sim/jobs/job.hh"
-#include "sim/judging_config.hh"
-#include "sim/problems/problem.hh"
-#include "sim/submissions/submission.hh"
-#include "simlib/libzip.hh"
-#include "simlib/sim/problem_package.hh"
-#include "src/job_server/main.hh"
+#include "add_or_reupload_problem_base.hh"
+#include "../main.hh"
+
+#include <sim/jobs/job.hh>
+#include <sim/judging_config.hh>
+#include <sim/problems/problem.hh>
+#include <sim/submissions/submission.hh>
+#include <simlib/libzip.hh>
+#include <simlib/sim/problem_package.hh>
 
 using sim::jobs::Job;
 using sim::problems::Problem;

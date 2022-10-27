@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sim/problem_tags/problem_tag.hh"
-#include "src/sim_merger/merger.hh"
-#include "src/sim_merger/primary_keys_from_jobs.hh"
-#include "src/sim_merger/problems.hh"
+#include "merger.hh"
+#include "primary_keys_from_jobs.hh"
+#include "problems.hh"
+#include <sim/problem_tags/problem_tag.hh>
 
 namespace sim_merger {
 

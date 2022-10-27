@@ -1,10 +1,10 @@
 #pragma once
 
-#include "sim/contest_problems/contest_problem.hh"
-#include "sim/contests/permissions.hh"
-#include "sim/problems/permissions.hh"
-#include "sim/problems/problem.hh"
-#include "sim/submissions/submission.hh"
+#include <sim/contest_problems/contest_problem.hh>
+#include <sim/contests/permissions.hh>
+#include <sim/problems/permissions.hh>
+#include <sim/problems/problem.hh>
+#include <sim/submissions/submission.hh>
 
 namespace sim::contest_problems {
 

@@ -1,22 +1,21 @@
-#include "src/web_server/problems/api.hh"
-#include "sim/problem_tags/problem_tag.hh"
-#include "sim/problems/problem.hh"
-#include "sim/submissions/submission.hh"
-#include "sim/users/user.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/config_file.hh"
-#include "simlib/file_path.hh"
-#include "simlib/json_str/json_str.hh"
-#include "simlib/mysql/mysql.hh"
-#include "simlib/sql.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/capabilities/problems.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "api.hh"
+#include "../capabilities/problems.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
 #include <algorithm>
 #include <cstdint>
 #include <optional>
+#include <sim/problem_tags/problem_tag.hh>
+#include <sim/problems/problem.hh>
+#include <sim/submissions/submission.hh>
+#include <sim/users/user.hh>
+#include <simlib/concat_tostr.hh>
+#include <simlib/config_file.hh>
+#include <simlib/file_path.hh>
+#include <simlib/json_str/json_str.hh>
+#include <simlib/mysql/mysql.hh>
+#include <simlib/sql.hh>
+#include <simlib/string_view.hh>
 #include <tuple>
 
 using sim::problem_tags::ProblemTag;

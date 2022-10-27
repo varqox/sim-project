@@ -1,4 +1,4 @@
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
 
 namespace web_server::old {
 

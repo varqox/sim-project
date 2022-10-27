@@ -1,8 +1,8 @@
-#include "src/web_server/capabilities/problems.hh"
-#include "sim/problems/problem.hh"
-#include "sim/users/user.hh"
-#include "src/web_server/capabilities/utils.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "problems.hh"
+#include "../web_worker/context.hh"
+#include "utils.hh"
+#include <sim/problems/problem.hh>
+#include <sim/users/user.hh>
 
 using sim::problems::Problem;
 using sim::users::User;

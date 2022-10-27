@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/contest_entry_tokens/contest_entry_token.hh"
-#include "sim/random.hh"
-#include "src/sim_merger/contests.hh"
-
+#include "contests.hh"
 #include <set>
+#include <sim/contest_entry_tokens/contest_entry_token.hh>
+#include <sim/random.hh>
 
 namespace sim_merger {
 

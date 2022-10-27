@@ -1,13 +1,12 @@
 #pragma once
 
-#include "sim/mysql/mysql.hh"
-#include "sim/sessions/session.hh"
-#include "simlib/http/url_dispatcher.hh"
-#include "src/web_server/http/cookies.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "../http/cookies.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
+#include "context.hh"
+#include <sim/mysql/mysql.hh>
+#include <sim/sessions/session.hh>
+#include <simlib/http/url_dispatcher.hh>
 #include <variant>
 
 namespace web_server::web_worker {

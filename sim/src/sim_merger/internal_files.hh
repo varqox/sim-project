@@ -1,11 +1,11 @@
 #pragma once
 
-#include "sim/internal_files/internal_file.hh"
-#include "simlib/defer.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/time.hh"
-#include "src/sim_merger/merger.hh"
+#include "merger.hh"
+#include <sim/internal_files/internal_file.hh>
+#include <simlib/defer.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/time.hh>
 
 namespace sim_merger {
 

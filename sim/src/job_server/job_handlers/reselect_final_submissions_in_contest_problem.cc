@@ -1,6 +1,7 @@
-#include "src/job_server/job_handlers/reselect_final_submissions_in_contest_problem.hh"
-#include "sim/submissions/update_final.hh"
-#include "src/job_server/main.hh"
+#include "reselect_final_submissions_in_contest_problem.hh"
+#include "../main.hh"
+
+#include <sim/submissions/update_final.hh>
 
 namespace job_server::job_handlers {
 

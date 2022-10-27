@@ -1,7 +1,6 @@
 #pragma once
 
-#include "src/web_server/web_worker/context.hh"
-
+#include "../web_worker/context.hh"
 #include <cstdint>
 
 namespace web_server::capabilities {

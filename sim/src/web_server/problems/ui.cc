@@ -1,7 +1,6 @@
-#include "src/web_server/problems/ui.hh"
-
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "ui.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
 
 using web_server::http::Response;
 using web_server::web_worker::Context;

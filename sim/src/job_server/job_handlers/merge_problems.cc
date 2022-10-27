@@ -1,9 +1,9 @@
-#include "src/job_server/job_handlers/merge_problems.hh"
-#include "sim/submissions/submission.hh"
-#include "sim/submissions/update_final.hh"
-#include "src/job_server/main.hh"
+#include "merge_problems.hh"
+#include "../main.hh"
 
 #include <deque>
+#include <sim/submissions/submission.hh>
+#include <sim/submissions/update_final.hh>
 
 using sim::jobs::Job;
 using sim::submissions::Submission;

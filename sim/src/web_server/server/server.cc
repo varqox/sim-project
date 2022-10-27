@@ -1,19 +1,18 @@
-#include "simlib/config_file.hh"
-#include "simlib/debug.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/process.hh"
-#include "simlib/time.hh"
-#include "simlib/working_directory.hh"
-#include "src/web_server/logs.hh"
-#include "src/web_server/old/sim.hh"
-#include "src/web_server/server/connection.hh"
-
+#include "../logs.hh"
+#include "../old/sim.hh"
+#include "connection.hh"
 #include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
 #include <cstdint>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <simlib/config_file.hh>
+#include <simlib/debug.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/process.hh>
+#include <simlib/time.hh>
+#include <simlib/working_directory.hh>
 #include <thread>
 
 using std::string;

@@ -1,5 +1,5 @@
-#include "sim/submissions/submission.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/submissions/submission.hh>
 
 using sim::contest_users::ContestUser;
 using sim::problems::Problem;

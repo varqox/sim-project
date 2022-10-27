@@ -1,8 +1,7 @@
-#include "sim/contest_users/contest_user.hh"
-#include "sim/users/user.hh"
-#include "simlib/time.hh"
-#include "src/web_server/old/sim.hh"
-
+#include "sim.hh"
+#include <sim/contest_users/contest_user.hh>
+#include <sim/users/user.hh>
+#include <simlib/time.hh>
 #include <type_traits>
 
 using sim::contest_users::ContestUser;

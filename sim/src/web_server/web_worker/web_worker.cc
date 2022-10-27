@@ -1,20 +1,19 @@
 #include "web_worker.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/problems/problem.hh"
-#include "sim/users/user.hh"
-#include "simlib/mysql/mysql.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/contest_entry_tokens/api.hh"
-#include "src/web_server/contest_entry_tokens/ui.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/problems/api.hh"
-#include "src/web_server/problems/ui.hh"
-#include "src/web_server/users/api.hh"
-#include "src/web_server/users/ui.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "../contest_entry_tokens/api.hh"
+#include "../contest_entry_tokens/ui.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
+#include "../problems/api.hh"
+#include "../problems/ui.hh"
+#include "../users/api.hh"
+#include "../users/ui.hh"
+#include "context.hh"
 #include <optional>
+#include <sim/jobs/utils.hh>
+#include <sim/problems/problem.hh>
+#include <sim/users/user.hh>
+#include <simlib/mysql/mysql.hh>
+#include <simlib/string_view.hh>
 #include <type_traits>
 
 using web_server::http::Request;

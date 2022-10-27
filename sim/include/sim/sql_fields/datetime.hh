@@ -1,9 +1,8 @@
 #pragma once
 
-#include "sim/sql_fields/varbinary.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/string_view.hh"
-
+#include <sim/sql_fields/varbinary.hh>
+#include <simlib/concat_tostr.hh>
+#include <simlib/string_view.hh>
 #include <string>
 
 namespace sim::sql_fields {

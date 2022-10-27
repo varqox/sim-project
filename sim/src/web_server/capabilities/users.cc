@@ -1,6 +1,6 @@
-#include "src/web_server/capabilities/users.hh"
-#include "sim/users/user.hh"
-#include "src/web_server/capabilities/utils.hh"
+#include "users.hh"
+#include "utils.hh"
+#include <sim/users/user.hh>
 
 namespace web_server::capabilities {
 

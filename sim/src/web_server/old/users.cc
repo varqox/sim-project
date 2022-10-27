@@ -1,9 +1,9 @@
-#include "sim/is_username.hh"
-#include "sim/users/user.hh"
-#include "simlib/random.hh"
-#include "simlib/sha.hh"
-#include "simlib/string_transform.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/is_username.hh>
+#include <sim/users/user.hh>
+#include <simlib/random.hh>
+#include <simlib/sha.hh>
+#include <simlib/string_transform.hh>
 
 using sim::users::User;
 using std::string;

@@ -1,11 +1,10 @@
 #pragma once
 
-#include "sim/random.hh"
-#include "sim/sessions/session.hh"
-#include "simlib/defer.hh"
-#include "src/sim_merger/users.hh"
-
+#include "users.hh"
 #include <set>
+#include <sim/random.hh>
+#include <sim/sessions/session.hh>
+#include <simlib/defer.hh>
 
 namespace sim_merger {
 

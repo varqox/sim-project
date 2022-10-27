@@ -1,11 +1,10 @@
 #pragma once
 
-#include "sim/contest_users/contest_user.hh"
-#include "sim/contests/contest.hh"
-#include "simlib/mysql/mysql.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "../web_worker/context.hh"
 #include <optional>
+#include <sim/contest_users/contest_user.hh>
+#include <sim/contests/contest.hh>
+#include <simlib/mysql/mysql.hh>
 
 namespace web_server::capabilities {
 

@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/jobs/job.hh"
-#include "simlib/string_view.hh"
-
 #include <cstdint>
 #include <optional>
+#include <sim/jobs/job.hh>
+#include <simlib/string_view.hh>
 
 namespace job_server {
 

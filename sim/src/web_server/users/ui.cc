@@ -1,8 +1,7 @@
-#include "src/web_server/users/ui.hh"
-
-#include "simlib/string_view.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "ui.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
+#include <simlib/string_view.hh>
 
 using sim::users::User;
 using web_server::http::Response;

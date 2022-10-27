@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/string_traits.hh"
-
 #include <algorithm>
+#include <simlib/string_traits.hh>
 
 namespace sim {
 

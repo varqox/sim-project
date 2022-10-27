@@ -1,6 +1,7 @@
-#include "src/job_server/job_handlers/add_or_reupload_problem__judge_main_solution_base.hh"
-#include "sim/internal_files/internal_file.hh"
-#include "simlib/sim/problem_package.hh"
+#include "add_or_reupload_problem__judge_main_solution_base.hh"
+
+#include <sim/internal_files/internal_file.hh>
+#include <simlib/sim/problem_package.hh>
 
 namespace job_server::job_handlers {
 

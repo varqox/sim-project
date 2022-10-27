@@ -1,8 +1,8 @@
 #pragma once
 
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/contests/permissions.hh"
-#include "sim/mysql/mysql.hh"
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contests/permissions.hh>
+#include <sim/mysql/mysql.hh>
 
 namespace sim::contest_rounds {
 

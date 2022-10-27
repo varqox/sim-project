@@ -1,12 +1,11 @@
 #pragma once
 
-#include "sim/contests/contest.hh"
-#include "sim/primary_key.hh"
-#include "sim/users/user.hh"
-#include "simlib/enum_val.hh"
-#include "simlib/enum_with_string_conversions.hh"
-
 #include <cstdint>
+#include <sim/contests/contest.hh>
+#include <sim/primary_key.hh>
+#include <sim/users/user.hh>
+#include <simlib/enum_val.hh>
+#include <simlib/enum_with_string_conversions.hh>
 
 namespace sim::contest_users {
 

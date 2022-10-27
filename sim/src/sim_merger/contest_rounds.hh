@@ -1,8 +1,8 @@
 #pragma once
 
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "src/sim_merger/contests.hh"
+#include "contests.hh"
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/sql_fields/datetime.hh>
 
 namespace sim_merger {
 

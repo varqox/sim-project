@@ -1,11 +1,11 @@
-#include "sim/contest_files/contest_file.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/random.hh"
-#include "simlib/call_in_destructor.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/humanize.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/contest_files/contest_file.hh>
+#include <sim/jobs/utils.hh>
+#include <sim/random.hh>
+#include <simlib/call_in_destructor.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/humanize.hh>
 
 using sim::contest_files::ContestFile;
 using sim::jobs::Job;

@@ -1,6 +1,7 @@
-#include "src/job_server/job_handlers/judge_base.hh"
-#include "sim/judging_config.hh"
-#include "simlib/enum_val.hh"
+#include "judge_base.hh"
+
+#include <sim/judging_config.hh>
+#include <simlib/enum_val.hh>
 
 using sim::submissions::Submission;
 

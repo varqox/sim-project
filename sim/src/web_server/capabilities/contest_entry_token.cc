@@ -1,11 +1,10 @@
-#include "src/web_server/capabilities/contest_entry_token.hh"
-#include "sim/contest_users/contest_user.hh"
-#include "sim/users/user.hh"
-#include "src/web_server/capabilities/contest.hh"
-#include "src/web_server/capabilities/utils.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "contest_entry_token.hh"
+#include "../web_worker/context.hh"
+#include "contest.hh"
+#include "utils.hh"
 #include <cstdlib>
+#include <sim/contest_users/contest_user.hh>
+#include <sim/users/user.hh>
 
 using sim::contest_users::ContestUser;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "simlib/aho_corasick.hh"
+#include <simlib/aho_corasick.hh>
 
 namespace sim {
 

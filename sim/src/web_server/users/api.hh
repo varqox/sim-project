@@ -1,10 +1,10 @@
 #pragma once
 
-#include "sim/users/user.hh"
-#include "simlib/mysql/mysql.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
+#include <sim/users/user.hh>
+#include <simlib/mysql/mysql.hh>
+#include <simlib/string_view.hh>
 
 namespace web_server::users::api {
 

@@ -1,12 +1,11 @@
-#include "src/web_server/capabilities/contest.hh"
-#include "sim/contest_users/contest_user.hh"
-#include "sim/users/user.hh"
-#include "simlib/debug.hh"
-#include "simlib/mysql/mysql.hh"
-#include "simlib/utilities.hh"
-#include "src/web_server/capabilities/utils.hh"
-
+#include "contest.hh"
+#include "utils.hh"
 #include <cstdint>
+#include <sim/contest_users/contest_user.hh>
+#include <sim/users/user.hh>
+#include <simlib/debug.hh>
+#include <simlib/mysql/mysql.hh>
+#include <simlib/utilities.hh>
 
 using sim::contest_users::ContestUser;
 

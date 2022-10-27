@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sim/contests/contest.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "simlib/defer.hh"
-#include "src/sim_merger/merger.hh"
+#include "merger.hh"
+#include <sim/contests/contest.hh>
+#include <sim/sql_fields/datetime.hh>
+#include <simlib/defer.hh>
 
 namespace sim_merger {
 

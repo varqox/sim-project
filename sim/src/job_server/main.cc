@@ -1,18 +1,6 @@
-#include "sim/jobs/job.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/mysql/mysql.hh"
-#include "sim/submissions/update_final.hh"
-#include "simlib/config_file.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/process.hh"
-#include "simlib/shared_function.hh"
-#include "simlib/time.hh"
-#include "simlib/working_directory.hh"
-#include "src/job_server/dispatcher.hh"
-#include "src/job_server/logs.hh"
-#include "src/job_server/notify_file.hh"
-
+#include "dispatcher.hh"
+#include "logs.hh"
+#include "notify_file.hh"
 #include <climits>
 #include <cstdint>
 #include <future>
@@ -20,6 +8,17 @@
 #include <poll.h>
 #include <queue>
 #include <set>
+#include <sim/jobs/job.hh>
+#include <sim/jobs/utils.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/submissions/update_final.hh>
+#include <simlib/config_file.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/process.hh>
+#include <simlib/shared_function.hh>
+#include <simlib/time.hh>
+#include <simlib/working_directory.hh>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <thread>
@@ -31,7 +30,6 @@
 #define DEBUG_JOB_SERVER(...)
 #endif
 
-using sim::jobs::Job;
 using std::array;
 using std::function;
 using std::lock_guard;

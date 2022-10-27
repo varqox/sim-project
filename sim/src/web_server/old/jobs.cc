@@ -1,7 +1,7 @@
-#include "sim/contests/contest.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/problems/permissions.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/contests/contest.hh>
+#include <sim/jobs/utils.hh>
+#include <sim/problems/permissions.hh>
 
 using sim::jobs::Job;
 using sim::problems::Problem;

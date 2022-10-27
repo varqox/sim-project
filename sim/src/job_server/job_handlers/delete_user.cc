@@ -1,7 +1,8 @@
-#include "src/job_server/job_handlers/delete_user.hh"
-#include "sim/jobs/job.hh"
-#include "sim/users/user.hh"
-#include "src/job_server/main.hh"
+#include "delete_user.hh"
+#include "../main.hh"
+
+#include <sim/jobs/job.hh>
+#include <sim/users/user.hh>
 
 using sim::jobs::Job;
 using sim::users::User;

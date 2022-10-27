@@ -1,19 +1,18 @@
-#include "sim/jobs/utils.hh"
-#include "sim/judging_config.hh"
-#include "sim/problem_tags/problem_tag.hh"
-#include "sim/problems/permissions.hh"
-#include "sim/problems/problem.hh"
-#include "simlib/config_file.hh"
-#include "simlib/enum_val.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/humanize.hh"
-#include "simlib/libzip.hh"
-#include "simlib/sim/problem_package.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/old/sim.hh"
-
+#include "sim.hh"
 #include <cstdint>
+#include <sim/jobs/utils.hh>
+#include <sim/judging_config.hh>
+#include <sim/problem_tags/problem_tag.hh>
+#include <sim/problems/permissions.hh>
+#include <sim/problems/problem.hh>
+#include <simlib/config_file.hh>
+#include <simlib/enum_val.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/humanize.hh>
+#include <simlib/libzip.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/string_view.hh>
 #include <type_traits>
 
 using sim::jobs::Job;

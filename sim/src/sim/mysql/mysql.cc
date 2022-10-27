@@ -1,5 +1,5 @@
-#include "sim/mysql/mysql.hh"
-#include "simlib/config_file.hh"
+#include <sim/mysql/mysql.hh>
+#include <simlib/config_file.hh>
 
 namespace sim::mysql {
 

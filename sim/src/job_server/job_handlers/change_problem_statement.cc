@@ -1,7 +1,8 @@
-#include "src/job_server/job_handlers/change_problem_statement.hh"
-#include "simlib/path.hh"
-#include "simlib/sim/problem_package.hh"
-#include "src/job_server/main.hh"
+#include "change_problem_statement.hh"
+#include "../main.hh"
+
+#include <simlib/path.hh>
+#include <simlib/sim/problem_package.hh>
 
 using sim::jobs::Job;
 

@@ -1,21 +1,20 @@
-#include "src/web_server/ui_template.hh"
-#include "sim/sessions/session.hh"
-#include "sim/users/user.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/file_info.hh"
-#include "simlib/json_str/json_str.hh"
-#include "simlib/string_transform.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/capabilities/contests.hh"
-#include "src/web_server/capabilities/jobs.hh"
-#include "src/web_server/capabilities/logs.hh"
-#include "src/web_server/capabilities/problems.hh"
-#include "src/web_server/capabilities/submissions.hh"
-#include "src/web_server/capabilities/users.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/web_worker.hh"
-
+#include "ui_template.hh"
+#include "capabilities/contests.hh"
+#include "capabilities/jobs.hh"
+#include "capabilities/logs.hh"
+#include "capabilities/problems.hh"
+#include "capabilities/submissions.hh"
+#include "capabilities/users.hh"
+#include "http/response.hh"
+#include "web_worker/web_worker.hh"
 #include <chrono>
+#include <sim/sessions/session.hh>
+#include <sim/users/user.hh>
+#include <simlib/concat_tostr.hh>
+#include <simlib/file_info.hh>
+#include <simlib/json_str/json_str.hh>
+#include <simlib/string_transform.hh>
+#include <simlib/string_view.hh>
 
 using sim::users::User;
 using web_server::http::Response;

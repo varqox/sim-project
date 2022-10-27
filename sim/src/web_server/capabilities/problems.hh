@@ -1,8 +1,8 @@
 #pragma once
 
-#include "sim/problems/problem.hh"
-#include "sim/users/user.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "../web_worker/context.hh"
+#include <sim/problems/problem.hh>
+#include <sim/users/user.hh>
 
 namespace web_server::capabilities {
 

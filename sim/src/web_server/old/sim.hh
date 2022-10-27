@@ -1,24 +1,23 @@
 #pragma once
 
-#include "sim/contest_files/permissions.hh"
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/contests/contest.hh"
-#include "sim/contests/permissions.hh"
-#include "sim/cpp_syntax_highlighter.hh"
-#include "sim/jobs/job.hh"
-#include "sim/mysql/mysql.hh"
-#include "sim/problems/permissions.hh"
-#include "sim/sessions/session.hh"
-#include "sim/submissions/submission.hh"
-#include "sim/users/user.hh"
-#include "simlib/http/response.hh"
-#include "simlib/request_uri_parser.hh"
-#include "src/web_server/capabilities/contests.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
-#include "src/web_server/web_worker/web_worker.hh"
-
+#include "../capabilities/contests.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
+#include "../web_worker/web_worker.hh"
+#include <sim/contest_files/permissions.hh>
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contests/contest.hh>
+#include <sim/contests/permissions.hh>
+#include <sim/cpp_syntax_highlighter.hh>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/problems/permissions.hh>
+#include <sim/sessions/session.hh>
+#include <sim/submissions/submission.hh>
+#include <sim/users/user.hh>
+#include <simlib/http/response.hh>
+#include <simlib/request_uri_parser.hh>
 #include <utime.h>
 
 namespace web_server::old {

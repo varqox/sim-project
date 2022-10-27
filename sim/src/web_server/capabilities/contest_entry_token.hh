@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/contest_users/contest_user.hh"
-#include "src/web_server/capabilities/contest.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "../web_worker/context.hh"
+#include "contest.hh"
 #include <optional>
+#include <sim/contest_users/contest_user.hh>
 
 namespace web_server::capabilities {
 

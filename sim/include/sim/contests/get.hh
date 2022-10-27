@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/contests/contest.hh"
-#include "sim/contests/permissions.hh"
-#include "sim/sql_fields/inf_datetime.hh"
-
 #include <optional>
+#include <sim/contests/contest.hh>
+#include <sim/contests/permissions.hh>
+#include <sim/sql_fields/inf_datetime.hh>
 
 namespace sim::contests {
 

@@ -1,14 +1,13 @@
 #include "context.hh"
-#include "sim/random.hh"
-#include "sim/sessions/session.hh"
-#include "simlib/string_traits.hh"
-#include "simlib/string_view.hh"
-#include "simlib/time.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/ui_template.hh"
-
+#include "../http/response.hh"
+#include "../ui_template.hh"
 #include <chrono>
 #include <optional>
+#include <sim/random.hh>
+#include <sim/sessions/session.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_view.hh>
+#include <simlib/time.hh>
 
 using web_server::http::Response;
 

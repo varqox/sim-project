@@ -1,15 +1,14 @@
-#include "sim/cpp_syntax_highlighter.hh"
-#include "simlib/directory.hh"
-#include "simlib/file_contents.hh"
-#include "simlib/path.hh"
-#include "simlib/process.hh"
-#include "simlib/string_compare.hh"
-#include "simlib/string_traits.hh"
-#include "simlib/string_view.hh"
-
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <map>
+#include <sim/cpp_syntax_highlighter.hh>
+#include <simlib/directory.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/path.hh>
+#include <simlib/process.hh>
+#include <simlib/string_compare.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_view.hh>
 
 using std::string;
 using std::vector;

@@ -1,12 +1,11 @@
-#include "src/web_server/old/sim.hh"
-#include "simlib/mysql/mysql.hh"
-#include "simlib/path.hh"
-#include "simlib/random.hh"
-#include "simlib/time.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-
+#include "sim.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
 #include <memory>
+#include <simlib/mysql/mysql.hh>
+#include <simlib/path.hh>
+#include <simlib/random.hh>
+#include <simlib/time.hh>
 #include <sys/stat.h>
 
 using sim::users::User;

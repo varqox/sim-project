@@ -1,5 +1,5 @@
-#include "sim/contests/permissions.hh"
-#include "sim/contest_users/contest_user.hh"
+#include <sim/contest_users/contest_user.hh>
+#include <sim/contests/permissions.hh>
 
 using sim::contest_users::ContestUser;
 using sim::users::User;

@@ -1,5 +1,5 @@
-#include "src/web_server/capabilities/jobs.hh"
-#include "src/web_server/capabilities/utils.hh"
+#include "jobs.hh"
+#include "utils.hh"
 
 namespace web_server::capabilities {
 
