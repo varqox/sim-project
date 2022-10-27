@@ -1,7 +1,6 @@
-#include "simlib/concat_common.hh"
-#include "simlib/string_view.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/concat_common.hh>
+#include <simlib/string_view.hh>
 
 using std::string;
 

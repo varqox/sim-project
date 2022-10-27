@@ -1,6 +1,5 @@
-#include "simlib/request_uri_parser.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/request_uri_parser.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_RequestUriParser, constructor_from_StringView) {

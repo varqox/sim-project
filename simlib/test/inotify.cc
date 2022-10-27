@@ -1,16 +1,15 @@
-#include "simlib/inotify.hh"
-#include "simlib/concurrent/semaphore.hh"
-#include "simlib/file_contents.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/random.hh"
-#include "simlib/repeating.hh"
-#include "simlib/temporary_directory.hh"
-#include "simlib/temporary_file.hh"
-
 #include <chrono>
 #include <cstdio>
 #include <gtest/gtest.h>
 #include <map>
+#include <simlib/concurrent/semaphore.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/inotify.hh>
+#include <simlib/random.hh>
+#include <simlib/repeating.hh>
+#include <simlib/temporary_directory.hh>
+#include <simlib/temporary_file.hh>
 #include <string>
 
 using std::multimap;

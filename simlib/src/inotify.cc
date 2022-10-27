@@ -1,5 +1,4 @@
-#include "simlib/inotify.hh"
-
+#include <simlib/inotify.hh>
 #include <sys/inotify.h>
 
 void FileModificationMonitor::init_watching() {

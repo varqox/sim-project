@@ -1,9 +1,5 @@
 #pragma once
 
-#include "simlib/debug.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/repeating.hh"
-
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -11,6 +7,9 @@
 #include <memory>
 #include <poll.h>
 #include <set>
+#include <simlib/debug.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/repeating.hh>
 #include <type_traits>
 #include <variant>
 #include <vector>

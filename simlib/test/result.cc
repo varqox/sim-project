@@ -1,5 +1,4 @@
-#include "simlib/result.hh"
-
+#include <simlib/result.hh>
 #include <string_view>
 
 using std::string_view;

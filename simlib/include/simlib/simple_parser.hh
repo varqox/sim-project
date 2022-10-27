@@ -1,12 +1,11 @@
 #pragma once
 
-#include "simlib/string_compare.hh"
-
+#include <simlib/string_compare.hh>
 #include <utility>
 
 #if 0
 #warning "Before committing disable this debug"
-#include "simlib/logger.hh"
+#include <simlib/logger.hh>
 #define DEBUG_PARSER(...) __VA_ARGS__
 #else
 #define DEBUG_PARSER(...)

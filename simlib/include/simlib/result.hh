@@ -1,7 +1,6 @@
 #pragma once
 
-#include "simlib/is_printable.hh"
-
+#include <simlib/is_printable.hh>
 #include <type_traits>
 #include <utility>
 #include <variant>

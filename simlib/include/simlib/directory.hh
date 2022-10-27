@@ -1,10 +1,9 @@
 #pragma once
 
-#include "simlib/debug.hh"
-#include "simlib/file_path.hh"
-#include "simlib/repeating.hh"
-
 #include <dirent.h>
+#include <simlib/debug.hh>
+#include <simlib/file_path.hh>
+#include <simlib/repeating.hh>
 #include <type_traits>
 
 // Encapsulates directory object DIR

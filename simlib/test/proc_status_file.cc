@@ -1,15 +1,14 @@
-#include "simlib/proc_status_file.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/concurrent/semaphore.hh"
-#include "simlib/ctype.hh"
-#include "simlib/file_contents.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/string_view.hh"
-#include "simlib/syscalls.hh"
-
 #include <csignal>
 #include <gtest/gtest.h>
 #include <regex>
+#include <simlib/concat_tostr.hh>
+#include <simlib/concurrent/semaphore.hh>
+#include <simlib/ctype.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/proc_status_file.hh>
+#include <simlib/string_view.hh>
+#include <simlib/syscalls.hh>
 #include <unistd.h>
 
 struct Field {

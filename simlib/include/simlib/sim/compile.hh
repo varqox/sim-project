@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/string_view.hh"
-
 #include <chrono>
 #include <optional>
+#include <simlib/string_view.hh>
 #include <vector>
 
 namespace sim {

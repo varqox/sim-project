@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/meta.hh"
-#include "simlib/to_string.hh"
-
+#include <simlib/meta.hh>
+#include <simlib/to_string.hh>
 #include <type_traits>
 
 template <class T, std::enable_if_t<meta::has_method_size<const T&>, int> = 0>

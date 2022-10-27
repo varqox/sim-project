@@ -1,7 +1,6 @@
-#include "simlib/utilities.hh"
-
 #include <gtest/gtest.h>
 #include <set>
+#include <simlib/utilities.hh>
 
 using std::set;
 

@@ -1,8 +1,7 @@
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/temporary_directory.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/temporary_directory.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_file_info, access) { // TODO:

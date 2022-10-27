@@ -1,7 +1,6 @@
 #pragma once
 
-#include "simlib/concat_common.hh"
-
+#include <simlib/concat_common.hh>
 #include <type_traits>
 
 template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>

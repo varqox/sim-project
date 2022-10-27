@@ -1,6 +1,5 @@
-#include "simlib/ctype.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/ctype.hh>
 
 constexpr auto characters_to_test = [] {
     using uchar_limits = std::numeric_limits<unsigned char>;

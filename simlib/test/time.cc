@@ -1,7 +1,6 @@
-#include "simlib/time.hh"
-
 #include <chrono>
 #include <gtest/gtest.h>
+#include <simlib/time.hh>
 
 using std::chrono_literals::operator""ns;
 using std::chrono_literals::operator""ms;

@@ -1,7 +1,6 @@
-#include "simlib/strongly_typed_function.hh"
-
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <simlib/strongly_typed_function.hh>
 #include <type_traits>
 
 static void foo(int /*unused*/) {}

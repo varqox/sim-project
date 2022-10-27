@@ -1,10 +1,9 @@
-#include "simlib/noexcept_concat.hh"
-#include "simlib/string_view.hh"
-#include "simlib/to_string.hh"
-
 #include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <simlib/noexcept_concat.hh>
+#include <simlib/string_view.hh>
+#include <simlib/to_string.hh>
 #include <type_traits>
 
 // NOLINTNEXTLINE

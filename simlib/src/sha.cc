@@ -1,5 +1,5 @@
-#include "simlib/sha.hh"
-#include "simlib/string_transform.hh"
+#include <simlib/sha.hh>
+#include <simlib/string_transform.hh>
 
 extern "C" {
 #include <3rdparty/sha3.c> // NOLINT(bugprone-suspicious-include)

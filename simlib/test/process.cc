@@ -1,6 +1,5 @@
-#include "simlib/proc_stat_file_contents.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/proc_stat_file_contents.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_process, executable_path) {

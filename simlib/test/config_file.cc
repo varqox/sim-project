@@ -1,7 +1,6 @@
-#include "simlib/config_file.hh"
-#include "simlib/utilities.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/config_file.hh>
+#include <simlib/utilities.hh>
 
 using std::array;
 using std::endl;

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/to_string.hh"
-
 #include <cstddef>
+#include <simlib/to_string.hh>
 #include <string>
 #include <type_traits>
 

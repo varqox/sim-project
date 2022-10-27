@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/string_traits.hh"
-#include "simlib/string_view.hh"
-
+#include <simlib/string_traits.hh>
+#include <simlib/string_view.hh>
 #include <utility>
 
 // Compares two StringView, but before comparing two characters modifies them

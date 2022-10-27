@@ -1,6 +1,5 @@
-#include "simlib/constructor_traits.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/constructor_traits.hh>
 
 struct A {};
 struct B {};

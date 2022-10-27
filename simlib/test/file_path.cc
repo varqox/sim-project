@@ -1,7 +1,6 @@
-#include "simlib/file_path.hh"
-#include "simlib/inplace_buff.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/file_path.hh>
+#include <simlib/inplace_buff.hh>
 
 using std::string;
 

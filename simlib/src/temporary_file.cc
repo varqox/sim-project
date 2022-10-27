@@ -1,12 +1,11 @@
-#include "simlib/temporary_file.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/random.hh"
-#include "simlib/string_traits.hh"
-
 #include <cassert>
 #include <cerrno>
 #include <cstddef>
 #include <fcntl.h>
+#include <simlib/file_descriptor.hh>
+#include <simlib/random.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/temporary_file.hh>
 
 TemporaryFile::TemporaryFile(std::string templ, mode_t mode) {
     assert(has_suffix(templ, "XXXXXX"));

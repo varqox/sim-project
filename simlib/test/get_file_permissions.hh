@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/file_path.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/file_path.hh>
 
 inline mode_t get_file_permissions(FilePath path) {
     struct stat64 st {};

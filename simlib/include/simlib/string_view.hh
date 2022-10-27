@@ -1,12 +1,11 @@
 #pragma once
 
-#include "simlib/to_string.hh"
-
 #include <cassert>
 #include <cstring>
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <simlib/to_string.hh>
 #include <stdexcept>
 #include <type_traits>
 

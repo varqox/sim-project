@@ -1,9 +1,9 @@
-#include "simlib/file_descriptor.hh"
-#include "simlib/file_info.hh"
-#include "simlib/temporary_directory.hh"
-#include "test/file_descriptor_exists.hh"
+#include "file_descriptor_exists.hh"
 
 #include <gtest/gtest.h>
+#include <simlib/file_descriptor.hh>
+#include <simlib/file_info.hh>
+#include <simlib/temporary_directory.hh>
 
 // NOLINTNEXTLINE
 TEST(file_descriptor, FileDescriptor) {

@@ -1,6 +1,5 @@
-#include "simlib/sha.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/sha.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_sha, sha3_224) {

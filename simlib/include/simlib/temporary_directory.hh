@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/debug.hh"
-#include "simlib/file_path.hh"
-
 #include <memory>
+#include <simlib/debug.hh>
+#include <simlib/file_path.hh>
 
 class TemporaryDirectory {
 private:

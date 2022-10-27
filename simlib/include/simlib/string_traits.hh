@@ -1,7 +1,7 @@
 #pragma once
 
-#include "simlib/ctype.hh"
-#include "simlib/string_view.hh"
+#include <simlib/ctype.hh>
+#include <simlib/string_view.hh>
 
 constexpr bool has_prefix(const StringView& str, const StringView& prefix) noexcept {
     return (str.compare(0, prefix.size(), prefix) == 0);

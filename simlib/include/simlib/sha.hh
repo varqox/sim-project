@@ -1,6 +1,6 @@
 #pragma once
 
-#include "simlib/inplace_buff.hh"
+#include <simlib/inplace_buff.hh>
 
 // SHA-3
 

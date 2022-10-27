@@ -1,7 +1,6 @@
-#include "simlib/debug.hh"
-
 #include <algorithm>
 #include <ctime>
+#include <simlib/debug.hh>
 #include <string>
 #include <sys/time.h>
 #include <utility>

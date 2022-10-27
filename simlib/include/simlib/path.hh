@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/string_view.hh"
-
 #include <optional>
+#include <simlib/string_view.hh>
 
 // Returns an absolute path that does not contain any . or .. components,
 // nor any repeated path separators (/). @p curr_dir can be empty. If path

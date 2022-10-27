@@ -1,8 +1,7 @@
-#include "simlib/to_string.hh"
-
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <limits>
+#include <simlib/to_string.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_StaticCStringBuff, default_constructor) {

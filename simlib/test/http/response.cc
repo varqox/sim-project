@@ -1,6 +1,5 @@
-#include "simlib/http/response.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/http/response.hh>
 
 // NOLINTNEXTLINE
 TEST(http, quote) {

@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/sim/judge_worker.hh"
-#include "simlib/sim/simfile.hh"
-#include "simlib/utilities.hh"
-
+#include <simlib/sim/judge_worker.hh>
+#include <simlib/sim/simfile.hh>
+#include <simlib/utilities.hh>
 #include <type_traits>
 
 namespace sim {

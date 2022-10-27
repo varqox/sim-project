@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/file_descriptor.hh"
-
 #include <optional>
+#include <simlib/file_descriptor.hh>
 #include <unistd.h>
 
 struct Pipe {

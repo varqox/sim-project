@@ -1,7 +1,6 @@
-#include "simlib/macros.hh"
-#include "simlib/string_view.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/macros.hh>
+#include <simlib/string_view.hh>
 
 #define ABC a b c
 #define XYZ x y z

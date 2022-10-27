@@ -1,7 +1,6 @@
 #pragma once
 
-#include "simlib/random.hh"
-
+#include <simlib/random.hh>
 #include <string>
 
 inline std::string random_bytes(size_t len) {

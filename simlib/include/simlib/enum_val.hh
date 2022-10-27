@@ -1,11 +1,11 @@
 #pragma once
 
 #include "enum_with_string_conversions.hh"
-#include "simlib/always_false.hh"
-#include "simlib/string_transform.hh"
-#include "simlib/string_view.hh"
 
 #include <optional>
+#include <simlib/always_false.hh>
+#include <simlib/string_transform.hh>
+#include <simlib/string_view.hh>
 #include <type_traits>
 
 template <class Enum, class = void>

@@ -1,6 +1,5 @@
-#include "simlib/signal_blocking.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/signal_blocking.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_signal_blocking, SignalBlocker) {

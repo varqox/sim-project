@@ -1,6 +1,5 @@
-#include "simlib/argv_parser.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/argv_parser.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_ArgvParser, constructor_from_argc_and_argv) {

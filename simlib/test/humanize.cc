@@ -1,6 +1,5 @@
-#include "simlib/humanize.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/humanize.hh>
 
 // NOLINTNEXTLINE
 TEST(humanize, humanize_file_size) {

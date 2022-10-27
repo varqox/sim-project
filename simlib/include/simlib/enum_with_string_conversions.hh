@@ -1,11 +1,10 @@
 #pragma once
 
-#include "simlib/macros.hh"
-#include "simlib/string_transform.hh"
-#include "simlib/string_view.hh"
-
 #include <cstdlib>
 #include <optional>
+#include <simlib/macros.hh>
+#include <simlib/string_transform.hh>
+#include <simlib/string_view.hh>
 #include <type_traits>
 
 // Example usage: ENUM_WITH_STRING_CONVERSIONS(Color, uint8_t, (GREEN, 1, "green")(RED, 2,

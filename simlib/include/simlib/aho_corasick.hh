@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/string_view.hh"
-
 #include <deque>
+#include <simlib/string_view.hh>
 #include <vector>
 
 class AhoCorasick {

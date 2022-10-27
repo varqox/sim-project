@@ -1,15 +1,15 @@
-#include "simlib/sandbox.hh"
-#include "simlib/concurrent/job_processor.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/path.hh"
-#include "simlib/process.hh"
-#include "simlib/temporary_file.hh"
-#include "test/compilation_cache.hh"
+#include "compilation_cache.hh"
 
 #include <chrono>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <linux/version.h>
+#include <simlib/concurrent/job_processor.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/path.hh>
+#include <simlib/process.hh>
+#include <simlib/sandbox.hh>
+#include <simlib/temporary_file.hh>
 #include <sys/syscall.h>
 #include <thread>
 #include <unistd.h>

@@ -1,6 +1,5 @@
-#include "simlib/file_contents.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/file_contents.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_file_contents, read_all) { // TODO:

@@ -1,8 +1,7 @@
-#include "simlib/string_view.hh"
-#include "simlib/to_string.hh"
-
 #include <array>
 #include <gtest/gtest.h>
+#include <simlib/string_view.hh>
+#include <simlib/to_string.hh>
 #include <type_traits>
 
 using std::array; // NOLINT(misc-unused-using-decls)

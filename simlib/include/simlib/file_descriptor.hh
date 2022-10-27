@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/file_path.hh"
-#include "simlib/file_perms.hh"
-
+#include <simlib/file_path.hh>
+#include <simlib/file_perms.hh>
 #include <unistd.h>
 
 // Encapsulates file descriptor

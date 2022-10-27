@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/string_view.hh"
-
 #include <cassert>
+#include <simlib/string_view.hh>
 #include <utility>
 #include <vector>
 

@@ -1,6 +1,5 @@
-#include "simlib/json_str/json_str.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/json_str/json_str.hh>
 
 // NOLINTNEXTLINE
 TEST(json_str, empty_obj) {

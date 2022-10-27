@@ -1,6 +1,5 @@
-#include "simlib/concat.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/concat.hh>
 
 using std::string;
 

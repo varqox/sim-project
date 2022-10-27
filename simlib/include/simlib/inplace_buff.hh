@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/concat_common.hh"
-#include "simlib/string_view.hh"
-
+#include <simlib/concat_common.hh>
+#include <simlib/string_view.hh>
 #include <utility>
 
 class InplaceBuffBase {

@@ -1,7 +1,6 @@
-#include "simlib/ranges.hh"
-
 #include <gtest/gtest.h>
 #include <memory>
+#include <simlib/ranges.hh>
 
 using std::array;
 using std::is_same_v;

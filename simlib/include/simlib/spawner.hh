@@ -1,9 +1,5 @@
 #pragma once
 
-#include "simlib/file_contents.hh"
-#include "simlib/file_path.hh"
-#include "simlib/overloaded.hh"
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -11,6 +7,9 @@
 #include <functional>
 #include <optional>
 #include <pthread.h>
+#include <simlib/file_contents.hh>
+#include <simlib/file_path.hh>
+#include <simlib/overloaded.hh>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <thread>

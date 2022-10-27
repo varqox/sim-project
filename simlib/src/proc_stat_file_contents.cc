@@ -1,9 +1,8 @@
-#include "simlib/proc_stat_file_contents.hh"
-#include "simlib/ctype.hh"
-#include "simlib/file_contents.hh"
-#include "simlib/string_traits.hh"
-
 #include <functional>
+#include <simlib/ctype.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/proc_stat_file_contents.hh>
+#include <simlib/string_traits.hh>
 
 using std::string;
 

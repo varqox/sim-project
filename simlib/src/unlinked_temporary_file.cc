@@ -1,5 +1,4 @@
-#include "simlib/unlinked_temporary_file.hh"
-
+#include <simlib/unlinked_temporary_file.hh>
 #include <sys/stat.h>
 
 FileDescriptor open_unlinked_tmp_file(int flags) noexcept {

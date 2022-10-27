@@ -1,6 +1,5 @@
-#include "simlib/err_defer.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/err_defer.hh>
 #include <stdexcept>
 
 // NOLINTNEXTLINE

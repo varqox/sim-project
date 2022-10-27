@@ -1,18 +1,18 @@
-#include "simlib/sim/judge_worker.hh"
-#include "simlib/enum_val.hh"
-#include "simlib/file_info.hh"
-#include "simlib/libzip.hh"
-#include "simlib/sim/checker.hh"
-#include "simlib/sim/problem_package.hh"
-#include "simlib/simple_parser.hh"
-#include "simlib/unlinked_temporary_file.hh"
-#include "src/sim/default_checker_dump.h"
+#include "default_checker_dump.h"
 
 #include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <fcntl.h>
 #include <future>
+#include <simlib/enum_val.hh>
+#include <simlib/file_info.hh>
+#include <simlib/libzip.hh>
+#include <simlib/sim/checker.hh>
+#include <simlib/sim/judge_worker.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/simple_parser.hh>
+#include <simlib/unlinked_temporary_file.hh>
 #include <thread>
 #include <unistd.h>
 

@@ -1,9 +1,3 @@
-#include "simlib/event_queue.hh"
-#include "simlib/concurrent/semaphore.hh"
-#include "simlib/defer.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/repeating.hh"
-
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -12,6 +6,11 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <optional>
+#include <simlib/concurrent/semaphore.hh>
+#include <simlib/defer.hh>
+#include <simlib/event_queue.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/repeating.hh>
 #include <thread>
 #include <type_traits>
 #include <unistd.h>

@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/file_descriptor.hh"
-#include "simlib/spawner.hh"
-
 #include <seccomp.h>
+#include <simlib/file_descriptor.hh>
+#include <simlib/spawner.hh>
 #include <vector>
 
 enum class OpenAccess {

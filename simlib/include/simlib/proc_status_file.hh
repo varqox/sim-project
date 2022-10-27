@@ -1,8 +1,8 @@
 #pragma once
 
-#include "simlib/file_descriptor.hh"
-#include "simlib/inplace_buff.hh"
-#include "simlib/string_view.hh"
+#include <simlib/file_descriptor.hh>
+#include <simlib/inplace_buff.hh>
+#include <simlib/string_view.hh>
 
 // On error returns empty (not open) file descriptor and errno is set open()
 FileDescriptor open_proc_status(pid_t tid) noexcept;

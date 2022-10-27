@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/inplace_buff.hh"
-
 #include <algorithm>
 #include <memory>
+#include <simlib/inplace_buff.hh>
 #include <type_traits>
 #include <utility>
 

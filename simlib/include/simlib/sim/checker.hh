@@ -1,6 +1,6 @@
 #pragma once
 
-#include "simlib/sandbox.hh"
+#include <simlib/sandbox.hh>
 
 namespace sim {
 

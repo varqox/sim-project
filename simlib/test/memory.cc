@@ -1,6 +1,5 @@
-#include "simlib/memory.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/memory.hh>
 
 using std::unique_ptr;
 

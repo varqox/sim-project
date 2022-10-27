@@ -1,16 +1,16 @@
-#include "simlib/file_manip.hh"
-#include "simlib/debug.hh"
-#include "simlib/defer.hh"
-#include "simlib/directory.hh"
-#include "simlib/file_contents.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_path.hh"
-#include "simlib/opened_temporary_file.hh"
-#include "simlib/random_bytes.hh"
-#include "simlib/temporary_directory.hh"
-#include "test/get_file_permissions.hh"
+#include "get_file_permissions.hh"
 
 #include <gtest/gtest.h>
+#include <simlib/debug.hh>
+#include <simlib/defer.hh>
+#include <simlib/directory.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/file_path.hh>
+#include <simlib/opened_temporary_file.hh>
+#include <simlib/random_bytes.hh>
+#include <simlib/temporary_directory.hh>
 
 using std::max;
 using std::string;

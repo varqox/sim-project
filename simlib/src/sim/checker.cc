@@ -1,6 +1,5 @@
-#include "simlib/ctype.hh"
-#include "simlib/debug.hh"
-
+#include <simlib/ctype.hh>
+#include <simlib/debug.hh>
 #include <unistd.h>
 
 using std::string;

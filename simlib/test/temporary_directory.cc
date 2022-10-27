@@ -1,8 +1,7 @@
-#include "simlib/temporary_directory.hh"
-#include "simlib/file_info.hh"
-
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
+#include <simlib/file_info.hh>
+#include <simlib/temporary_directory.hh>
 
 using std::string;
 using ::testing::MatchesRegex;

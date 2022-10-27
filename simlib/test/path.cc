@@ -1,11 +1,10 @@
-#include "simlib/path.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/string_traits.hh"
-#include "simlib/temporary_directory.hh"
-
 #include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
+#include <simlib/concat_tostr.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/path.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/temporary_directory.hh>
 
 // NOLINTNEXTLINE
 TEST(path, path_absolute) {

@@ -1,7 +1,6 @@
-#include "simlib/member_comparator.hh"
-#include "simlib/string_view.hh"
-
 #include <gtest/gtest.h>
+#include <simlib/member_comparator.hh>
+#include <simlib/string_view.hh>
 #include <utility>
 #include <vector>
 

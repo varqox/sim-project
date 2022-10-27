@@ -1,7 +1,6 @@
 #pragma once
 
-#include "simlib/concurrent/bounded_queue.hh"
-
+#include <simlib/concurrent/bounded_queue.hh>
 #include <thread>
 #include <vector>
 

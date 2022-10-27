@@ -1,6 +1,6 @@
-#include "simlib/proc_status_file.hh"
-#include "simlib/debug.hh"
-#include "simlib/fd_pread_buff.hh"
+#include <simlib/debug.hh>
+#include <simlib/fd_pread_buff.hh>
+#include <simlib/proc_status_file.hh>
 
 FileDescriptor open_proc_status(pid_t tid) noexcept {
     constexpr StringView prefix = "/proc/";

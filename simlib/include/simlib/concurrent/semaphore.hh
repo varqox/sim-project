@@ -1,8 +1,7 @@
 #pragma once
 
-#include "simlib/debug.hh"
-
 #include <semaphore.h>
+#include <simlib/debug.hh>
 
 namespace concurrent {
 

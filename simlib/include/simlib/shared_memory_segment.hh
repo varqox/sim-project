@@ -1,7 +1,6 @@
 #pragma once
 
-#include "simlib/file_perms.hh"
-
+#include <simlib/file_perms.hh>
 #include <sys/shm.h>
 
 class SharedMemorySegment {

@@ -1,14 +1,14 @@
-#include "simlib/temporary_file.hh"
-#include "simlib/defer.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/file_perms.hh"
-#include "simlib/string_traits.hh"
-#include "test/get_file_permissions.hh"
+#include "get_file_permissions.hh"
 
 #include <fcntl.h>
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
+#include <simlib/defer.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/file_perms.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/temporary_file.hh>
 
 using std::string;
 using ::testing::MatchesRegex;

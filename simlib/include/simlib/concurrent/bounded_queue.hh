@@ -1,11 +1,10 @@
 #pragma once
 
-#include "simlib/concurrent/mutexed_value.hh"
-#include "simlib/concurrent/semaphore.hh"
-
 #include <climits>
 #include <deque>
 #include <mutex>
+#include <simlib/concurrent/mutexed_value.hh>
+#include <simlib/concurrent/semaphore.hh>
 #include <type_traits>
 
 namespace concurrent {

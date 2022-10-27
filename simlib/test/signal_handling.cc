@@ -1,10 +1,9 @@
-#include "simlib/signal_handling.hh"
-#include "simlib/concurrent/semaphore.hh"
-
 #include <chrono>
 #include <csignal>
 #include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
+#include <simlib/concurrent/semaphore.hh>
+#include <simlib/signal_handling.hh>
 #include <thread>
 #include <unistd.h>
 
