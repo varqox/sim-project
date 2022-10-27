@@ -7,8 +7,8 @@
 #include <linux/version.h>
 #include <simlib/concurrent/job_processor.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/old_sandbox.hh>
 #include <simlib/path.hh>
-#include <simlib/sandbox.hh>
 #include <simlib/temporary_file.hh>
 #include <simlib/throw_assert.hh>
 #include <sys/syscall.h>
@@ -19,26 +19,26 @@ using namespace std::chrono_literals;
 
 using std::string;
 
-class SandboxTests {
+class OldSandboxTests {
     static constexpr size_t MEM_LIMIT = 16 << 20; // 16 MiB (in bytes)
     // Big RT limit is needed for tests where memory dump is created - it is
     // really slow)
     static constexpr std::chrono::nanoseconds REAL_TIME_LIMIT = 16s;
     static constexpr std::chrono::nanoseconds CPU_TIME_LIMIT = 200ms;
-    static constexpr Sandbox::Options SANDBOX_OPTIONS{
+    static constexpr OldSandbox::Options SANDBOX_OPTIONS{
         -1, -1, -1, REAL_TIME_LIMIT, MEM_LIMIT, CPU_TIME_LIMIT};
 
     const string& test_cases_dir_;
-    TemporaryFile executable_{"/tmp/simlib.test.sandbox.XXXXXX"};
+    TemporaryFile executable_{"/tmp/simlib.test.old-sandbox.XXXXXX"};
 
 public:
-    explicit SandboxTests(const string& test_cases_dir) : test_cases_dir_(test_cases_dir) {}
+    explicit OldSandboxTests(const string& test_cases_dir) : test_cases_dir_(test_cases_dir) {}
 
 private:
     template <class... Flags>
     void compile_test_case(StringView test_case_filename, Flags&&... cc_flags) {
         CompilationCache ccache = {
-            "/tmp/simlib-sandbox-test-compilation-cache/", std::chrono::hours(24)};
+            "/tmp/simlib-old-sandbox-test-compilation-cache/", std::chrono::hours(24)};
         auto path = concat_tostr(test_cases_dir_, test_case_filename);
         if (ccache.is_cached(path, path)) {
             thread_fork_safe_copy(ccache.cached_path(path), executable_.path(), S_0755);
@@ -61,8 +61,8 @@ private:
         ccache.cache_file(path, executable_.path());
     }
 
-    using ExitStatSiCode = decltype(std::declval<Sandbox::ExitStat>().si.code);
-    using ExitStatMessage = decltype(std::declval<Sandbox::ExitStat>().message);
+    using ExitStatSiCode = decltype(std::declval<OldSandbox::ExitStat>().si.code);
+    using ExitStatMessage = decltype(std::declval<OldSandbox::ExitStat>().message);
 
     static bool
     killed_or_dumped_by_abort(const ExitStatSiCode& si_code, const ExitStatMessage& message) {
@@ -84,7 +84,7 @@ private:
 public:
     void test_1() {
         compile_test_case("1.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, "Memory limit exceeded");
@@ -98,7 +98,7 @@ public:
 
     void test_2() {
         compile_test_case("2.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGSEGV);
         EXPECT_EQ(es.message, "killed by signal 11 - Segmentation fault");
@@ -109,7 +109,7 @@ public:
 
     void test_3() {
         compile_test_case("3.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 37);
         EXPECT_EQ(es.message, "exited with 37");
@@ -123,7 +123,7 @@ public:
 
     void test_4() {
         compile_test_case("4.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
@@ -137,7 +137,7 @@ public:
 
     void test_5() {
         compile_test_case("5.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
         EXPECT_EQ(es.si.status, SIGABRT);
         EXPECT_LT(0s, es.cpu_runtime);
@@ -150,7 +150,7 @@ public:
 
     void test_6() {
         compile_test_case("6.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
         EXPECT_EQ(es.si.status, SIGABRT);
         EXPECT_LT(0s, es.cpu_runtime);
@@ -161,7 +161,9 @@ public:
         EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
         // compile_test_case("6.c"); // not needed
-        es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS, {{"/tmp", OpenAccess::RDONLY}});
+        es = OldSandbox().run(
+            executable_.path(), {}, SANDBOX_OPTIONS, {{"/tmp", OpenAccess::RDONLY}}
+        );
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, "");
@@ -175,7 +177,7 @@ public:
         for (auto perm : {OpenAccess::NONE, OpenAccess::WRONLY, OpenAccess::RDWR}) {
             // compile_test_case("6.c"); // not needed
 
-            es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS, {{"/tmp", perm}});
+            es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS, {{"/tmp", perm}});
             EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
             EXPECT_EQ(es.si.status, SIGABRT);
             EXPECT_LT(0s, es.cpu_runtime);
@@ -191,7 +193,7 @@ public:
         // Testing the allowing of lseek(), dup(), etc. on the closed stdin,
         // stdout and stderr
         compile_test_case("7.c");
-        auto es = Sandbox().run(
+        auto es = OldSandbox().run(
             executable_.path(), {}, SANDBOX_OPTIONS, {{"/dev/null", OpenAccess::RDONLY}}
         );
         EXPECT_EQ(es.si.code, CLD_EXITED);
@@ -208,7 +210,7 @@ public:
     void test_8() {
         // Testing uname
         compile_test_case("8.c", "-m32");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, "");
@@ -220,7 +222,7 @@ public:
         EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
         compile_test_case("8.c", "-m64");
-        es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, "");
@@ -235,7 +237,7 @@ public:
     void test_9() {
         // Testing set_thread_area
         compile_test_case("9.c", "-m32");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, "");
@@ -247,7 +249,7 @@ public:
         EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
         compile_test_case("9.c", "-m64");
-        es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, "");
@@ -264,7 +266,7 @@ public:
         if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)) {
             compile_test_case("10.c", "-m32");
 
-            auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+            auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
             EXPECT_EQ(es.si.code, CLD_EXITED);
             EXPECT_EQ(es.si.status, 0);
             EXPECT_EQ(es.message, "");
@@ -277,7 +279,7 @@ public:
         }
 
         compile_test_case("10.c", "-m64");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, "");
@@ -292,7 +294,7 @@ public:
     void test_11() {
         // Testing execve
         compile_test_case("11.c", "-m32");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
@@ -304,7 +306,7 @@ public:
         EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
         compile_test_case("11.c", "-m64");
-        es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
@@ -319,7 +321,7 @@ public:
     void test_12() {
         // Tests time-outing on time and memory vm_peak calculation on timeout
         compile_test_case("12.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, concat_tostr("killed by signal 9 - Killed"));
@@ -340,7 +342,7 @@ public:
     void test_13() {
         // Testing memory vm_peak calculation on normal exit
         compile_test_case("13.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 0);
         EXPECT_EQ(es.message, concat_tostr(""));
@@ -355,7 +357,7 @@ public:
     void test_14() {
         // Testing memory vm_peak calculation on abort
         compile_test_case("14.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
         EXPECT_EQ(es.si.status, SIGABRT);
         EXPECT_LT(0s, es.cpu_runtime);
@@ -369,7 +371,7 @@ public:
     void test_15() {
         // Testing memory vm_peak calculation on forbidden syscall
         compile_test_case("15.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
@@ -385,7 +387,7 @@ public:
         // Testing memory vm_peak calculation on forbidden syscall (according to
         // its callback)
         compile_test_case("16.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
@@ -400,7 +402,7 @@ public:
     void test_17() {
         // Testing memory vm_peak calculation on stack overflow
         compile_test_case("17.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_PRED2(killed_or_dumped_by_segv, es.si.code, es.message);
         EXPECT_EQ(es.si.status, SIGSEGV);
         EXPECT_LT(0s, es.cpu_runtime);
@@ -414,7 +416,7 @@ public:
     void test_18() {
         // Testing memory vm_peak calculation on exit with exit(2)
         compile_test_case("18.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 11);
         EXPECT_EQ(es.message, concat_tostr("exited with 11"));
@@ -429,7 +431,7 @@ public:
     void test_19() {
         // Testing memory vm_peak calculation on exit with exit_group(2)
         compile_test_case("19.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 55);
         EXPECT_EQ(es.message, concat_tostr("exited with 55"));
@@ -444,7 +446,7 @@ public:
     void test_20() {
         // Testing memory vm_peak calculation on "Memory limit exceeded"
         compile_test_case("20.c");
-        auto es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        auto es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_KILLED);
         EXPECT_EQ(es.si.status, SIGKILL);
         EXPECT_EQ(es.message, "Memory limit exceeded");
@@ -458,12 +460,12 @@ public:
     }
 
 private:
-    static std::pair<FileDescriptor, Sandbox::Options> dev_null_as_std_in_out_err() {
+    static std::pair<FileDescriptor, OldSandbox::Options> dev_null_as_std_in_out_err() {
         FileDescriptor dev_null("/dev/null", O_RDWR | O_CLOEXEC);
         throw_assert(dev_null != -1);
         return {
             std::move(dev_null),
-            Sandbox::Options(
+            OldSandbox::Options(
                 dev_null, dev_null, dev_null, REAL_TIME_LIMIT, MEM_LIMIT, CPU_TIME_LIMIT
             )};
     }
@@ -473,7 +475,7 @@ public:
         auto [dev_null, rw_opts] = dev_null_as_std_in_out_err();
         // Testing writing to open stdin
         compile_test_case("21.c");
-        auto es = Sandbox().run(executable_.path(), {}, rw_opts);
+        auto es = OldSandbox().run(executable_.path(), {}, rw_opts);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 1);
         EXPECT_EQ(es.message, "exited with 1");
@@ -486,7 +488,7 @@ public:
 
         // Testing writing to closed stdin
         // compile_test_case("21.c"); // not needed
-        es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 7);
         EXPECT_EQ(es.message, "exited with 7");
@@ -502,7 +504,7 @@ public:
         auto [dev_null, rw_opts] = dev_null_as_std_in_out_err();
         // Testing reading from open stdout and stderr
         compile_test_case("22.c");
-        auto es = Sandbox().run(executable_.path(), {}, rw_opts);
+        auto es = OldSandbox().run(executable_.path(), {}, rw_opts);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 6);
         EXPECT_EQ(es.message, "exited with 6");
@@ -515,7 +517,7 @@ public:
 
         // Testing reading from closed stdout and stderr
         // compile_test_case("22.c"); // not needed
-        es = Sandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
+        es = OldSandbox().run(executable_.path(), {}, SANDBOX_OPTIONS);
         EXPECT_EQ(es.si.code, CLD_EXITED);
         EXPECT_EQ(es.si.status, 7);
         EXPECT_EQ(es.message, "exited with 7");
@@ -528,43 +530,43 @@ public:
     }
 };
 
-class SandboxTestRunner : public concurrent::JobProcessor<void (SandboxTests::*)()> {
+class OldSandboxTestRunner : public concurrent::JobProcessor<void (OldSandboxTests::*)()> {
     const string test_cases_dir_;
     std::atomic_size_t test_ran{0};
 
 public:
-    explicit SandboxTestRunner(string test_cases_dir)
+    explicit OldSandboxTestRunner(string test_cases_dir)
     : test_cases_dir_(std::move(test_cases_dir)) {}
 
 protected:
-    void process_job(void (SandboxTests::*test_case)()) final {
+    void process_job(void (OldSandboxTests::*test_case)()) final {
         stdlog("Running test: ", ++test_ran);
-        std::invoke(test_case, SandboxTests(test_cases_dir_));
+        std::invoke(test_case, OldSandboxTests(test_cases_dir_));
     }
 
     void produce_jobs() final {
-        add_job(&SandboxTests::test_1);
-        add_job(&SandboxTests::test_2);
-        add_job(&SandboxTests::test_3);
-        add_job(&SandboxTests::test_4);
-        add_job(&SandboxTests::test_5);
-        add_job(&SandboxTests::test_6);
-        add_job(&SandboxTests::test_7);
-        add_job(&SandboxTests::test_8);
-        add_job(&SandboxTests::test_9);
-        add_job(&SandboxTests::test_10);
-        add_job(&SandboxTests::test_11);
-        add_job(&SandboxTests::test_12);
-        add_job(&SandboxTests::test_13);
-        add_job(&SandboxTests::test_14);
-        add_job(&SandboxTests::test_15);
-        add_job(&SandboxTests::test_16);
-        add_job(&SandboxTests::test_17);
-        add_job(&SandboxTests::test_18);
-        add_job(&SandboxTests::test_19);
-        add_job(&SandboxTests::test_20);
-        add_job(&SandboxTests::test_21);
-        add_job(&SandboxTests::test_22);
+        add_job(&OldSandboxTests::test_1);
+        add_job(&OldSandboxTests::test_2);
+        add_job(&OldSandboxTests::test_3);
+        add_job(&OldSandboxTests::test_4);
+        add_job(&OldSandboxTests::test_5);
+        add_job(&OldSandboxTests::test_6);
+        add_job(&OldSandboxTests::test_7);
+        add_job(&OldSandboxTests::test_8);
+        add_job(&OldSandboxTests::test_9);
+        add_job(&OldSandboxTests::test_10);
+        add_job(&OldSandboxTests::test_11);
+        add_job(&OldSandboxTests::test_12);
+        add_job(&OldSandboxTests::test_13);
+        add_job(&OldSandboxTests::test_14);
+        add_job(&OldSandboxTests::test_15);
+        add_job(&OldSandboxTests::test_16);
+        add_job(&OldSandboxTests::test_17);
+        add_job(&OldSandboxTests::test_18);
+        add_job(&OldSandboxTests::test_19);
+        add_job(&OldSandboxTests::test_20);
+        add_job(&OldSandboxTests::test_21);
+        add_job(&OldSandboxTests::test_22);
     }
 };
 
@@ -579,7 +581,7 @@ int main(int argc, char** argv) {
 }
 
 // NOLINTNEXTLINE
-TEST(Sandbox, run) {
+TEST(OldSandbox, run) {
     stdlog.label(false);
-    SandboxTestRunner(test_cases_dir.to_string()).run();
+    OldSandboxTestRunner(test_cases_dir.to_string()).run();
 }

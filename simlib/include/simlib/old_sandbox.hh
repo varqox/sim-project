@@ -30,7 +30,7 @@ public:
     virtual ~SyscallCallback() = default;
 };
 
-class Sandbox : protected Spawner {
+class OldSandbox : protected Spawner {
 public:
     using AllowedFile = std::pair<std::string, OpenAccess>;
 
@@ -65,14 +65,14 @@ private:
     void update_tracee_vm_peak() { update_tracee_vm_peak(get_tracee_vm_size()); }
 
 public:
-    Sandbox();
+    OldSandbox();
 
-    Sandbox(const Sandbox&) = delete;
-    Sandbox(Sandbox&&) = delete;
-    Sandbox& operator=(const Sandbox&) = delete;
-    Sandbox& operator=(Sandbox&&) = delete;
+    OldSandbox(const OldSandbox&) = delete;
+    OldSandbox(OldSandbox&&) = delete;
+    OldSandbox& operator=(const OldSandbox&) = delete;
+    OldSandbox& operator=(OldSandbox&&) = delete;
 
-    ~Sandbox() {
+    ~OldSandbox() {
         seccomp_release(x86_64_ctx_);
         seccomp_release(x86_ctx_);
     }

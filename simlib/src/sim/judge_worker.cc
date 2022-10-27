@@ -240,7 +240,7 @@ static inline auto cpu_time_limit_to_real_time_limit(std::chrono::nanoseconds cp
     return cpu_tl * 3 / 2 + std::chrono::milliseconds(500);
 }
 
-Sandbox::ExitStat JudgeWorker::run_solution(
+OldSandbox::ExitStat JudgeWorker::run_solution(
     FilePath input_file,
     FilePath output_file,
     std::optional<std::chrono::nanoseconds> time_limit,
@@ -264,7 +264,7 @@ Sandbox::ExitStat JudgeWorker::run_solution(
         THROW("Failed to open file `", output_file, '`', errmsg());
     }
 
-    Sandbox sandbox;
+    OldSandbox sandbox;
     string solution_path(concat_tostr(tmp_dir.path(), SOLUTION_FILENAME));
 
     FileDescriptor test_in(input_file, O_RDONLY | O_CLOEXEC);
@@ -278,7 +278,7 @@ Sandbox::ExitStat JudgeWorker::run_solution(
     }
 
     // Run solution on the test
-    Sandbox::ExitStat es = sandbox.run(
+    OldSandbox::ExitStat es = sandbox.run(
         solution_path, {}, {test_in, solution_stdout, -1, real_time_limit, memory_limit, time_limit}
     ); // Allow exceptions to fly upper
 
@@ -297,8 +297,8 @@ struct CheckerStatus {
 } // namespace
 
 static CheckerStatus exit_to_checker_status(
-    const Sandbox::ExitStat& es,
-    const Sandbox::Options& opts,
+    const OldSandbox::ExitStat& es,
+    const OldSandbox::Options& opts,
     int output_fd,
     const char* output_name
 ) {
@@ -523,7 +523,7 @@ JudgeReport JudgeWorker::judge_interactive(
     std::promise<CheckerStatus> checker_status_promise;
     std::atomic_bool checker_finished{false};
     std::promise<std::optional<pid_t>> solution_pid_promise;
-    Sandbox::ExitStat ces;
+    OldSandbox::ExitStat ces;
 
     auto checker_supervisor = [&] {
         try {
@@ -536,7 +536,7 @@ JudgeReport JudgeWorker::judge_interactive(
                 THROW("Cannot create checker output file descriptor");
             }
 
-            Sandbox sandbox;
+            OldSandbox sandbox;
             const auto checker_path = concat_tostr(tmp_dir.path(), CHECKER_FILENAME);
 
             checker_supervisor_ready.set_value();
@@ -559,7 +559,7 @@ JudgeReport JudgeWorker::judge_interactive(
                 }
 
                 // Checker parameters
-                Sandbox::Options opts = {
+                OldSandbox::Options opts = {
                     job.checker_stdin,
                     job.checker_stdout,
                     output, // STDERR
@@ -611,7 +611,7 @@ JudgeReport JudgeWorker::judge_interactive(
         }
     };
 
-    Sandbox sandbox;
+    OldSandbox sandbox;
     const auto solution_path = concat_tostr(tmp_dir.path(), SOLUTION_FILENAME);
 
     auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
@@ -645,7 +645,7 @@ JudgeReport JudgeWorker::judge_interactive(
         checker_supervisor_ready = {}; // reset promise
 
         // Run solution
-        Sandbox::ExitStat es;
+        OldSandbox::ExitStat es;
         bool solution_pid_was_set = false;
         try {
             es = sandbox.run(
@@ -842,14 +842,14 @@ JudgeReport JudgeWorker::judge(
     FileRemover solution_stdout_remover{sol_stdout_path}; // Save disk space
 
     // Checker parameters
-    Sandbox::Options checker_opts = {
+    OldSandbox::Options checker_opts = {
         -1, // STDIN is ignored
         checker_stdout, // STDOUT (backward compatibility)
         checker_stderr, // STDERR
         checker_time_limit,
         checker_memory_limit};
 
-    Sandbox sandbox;
+    OldSandbox sandbox;
 
     string checker_path{concat_tostr(tmp_dir.path(), CHECKER_FILENAME)};
     string solution_path{concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
@@ -872,7 +872,7 @@ JudgeReport JudgeWorker::judge(
         }
 
         // Run solution on the test
-        Sandbox::ExitStat es = sandbox.run(
+        OldSandbox::ExitStat es = sandbox.run(
             solution_path,
             {},
             {test_in,

@@ -5,7 +5,7 @@
 #include <simlib/file_path.hh>
 #include <simlib/logger.hh>
 #include <simlib/macros/stack_unwinding.hh>
-#include <simlib/sandbox.hh>
+#include <simlib/old_sandbox.hh>
 #include <simlib/sim/simfile.hh>
 #include <simlib/temporary_directory.hh>
 #include <simlib/time_format_conversions.hh>
@@ -183,13 +183,13 @@ public:
     virtual void begin(bool final) = 0;
 
     virtual void
-    test(StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es) = 0;
+    test(StringView test_name, JudgeReport::Test test_report, OldSandbox::ExitStat es) = 0;
 
     virtual void test(
         StringView test_name,
         JudgeReport::Test test_report,
-        Sandbox::ExitStat es,
-        Sandbox::ExitStat checker_es,
+        OldSandbox::ExitStat es,
+        OldSandbox::ExitStat checker_es,
         std::optional<uint64_t> checker_mem_limit,
         StringView checker_error_str
     ) = 0;
@@ -223,7 +223,7 @@ class VerboseJudgeLogger : public JudgeLogger {
     void log_test(
         const StringView& test_name,
         const JudgeReport::Test& test_report,
-        Sandbox::ExitStat es,
+        OldSandbox::ExitStat es,
         Func&& func
     ) {
         if (after_final_score_) {
@@ -287,15 +287,16 @@ public:
         log("Judging (", (final ? "final" : "initial"), "): {");
     }
 
-    void test(StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es) override {
+    void
+    test(StringView test_name, JudgeReport::Test test_report, OldSandbox::ExitStat es) override {
         log_test(test_name, test_report, es, [](auto& /*unused*/) {});
     }
 
     void test(
         StringView test_name,
         JudgeReport::Test test_report,
-        Sandbox::ExitStat es,
-        Sandbox::ExitStat checker_es,
+        OldSandbox::ExitStat es,
+        OldSandbox::ExitStat checker_es,
         std::optional<uint64_t> checker_mem_limit,
         StringView checker_error_str
     ) override {
@@ -549,7 +550,7 @@ public:
      * @param memory_limit memory limit in bytes
      * @return exit status of running the solution (in the sandbox)
      */
-    [[nodiscard]] Sandbox::ExitStat run_solution(
+    [[nodiscard]] OldSandbox::ExitStat run_solution(
         FilePath input_file,
         FilePath output_file,
         std::optional<std::chrono::nanoseconds> time_limit,

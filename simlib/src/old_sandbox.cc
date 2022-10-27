@@ -5,7 +5,7 @@
 #include <simlib/defer.hh>
 #include <simlib/humanize.hh>
 #include <simlib/macros/stack_unwinding.hh>
-#include <simlib/sandbox.hh>
+#include <simlib/old_sandbox.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/throw_assert.hh>
@@ -307,7 +307,7 @@ inline auto syscall_callback_lambda(Func&& f DEBUG_SANDBOX(, StringView callback
                                                         DEBUG_SANDBOX(, callback_name));
 }
 
-Sandbox::Sandbox() : x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
+OldSandbox::OldSandbox() : x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
 
     if (not x86_ctx_) {
         THROW("seccomp_init()", errmsg());
@@ -387,13 +387,13 @@ Sandbox::Sandbox() : x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
 
     /* ======================= Installing callbacks ======================= */
     class SyscallCallbackLimiting : public SyscallCallback {
-        Sandbox& sandbox_;
+        OldSandbox& sandbox_;
         const uint limit_;
         uint counter_;
         const char* syscall_name_;
 
     public:
-        SyscallCallbackLimiting(Sandbox& sandbox, uint limit, const char* syscall_name)
+        SyscallCallbackLimiting(OldSandbox& sandbox, uint limit, const char* syscall_name)
         : sandbox_(sandbox)
         , limit_(limit)
         , counter_(limit)
@@ -425,7 +425,7 @@ Sandbox::Sandbox() : x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
         SCMP_ACT_TRACE(add_limiting_callback(1, "execve")), SCMP_SYS(execve), 0
     );
 
-    // prlimit64() - needed by callback to Sandbox::run_child() to limit the virtual address
+    // prlimit64() - needed by callback to OldSandbox::run_child() to limit the virtual address
     // space size
     seccomp_rule_add_both_ctx(SECCOMP_RET_ALLOW, SCMP_SYS(prlimit64), 0);
 
@@ -467,11 +467,11 @@ Sandbox::Sandbox() : x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
                                                   // subsequent unsuccessful allocations
 
         class SyscallCallbackVmPeakUpdater : public SyscallCallback {
-            Sandbox& sandbox_;
+            OldSandbox& sandbox_;
             uint fail_counter_ = 0;
 
         public:
-            explicit SyscallCallbackVmPeakUpdater(Sandbox& sandbox) : sandbox_(sandbox) {}
+            explicit SyscallCallbackVmPeakUpdater(OldSandbox& sandbox) : sandbox_(sandbox) {}
 
             void reset() noexcept override { fail_counter_ = 0; }
 
@@ -795,24 +795,24 @@ Sandbox::Sandbox() : x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
 }
 
 template <class... T>
-inline void Sandbox::seccomp_rule_add_both_ctx(T&&... args) {
+inline void OldSandbox::seccomp_rule_add_both_ctx(T&&... args) {
     seccomp_rule_add_throw(x86_ctx_, args...);
     seccomp_rule_add_throw(x86_64_ctx_, args...);
 }
 
 template <class... T>
-inline bool Sandbox::set_message_callback(T&&... args) {
+inline bool OldSandbox::set_message_callback(T&&... args) {
     message_to_set_in_exit_stat_ = concat_tostr(std::forward<T>(args)...);
     return true;
 }
 
-inline void Sandbox::reset_callbacks() noexcept {
+inline void OldSandbox::reset_callbacks() noexcept {
     for (auto& p : callbacks_) {
         p->reset();
     }
 }
 
-uint64_t Sandbox::get_tracee_vm_size() {
+uint64_t OldSandbox::get_tracee_vm_size() {
     InplaceBuff<32> buff(32);
     ssize_t rc = pread(tracee_statm_fd_, buff.data(), buff.size, 0);
     if (rc <= 0) {
@@ -843,7 +843,7 @@ uint64_t Sandbox::get_tracee_vm_size() {
     return vm_size;
 }
 
-void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
+void OldSandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
     if (curr_vm_size > tracee_vm_peak_) {
         tracee_vm_peak_ = curr_vm_size;
     }
@@ -859,7 +859,7 @@ void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
     );)
 }
 
-Sandbox::ExitStat Sandbox::run(
+OldSandbox::ExitStat OldSandbox::run(
     FilePath exec,
     const std::vector<std::string>& exec_args,
     const Options& opts,

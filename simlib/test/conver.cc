@@ -154,7 +154,7 @@ class TestingJudgeLogger : public sim::JudgeLogger {
     void log_test(
         StringView test_name,
         const JudgeReport::Test& test_report,
-        const Sandbox::ExitStat& es,
+        const OldSandbox::ExitStat& es,
         Func&& func
     ) {
         log("  ",
@@ -183,15 +183,16 @@ public:
         log("Judging (", (final ? "final" : "initial"), "): {\n");
     }
 
-    void test(StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es) override {
+    void
+    test(StringView test_name, JudgeReport::Test test_report, OldSandbox::ExitStat es) override {
         log_test(test_name, test_report, es, [] {});
     }
 
     void test(
         StringView test_name,
         JudgeReport::Test test_report,
-        Sandbox::ExitStat es,
-        Sandbox::ExitStat /*checker_es*/,
+        OldSandbox::ExitStat es,
+        OldSandbox::ExitStat /*checker_es*/,
         optional<uint64_t> checker_mem_limit,
         StringView checker_error_str
     ) override {
