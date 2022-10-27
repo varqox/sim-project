@@ -1,13 +1,13 @@
 #pragma once
 
-#include "simlib/argv_parser.hh"
-#include "simlib/sim/conver.hh"
-#include "src/sip_judge_logger.hh"
-#include "src/sipfile.hh"
-#include "src/tests_files.hh"
+#include "sip_judge_logger.hh"
+#include "sipfile.hh"
+#include "tests_files.hh"
 
 #include <functional>
 #include <optional>
+#include <simlib/argv_parser.hh>
+#include <simlib/sim/conver.hh>
 
 class SipPackage {
 private:

@@ -54,6 +54,7 @@ else
 endif
 
 sip = executable('sip',
+    implicit_include_directories : false,
     sources : [
         'src/commands/checker.cc',
         'src/commands/clean.cc',

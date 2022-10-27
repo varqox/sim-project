@@ -1,8 +1,9 @@
-#include "simlib/debug.hh"
-#include "simlib/path.hh"
-#include "simlib/working_directory.hh"
-#include "src/commands/commands.hh"
-#include "src/sip_package.hh"
+#include "../sip_package.hh"
+#include "commands.hh"
+
+#include <simlib/debug.hh>
+#include <simlib/path.hh>
+#include <simlib/working_directory.hh>
 
 namespace commands {
 

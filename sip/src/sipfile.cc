@@ -1,14 +1,14 @@
-#include "src/sipfile.hh"
-#include "simlib/file_info.hh"
-#include "simlib/path.hh"
-#include "simlib/sim/judge_worker.hh"
-#include "simlib/sim/problem_package.hh"
-#include "simlib/sim/simfile.hh"
-#include "simlib/string_transform.hh"
-#include "src/sip_error.hh"
-#include "src/utils.hh"
+#include "sipfile.hh"
+#include "sip_error.hh"
+#include "utils.hh"
 
 #include <optional>
+#include <simlib/file_info.hh>
+#include <simlib/path.hh>
+#include <simlib/sim/judge_worker.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/sim/simfile.hh>
+#include <simlib/string_transform.hh>
 
 using std::not_fn;
 

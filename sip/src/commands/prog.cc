@@ -1,6 +1,7 @@
-#include "simlib/debug.hh"
-#include "src/sip_package.hh"
-#include "src/utils.hh"
+#include "../sip_package.hh"
+#include "../utils.hh"
+
+#include <simlib/debug.hh>
 
 namespace commands {
 

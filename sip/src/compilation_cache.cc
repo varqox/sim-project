@@ -1,8 +1,9 @@
-#include "src/compilation_cache.hh"
-#include "simlib/file_info.hh"
-#include "src/constants.hh"
-#include "src/proot_dump.h"
-#include "src/sip_error.hh"
+#include "compilation_cache.hh"
+#include "constants.hh"
+#include "proot_dump.h"
+#include "sip_error.hh"
+
+#include <simlib/file_info.hh>
 
 using std::string;
 

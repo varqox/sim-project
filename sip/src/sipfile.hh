@@ -1,11 +1,10 @@
 #pragma once
 
-#include "simlib/config_file.hh"
-#include "simlib/member_comparator.hh"
-
 #include <chrono>
 #include <cstdint>
 #include <set>
+#include <simlib/config_file.hh>
+#include <simlib/member_comparator.hh>
 
 /**
  * @brief Sipfile holds sip package configuration that does not fit into Simfile

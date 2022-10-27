@@ -1,7 +1,8 @@
-#include "simlib/debug.hh"
-#include "simlib/file_info.hh"
-#include "src/sip_error.hh"
-#include "src/sip_package.hh"
+#include "../sip_error.hh"
+#include "../sip_package.hh"
+
+#include <simlib/debug.hh>
+#include <simlib/file_info.hh>
 
 namespace commands {
 

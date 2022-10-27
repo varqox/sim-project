@@ -1,5 +1,5 @@
-#include "src/tests_files.hh"
-#include "src/sip_error.hh"
+#include "tests_files.hh"
+#include "sip_error.hh"
 
 static StringView get_test_name(StringView test_path) {
     test_path = test_path.substring(0, test_path.rfind('.'));

@@ -1,6 +1,6 @@
-#include "src/utils.hh"
-#include "simlib/sim/problem_package.hh"
+#include "utils.hh"
 
+#include <simlib/sim/problem_package.hh>
 #include <type_traits>
 
 using std::set;

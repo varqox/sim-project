@@ -1,4 +1,4 @@
-#include "src/git_commit.hh"
+#include "../git_commit.hh"
 
 #include <cstdio>
 
