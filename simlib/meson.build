@@ -54,6 +54,7 @@ if get_option('static')
 endif
 
 dump_file_as_c_array = executable('dump_file_as_c_array',
+    implicit_include_directories : false,
     sources : 'src/dump_file_as_c_array.c',
     install : false,
 )
@@ -122,22 +123,24 @@ simlib_libsources = files([
     'src/working_directory.cc',
 ])
 
-simlib = library('simlib', sources : [
+simlib = library('simlib',
+    implicit_include_directories : false,
+    include_directories : simlib_incdir,
+    sources : [
         simlib_libsources,
         dump_file_as_c_array_gen.process(
             'src/sim/default_checker.c',
             extra_args : 'default_checker_c'
         ),
     ],
-    include_directories : simlib_incdir,
     dependencies : simlib_dependencies,
     install : true,
 )
 
 simlib_dep = declare_dependency(
     include_directories : simlib_incdir,
-    link_with : simlib,
     dependencies : simlib_dependencies,
+    link_with : simlib,
 )
 
 alias_target('base', simlib)
@@ -161,16 +164,22 @@ gtest_main_dep = dependency('gtest', main : true, method : 'pkg-config', require
 if not gtest_main_dep.found()
     gtest_main_dep = subproject('gtest').get_variable('gtest_main_dep')
     gtest_main_dep = declare_dependency(
-        link_with : shared_library('gtest_main', dependencies : gtest_main_dep),
         dependencies : gtest_main_dep.partial_dependency(includes : true),
+        link_with : shared_library('gtest_main',
+            implicit_include_directories : false,
+            dependencies : gtest_main_dep,
+        ),
     )
 endif
 gmock_dep = dependency('gmock', main : false, method : 'pkg-config', required : false)
 if not gmock_dep.found()
     gmock_dep = subproject('gtest').get_variable('gmock_dep')
     gmock_dep = declare_dependency(
-        link_with : shared_library('gmock', dependencies : gmock_dep),
         dependencies : gmock_dep.partial_dependency(includes : true),
+        link_with : shared_library('gmock',
+            implicit_include_directories : false,
+            dependencies : gmock_dep,
+        ),
     )
 endif
 
@@ -245,10 +254,15 @@ tests = [
 
 foreach test : tests
     name = test[0].underscorify()
-    exe = executable(name, sources : test[0], dependencies : [
-        gtest_main_dep,
-        simlib_dep,
-        test[1],
-    ], build_by_default : false)
+    exe = executable(name,
+        implicit_include_directories : false,
+        sources : test[0],
+        dependencies : [
+            gtest_main_dep,
+            simlib_dep,
+            test[1],
+        ],
+        build_by_default : false,
+    )
     test(name, exe, timeout : 300, kwargs : test[2], workdir : meson.current_source_dir())
 endforeach
