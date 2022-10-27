@@ -56,7 +56,7 @@ class SipJudgeLogger : public sim::JudgeLogger {
 
     template <class Func>
     void log_test(
-        StringView test_name, const sim::JudgeReport::Test& test_report, Sandbox::ExitStat es,
+        StringView test_name, const sim::JudgeReport::Test& test_report, OldSandbox::ExitStat es,
         Func&& func) {
         assert(test_name.size() <= test_name_max_len_);
         ++status_count_[test_report.status];
@@ -103,14 +103,14 @@ public:
 
     void begin(bool final) override { final_ = final; }
 
-    void test(StringView test_name, sim::JudgeReport::Test test_report, Sandbox::ExitStat es)
+    void test(StringView test_name, sim::JudgeReport::Test test_report, OldSandbox::ExitStat es)
         override {
         log_test(test_name, test_report, es, [](auto& /*unused*/) {});
     }
 
     void test(
-        StringView test_name, sim::JudgeReport::Test test_report, Sandbox::ExitStat es,
-        Sandbox::ExitStat checker_es, std::optional<uint64_t> checker_mem_limit,
+        StringView test_name, sim::JudgeReport::Test test_report, OldSandbox::ExitStat es,
+        OldSandbox::ExitStat checker_es, std::optional<uint64_t> checker_mem_limit,
         StringView checker_error_str) override {
         log_test(test_name, test_report, es, [&](auto& tmplog) {
             // Checker status
