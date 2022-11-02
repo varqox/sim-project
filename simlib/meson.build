@@ -74,10 +74,11 @@ threads_dep = dependency('threads', kwargs : static_kwargs)
 if get_option('static')
     threads_dep = declare_dependency(
         compile_args : '-pthread',
-        link_args : ['-Wl,--whole-archive', '-lpthread', '-Wl,--no-whole-archive']
+        link_args : ['-Wl,--whole-archive', '-lpthread', '-Wl,--no-whole-archive'],
     )
 endif
 
+simlib_incdir = include_directories('include', is_system : false)
 simlib_dependencies = [
     dl_dep,
     libseccomp_dep,
@@ -89,45 +90,40 @@ simlib_dependencies = [
     ),
 ]
 
-simlib_incdir = include_directories('include', is_system : false)
-simlib_libsources = files([
-    'src/aho_corasick.cc',
-    'src/config_file.cc',
-    'src/event_queue.cc',
-    'src/file_contents.cc',
-    'src/file_manip.cc',
-    'src/http/response.cc',
-    'src/humanize.cc',
-    'src/inotify.cc',
-    'src/libarchive_zip.cc',
-    'src/logger.cc',
-    'src/path.cc',
-    'src/proc_stat_file_contents.cc',
-    'src/proc_status_file.cc',
-    'src/process.cc',
-    'src/random.cc',
-    'src/sandbox.cc',
-    'src/sha.cc',
-    'src/sim/checker.cc',
-    'src/sim/compile.cc',
-    'src/sim/conver.cc',
-    'src/sim/judge_worker.cc',
-    'src/sim/problem_package.cc',
-    'src/sim/simfile.cc',
-    'src/spawner.cc',
-    'src/string_compare.cc',
-    'src/temporary_directory.cc',
-    'src/temporary_file.cc',
-    'src/time.cc',
-    'src/unlinked_temporary_file.cc',
-    'src/working_directory.cc',
-])
-
 simlib = library('simlib',
     implicit_include_directories : false,
     include_directories : simlib_incdir,
     sources : [
-        simlib_libsources,
+        'src/aho_corasick.cc',
+        'src/config_file.cc',
+        'src/event_queue.cc',
+        'src/file_contents.cc',
+        'src/file_manip.cc',
+        'src/http/response.cc',
+        'src/humanize.cc',
+        'src/inotify.cc',
+        'src/libarchive_zip.cc',
+        'src/logger.cc',
+        'src/path.cc',
+        'src/proc_stat_file_contents.cc',
+        'src/proc_status_file.cc',
+        'src/process.cc',
+        'src/random.cc',
+        'src/sandbox.cc',
+        'src/sha.cc',
+        'src/sim/checker.cc',
+        'src/sim/compile.cc',
+        'src/sim/conver.cc',
+        'src/sim/judge_worker.cc',
+        'src/sim/problem_package.cc',
+        'src/sim/simfile.cc',
+        'src/spawner.cc',
+        'src/string_compare.cc',
+        'src/temporary_directory.cc',
+        'src/temporary_file.cc',
+        'src/time.cc',
+        'src/unlinked_temporary_file.cc',
+        'src/working_directory.cc',
         dump_file_as_c_array_gen.process(
             'src/sim/default_checker.c',
             extra_args : 'default_checker_c'
