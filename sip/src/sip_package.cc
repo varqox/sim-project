@@ -734,9 +734,9 @@ static void compile_tex_file(StringView file) {
     setenv("TEXINPUTS", concat_tostr(".:", path_dirpath(file), ':').data(), true);
     // It is necessary (essential) to run latex two times
     for (int iter = 0; iter < 2; ++iter) {
-        auto es =
-                Spawner::run("pdflatex", {"pdflatex", "-output-dir=utils/latex", file.to_string()},
-                        {-1, STDOUT_FILENO, STDERR_FILENO});
+        auto es = Spawner::run("pdflatex",
+                {"pdflatex", "-halt-on-error", "-output-dir=utils/latex", file.to_string()},
+                {-1, STDOUT_FILENO, STDERR_FILENO});
 
         if (es.si.code != CLD_EXITED or es.si.status != 0) {
             // During watching it is not intended to stop on compilation error
