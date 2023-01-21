@@ -1,12 +1,11 @@
-#include "sim/cpp_syntax_highlighter.hh"
-#include "simlib/debug.hh"
-#include "simlib/logger.hh"
-#include "simlib/meta.hh"
-#include "simlib/string_transform.hh"
-#include "simlib/string_view.hh"
-#include "simlib/utilities.hh"
-
 #include <limits>
+#include <sim/cpp_syntax_highlighter.hh>
+#include <simlib/debug.hh>
+#include <simlib/logger.hh>
+#include <simlib/meta.hh>
+#include <simlib/string_transform.hh>
+#include <simlib/string_view.hh>
+#include <simlib/utilities.hh>
 
 using std::array;
 using std::string;
@@ -220,8 +219,7 @@ constexpr std::enable_if_t<RES_END >= RES_N, array<CStringView, RES_N>> extract_
 template <size_t N, size_t RES_N, size_t RES_END = 0>
         constexpr std::enable_if_t <
         RES_END<RES_N, array<CStringView, RES_N>> extract_keywords_from(
-                const array<Word, N>& arr, const array<CStringView, RES_N>& res,
-                size_t idx = 0) {
+                const array<Word, N>& arr, const array<CStringView, RES_N>& res, size_t idx = 0) {
     return (idx == N ? res
                      : (arr[idx].style == KEYWORD
                                        ? extract_keywords_from<N, RES_N, RES_END + 1>(arr,
@@ -278,8 +276,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
     // Make sure we can use int
     if (input.size() + BEGIN_GUARDS + END_GUARDS >
-            static_cast<size_t>(std::numeric_limits<int>::max()))
-    {
+            static_cast<size_t>(std::numeric_limits<int>::max())) {
         THROW("Input string is too long");
     }
 
@@ -307,8 +304,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
     vector<StyleType> begs(str.size(),
             -1); // here beginnings of styles are marked
-    vector<int8_t> ends(
-            str.size() + 1); // ends[i] = # of endings (of styles) JUST BEFORE str[i]
+    vector<int8_t> ends(str.size() + 1); // ends[i] = # of endings (of styles) JUST BEFORE str[i]
 
     /* Mark comments string / character literals */
 
@@ -371,8 +367,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
         // i iterates over str, j iterates over input
         for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
             while (str[i] != input[j]) {
-                throw_assert(
-                        input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
+                throw_assert(input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
                 j += 2;
                 ++line;
             }
@@ -469,10 +464,10 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
                 StringView function_name = substring(str, k, name_end);
                 // It is important that function_name is taken as StringView
                 // below!
-                begs[k] = (std::binary_search(
-                                   cpp_keywords.begin(), cpp_keywords.end(), function_name)
-                                ? KEYWORD
-                                : FUNCTION);
+                begs[k] =
+                        (std::binary_search(cpp_keywords.begin(), cpp_keywords.end(), function_name)
+                                        ? KEYWORD
+                                        : FUNCTION);
                 ++ends[name_end];
             }
 
@@ -727,8 +722,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
             }
             // Handle "\\\n"
             do {
-                throw_assert(
-                        input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
+                throw_assert(input[j] == '\\' && j + 1 < (int)input.size() && input[j + 1] == '\n');
 
                 ++line;
                 // When we were ending styles (somewhere above), there can be
@@ -737,8 +731,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
                 // very rare situation and gives little profit at the expense of
                 // a not pretty if statement
                 back_insert(res, begin_style[OPERATOR], '\\', end_style,
-                        "\n</td></tr><tr><td id=\"L", line, "\" line=\"", line,
-                        "\"></td><td>");
+                        "\n</td></tr><tr><td id=\"L", line, "\" line=\"", line, "\"></td><td>");
             } while (str[i] != input[j += 2]);
 
             // Restore styles
@@ -757,8 +750,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
             }
             // Break the line
             ++line;
-            back_insert(res, "\n</td></tr><tr><td id=\"L", line, "\" line=\"", line,
-                    "\"></td><td>");
+            back_insert(
+                    res, "\n</td></tr><tr><td id=\"L", line, "\" line=\"", line, "\"></td><td>");
             // Restore styles
             for (StyleType style : style_stack) {
                 res += begin_style[style];

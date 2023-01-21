@@ -1,11 +1,11 @@
-#include "sim/contest_files/contest_file.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/random.hh"
-#include "simlib/call_in_destructor.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/humanize.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/contest_files/contest_file.hh>
+#include <sim/jobs/utils.hh>
+#include <sim/random.hh>
+#include <simlib/call_in_destructor.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/humanize.hh>
 
 using sim::contest_files::ContestFile;
 using sim::jobs::Job;
@@ -31,16 +31,7 @@ void Sim::api_contest_files() {
                  "LEFT JOIN users u ON u.id=cf.creator "
                  "WHERE TRUE"); // Needed to easily append constraints
 
-    enum ColumnIdx {
-        FID,
-        FNAME,
-        DESCRIPTION,
-        FSIZE,
-        MODIFIED,
-        CONTEST_ID,
-        CREATOR,
-        CUSERNAME
-    };
+    enum ColumnIdx { FID, FNAME, DESCRIPTION, FSIZE, MODIFIED, CONTEST_ID, CREATOR, CUSERNAME };
 
     auto append_column_names = [&] {
         // clang-format off
@@ -97,8 +88,7 @@ void Sim::api_contest_files() {
 
                 if (cond_c == '=' and not allow_access) {
                     auto perms_opt = sim::contest_files::get_permissions(mysql, arg_id,
-                            (session.has_value() ? std::optional{session->user_id}
-                                                 : std::nullopt));
+                            (session.has_value() ? std::optional{session->user_id} : std::nullopt));
                     if (perms_opt) {
                         std::tie(perms, overall_perms) = perms_opt.value();
                     }
@@ -122,8 +112,7 @@ void Sim::api_contest_files() {
                 query.append(" AND cf.contest_id=", arg_id);
 
                 auto cperms = sim::contests::get_permissions(mysql, arg_id,
-                        (session.has_value() ? std::optional{session->user_id}
-                                             : std::nullopt));
+                        (session.has_value() ? std::optional{session->user_id} : std::nullopt));
                 if (not cperms) {
                     return set_empty_response(); // Do allow to query for
                                                  // contest existence (not
@@ -174,8 +163,7 @@ void Sim::api_contest_files() {
                 res[CONTEST_ID], ',');
 
         // Permissions are already loaded
-        if (uint(overall_perms & OverallPermissions::VIEW_CREATOR) and
-                not res.is_null(CREATOR)) {
+        if (uint(overall_perms & OverallPermissions::VIEW_CREATOR) and not res.is_null(CREATOR)) {
             append(res[CREATOR], ',', json_stringify(res[CUSERNAME]), ',');
         } else {
             append("null,null,");
@@ -260,8 +248,7 @@ void Sim::api_contest_file_download(
 void Sim::api_contest_file_add() {
     StringView contest_id = url_args.extract_next_arg();
     if (contest_id.empty() or contest_id[0] != 'c' or
-            not is_digit(contest_id = contest_id.substr(1)))
-    {
+            not is_digit(contest_id = contest_id.substr(1))) {
         return api_error400();
     }
 
@@ -272,8 +259,7 @@ void Sim::api_contest_file_add() {
     }
 
     using sim::contest_files::OverallPermissions;
-    OverallPermissions overall_perms =
-            sim::contest_files::get_overall_permissions(cperms.value());
+    OverallPermissions overall_perms = sim::contest_files::get_overall_permissions(cperms.value());
     if (uint(~overall_perms & OverallPermissions::ADD)) {
         return api_error403();
     }
@@ -283,16 +269,15 @@ void Sim::api_contest_file_add() {
     CStringView file_tmp_path;
     CStringView user_filename;
     form_validate(name, "name", "File name", decltype(ContestFile::id)::max_len);
-    form_validate(description, "description", "Description",
-            decltype(ContestFile::description)::max_len);
+    form_validate(
+            description, "description", "Description", decltype(ContestFile::description)::max_len);
     bool file_exists = form_validate_file_path_not_blank(file_tmp_path, "file", "File");
     form_validate_not_blank(user_filename, "file", "Filename of the selected file");
 
     if (name.empty()) {
         if (user_filename.size() > decltype(ContestFile::id)::max_len) {
             add_notification("error", "Filename of the provided file is longer than ",
-                    decltype(ContestFile::id)::max_len,
-                    ". You have to provide a shorter name.");
+                    decltype(ContestFile::id)::max_len, ". You have to provide a shorter name.");
         } else {
             name = user_filename;
         }
@@ -301,8 +286,7 @@ void Sim::api_contest_file_add() {
     // Check the file size
     auto file_size = (file_exists ? get_file_size(file_tmp_path) : 0);
     if (file_size > ContestFile::max_size) {
-        add_notification("error",
-                "File is too big (maximum allowed size: ", ContestFile::max_size,
+        add_notification("error", "File is too big (maximum allowed size: ", ContestFile::max_size,
                 " bytes = ", humanize_file_size(ContestFile::max_size), ')');
         return api_error400(notifications);
     }
@@ -316,9 +300,8 @@ void Sim::api_contest_file_add() {
     mysql.update("INSERT INTO internal_files VALUES()");
     auto internal_file_id = mysql.insert_id();
 
-    CallInDtor internal_file_remover([internal_file_id] {
-        (void)unlink(sim::internal_files::path_of(internal_file_id));
-    });
+    CallInDtor internal_file_remover(
+            [internal_file_id] { (void)unlink(sim::internal_files::path_of(internal_file_id)); });
 
     // Insert file
     auto stmt = mysql.prepare("INSERT IGNORE contest_files (id, file_id,"
@@ -332,8 +315,8 @@ void Sim::api_contest_file_add() {
 
     do {
         file_id = sim::generate_random_token(decltype(ContestFile::id)::max_len);
-        stmt.bind_and_execute(file_id, internal_file_id, contest_id, name, description,
-                file_size, curr_date, session->user_id);
+        stmt.bind_and_execute(file_id, internal_file_id, contest_id, name, description, file_size,
+                curr_date, session->user_id);
     } while (stmt.affected_rows() == 0);
 
     // Move file
@@ -347,8 +330,7 @@ void Sim::api_contest_file_add() {
     append(file_id);
 }
 
-void Sim::api_contest_file_edit(
-        StringView contest_file_id, sim::contest_files::Permissions perms) {
+void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::Permissions perms) {
     if (uint(~perms & sim::contest_files::Permissions::EDIT)) {
         return api_error403();
     }
@@ -357,8 +339,8 @@ void Sim::api_contest_file_edit(
     CStringView description;
     CStringView file_tmp_path;
     form_validate(name, "name", "File name", decltype(ContestFile::id)::max_len);
-    form_validate(description, "description", "Description",
-            decltype(ContestFile::description)::max_len);
+    form_validate(
+            description, "description", "Description", decltype(ContestFile::description)::max_len);
     bool reuploading_file = form_validate_file_path_not_blank(file_tmp_path, "file", "File");
 
     CStringView user_filename = request.form_fields.get("file").value_or("");
@@ -367,8 +349,7 @@ void Sim::api_contest_file_edit(
     if (name.empty()) {
         if (user_filename.size() > decltype(ContestFile::id)::max_len) {
             add_notification("error", "Filename of the provided file is longer than ",
-                    decltype(ContestFile::id)::max_len,
-                    ". You have to provide a shorter name.");
+                    decltype(ContestFile::id)::max_len, ". You have to provide a shorter name.");
         } else if (user_filename.empty()) {
             add_notification("error",
                     "File cannot have an empty name - no name and "
@@ -381,8 +362,7 @@ void Sim::api_contest_file_edit(
     // Check the file size
     auto file_size = (reuploading_file ? get_file_size(file_tmp_path) : 0);
     if (file_size > ContestFile::max_size) {
-        add_notification("error",
-                "File is too big (maximum allowed size: ", ContestFile::max_size,
+        add_notification("error", "File is too big (maximum allowed size: ", ContestFile::max_size,
                 " bytes = ", humanize_file_size(ContestFile::max_size), ')');
         return api_error400(notifications);
     }
@@ -414,8 +394,8 @@ void Sim::api_contest_file_edit(
                       "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                       "FROM contest_files WHERE id=?")
                 .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
-                        default_priority(Job::Type::DELETE_FILE),
-                        EnumVal(Job::Status::PENDING), mysql_date(), contest_file_id);
+                        default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
+                        mysql_date(), contest_file_id);
     }
 
     // Update file
@@ -424,8 +404,8 @@ void Sim::api_contest_file_edit(
                               " description=?, file_size=IF(?, ?, file_size),"
                               " modified=? "
                               "WHERE id=?");
-    stmt.bind_and_execute(reuploading_file, internal_file_id, name, description,
-            reuploading_file, file_size, mysql_date(), contest_file_id);
+    stmt.bind_and_execute(reuploading_file, internal_file_id, name, description, reuploading_file,
+            file_size, mysql_date(), contest_file_id);
 
     transaction.commit();
     internal_file_remover.cancel();

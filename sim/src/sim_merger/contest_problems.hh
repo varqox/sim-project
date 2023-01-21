@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sim/contest_problems/contest_problem.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "src/sim_merger/contest_rounds.hh"
-#include "src/sim_merger/problems.hh"
+#include "contest_rounds.hh"
+#include "problems.hh"
+#include <sim/contest_problems/contest_problem.hh>
+#include <sim/sql_fields/datetime.hh>
 
 namespace sim_merger {
 
@@ -46,9 +46,8 @@ class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProble
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::contest_problems::ContestProblem& /*unused*/) {
-            return nullptr;
-        });
+        Merger::merge(
+                [&](const sim::contest_problems::ContestProblem& /*unused*/) { return nullptr; });
     }
 
 public:

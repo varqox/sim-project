@@ -1,11 +1,10 @@
 #pragma once
 
-#include "sim/primary_key.hh"
-#include "src/sim_merger/primary_keys_from_jobs.hh"
-#include "src/sim_merger/sim_merger.hh"
-#include "src/sql_tables.hh"
-
+#include "../sql_tables.hh"
+#include "primary_keys_from_jobs.hh"
+#include "sim_merger.hh"
 #include <map>
+#include <sim/primary_key.hh>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -130,7 +129,8 @@ protected:
             }
         }
 
-        RecordSet(IdKind my_kind, std::string my_sql_tbl_name, StringView my_sql_tbl_prefix, PrimaryKeysWithTime<PrimaryKeyType> my_ids)
+        RecordSet(IdKind my_kind, std::string my_sql_tbl_name, StringView my_sql_tbl_prefix,
+                PrimaryKeysWithTime<PrimaryKeyType> my_ids)
         : kind(my_kind)
         , sql_table_name(std::move(my_sql_tbl_name))
         , sql_table_prefix(my_sql_tbl_prefix)
@@ -167,8 +167,8 @@ protected:
         static_assert(
                 std::is_invocable_r_v<NewRecord*, Func, const Record&> or takes_two_arguments);
 
-        auto try_merging_into_existing_new_record_wrapper =
-                [&](const Record& x, IdKind kind) -> NewRecord* {
+        auto try_merging_into_existing_new_record_wrapper = [&](const Record& x,
+                                                                    IdKind kind) -> NewRecord* {
             if constexpr (takes_two_arguments) {
                 return try_to_merge_into_an_existing_new_record(x, kind);
             } else {
@@ -179,11 +179,12 @@ protected:
 
         using std::chrono::system_clock;
 
-        auto process_id = [&](RecordSet& record_set, PrimaryKeyType id, system_clock::time_point tp) {
+        auto process_id = [&](RecordSet& record_set, PrimaryKeyType id,
+                                  system_clock::time_point tp) {
             auto log_added = [&](PrimaryKeyType new_id) {
                 if constexpr (debug) {
-                    stdlog("Added ", id_info(id, record_set.kind), " with new id: ", new_id,
-                            "  ", mysql_date(system_clock::to_time_t(tp)));
+                    stdlog("Added ", id_info(id, record_set.kind), " with new id: ", new_id, "  ",
+                            mysql_date(system_clock::to_time_t(tp)));
                 } else {
                     (void)new_id; // Suppress GCC warning
                 }
@@ -235,7 +236,8 @@ protected:
                 });
     }
 
-    virtual PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id) {
+    virtual PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
+            const PrimaryKeyType& record_id) {
         STACK_UNWINDING_MARK;
         (void)record_id;
         if constexpr (std::is_integral_v<PrimaryKeyType>) {
@@ -253,8 +255,7 @@ protected:
     : sql_table_name_(orig_sql_table_name.to_string())
     , main_{IdKind::Main, concat_tostr(main_sim_table_prefix, orig_sql_table_name),
               main_sim_table_prefix, std::move(main_ids)}
-    , other_{IdKind::Other, orig_sql_table_name.to_string(), "",
-              std::move(other_ids)} {
+    , other_{IdKind::Other, orig_sql_table_name.to_string(), "", std::move(other_ids)} {
         STACK_UNWINDING_MARK;
 
         assert(std::find(tables.begin(), tables.end(), orig_sql_table_name) != tables.end());

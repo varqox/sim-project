@@ -1,17 +1,16 @@
-#include "sim/jobs/job.hh"
-#include "sim/mysql/mysql.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/debug.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/path.hh"
-#include "simlib/process.hh"
-#include "simlib/sim/problem_package.hh"
-#include "simlib/spawner.hh"
-#include "simlib/time.hh"
-#include "simlib/working_directory.hh"
-
 #include <chrono>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
+#include <simlib/concat_tostr.hh>
+#include <simlib/debug.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/path.hh>
+#include <simlib/process.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/spawner.hh>
+#include <simlib/time.hh>
+#include <simlib/working_directory.hh>
 
 using sim::jobs::Job;
 using std::string;
@@ -80,8 +79,7 @@ int main2(int argc, char** argv) {
         while (stmt.next()) {
             auto file_path = sim::internal_files::path_of(tmp_file_id);
             if (access(file_path, F_OK) == 0 and
-                    system_clock::now() - get_modification_time(file_path) > 2h)
-            {
+                    system_clock::now() - get_modification_time(file_path) > 2h) {
                 deleter.bind_and_execute(tmp_file_id);
                 (void)unlink(file_path);
             }

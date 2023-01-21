@@ -1,9 +1,9 @@
-#include "sim/is_username.hh"
-#include "sim/users/user.hh"
-#include "simlib/random.hh"
-#include "simlib/sha.hh"
-#include "simlib/string_transform.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/is_username.hh>
+#include <sim/users/user.hh>
+#include <simlib/random.hh>
+#include <simlib/sha.hh>
+#include <simlib/string_transform.hh>
 
 using sim::users::User;
 using std::string;
@@ -43,8 +43,8 @@ Sim::UserPermissions Sim::users_get_permissions(
         return PERM::NONE;
     }
 
-    auto viewer = EnumVal(session->user_type).to_int() +
-            (session->user_id != sim::users::SIM_ROOT_UID);
+    auto viewer =
+            EnumVal(session->user_type).to_int() + (session->user_id != sim::users::SIM_ROOT_UID);
     if (session->user_id == user_id) {
         constexpr UserPermissions perm[4] = {
                 // Sim root
@@ -126,8 +126,7 @@ bool Sim::check_submitted_password(StringView password_field_name) {
     throw_assert(stmt.next());
 
     return sim::users::password_matches(
-            request.form_fields.get(password_field_name).value_or(""), password_salt,
-            passwd_hash);
+            request.form_fields.get(password_field_name).value_or(""), password_salt, passwd_hash);
 }
 
 void Sim::users_handle() {

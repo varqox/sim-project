@@ -1,11 +1,10 @@
-#include "sim/sessions/session.hh"
-#include "sim/random.hh"
-#include "simlib/debug.hh"
-#include "simlib/time.hh"
-#include "src/web_server/old/sim.hh"
-
+#include "sim.hh"
 #include <chrono>
 #include <optional>
+#include <sim/random.hh>
+#include <sim/sessions/session.hh>
+#include <simlib/debug.hh>
+#include <simlib/time.hh>
 
 using sim::sessions::Session;
 using std::string;

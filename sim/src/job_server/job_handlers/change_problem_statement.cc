@@ -1,7 +1,8 @@
-#include "src/job_server/job_handlers/change_problem_statement.hh"
-#include "simlib/path.hh"
-#include "simlib/sim/problem_package.hh"
-#include "src/job_server/main.hh"
+#include "change_problem_statement.hh"
+#include "../main.hh"
+
+#include <simlib/path.hh>
+#include <simlib/sim/problem_package.hh>
 
 using sim::jobs::Job;
 
@@ -69,8 +70,8 @@ void ChangeProblemStatement::run() {
     }
 
     // Add new statement file entry
-    dest_zip.file_add(new_statement_path,
-            dest_zip.source_file(sim::internal_files::path_of(job_file_id_)));
+    dest_zip.file_add(
+            new_statement_path, dest_zip.source_file(sim::internal_files::path_of(job_file_id_)));
 
     dest_zip.close(); // Write all data to the dest_zip
 

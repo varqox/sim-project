@@ -1,19 +1,18 @@
-#include "simlib/config_file.hh"
-#include "simlib/debug.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/process.hh"
-#include "simlib/time.hh"
-#include "simlib/working_directory.hh"
-#include "src/web_server/logs.hh"
-#include "src/web_server/old/sim.hh"
-#include "src/web_server/server/connection.hh"
-
+#include "../logs.hh"
+#include "../old/sim.hh"
+#include "connection.hh"
 #include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
 #include <cstdint>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <simlib/config_file.hh>
+#include <simlib/debug.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/process.hh>
+#include <simlib/time.hh>
+#include <simlib/working_directory.hh>
 #include <thread>
 
 using std::string;
@@ -31,8 +30,8 @@ static void* worker(void* ptr) {
 
         for (;;) {
             // accept the connection
-            FileDescriptor client_socket_fd{accept4(socket_fd,
-                    reinterpret_cast<sockaddr*>(&name), &client_name_len, SOCK_CLOEXEC)};
+            FileDescriptor client_socket_fd{accept4(
+                    socket_fd, reinterpret_cast<sockaddr*>(&name), &client_name_len, SOCK_CLOEXEC)};
             if (client_socket_fd == -1) {
                 continue;
             }
@@ -191,8 +190,7 @@ int main() {
         };
         for (int try_no = 1; try_no <= FAST_SILENT_TRIES; ++try_no) {
             if (try_no > 1) {
-                std::this_thread::sleep_for(
-                        std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
             }
 
             if (call_bind() == 0) {

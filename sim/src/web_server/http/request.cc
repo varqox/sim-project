@@ -1,6 +1,6 @@
-#include "src/web_server/http/request.hh"
-#include "simlib/debug.hh"
-#include "simlib/file_manip.hh"
+#include "request.hh"
+#include <simlib/debug.hh>
+#include <simlib/file_manip.hh>
 
 using std::string;
 

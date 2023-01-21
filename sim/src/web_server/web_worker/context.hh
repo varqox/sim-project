@@ -1,13 +1,12 @@
 #pragma once
 
-#include "sim/mysql/mysql.hh"
-#include "sim/sessions/session.hh"
-#include "sim/users/user.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/http/cookies.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-
+#include "../http/cookies.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
+#include <sim/mysql/mysql.hh>
+#include <sim/sessions/session.hh>
+#include <sim/users/user.hh>
+#include <simlib/string_view.hh>
 #include <type_traits>
 
 namespace web_server::web_worker {
@@ -34,9 +33,9 @@ struct Context {
     void open_session();
     void close_session();
 
-    void create_session(decltype(Session::user_id) user_id,
-            decltype(Session::user_type) user_type, decltype(Session::username) username,
-            decltype(Session::data) data, bool long_exiration);
+    void create_session(decltype(Session::user_id) user_id, decltype(Session::user_type) user_type,
+            decltype(Session::username) username, decltype(Session::data) data,
+            bool long_exiration);
     void destroy_session();
 
     bool session_has_expired() noexcept;

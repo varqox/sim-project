@@ -1,9 +1,9 @@
 #pragma once
 
-#include "sim/contests/contest.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
+#include <sim/contests/contest.hh>
+#include <simlib/string_view.hh>
 
 namespace web_server::contest_entry_tokens::api {
 
@@ -11,14 +11,11 @@ http::Response view(web_worker::Context& ctx, decltype(sim::contests::Contest::i
 
 http::Response add(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response regen(
-        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response regen(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response delete_(
-        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response delete_(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
-http::Response add_short(
-        web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
+http::Response add_short(web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);
 
 http::Response regen_short(
         web_worker::Context& ctx, decltype(sim::contests::Contest::id) contest_id);

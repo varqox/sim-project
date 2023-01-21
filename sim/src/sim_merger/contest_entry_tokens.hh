@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/contest_entry_tokens/contest_entry_token.hh"
-#include "sim/random.hh"
-#include "src/sim_merger/contests.hh"
-
+#include "contests.hh"
 #include <set>
+#include <sim/contest_entry_tokens/contest_entry_token.hh>
+#include <sim/random.hh>
 
 namespace sim_merger {
 
@@ -15,8 +14,7 @@ struct ContestEntryTokenIdGetter {
     }
 };
 
-class ContestEntryTokensMerger
-: public Merger<sim::contest_entry_tokens::ContestEntryToken> {
+class ContestEntryTokensMerger : public Merger<sim::contest_entry_tokens::ContestEntryToken> {
     const ContestsMerger& contests_;
 
     std::set<decltype(sim::contest_entry_tokens::ContestEntryToken::token)> taken_tokens_;
@@ -27,8 +25,8 @@ class ContestEntryTokensMerger
         STACK_UNWINDING_MARK;
 
         sim::contest_entry_tokens::ContestEntryToken cet;
-        mysql::Optional<decltype(sim::contest_entry_tokens::ContestEntryToken::short_token)::
-                        value_type>
+        mysql::Optional<
+                decltype(sim::contest_entry_tokens::ContestEntryToken::short_token)::value_type>
                 m_short_token;
         mysql::Optional<decltype(sim::contest_entry_tokens::ContestEntryToken::
                         short_token_expiration)::value_type>
@@ -50,8 +48,8 @@ class ContestEntryTokensMerger
                 std::string new_short_token = cet.short_token->to_string();
                 while (not taken_short_tokens_.emplace(new_short_token).second) {
                     new_short_token = sim::generate_random_token(
-                            decltype(sim::contest_entry_tokens::ContestEntryToken::
-                                            short_token)::value_type::max_len);
+                            decltype(sim::contest_entry_tokens::ContestEntryToken::short_token)::
+                                    value_type::max_len);
                 }
                 cet.short_token = new_short_token;
             }
@@ -68,7 +66,8 @@ class ContestEntryTokensMerger
         });
     }
 
-    PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id) override {
+    PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
+            const PrimaryKeyType& record_id) override {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_tokens_.emplace(new_id).second) {
@@ -92,15 +91,14 @@ public:
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(
-                    x.token, x.contest_id, x.short_token, x.short_token_expiration);
+            stmt.bind_and_execute(x.token, x.contest_id, x.short_token, x.short_token_expiration);
         }
 
         transaction.commit();
     }
 
-    ContestEntryTokensMerger(
-            const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const ContestsMerger& contests)
+    ContestEntryTokensMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
+            const ContestsMerger& contests)
     : Merger("contest_entry_tokens", ids_from_both_jobs.main.contest_entry_tokens,
               ids_from_both_jobs.other.contest_entry_tokens)
     , contests_(contests) {

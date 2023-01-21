@@ -1,6 +1,7 @@
-#include "src/job_server/job_handlers/delete_contest_problem.hh"
-#include "sim/jobs/job.hh"
-#include "src/job_server/main.hh"
+#include "delete_contest_problem.hh"
+#include "../main.hh"
+
+#include <sim/jobs/job.hh>
 
 using sim::jobs::Job;
 
@@ -52,8 +53,7 @@ void DeleteContestProblem::run() {
 
     // Delete contest problem (all necessary actions will take place thanks to
     // foreign key constrains)
-    mysql.prepare("DELETE FROM contest_problems WHERE id=?")
-            .bind_and_execute(contest_problem_id_);
+    mysql.prepare("DELETE FROM contest_problems WHERE id=?").bind_and_execute(contest_problem_id_);
 
     job_done();
 

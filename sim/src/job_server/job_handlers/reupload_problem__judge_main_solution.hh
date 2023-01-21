@@ -1,12 +1,12 @@
 #pragma once
 
-#include "sim/jobs/job.hh"
-#include "src/job_server/job_handlers/add_or_reupload_problem__judge_main_solution_base.hh"
+#include "add_or_reupload_problem__judge_main_solution_base.hh"
+
+#include <sim/jobs/job.hh>
 
 namespace job_server::job_handlers {
 
-class ReuploadProblemJudgeModelSolution final
-: public AddOrReuploadProblemJudgeModelSolutionBase {
+class ReuploadProblemJudgeModelSolution final : public AddOrReuploadProblemJudgeModelSolutionBase {
 public:
     ReuploadProblemJudgeModelSolution(uint64_t job_id, StringView job_creator,
             const sim::jobs::AddProblemInfo& info, uint64_t job_file_id,

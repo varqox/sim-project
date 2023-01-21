@@ -1,5 +1,5 @@
-#include "src/web_server/old/sim.hh"
-#include "src/web_server/ui_template.hh"
+#include "../ui_template.hh"
+#include "sim.hh"
 
 namespace web_server::old {
 

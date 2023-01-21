@@ -1,9 +1,8 @@
 #pragma once
 
-#include "simlib/string_view.hh"
-#include "src/web_server/http/headers.hh"
-
+#include "headers.hh"
 #include <optional>
+#include <simlib/string_view.hh>
 
 namespace web_server::http {
 

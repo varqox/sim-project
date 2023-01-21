@@ -1,6 +1,6 @@
 #pragma once
 
-#include "simlib/inplace_buff.hh"
+#include <simlib/inplace_buff.hh>
 
 namespace sim::sql_fields {
 

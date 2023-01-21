@@ -1,8 +1,8 @@
 #pragma once
 
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "src/sim_merger/contests.hh"
+#include "contests.hh"
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/sql_fields/datetime.hh>
 
 namespace sim_merger {
 
@@ -38,8 +38,7 @@ class ContestRoundsMerger : public Merger<sim::contest_rounds::ContestRound> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge(
-                [&](const sim::contest_rounds::ContestRound& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contest_rounds::ContestRound& /*unused*/) { return nullptr; });
     }
 
 public:
@@ -64,8 +63,8 @@ public:
         transaction.commit();
     }
 
-    ContestRoundsMerger(
-            const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const ContestsMerger& contests)
+    ContestRoundsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
+            const ContestsMerger& contests)
     : Merger("contest_rounds", ids_from_both_jobs.main.contest_rounds,
               ids_from_both_jobs.other.contest_rounds)
     , contests_(contests) {

@@ -1,15 +1,14 @@
 #pragma once
 
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/contests/contest.hh"
-#include "sim/primary_key.hh"
-#include "sim/problems/problem.hh"
-#include "sim/sql_fields/varbinary.hh"
-#include "simlib/enum_val.hh"
-#include "simlib/enum_with_string_conversions.hh"
-#include "simlib/string_view.hh"
-
 #include <cstdint>
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contests/contest.hh>
+#include <sim/primary_key.hh>
+#include <sim/problems/problem.hh>
+#include <sim/sql_fields/varbinary.hh>
+#include <simlib/enum_val.hh>
+#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/string_view.hh>
 
 namespace sim::contest_problems {
 

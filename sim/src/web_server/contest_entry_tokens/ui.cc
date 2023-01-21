@@ -1,7 +1,7 @@
-#include "src/web_server/contest_entry_tokens/ui.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "ui.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
+#include <simlib/string_view.hh>
 
 using web_server::http::Response;
 using web_server::web_worker::Context;

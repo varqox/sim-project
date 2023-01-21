@@ -1,5 +1,5 @@
-#include "sim/problems/permissions.hh"
-#include "simlib/debug.hh"
+#include <sim/problems/permissions.hh>
+#include <simlib/debug.hh>
 
 using sim::users::User;
 using std::optional;
@@ -26,8 +26,8 @@ OverallPermissions get_overall_permissions(optional<User::Type> user_type) noexc
 
     __builtin_unreachable();
 }
-Permissions get_permissions(optional<decltype(User::id)> user_id,
-        optional<User::Type> user_type, decltype(Problem::owner_id) problem_owner_id,
+Permissions get_permissions(optional<decltype(User::id)> user_id, optional<User::Type> user_type,
+        decltype(Problem::owner_id) problem_owner_id,
         decltype(Problem::type) problem_type) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = Permissions;
@@ -41,10 +41,9 @@ Permissions get_permissions(optional<decltype(User::id)> user_id,
     }
 
     constexpr PERM admin_perms = PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS |
-            PERM::VIEW_HIDDEN_TAGS | PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS |
-            PERM::VIEW_SIMFILE | PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME |
-            PERM::VIEW_RELATED_JOBS | PERM::DOWNLOAD | PERM::SUBMIT | PERM::EDIT |
-            PERM::SUBMIT_IGNORED | PERM::REUPLOAD | PERM::REJUDGE_ALL |
+            PERM::VIEW_HIDDEN_TAGS | PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS | PERM::VIEW_SIMFILE |
+            PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::VIEW_RELATED_JOBS | PERM::DOWNLOAD |
+            PERM::SUBMIT | PERM::EDIT | PERM::SUBMIT_IGNORED | PERM::REUPLOAD | PERM::REJUDGE_ALL |
             PERM::RESET_TIME_LIMITS | PERM::EDIT_TAGS | PERM::EDIT_HIDDEN_TAGS | PERM::DELETE |
             PERM::MERGE | PERM::CHANGE_STATEMENT | PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
 
@@ -57,14 +56,13 @@ Permissions get_permissions(optional<decltype(User::id)> user_id,
     case User::Type::TEACHER: {
         switch (problem_type) {
         case Problem::Type::PUBLIC:
-            return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS |
-                    PERM::VIEW_HIDDEN_TAGS | PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS |
-                    PERM::VIEW_SIMFILE | PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME |
-                    PERM::DOWNLOAD | PERM::SUBMIT | PERM::SUBMIT_IGNORED;
+            return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_HIDDEN_TAGS |
+                    PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS | PERM::VIEW_SIMFILE | PERM::VIEW_OWNER |
+                    PERM::VIEW_ADD_TIME | PERM::DOWNLOAD | PERM::SUBMIT | PERM::SUBMIT_IGNORED;
         case Problem::Type::CONTEST_ONLY:
-            return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS |
-                    PERM::VIEW_HIDDEN_TAGS | PERM::VIEW_SIMFILE | PERM::VIEW_OWNER |
-                    PERM::VIEW_ADD_TIME | PERM::SUBMIT | PERM::SUBMIT_IGNORED;
+            return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_HIDDEN_TAGS |
+                    PERM::VIEW_SIMFILE | PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::SUBMIT |
+                    PERM::SUBMIT_IGNORED;
         case Problem::Type::PRIVATE: return PERM::NONE;
         }
         __builtin_unreachable();

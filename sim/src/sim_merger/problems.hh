@@ -1,12 +1,12 @@
 #pragma once
 
-#include "sim/problems/problem.hh"
-#include "simlib/concat.hh"
-#include "simlib/libzip.hh"
-#include "simlib/sim/problem_package.hh"
-#include "simlib/sim/simfile.hh"
-#include "src/sim_merger/internal_files.hh"
-#include "src/sim_merger/users.hh"
+#include "internal_files.hh"
+#include "users.hh"
+#include <sim/problems/problem.hh>
+#include <simlib/concat.hh>
+#include <simlib/libzip.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/sim/simfile.hh>
 
 namespace sim_merger {
 
@@ -24,8 +24,8 @@ static std::pair<std::vector<std::string>, std::string> package_fingerprint(
     auto simfile_contents = zip.extract_to_str(zip.get_index(concat(main_dir, "Simfile")));
     sim::Simfile sf(simfile_contents);
     sf.load_statement();
-    auto statement_contents = zip.extract_to_str(
-            zip.get_index(concat(main_dir, WONT_THROW(sf.statement.value()))));
+    auto statement_contents =
+            zip.extract_to_str(zip.get_index(concat(main_dir, WONT_THROW(sf.statement.value()))));
 
     return {entries_list, statement_contents};
 }
@@ -46,8 +46,8 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
                                  "simfile, owner_id, created_at, updated_at FROM ",
                 record_set.sql_table_name);
         stmt.bind_and_execute();
-        stmt.res_bind_all(prob.id, prob.file_id, prob.type, prob.name, prob.label,
-                prob.simfile, m_owner_id, prob.created_at, prob.updated_at);
+        stmt.res_bind_all(prob.id, prob.file_id, prob.type, prob.name, prob.label, prob.simfile,
+                m_owner_id, prob.created_at, prob.updated_at);
         while (stmt.next()) {
             prob.file_id = internal_files_.new_id(prob.file_id, record_set.kind);
             prob.owner_id = m_owner_id.to_opt();
@@ -158,8 +158,8 @@ public:
                          " aux_id, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
                     .bind_and_execute(EnumVal(sim::jobs::Job::Status::PENDING),
                             default_priority(sim::jobs::Job::Type::MERGE_PROBLEMS),
-                            EnumVal(sim::jobs::Job::Type::MERGE_PROBLEMS), mysql_date(),
-                            src_id, sim::jobs::MergeProblemsInfo(dest_id, false).dump());
+                            EnumVal(sim::jobs::Job::Type::MERGE_PROBLEMS), mysql_date(), src_id,
+                            sim::jobs::MergeProblemsInfo(dest_id, false).dump());
         }
 
         if (reset_new_problems_time_limits_) {

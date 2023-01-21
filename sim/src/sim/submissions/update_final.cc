@@ -1,7 +1,7 @@
-#include "sim/submissions/update_final.hh"
-#include "sim/contest_problems/contest_problem.hh"
-#include "sim/submissions/submission.hh"
-#include "simlib/time.hh"
+#include <sim/contest_problems/contest_problem.hh>
+#include <sim/submissions/submission.hh>
+#include <sim/submissions/update_final.hh>
+#include <simlib/time.hh>
 
 using sim::contest_problems::ContestProblem;
 using sim::submissions::Submission;
@@ -214,8 +214,7 @@ static void update_contest_final(
     mysql.prepare("UPDATE submissions SET contest_final=IF(id=?, 1, 0) "
                   "WHERE id=?"
                   " OR (owner=? AND contest_problem_id=? AND contest_final=1)")
-            .bind_and_execute(
-                    new_final_id, new_final_id, submission_owner, contest_problem_id);
+            .bind_and_execute(new_final_id, new_final_id, submission_owner, contest_problem_id);
 
     // Update initial finals
     mysql.prepare("UPDATE submissions SET contest_initial_final=IF(id=?, 1, 0) "
@@ -227,8 +226,8 @@ static void update_contest_final(
 
 namespace sim::submissions {
 
-void update_final_lock(mysql::Connection& mysql, std::optional<uint64_t> submission_owner,
-        uint64_t problem_id) {
+void update_final_lock(
+        mysql::Connection& mysql, std::optional<uint64_t> submission_owner, uint64_t problem_id) {
     if (not submission_owner.has_value()) {
         return; // update_final on System submission is no-op
     }
@@ -240,8 +239,7 @@ void update_final_lock(mysql::Connection& mysql, std::optional<uint64_t> submiss
 }
 
 void update_final(mysql::Connection& mysql, std::optional<uint64_t> submission_owner,
-        uint64_t problem_id, std::optional<uint64_t> contest_problem_id,
-        bool make_transaction) {
+        uint64_t problem_id, std::optional<uint64_t> contest_problem_id, bool make_transaction) {
     STACK_UNWINDING_MARK;
 
     if (not submission_owner.has_value()) {

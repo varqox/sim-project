@@ -1,16 +1,15 @@
-#include "simlib/argv_parser.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/debug.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/logger.hh"
-#include "simlib/path.hh"
-#include "simlib/process.hh"
-#include "simlib/string_view.hh"
-#include "simlib/syscalls.hh"
-
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
+#include <simlib/argv_parser.hh>
+#include <simlib/concat_tostr.hh>
+#include <simlib/debug.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/logger.hh>
+#include <simlib/path.hh>
+#include <simlib/process.hh>
+#include <simlib/string_view.hh>
+#include <simlib/syscalls.hh>
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
@@ -170,8 +169,7 @@ static void stop() {
     // First kill manage so that it won't restart servers
     kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
     // Kill servers
-    kill_processes_by_exec(
-            {paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
+    kill_processes_by_exec({paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
 }
 
 } // namespace command

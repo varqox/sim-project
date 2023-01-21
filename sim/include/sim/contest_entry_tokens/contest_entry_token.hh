@@ -1,12 +1,11 @@
 #pragma once
 
-#include "sim/contests/contest.hh"
-#include "sim/primary_key.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "sim/sql_fields/varbinary.hh"
-
 #include <chrono>
 #include <optional>
+#include <sim/contests/contest.hh>
+#include <sim/primary_key.hh>
+#include <sim/sql_fields/datetime.hh>
+#include <sim/sql_fields/varbinary.hh>
 
 namespace sim::contest_entry_tokens {
 

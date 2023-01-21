@@ -1,18 +1,17 @@
 #pragma once
 
-#include "sim/contest_problems/contest_problem.hh"
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/contests/contest.hh"
-#include "sim/internal_files/internal_file.hh"
-#include "sim/primary_key.hh"
-#include "sim/problems/problem.hh"
-#include "sim/sql_fields/blob.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "sim/users/user.hh"
-#include "simlib/enum_with_string_conversions.hh"
-
 #include <cstdint>
 #include <optional>
+#include <sim/contest_problems/contest_problem.hh>
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contests/contest.hh>
+#include <sim/internal_files/internal_file.hh>
+#include <sim/primary_key.hh>
+#include <sim/problems/problem.hh>
+#include <sim/sql_fields/blob.hh>
+#include <sim/sql_fields/datetime.hh>
+#include <sim/users/user.hh>
+#include <simlib/enum_with_string_conversions.hh>
 
 namespace sim::submissions {
 
@@ -116,9 +115,9 @@ constexpr const char* to_mime(Submission::Language x) {
 }
 
 // Non-fatal statuses
-static_assert(meta::max(Submission::Status::OK, Submission::Status::WA,
-                      Submission::Status::TLE, Submission::Status::MLE,
-                      Submission::Status::RTE) < Submission::Status::PENDING,
+static_assert(
+        meta::max(Submission::Status::OK, Submission::Status::WA, Submission::Status::TLE,
+                Submission::Status::MLE, Submission::Status::RTE) < Submission::Status::PENDING,
         "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
         " used during selection of the final submission");
 

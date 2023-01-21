@@ -1,8 +1,7 @@
 #pragma once
 
-#include "src/web_server/http/form_fields.hh"
-#include "src/web_server/http/headers.hh"
-
+#include "form_fields.hh"
+#include "headers.hh"
 #include <optional>
 
 namespace web_server::http {

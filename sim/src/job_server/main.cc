@@ -1,18 +1,6 @@
-#include "sim/jobs/job.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/mysql/mysql.hh"
-#include "sim/submissions/update_final.hh"
-#include "simlib/config_file.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/process.hh"
-#include "simlib/shared_function.hh"
-#include "simlib/time.hh"
-#include "simlib/working_directory.hh"
-#include "src/job_server/dispatcher.hh"
-#include "src/job_server/logs.hh"
-#include "src/job_server/notify_file.hh"
-
+#include "dispatcher.hh"
+#include "logs.hh"
+#include "notify_file.hh"
 #include <climits>
 #include <cstdint>
 #include <future>
@@ -20,6 +8,17 @@
 #include <poll.h>
 #include <queue>
 #include <set>
+#include <sim/jobs/job.hh>
+#include <sim/jobs/utils.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/submissions/update_final.hh>
+#include <simlib/config_file.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/process.hh>
+#include <simlib/shared_function.hh>
+#include <simlib/time.hh>
+#include <simlib/working_directory.hh>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <thread>
@@ -31,7 +30,6 @@
 #define DEBUG_JOB_SERVER(...)
 #endif
 
-using sim::jobs::Job;
 using std::array;
 using std::function;
 using std::lock_guard;
@@ -81,8 +79,7 @@ private:
         // Strong assumption: any job must belong to AT MOST one problem
         std::map<uint64_t, ProblemInfo> problem_info;
         std::map<Job, ProblemJobs> queue; // (best problem's job => all jobs of the problem)
-        std::map<int64_t, ProblemJobs>
-                locked_problems; // (problem_id  => (locks, problem's jobs))
+        std::map<int64_t, ProblemJobs> locked_problems; // (problem_id  => (locks, problem's jobs))
     } judge_jobs,
             problem_management_jobs; // (judge jobs - they need judge machines)
 
@@ -93,8 +90,8 @@ private:
             if (!job_category.problem_info.empty()) {
                 stdlog("problem_info = {");
                 for (auto&& [prob_id, pinfo] : job_category.problem_info) {
-                    stdlog("   ", prob_id, " => {", pinfo.its_best_job.id, ", ",
-                            pinfo.locks_no, "},");
+                    stdlog("   ", prob_id, " => {", pinfo.its_best_job.id, ", ", pinfo.locks_no,
+                            "},");
                 }
                 stdlog("}");
             }
@@ -169,9 +166,8 @@ public:
                         ProblemInfo& pinfo = it->second;
                         Job best_job = pinfo.its_best_job;
                         // Get the problem's jobs (the problem may be locked)
-                        auto& pjobs =
-                                (pinfo.locks_no > 0 ? job_category.locked_problems[problem_id]
-                                                    : job_category.queue[best_job]);
+                        auto& pjobs = (pinfo.locks_no > 0 ? job_category.locked_problems[problem_id]
+                                                          : job_category.queue[best_job]);
                         // Ensure field 'problem_id' is set properly (in case of
                         // element creation this line is necessary)
                         pjobs.problem_id = problem_id;
@@ -201,8 +197,8 @@ public:
                 switch (jtype) {
                 case JT::JUDGE_SUBMISSION:
                 case JT::REJUDGE_SUBMISSION: {
-                    auto opt = str2num<uint64_t>(intentional_unsafe_string_view(
-                            sim::jobs::extract_dumped_string(info)));
+                    auto opt = str2num<uint64_t>(
+                            intentional_unsafe_string_view(sim::jobs::extract_dumped_string(info)));
                     if (not opt) {
                         THROW("Corrupted job's info field");
                     }
@@ -211,9 +207,7 @@ public:
                     break;
                 }
 
-                case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
-                    queue_job(judge_jobs, 0, false);
-                    break;
+                case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: queue_job(judge_jobs, 0, false); break;
 
                 case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
                     queue_job(judge_jobs, aux_id.value(), true);
@@ -239,8 +233,7 @@ public:
                 case JT::DELETE_CONTEST_PROBLEM:
                 case JT::DELETE_FILE: other_jobs.insert({jid, priority, false}); break;
                 }
-                mark_stmt.bind_and_execute(
-                        EnumVal(sim::jobs::Job::Status::NOTICED_PENDING), jid);
+                mark_stmt.bind_and_execute(EnumVal(sim::jobs::Job::Status::NOTICED_PENDING), jid);
             } while (stmt.next());
         }
 
@@ -255,8 +248,7 @@ public:
         auto lock_impl = [&pid](auto& job_category) {
             auto it = job_category.problem_info.find(pid);
             if (it == job_category.problem_info.end()) {
-                it = job_category.problem_info.try_emplace(pid, ProblemInfo{Job::least(), 0})
-                             .first;
+                it = job_category.problem_info.try_emplace(pid, ProblemInfo{Job::least(), 0}).first;
             }
 
             auto& pinfo = it->second;
@@ -574,9 +566,8 @@ private:
             }
 
             if (wp_.worker_dies_callback_) {
-                EventsQueue::register_event(
-                        shared_function([&callback = wp_.worker_dies_callback_,
-                                                winfo = std::move(wi)]() mutable {
+                EventsQueue::register_event(shared_function(
+                        [&callback = wp_.worker_dies_callback_, winfo = std::move(wi)]() mutable {
                             callback(std::move(winfo));
                         }));
             }
@@ -729,8 +720,7 @@ static void process_job(const WorkersPool::NextJob& job) {
     if (creator.has_value()) {
         creat = creator.value();
     }
-    job_server::job_dispatcher(
-            job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, added);
+    job_server::job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, added);
 
     exit_procedures();
 }
@@ -756,42 +746,38 @@ static void process_judge_job(const WorkersPool::NextJob& job) {
 static void sync_and_assign_jobs();
 
 static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-        local_workers(
-                process_local_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
-                    STACK_UNWINDING_MARK;
+        local_workers(process_local_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
+            STACK_UNWINDING_MARK;
 
-                    // Job has to be reset and cleanup to be done
-                    if (not winfo.is_idle) {
-                        if (winfo.next_job.locked_its_problem) {
-                            jobs_queue.unlock_problem(winfo.next_job.problem_id);
-                        }
+            // Job has to be reset and cleanup to be done
+            if (not winfo.is_idle) {
+                if (winfo.next_job.locked_its_problem) {
+                    jobs_queue.unlock_problem(winfo.next_job.problem_id);
+                }
 
-                        sim::jobs::restart_job(job_server::mysql,
-                                intentional_unsafe_string_view(to_string(winfo.next_job.id)),
-                                false);
-                    }
+                sim::jobs::restart_job(job_server::mysql,
+                        intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
+            }
 
-                    EventsQueue::register_event([] { spawn_worker(local_workers); });
-                });
+            EventsQueue::register_event([] { spawn_worker(local_workers); });
+        });
 
 static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-        judge_workers(
-                process_judge_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
-                    STACK_UNWINDING_MARK;
+        judge_workers(process_judge_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
+            STACK_UNWINDING_MARK;
 
-                    // Job has to be reset and cleanup to be done
-                    if (not winfo.is_idle) {
-                        if (winfo.next_job.locked_its_problem) {
-                            jobs_queue.unlock_problem(winfo.next_job.problem_id);
-                        }
+            // Job has to be reset and cleanup to be done
+            if (not winfo.is_idle) {
+                if (winfo.next_job.locked_its_problem) {
+                    jobs_queue.unlock_problem(winfo.next_job.problem_id);
+                }
 
-                        sim::jobs::restart_job(job_server::mysql,
-                                intentional_unsafe_string_view(to_string(winfo.next_job.id)),
-                                false);
-                    }
+                sim::jobs::restart_job(job_server::mysql,
+                        intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
+            }
 
-                    EventsQueue::register_event([] { spawn_worker(judge_workers); });
-                });
+            EventsQueue::register_event([] { spawn_worker(judge_workers); });
+        });
 
 static void sync_and_assign_jobs() {
     STACK_UNWINDING_MARK;
@@ -825,12 +811,12 @@ static void sync_and_assign_jobs() {
             }
         }
 
-        DEBUG_JOB_SERVER(stdlog("DEBUG: Got job: {id: ", best_job.id,
-                ", pri: ", best_job.priority, ", locks: ", best_job.locks_problem, "}"));
+        DEBUG_JOB_SERVER(stdlog("DEBUG: Got job: {id: ", best_job.id, ", pri: ", best_job.priority,
+                ", locks: ", best_job.locks_problem, "}"));
 
         if (idx == 0) { // Problem job
-            if (local_workers.pass_job(
-                        best_job.id, problem_job.problem_id, best_job.locks_problem)) {
+            if (local_workers.pass_job(best_job.id, problem_job.problem_id, best_job.locks_problem))
+            {
                 problem_job.was_passed();
             } else {
                 selector[0].ok = false; // No more workers available
@@ -844,8 +830,7 @@ static void sync_and_assign_jobs() {
             }
 
         } else if (idx == 2) { // Judge job
-            if (judge_workers.pass_job(
-                        best_job.id, judge_job.problem_id, best_job.locks_problem)) {
+            if (judge_workers.pass_job(best_job.id, judge_job.problem_id, best_job.locks_problem)) {
                 judge_job.was_passed();
             } else {
                 selector[2].ok = false; // No more workers available
@@ -941,8 +926,8 @@ static void events_loop() noexcept {
                         (void)create_file(job_server::notify_file, S_IRUSR);
                     }
 
-                    inotify_wd = inotify_add_watch(inotify_fd, job_server::notify_file.data(),
-                            IN_ATTRIB | IN_MOVE_SELF);
+                    inotify_wd = inotify_add_watch(
+                            inotify_fd, job_server::notify_file.data(), IN_ATTRIB | IN_MOVE_SELF);
                     if (inotify_wd == -1) {
                         errlog("inotify_add_watch() failed", errmsg());
                     } else {
@@ -1045,8 +1030,8 @@ static void events_loop() noexcept {
 
                     constexpr uint INFY_IDX = 0;
                     constexpr uint EQ_IDX = 1;
-                    pollfd pfd[2] = {{inotify_fd, POLLIN, 0},
-                            {EventsQueue::get_notifier_fd(), POLLIN, 0}};
+                    pollfd pfd[2] = {
+                            {inotify_fd, POLLIN, 0}, {EventsQueue::get_notifier_fd(), POLLIN, 0}};
 
                     for (;;) {
                         int rc = poll(pfd, 2, -1);
@@ -1106,8 +1091,7 @@ static void clean_up_db() {
         stmt.res_bind_all(job_id, job_type, job_info);
         while (stmt.next()) {
             sim::jobs::restart_job(job_server::mysql,
-                    intentional_unsafe_string_view(to_string(job_id)), job_type, job_info,
-                    false);
+                    intentional_unsafe_string_view(to_string(job_id)), job_type, job_info, false);
         }
 
         // Fix jobs that are noticed [ending] after the job-server died

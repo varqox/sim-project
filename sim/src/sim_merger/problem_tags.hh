@@ -1,22 +1,21 @@
 #pragma once
 
-#include "sim/problem_tags/problem_tag.hh"
-#include "src/sim_merger/primary_keys_from_jobs.hh"
-#include "src/sim_merger/merger.hh"
-#include "src/sim_merger/problems.hh"
+#include "merger.hh"
+#include "primary_keys_from_jobs.hh"
+#include "problems.hh"
+#include <sim/problem_tags/problem_tag.hh>
 
 namespace sim_merger {
 
-class ProblemTagsMerger
-: public Merger<sim::problem_tags::ProblemTag> {
+class ProblemTagsMerger : public Merger<sim::problem_tags::ProblemTag> {
     const ProblemsMerger& problems_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
         sim::problem_tags::ProblemTag ptag;
-        auto stmt = conn.prepare(
-                "SELECT problem_id, name, is_hidden FROM ", record_set.sql_table_name);
+        auto stmt =
+                conn.prepare("SELECT problem_id, name, is_hidden FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(ptag.problem_id, ptag.name, ptag.is_hidden);
         while (stmt.next()) {
@@ -28,8 +27,7 @@ class ProblemTagsMerger
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge(
-                [&](const sim::problem_tags::ProblemTag& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::problem_tags::ProblemTag& /*unused*/) { return nullptr; });
     }
 
     PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
@@ -55,8 +53,8 @@ public:
 
         transaction.commit();
     }
-    ProblemTagsMerger(
-            const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const ProblemsMerger& problems)
+    ProblemTagsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
+            const ProblemsMerger& problems)
     : Merger("problem_tags", ids_from_both_jobs.main.problem_tags,
               ids_from_both_jobs.other.problem_tags)
     , problems_(problems) {

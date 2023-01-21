@@ -1,6 +1,7 @@
-#include "src/job_server/job_handlers/delete_problem.hh"
-#include "sim/jobs/job.hh"
-#include "src/job_server/main.hh"
+#include "delete_problem.hh"
+#include "../main.hh"
+
+#include <sim/jobs/job.hh>
 
 using sim::jobs::Job;
 

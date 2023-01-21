@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/job_server/job_handlers/reset_time_limits_in_problem_package_base.hh"
+#include "reset_time_limits_in_problem_package_base.hh"
 
 namespace job_server::job_handlers {
 

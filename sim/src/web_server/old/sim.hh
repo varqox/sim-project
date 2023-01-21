@@ -1,24 +1,23 @@
 #pragma once
 
-#include "sim/contest_files/permissions.hh"
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/contests/contest.hh"
-#include "sim/contests/permissions.hh"
-#include "sim/cpp_syntax_highlighter.hh"
-#include "sim/jobs/job.hh"
-#include "sim/mysql/mysql.hh"
-#include "sim/problems/permissions.hh"
-#include "sim/sessions/session.hh"
-#include "sim/submissions/submission.hh"
-#include "sim/users/user.hh"
-#include "simlib/http/response.hh"
-#include "simlib/request_uri_parser.hh"
-#include "src/web_server/capabilities/contests.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
-#include "src/web_server/web_worker/web_worker.hh"
-
+#include "../capabilities/contests.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
+#include "../web_worker/context.hh"
+#include "../web_worker/web_worker.hh"
+#include <sim/contest_files/permissions.hh>
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contests/contest.hh>
+#include <sim/contests/permissions.hh>
+#include <sim/cpp_syntax_highlighter.hh>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/problems/permissions.hh>
+#include <sim/sessions/session.hh>
+#include <sim/submissions/submission.hh>
+#include <sim/users/user.hh>
+#include <simlib/http/response.hh>
+#include <simlib/request_uri_parser.hh>
 #include <utime.h>
 
 namespace web_server::old {
@@ -115,8 +114,7 @@ class Sim final {
 
     void api_problem_add(sim::problems::OverallPermissions overall_perms);
 
-    void api_statement_impl(
-            uint64_t problem_file_id, StringView problem_label, StringView simfile);
+    void api_statement_impl(uint64_t problem_file_id, StringView problem_label, StringView simfile);
 
     void api_problem_statement(
             StringView problem_label, StringView simfile, sim::problems::Permissions perms);
@@ -174,8 +172,7 @@ class Sim final {
 
     void api_contest_clone(capabilities::Contests caps_contests);
 
-    void api_contest_edit(
-            StringView contest_id, sim::contests::Permissions perms, bool is_public);
+    void api_contest_edit(StringView contest_id, sim::contests::Permissions perms, bool is_public);
 
     void api_contest_delete(StringView contest_id, sim::contests::Permissions perms);
 
@@ -183,12 +180,10 @@ class Sim final {
 
     void api_contest_round_clone(StringView contest_id, sim::contests::Permissions perms);
 
-    void api_contest_round_edit(
-            decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+    void api_contest_round_edit(decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
             sim::contests::Permissions perms);
 
-    void api_contest_round_delete(
-            decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+    void api_contest_round_delete(decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
             sim::contests::Permissions perms);
 
     void api_contest_problem_statement(StringView problem_id);
@@ -197,11 +192,10 @@ class Sim final {
             decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
             sim::contests::Permissions perms);
 
-    void api_contest_problem_rejudge_all_submissions(StringView contest_problem_id,
-            sim::contests::Permissions perms, StringView problem_id);
+    void api_contest_problem_rejudge_all_submissions(
+            StringView contest_problem_id, sim::contests::Permissions perms, StringView problem_id);
 
-    void api_contest_problem_edit(
-            StringView contest_problem_id, sim::contests::Permissions perms);
+    void api_contest_problem_edit(StringView contest_problem_id, sim::contests::Permissions perms);
 
     void api_contest_problem_delete(
             StringView contest_problem_id, sim::contests::Permissions perms);
@@ -233,11 +227,9 @@ class Sim final {
     void api_contest_file_download(
             StringView contest_file_id, sim::contest_files::Permissions perms);
 
-    void api_contest_file_edit(
-            StringView contest_file_id, sim::contest_files::Permissions perms);
+    void api_contest_file_edit(StringView contest_file_id, sim::contest_files::Permissions perms);
 
-    void api_contest_file_delete(
-            StringView contest_file_id, sim::contest_files::Permissions perms);
+    void api_contest_file_delete(StringView contest_file_id, sim::contest_files::Permissions perms);
 
     /* ============================== Session ============================== */
 
@@ -325,8 +317,8 @@ class Sim final {
     template < // TODO: deprecate with reason "use FormValidator"
             class T, class Checker,
             typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
-    bool form_validate(T& var, const std::string& name, StringView name_to_print,
-            Checker&& check, StringView error_msg = {}, size_t max_size = -1) {
+    bool form_validate(T& var, const std::string& name, StringView name_to_print, Checker&& check,
+            StringView error_msg = {}, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
 
         if (form_validate(var, name, name_to_print, max_size)) {
@@ -336,8 +328,7 @@ class Sim final {
 
             form_validation_error = true;
             if (error_msg.empty()) {
-                add_notification(
-                        "error", html_escape(concat(name_to_print, " validation error")));
+                add_notification("error", html_escape(concat(name_to_print, " validation error")));
             } else {
                 add_notification("error", html_escape(error_msg));
             }
@@ -389,8 +380,7 @@ class Sim final {
 
             form_validation_error = true;
             if (error_msg.empty()) {
-                add_notification(
-                        "error", html_escape(concat(name_to_print, ": invalid value")));
+                add_notification("error", html_escape(concat(name_to_print, ": invalid value")));
             } else {
                 add_notification("error", html_escape(error_msg));
             }
@@ -410,8 +400,7 @@ class Sim final {
         const auto file = request.form_fields.file_path(name);
         if (not file) {
             form_validation_error = true;
-            add_notification(
-                    "error", html_escape(name_to_print), " has to be submitted as a file");
+            add_notification("error", html_escape(name_to_print), " has to be submitted as a file");
             return false;
         }
 
@@ -564,13 +553,12 @@ private:
             std::optional<sim::contest_users::ContestUser::Mode> user_mode) noexcept;
 
     // Returns (viewer mode, perms), queries MySQL
-    std::pair<std::optional<sim::contest_users::ContestUser::Mode>,
-            Sim::ContestUserPermissions>
+    std::pair<std::optional<sim::contest_users::ContestUser::Mode>, Sim::ContestUserPermissions>
     contest_user_get_overall_permissions(StringView contest_id);
 
     // Returns (viewer mode, perms, user's mode), queries MySQL
-    std::tuple<std::optional<sim::contest_users::ContestUser::Mode>,
-            Sim::ContestUserPermissions, std::optional<sim::contest_users::ContestUser::Mode>>
+    std::tuple<std::optional<sim::contest_users::ContestUser::Mode>, Sim::ContestUserPermissions,
+            std::optional<sim::contest_users::ContestUser::Mode>>
     contest_user_get_permissions(StringView contest_id, StringView user_id);
 
     /* ============================= Submissions =============================

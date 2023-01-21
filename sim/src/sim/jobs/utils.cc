@@ -1,7 +1,6 @@
-#include "sim/jobs/utils.hh"
-#include "simlib/time.hh"
-#include "src/job_server/notify_file.hh"
-
+#include "../../job_server/notify_file.hh"
+#include <sim/jobs/utils.hh>
+#include <simlib/time.hh>
 #include <utime.h>
 
 namespace sim::jobs {
@@ -13,8 +12,8 @@ void restart_job(mysql::Connection& mysql, StringView job_id, Job::Type job_type
 
     // Restart adding / reuploading problem
     bool adding = is_one_of(job_type, JT::ADD_PROBLEM, JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION);
-    bool reupload = is_one_of(
-            job_type, JT::REUPLOAD_PROBLEM, JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION);
+    bool reupload =
+            is_one_of(job_type, JT::REUPLOAD_PROBLEM, JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION);
 
     if (adding or reupload) {
         AddProblemInfo info{job_info};
@@ -29,8 +28,8 @@ void restart_job(mysql::Connection& mysql, StringView job_id, Job::Type job_type
                       "FROM jobs "
                       "WHERE id=? AND tmp_file_id IS NOT NULL")
                 .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
-                        default_priority(Job::Type::DELETE_FILE),
-                        EnumVal(Job::Status::PENDING), mysql_date(), job_id);
+                        default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
+                        mysql_date(), job_id);
 
         // Restart job
         mysql.prepare("UPDATE jobs SET type=?, status=?, tmp_file_id=NULL, info=? "

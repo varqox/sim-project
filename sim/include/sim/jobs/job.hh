@@ -1,15 +1,14 @@
 #pragma once
 
-#include "sim/internal_files/internal_file.hh"
-#include "sim/primary_key.hh"
-#include "sim/sql_fields/blob.hh"
-#include "sim/sql_fields/datetime.hh"
-#include "sim/users/user.hh"
-#include "simlib/enum_with_string_conversions.hh"
-#include "simlib/string_view.hh"
-
 #include <cstdint>
 #include <optional>
+#include <sim/internal_files/internal_file.hh>
+#include <sim/primary_key.hh>
+#include <sim/sql_fields/blob.hh>
+#include <sim/sql_fields/datetime.hh>
+#include <sim/users/user.hh>
+#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/string_view.hh>
 
 namespace sim::jobs {
 

@@ -1,7 +1,8 @@
-#include "src/job_server/job_handlers/reset_time_limits_in_problem_package_base.hh"
-#include "sim/judging_config.hh"
-#include "simlib/sim/problem_package.hh"
-#include "src/job_server/main.hh"
+#include "reset_time_limits_in_problem_package_base.hh"
+#include "../main.hh"
+
+#include <sim/judging_config.hh>
+#include <simlib/sim/problem_package.hh>
 
 namespace job_server::job_handlers {
 
@@ -41,8 +42,7 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath pac
         opts.min_time_limit = sim::MIN_TIME_LIMIT;
         opts.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
 
-        sim::Conver::reset_time_limits_using_jugde_reports(
-                simfile, initial_rep, final_rep, opts);
+        sim::Conver::reset_time_limits_using_jugde_reports(simfile, initial_rep, final_rep, opts);
 
     } catch (const std::exception& e) {
         return set_failure("Conver failed: ", e.what());

@@ -1,6 +1,7 @@
-#include "src/job_server/job_handlers/add_or_reupload_problem__judge_main_solution_base.hh"
-#include "sim/internal_files/internal_file.hh"
-#include "simlib/sim/problem_package.hh"
+#include "add_or_reupload_problem__judge_main_solution_base.hh"
+
+#include <sim/internal_files/internal_file.hh>
+#include <simlib/sim/problem_package.hh>
 
 namespace job_server::job_handlers {
 
@@ -15,8 +16,8 @@ void AddOrReuploadProblemJudgeModelSolutionBase::run() {
 
     // Put the Simfile in the package
     ZipFile zip(package_path);
-    zip.file_add(concat(sim::zip_package_main_dir(zip), "Simfile"),
-            zip.source_buffer(new_simfile_), ZIP_FL_OVERWRITE);
+    zip.file_add(concat(sim::zip_package_main_dir(zip), "Simfile"), zip.source_buffer(new_simfile_),
+            ZIP_FL_OVERWRITE);
     zip.close();
 
     bool canceled = false;

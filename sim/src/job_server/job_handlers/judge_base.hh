@@ -1,8 +1,9 @@
 #pragma once
 
-#include "sim/submissions/submission.hh"
-#include "simlib/sim/judge_worker.hh"
-#include "src/job_server/job_handlers/job_handler.hh"
+#include "job_handler.hh"
+
+#include <sim/submissions/submission.hh>
+#include <simlib/sim/judge_worker.hh>
 
 namespace job_server::job_handlers {
 
@@ -30,8 +31,7 @@ private:
 
 protected:
     // Iff compilation failed, compilation errors are returned
-    std::optional<std::string> compile_solution(
-            FilePath solution_path, sim::SolutionLanguage lang);
+    std::optional<std::string> compile_solution(FilePath solution_path, sim::SolutionLanguage lang);
 
     // Iff compilation failed, compilation errors are returned
     std::optional<std::string> compile_solution_from_problem_package(

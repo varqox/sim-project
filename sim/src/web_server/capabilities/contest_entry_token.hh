@@ -1,10 +1,9 @@
 #pragma once
 
-#include "sim/contest_users/contest_user.hh"
-#include "src/web_server/capabilities/contest.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "../web_worker/context.hh"
+#include "contest.hh"
 #include <optional>
+#include <sim/contest_users/contest_user.hh>
 
 namespace web_server::capabilities {
 
@@ -24,7 +23,6 @@ enum class ContestEntryTokenKind {
 
 ContestEntryToken contest_entry_token_for(ContestEntryTokenKind token_kind,
         const decltype(web_worker::Context::session)& session, const Contest& caps_contest,
-        std::optional<decltype(sim::contest_users::ContestUser::mode)>
-                contest_user_mode) noexcept;
+        std::optional<decltype(sim::contest_users::ContestUser::mode)> contest_user_mode) noexcept;
 
 } // namespace web_server::capabilities

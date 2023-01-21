@@ -1,14 +1,13 @@
 #include "context.hh"
-#include "sim/random.hh"
-#include "sim/sessions/session.hh"
-#include "simlib/string_traits.hh"
-#include "simlib/string_view.hh"
-#include "simlib/time.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/ui_template.hh"
-
+#include "../http/response.hh"
+#include "../ui_template.hh"
 #include <chrono>
 #include <optional>
+#include <sim/random.hh>
+#include <sim/sessions/session.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_view.hh>
+#include <simlib/time.hh>
 
 using web_server::http::Response;
 
@@ -21,9 +20,9 @@ void Context::open_session() {
         return; // Optimization (no mysql query) for empty or nonexistent cookie
     }
     Session s;
-    auto stmt = mysql.prepare(
-            "SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
-            "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
+    auto stmt =
+            mysql.prepare("SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
+                          "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
     stmt.bind_and_execute(session_id, mysql_date());
     stmt.res_bind_all(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
     if (not stmt.next()) {

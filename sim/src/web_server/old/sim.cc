@@ -1,12 +1,11 @@
-#include "src/web_server/old/sim.hh"
-#include "simlib/mysql/mysql.hh"
-#include "simlib/path.hh"
-#include "simlib/random.hh"
-#include "simlib/time.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-
+#include "sim.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
 #include <memory>
+#include <simlib/mysql/mysql.hh>
+#include <simlib/path.hh>
+#include <simlib/random.hh>
+#include <simlib/time.hh>
 #include <sys/stat.h>
 
 using sim::users::User;
@@ -65,9 +64,7 @@ http::Response Sim::handle(http::Request req) {
                 // If no session is open, load value from cookie to pass
                 // verification
                 if (session_open() and
-                        request.form_fields.get("csrf_token").value_or("") !=
-                                session->csrf_token)
-                {
+                        request.form_fields.get("csrf_token").value_or("") != session->csrf_token) {
                     error403();
                     goto cleanup;
                 }
@@ -184,8 +181,8 @@ void Sim::static_file() {
         struct tm client_mtime {};
         auto if_modified_since = request.headers.get("if-modified-since");
         if (if_modified_since and
-                strptime(if_modified_since->data(), "%a, %d %b %Y %H:%M:%S GMT",
-                        &client_mtime) != nullptr and
+                strptime(if_modified_since->data(), "%a, %d %b %Y %H:%M:%S GMT", &client_mtime) !=
+                        nullptr and
                 timegm(&client_mtime) >= attr.st_mtime)
         {
             resp.status_code = "304 Not Modified";

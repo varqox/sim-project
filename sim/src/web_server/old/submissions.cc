@@ -1,5 +1,5 @@
-#include "sim/submissions/submission.hh"
-#include "src/web_server/old/sim.hh"
+#include "sim.hh"
+#include <sim/submissions/submission.hh>
 
 using sim::contest_users::ContestUser;
 using sim::problems::Problem;
@@ -66,8 +66,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
                 PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
     }
 
-    if (session.has_value() and submission_owner and
-            session->user_id == submission_owner.value()) {
+    if (session.has_value() and submission_owner and session->user_id == submission_owner.value()) {
         return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
     }
 

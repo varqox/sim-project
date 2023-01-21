@@ -1,33 +1,32 @@
-#include "sim/contest_entry_tokens/contest_entry_token.hh"
-#include "sim/contest_files/contest_file.hh"
-#include "sim/contest_rounds/contest_round.hh"
-#include "sim/contest_users/contest_user.hh"
-#include "sim/inf_datetime.hh"
-#include "sim/mysql/mysql.hh"
-#include "sim/problem_tags/problem_tag.hh"
-#include "sim/users/user.hh"
-#include "simlib/concat.hh"
-#include "simlib/concat_tostr.hh"
-#include "simlib/config_file.hh"
-#include "simlib/defer.hh"
-#include "simlib/err_defer.hh"
-#include "simlib/file_contents.hh"
-#include "simlib/file_descriptor.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/opened_temporary_file.hh"
-#include "simlib/process.hh"
-#include "simlib/ranges.hh"
-#include "simlib/spawner.hh"
-#include "simlib/string_view.hh"
-#include "simlib/temporary_file.hh"
-#include "src/sql_tables.hh"
-#include "src/web_server/logs.hh"
-
+#include "sql_tables.hh"
+#include "web_server/logs.hh"
 #include <climits>
 #include <cstdio>
 #include <fcntl.h>
 #include <fstream>
+#include <sim/contest_entry_tokens/contest_entry_token.hh>
+#include <sim/contest_files/contest_file.hh>
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contest_users/contest_user.hh>
+#include <sim/inf_datetime.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/problem_tags/problem_tag.hh>
+#include <sim/users/user.hh>
+#include <simlib/concat.hh>
+#include <simlib/concat_tostr.hh>
+#include <simlib/config_file.hh>
+#include <simlib/defer.hh>
+#include <simlib/err_defer.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/opened_temporary_file.hh>
+#include <simlib/process.hh>
+#include <simlib/ranges.hh>
+#include <simlib/spawner.hh>
+#include <simlib/string_view.hh>
+#include <simlib/temporary_file.hh>
 #include <unistd.h>
 
 namespace {
@@ -156,8 +155,8 @@ static void update_db_schema(Func&& prepare_database) {
                     concat_tostr("--defaults-file=", mysql_cnf.path()),
                     conn.impl()->db,
             },
-            Spawner::Options{FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO,
-                    STDERR_FILENO, "."});
+            Spawner::Options{
+                    FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO, "."});
     done = true;
     drop_backup_tables();
 }

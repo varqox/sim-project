@@ -1,11 +1,10 @@
 #pragma once
 
-#include "sim/random.hh"
-#include "sim/sessions/session.hh"
-#include "simlib/defer.hh"
-#include "src/sim_merger/users.hh"
-
+#include "users.hh"
 #include <set>
+#include <sim/random.hh>
+#include <sim/sessions/session.hh>
+#include <simlib/defer.hh>
 
 namespace sim_merger {
 
@@ -27,9 +26,8 @@ class SessionsMerger : public Merger<sim::sessions::Session> {
         }();
 
         sim::sessions::Session ses;
-        auto stmt =
-                conn.prepare("SELECT id, csrf_token, user_id, data, user_agent, expires FROM ",
-                        record_set.sql_table_name);
+        auto stmt = conn.prepare("SELECT id, csrf_token, user_id, data, user_agent, expires FROM ",
+                record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(
                 ses.id, ses.csrf_token, ses.user_id, ses.data, ses.user_agent, ses.expires);
@@ -68,14 +66,14 @@ public:
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(
-                    x.id, x.csrf_token, x.user_id, x.data, x.user_agent, x.expires);
+            stmt.bind_and_execute(x.id, x.csrf_token, x.user_id, x.data, x.user_agent, x.expires);
         }
 
         transaction.commit();
     }
 
-    SessionsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const UsersMerger& users)
+    SessionsMerger(
+            const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const UsersMerger& users)
     : Merger("sessions", ids_from_both_jobs.main.sessions, ids_from_both_jobs.other.sessions)
     , users_(users) {
         STACK_UNWINDING_MARK;

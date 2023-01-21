@@ -1,11 +1,11 @@
 #pragma once
 
-#include "sim/internal_files/internal_file.hh"
-#include "simlib/defer.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/time.hh"
-#include "src/sim_merger/merger.hh"
+#include "merger.hh"
+#include <sim/internal_files/internal_file.hh>
+#include <simlib/defer.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/time.hh>
 
 namespace sim_merger {
 
@@ -99,8 +99,7 @@ public:
             } else {
                 // Copy other's files
                 throw_assert(not new_record.other_ids.empty());
-                auto src = concat(
-                        other_sim_build, "internal_files/", new_record.other_ids.front());
+                auto src = concat(other_sim_build, "internal_files/", new_record.other_ids.front());
                 auto dest = concat(dest_path, x.id);
                 if (copy(src, dest)) {
                     THROW("copy(", src, ", ", dest, ')', errmsg());

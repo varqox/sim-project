@@ -1,27 +1,26 @@
-#include "src/sim_merger/sim_merger.hh"
-#include "sim/mysql/mysql.hh"
-#include "simlib/config_file.hh"
-#include "simlib/defer.hh"
-#include "simlib/file_info.hh"
-#include "simlib/path.hh"
-#include "simlib/process.hh"
-#include "simlib/spawner.hh"
-#include "simlib/working_directory.hh"
-#include "src/sim_merger/contest_entry_tokens.hh"
-#include "src/sim_merger/contest_files.hh"
-#include "src/sim_merger/contest_problems.hh"
-#include "src/sim_merger/contest_rounds.hh"
-#include "src/sim_merger/contest_users.hh"
-#include "src/sim_merger/contests.hh"
-#include "src/sim_merger/internal_files.hh"
-#include "src/sim_merger/jobs.hh"
-#include "src/sim_merger/problem_tags.hh"
-#include "src/sim_merger/problems.hh"
-#include "src/sim_merger/sessions.hh"
-#include "src/sim_merger/submissions.hh"
-#include "src/sim_merger/users.hh"
-
+#include "sim_merger.hh"
+#include "contest_entry_tokens.hh"
+#include "contest_files.hh"
+#include "contest_problems.hh"
+#include "contest_rounds.hh"
+#include "contest_users.hh"
+#include "contests.hh"
+#include "internal_files.hh"
+#include "jobs.hh"
+#include "problem_tags.hh"
+#include "problems.hh"
+#include "sessions.hh"
+#include "submissions.hh"
+#include "users.hh"
 #include <iostream>
+#include <sim/mysql/mysql.hh>
+#include <simlib/config_file.hh>
+#include <simlib/defer.hh>
+#include <simlib/file_info.hh>
+#include <simlib/path.hh>
+#include <simlib/process.hh>
+#include <simlib/spawner.hh>
+#include <simlib/working_directory.hh>
 
 using std::vector;
 
@@ -41,9 +40,8 @@ static void load_tables_from_other_sim_backup() {
 
     Spawner::Options opts = {fd, STDOUT_FILENO, STDERR_FILENO};
     auto es = Spawner::run("mysql",
-            {"mysql", "-u", cf["user"].as_string(),
-                    concat_tostr("-p", cf["password"].as_string()), cf["db"].as_string(),
-                    "-B"},
+            {"mysql", "-u", cf["user"].as_string(), concat_tostr("-p", cf["password"].as_string()),
+                    cf["db"].as_string(), "-B"},
             opts);
     if (es.si.code != CLD_EXITED or es.si.status != 0) {
         THROW("loading dump.sql failed: ", es.message);
@@ -95,8 +93,7 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
                 stdlog.open("/dev/null");
 
             } else if (0 == strcmp(argv[i], "-r") or
-                    0 == strcmp(argv[i], "--reset-new-problems-time-limits"))
-            {
+                    0 == strcmp(argv[i], "--reset-new-problems-time-limits")) {
                 cmd_options.reset_new_problems_time_limits = true;
 
             } else { // Unknown
@@ -154,8 +151,7 @@ static int true_main(int argc, char** argv) {
 
     try {
         // Get connection
-        conn = sim::mysql::make_conn_with_credential_file(
-                concat(main_sim_build, ".db.config"));
+        conn = sim::mysql::make_conn_with_credential_file(concat(main_sim_build, ".db.config"));
     } catch (const std::exception& e) {
         errlog("\033[31mFailed to connect to database\033[m - ", e.what());
         return 1;
@@ -175,10 +171,9 @@ static int true_main(int argc, char** argv) {
     STACK_UNWINDING_MARK;
     // Ensure that other_sim_bulid/dump.sql exists
     if (access(concat(other_sim_build, "dump.sql"), F_OK) != 0) {
-        stdlog("File ", other_sim_build,
-                "dump.sql does not exists -> asking git to restore it");
-        auto es = Spawner::run("git",
-                {"git", "-C", other_sim_build.to_string(), "checkout", "--", "dump.sql"});
+        stdlog("File ", other_sim_build, "dump.sql does not exists -> asking git to restore it");
+        auto es = Spawner::run(
+                "git", {"git", "-C", other_sim_build.to_string(), "checkout", "--", "dump.sql"});
         if (es.si.code != CLD_EXITED or es.si.status != 0) {
             errlog("Git failed: ", es.message);
             return 1;
@@ -208,8 +203,7 @@ static int true_main(int argc, char** argv) {
                 ERRLOG_CATCH(e);
             }
             try {
-                conn.update("RENAME TABLE ", main_sim_table_prefix, table_name, " TO ",
-                        table_name);
+                conn.update("RENAME TABLE ", main_sim_table_prefix, table_name, " TO ", table_name);
             } catch (const std::exception& e) {
                 ERRLOG_CATCH(e);
             }
@@ -249,8 +243,8 @@ static int true_main(int argc, char** argv) {
     mergers.emplace_back(&sessions);
 
     stdlog("\033[1;36mMerging problems\033[m...");
-    ProblemsMerger problems(ids_from_both_jobs, internal_files, users,
-            cmd_options.reset_new_problems_time_limits);
+    ProblemsMerger problems(
+            ids_from_both_jobs, internal_files, users, cmd_options.reset_new_problems_time_limits);
     mergers.emplace_back(&problems);
 
     stdlog("\033[1;36mMerging problem tags\033[m...");
@@ -266,8 +260,7 @@ static int true_main(int argc, char** argv) {
     mergers.emplace_back(&contest_rounds);
 
     stdlog("\033[1;36mMerging contest problems\033[m...");
-    ContestProblemsMerger contest_problems(
-            ids_from_both_jobs, contest_rounds, contests, problems);
+    ContestProblemsMerger contest_problems(ids_from_both_jobs, contest_rounds, contests, problems);
     mergers.emplace_back(&contest_problems);
 
     stdlog("\033[1;36mMerging contest users\033[m...");

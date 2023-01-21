@@ -1,8 +1,8 @@
 #pragma once
 
-#include "sim/problems/problem.hh"
-#include "sim/users/user.hh"
-#include "src/web_server/web_worker/context.hh"
+#include "../web_worker/context.hh"
+#include <sim/problems/problem.hh>
+#include <sim/users/user.hh>
 
 namespace web_server::capabilities {
 
@@ -31,8 +31,7 @@ struct ProblemsListCapabilities {
 ProblemsListCapabilities list_all_problems(
         const decltype(web_worker::Context::session)& session) noexcept;
 
-ProblemsListCapabilities list_user_problems(
-        const decltype(web_worker::Context::session)& session,
+ProblemsListCapabilities list_user_problems(const decltype(web_worker::Context::session)& session,
         decltype(sim::users::User::id) user_id) noexcept;
 
 struct ProblemCapabilities {

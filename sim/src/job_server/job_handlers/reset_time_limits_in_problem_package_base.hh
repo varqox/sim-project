@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/job_server/job_handlers/judge_base.hh"
+#include "judge_base.hh"
 
 namespace job_server::job_handlers {
 

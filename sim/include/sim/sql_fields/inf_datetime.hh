@@ -1,8 +1,7 @@
 #pragma once
 
-#include "sim/inf_datetime.hh"
-#include "sim/sql_fields/varbinary.hh"
-
+#include <sim/inf_datetime.hh>
+#include <sim/sql_fields/varbinary.hh>
 #include <string>
 
 namespace sim::sql_fields {

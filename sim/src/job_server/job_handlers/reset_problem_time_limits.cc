@@ -1,7 +1,8 @@
-#include "src/job_server/job_handlers/reset_problem_time_limits.hh"
-#include "sim/jobs/job.hh"
-#include "simlib/sim/problem_package.hh"
-#include "src/job_server/main.hh"
+#include "reset_problem_time_limits.hh"
+#include "../main.hh"
+
+#include <sim/jobs/job.hh>
+#include <simlib/sim/problem_package.hh>
 
 using sim::internal_files::path_of;
 using sim::jobs::Job;

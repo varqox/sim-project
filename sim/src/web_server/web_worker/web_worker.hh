@@ -1,13 +1,12 @@
 #pragma once
 
-#include "sim/mysql/mysql.hh"
-#include "sim/sessions/session.hh"
-#include "simlib/http/url_dispatcher.hh"
-#include "src/web_server/http/cookies.hh"
-#include "src/web_server/http/request.hh"
-#include "src/web_server/http/response.hh"
-#include "src/web_server/web_worker/context.hh"
-
+#include "../http/cookies.hh"
+#include "../http/request.hh"
+#include "../http/response.hh"
+#include "context.hh"
+#include <sim/mysql/mysql.hh>
+#include <sim/sessions/session.hh>
+#include <simlib/http/url_dispatcher.hh>
 #include <variant>
 
 namespace web_server::web_worker {
@@ -30,16 +29,14 @@ private:
     http::Response handler_impl(ResponseMaker&& response_maker);
 
     template <const char* url_pattern, auto... CustomParsers, class... Params>
-    void do_add_get_handler(
-            strongly_typed_function<http::Response(Context&, Params...)> handler);
+    void do_add_get_handler(strongly_typed_function<http::Response(Context&, Params...)> handler);
 
     template <const char* url_pattern, auto... CustomParsers, class... Params>
-    void do_add_post_handler(
-            strongly_typed_function<http::Response(Context&, Params...)> handler);
+    void do_add_post_handler(strongly_typed_function<http::Response(Context&, Params...)> handler);
 
     template <const char* url_pattern, auto... CustomParsers>
-    void add_get_handler(UrlDispatcher::HandlerImpl<std::tuple<Context&>, std::tuple<>,
-            url_pattern, CustomParsers...>
+    void add_get_handler(UrlDispatcher::HandlerImpl<std::tuple<Context&>, std::tuple<>, url_pattern,
+            CustomParsers...>
                     handler) {
         do_add_get_handler<url_pattern, CustomParsers...>(std::move(handler));
     }

@@ -1,21 +1,20 @@
-#include "sim/contest_problems/contest_problem.hh"
-#include "sim/contests/contest.hh"
-#include "sim/inf_datetime.hh"
-#include "sim/is_username.hh"
-#include "sim/jobs/utils.hh"
-#include "sim/submissions/submission.hh"
-#include "sim/submissions/update_final.hh"
-#include "simlib/call_in_destructor.hh"
-#include "simlib/file_contents.hh"
-#include "simlib/file_info.hh"
-#include "simlib/file_manip.hh"
-#include "simlib/humanize.hh"
-#include "simlib/process.hh"
-#include "simlib/string_view.hh"
-#include "src/web_server/old/sim.hh"
-
+#include "sim.hh"
 #include <functional>
 #include <optional>
+#include <sim/contest_problems/contest_problem.hh>
+#include <sim/contests/contest.hh>
+#include <sim/inf_datetime.hh>
+#include <sim/is_username.hh>
+#include <sim/jobs/utils.hh>
+#include <sim/submissions/submission.hh>
+#include <sim/submissions/update_final.hh>
+#include <simlib/call_in_destructor.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/humanize.hh>
+#include <simlib/process.hh>
+#include <simlib/string_view.hh>
 
 using sim::InfDatetime;
 using sim::contest_problems::ContestProblem;
@@ -29,8 +28,8 @@ using std::string;
 
 namespace web_server::old {
 
-void Sim::append_submission_status(Submission::Status initial_status,
-        Submission::Status full_status, bool show_full_status) {
+void Sim::append_submission_status(
+        Submission::Status initial_status, Submission::Status full_status, bool show_full_status) {
     STACK_UNWINDING_MARK;
     using SS = Submission::Status;
 
@@ -232,8 +231,8 @@ void Sim::api_submissions() {
                 } else if (arg_id == "I") {
                     qwhere.append(" AND s.type=", EnumVal(Submission::Type::IGNORED).to_int());
                 } else if (arg_id == "S") {
-                    qwhere.append(" AND s.type=",
-                            EnumVal(Submission::Type::PROBLEM_SOLUTION).to_int());
+                    qwhere.append(
+                            " AND s.type=", EnumVal(Submission::Type::PROBLEM_SOLUTION).to_int());
                 } else {
                     return api_error400(intentional_unsafe_string_view(
                             concat("Invalid submission type: ", arg_id)));
@@ -420,11 +419,11 @@ void Sim::api_submissions() {
                                                                owner)::value_type>(res[SOWNER])
                                                        .value())}),
                 stype,
-                (res.is_null(CUMODE) ? std::nullopt
-                                     : std::optional{decltype(ContestUser::mode){WONT_THROW(
-                                               str2num<decltype(ContestUser::mode)::ValType>(
-                                                       res[CUMODE])
-                                                       .value())}}),
+                (res.is_null(CUMODE)
+                                ? std::nullopt
+                                : std::optional{decltype(ContestUser::mode){WONT_THROW(
+                                          str2num<decltype(ContestUser::mode)::ValType>(res[CUMODE])
+                                                  .value())}}),
                 (res.is_null(POWNER_ID)
                                 ? std::nullopt
                                 : optional<decltype(Problem::owner_id)::value_type>{WONT_THROW(
@@ -513,8 +512,8 @@ void Sim::api_submissions() {
                 }
             }
 
-            if (subtype_to_show != FINAL and subtype_to_show != PROBLEM_FINAL and
-                    selecting_finals) {
+            if (subtype_to_show != FINAL and subtype_to_show != PROBLEM_FINAL and selecting_finals)
+            {
                 if (not select_one) {
                     THROW("Cannot show final while selecting finals - this is "
                           "a bug in the query or the restricting access (URL: ",
@@ -538,8 +537,7 @@ void Sim::api_submissions() {
 
         append('"',
                 to_string(Submission::Language(WONT_THROW(
-                        str2num<decltype(Submission::language)::ValType>(res[SLANGUAGE])
-                                .value()))),
+                        str2num<decltype(Submission::language)::ValType>(res[SLANGUAGE]).value()))),
                 "\",");
 
         // Onwer's id
@@ -627,10 +625,9 @@ void Sim::api_submissions() {
 
         // Status: (CSS class, text)
         append_submission_status(
-                decltype(Submission::initial_status)(
-                        WONT_THROW(str2num<decltype(Submission::initial_status)::ValType>(
-                                res[INITIAL_STATUS])
-                                           .value())),
+                decltype(Submission::initial_status)(WONT_THROW(
+                        str2num<decltype(Submission::initial_status)::ValType>(res[INITIAL_STATUS])
+                                .value())),
                 decltype(Submission::full_status)(WONT_THROW(
                         str2num<decltype(Submission::full_status)::ValType>(res[FINAL_STATUS])
                                 .value())),
@@ -825,16 +822,15 @@ void Sim::api_submission_add() {
         }
 
         auto contest_perms = sim::contests::get_permissions(
-                (session.has_value() ? std::optional{session->user_type} : std::nullopt),
-                is_public, umode);
+                (session.has_value() ? std::optional{session->user_type} : std::nullopt), is_public,
+                umode);
         if (uint(~contest_perms & sim::contests::Permissions::PARTICIPATE)) {
             return api_error403(); // Could not participate
         }
 
         auto curr_date = mysql_date();
         if (uint(~contest_perms & sim::contests::Permissions::ADMIN) and
-                (curr_date < InfDatetime(cr_begins_str) or
-                        InfDatetime(cr_ends_str) <= curr_date))
+                (curr_date < InfDatetime(cr_begins_str) or InfDatetime(cr_ends_str) <= curr_date))
         {
             return api_error403(); // Round has not begun jet or already ended
         }
@@ -887,8 +883,7 @@ void Sim::api_submission_add() {
 
     mysql.update("INSERT INTO internal_files VALUES()");
     auto file_id = mysql.insert_id();
-    CallInDtor file_remover(
-            [file_id] { (void)unlink(sim::internal_files::path_of(file_id)); });
+    CallInDtor file_remover([file_id] { (void)unlink(sim::internal_files::path_of(file_id)); });
 
     // Save source file
     if (not code.empty()) {
@@ -947,8 +942,8 @@ void Sim::api_submission_download() {
     }
 
     resp.headers["Content-type"] = to_mime(submissions_slang);
-    resp.headers["Content-Disposition"] = concat_tostr(
-            "attachment; filename=", submissions_sid, to_extension(submissions_slang));
+    resp.headers["Content-Disposition"] =
+            concat_tostr("attachment; filename=", submissions_sid, to_extension(submissions_slang));
 
     resp.content = sim::internal_files::path_of(submissions_file_id);
     resp.content_type = http::Response::FILE;
@@ -971,9 +966,8 @@ void Sim::api_submission_rejudge() {
                          " type, added, aux_id, info, data) "
                          "VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, '')");
     stmt.bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-            default_priority(Job::Type::REJUDGE_SUBMISSION),
-            EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(), submissions_sid,
-            sim::jobs::dump_string(problem_id));
+            default_priority(Job::Type::REJUDGE_SUBMISSION), EnumVal(Job::Type::REJUDGE_SUBMISSION),
+            mysql_date(), submissions_sid, sim::jobs::dump_string(problem_id));
 
     sim::jobs::notify_job_server();
 }
