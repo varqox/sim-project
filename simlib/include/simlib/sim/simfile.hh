@@ -326,6 +326,7 @@ public:
      *     validation error occurs
      */
     void validate_files(StringView package_path) const;
+
     struct TestNameComparator {
         struct SplitResult {
             StringView gid; // Group id
@@ -356,7 +357,7 @@ public:
                 }
             };
             normalize_gid(x.gid);
-            normalize_gid(x.gid);
+            normalize_gid(y.gid);
             // tid == "ocen" behaves the same as gid == "0"
             if (x.tid == "ocen" and y.tid == "ocen") {
                 return StrVersionCompare()(x.gid, y.gid);

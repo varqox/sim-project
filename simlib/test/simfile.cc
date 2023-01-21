@@ -2,8 +2,10 @@
 #include <simlib/debug.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/sim/simfile.hh>
+#include <simlib/string_view.hh>
 #include <simlib/temporary_directory.hh>
 #include <simlib/utilities.hh>
+#include <vector>
 
 using std::array;
 using std::string;
@@ -732,6 +734,96 @@ TEST(Simfile, validate_files) {
             do_check();
 
             files[i] = std::move(val);
+        }
+    }
+}
+
+// NOLINTNEXTLINE
+TEST(Simfile, TestNameComparator_split) {
+    auto check_split = [&](StringView test_name, StringView expected_gid, StringView expected_tid) {
+        auto res = sim::Simfile::TestNameComparator::split(test_name);
+        EXPECT_EQ(res.gid, expected_gid);
+        EXPECT_EQ(res.tid, expected_tid);
+    };
+
+    check_split("abc0", "0", "");
+    check_split("abc0123xyz", "0123", "xyz");
+    check_split("abc0a", "0", "a");
+    check_split("abc0xyz", "0", "xyz");
+    check_split("0123", "0123", "");
+    check_split("0123xyz", "0123", "xyz");
+    check_split("123", "123", "");
+    check_split("123xyz", "123", "xyz");
+    check_split("abc123xyz", "123", "xyz");
+    check_split("abc", "", "abc");
+    check_split("", "", "");
+}
+
+// NOLINTNEXTLINE
+TEST(Simfile, TestNameComparator_function_call_operator) {
+    vector<std::pair<int, const char*>> ordered_test_names = {
+            {0, "0"},
+            {0, "pow0"},
+            {1, "0a"},
+            {1, "pow0a"},
+            {1, "x0a"},
+            {2, "0abc"},
+            {2, "pow0abc"},
+            {3, "001ocen"},
+            {3, "pow001ocen"},
+            {3, "01ocen"},
+            {3, "pow01ocen"},
+            {3, "1ocen"},
+            {3, "pow1ocen"},
+            {4, "2ocen"},
+            {4, "pow2ocen"},
+            {5, "3ocen"},
+            {5, "pow3ocen"},
+            {6, "4ocen"},
+            {6, "pow4ocen"},
+            {7, "010ocen"},
+            {7, "pow010ocen"},
+            {8, "123ocen"},
+            {8, "pow123ocen"},
+            {9, "0z"},
+            {9, "pow0z"},
+
+            {10, "001"},
+            {10, "pow001"},
+            {10, "01"},
+            {10, "pow01"},
+            {11, "001a"},
+            {11, "pow001a"},
+            {11, "01a"},
+            {11, "pow01a"},
+            {11, "x001a"},
+            {11, "x01a"},
+            {12, "001abc"},
+            {12, "pow001abc"},
+            {12, "01abc"},
+            {12, "pow01abc"},
+
+            {13, "010"},
+            {13, "pow010"},
+            {14, "010a"},
+            {14, "pow010a"},
+            {14, "x010a"},
+            {15, "010abc"},
+            {15, "pow010abc"},
+
+            {16, "123"},
+            {16, "pow123"},
+            {17, "123a"},
+            {17, "pow123a"},
+            {17, "x123a"},
+            {18, "123abc"},
+            {18, "pow123abc"},
+    };
+
+    for (auto [a_ord, a_name] : ordered_test_names) {
+        for (auto [b_ord, b_name] : ordered_test_names) {
+            EXPECT_EQ(sim::Simfile::TestNameComparator{}(a_name, b_name), a_ord < b_ord)
+                    << a_name << ' ' << b_name;
         }
     }
 }
