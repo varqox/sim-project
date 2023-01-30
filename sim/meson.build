@@ -280,7 +280,7 @@ meson.add_install_script('sh', '-c', 'chmod 0700 "$MESON_INSTALL_DESTDIR_PREFIX"
 meson.add_install_script('sh', '-c', mkdir_p.format('internal_files'))
 meson.add_install_script('sh', '-c', mkdir_p.format('logs'))
 meson.add_install_script('sh', '-c', cp_n.format('src/sim.conf', 'sim.conf'))
-meson.add_install_script('sh', '-c', setup_installation.full_path() + ' "$MESON_INSTALL_DESTDIR_PREFIX"')
+meson.add_install_script('sh', '-c', 'if test -e "$MESON_INSTALL_DESTDIR_PREFIX/.db.config"; then ' + setup_installation.full_path() + ' "$MESON_INSTALL_DESTDIR_PREFIX"; else { printf "To complete installation you need to run:\n%s %s\n" \'' + setup_installation.full_path() + '\' $MESON_INSTALL_DESTDIR_PREFIX; false; } fi')
 
 #################################### Tests ####################################
 
