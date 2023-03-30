@@ -25,11 +25,14 @@ TEST(http, UrlParser) {
     static_assert(UrlParser<url, is_xyz>::literal_prefix == "/");
     static_assert(UrlParser<url, is_xyz>::literal_suffix.empty());
     // Parsing
-    static_assert(UrlParser<url, is_xyz>::try_parse("/-8/abcxyz/42/hohyha/7/xyz") ==
-            std::tuple(-8, 42, "hohyha", 7, std::tuple()));
+    static_assert(
+        UrlParser<url, is_xyz>::try_parse("/-8/abcxyz/42/hohyha/7/xyz") ==
+        std::tuple(-8, 42, "hohyha", 7, std::tuple())
+    );
     static_assert(UrlParser<url, is_xyz>::try_parse("/-8/abcxyz/42/hohyha/-7/xyz") == std::nullopt);
-    static_assert(std::is_same_v<typename UrlParser<url, is_xyz>::HandlerArgsTuple,
-            std::tuple<int64_t, int64_t, StringView, uint64_t, std::tuple<>>>);
+    static_assert(std::is_same_v<
+                  typename UrlParser<url, is_xyz>::HandlerArgsTuple,
+                  std::tuple<int64_t, int64_t, StringView, uint64_t, std::tuple<>>>);
     // Prefixes and suffixes
     static constexpr char url1[] = "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}";
     static_assert(UrlParser<url1, is_xyz>::literal_prefix == "/a/bc/def/hijk/");
@@ -38,11 +41,11 @@ TEST(http, UrlParser) {
     static_assert(UrlParser<url2, is_xyz>::literal_prefix == "/a/bc/def/hijk/");
     static_assert(UrlParser<url2, is_xyz>::literal_suffix == "/");
     static constexpr char url3[] =
-            "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}/x/yz/okl/";
+        "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}/x/yz/okl/";
     static_assert(UrlParser<url3, is_xyz>::literal_prefix == "/a/bc/def/hijk/");
     static_assert(UrlParser<url3, is_xyz>::literal_suffix == "/x/yz/okl/");
     static constexpr char url4[] =
-            "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}/x/yz/okl";
+        "/a/bc/def/hijk/{i64}/abcxyz/{i64}/{string}/{u64}/{custom}/x/yz/okl";
     static_assert(UrlParser<url4, is_xyz>::literal_prefix == "/a/bc/def/hijk/");
     static_assert(UrlParser<url4, is_xyz>::literal_suffix == "/x/yz/okl");
     static constexpr char url5[] = "//a/bc/def//hijk/{i64}/abcxyz/{i64}/"
@@ -254,15 +257,17 @@ TEST(http, UrlDispatcher_all_potential_collisions) {
 
     static constexpr char url3[] = "/a/b/{string}/o/x/y/z/";
     ud.add_handler<url3>([&](StringView /*unused*/) { return 0; });
-    EXPECT_EQ(canonized_collisions(ud),
-            (VC{{url2, url0}, {url2, url3}, {url2, url1}, {url0, url3}, {url0, url1},
-                    {url3, url1}}));
+    EXPECT_EQ(
+        canonized_collisions(ud),
+        (VC{{url2, url0}, {url2, url3}, {url2, url1}, {url0, url3}, {url0, url1}, {url3, url1}})
+    );
     // This url does not collide
     static constexpr char url4[] = "/z/y/x/{string}/c/b/a/";
     ud.add_handler<url4>([&](StringView /*unused*/) { return 0; });
-    EXPECT_EQ(canonized_collisions(ud),
-            (VC{{url2, url0}, {url2, url3}, {url2, url1}, {url0, url3}, {url0, url1},
-                    {url3, url1}}));
+    EXPECT_EQ(
+        canonized_collisions(ud),
+        (VC{{url2, url0}, {url2, url3}, {url2, url1}, {url0, url3}, {url0, url1}, {url3, url1}})
+    );
 }
 
 // NOLINTNEXTLINE
@@ -280,6 +285,7 @@ TEST(http, UrlDispatcher_two_handlers_for_the_same_url_without_custom_prasers) {
 static std::optional<StringView> has_even_length(StringView s) {
     return s.size() % 2 == 0 ? std::optional{s} : std::nullopt;
 }
+
 static std::optional<StringView> has_odd_length(StringView s) {
     return s.size() % 2 == 1 ? std::optional{s} : std::nullopt;
 }

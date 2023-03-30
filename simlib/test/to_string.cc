@@ -175,7 +175,8 @@ TEST(to_string, to_string_with_integral) {
     static_assert(to_string(static_cast<uint64_t>(1)) == "1");
     static_assert(to_string(static_cast<uint64_t>(42)) == "42");
     static_assert(
-            to_string(static_cast<uint64_t>(16421358215683281653ULL)) == "16421358215683281653");
+        to_string(static_cast<uint64_t>(16421358215683281653ULL)) == "16421358215683281653"
+    );
     static_assert(to_string(std::numeric_limits<uint64_t>::max()) == "18446744073709551615");
 }
 

@@ -38,7 +38,7 @@ TEST(ranges, reverse_view_lvalue) {
     for (auto& x : reverse_view(v)) {
         EXPECT_EQ(&v[0], &x);
     }
-    for (auto const& x : reverse_view(v)) {
+    for (const auto& x : reverse_view(v)) {
         EXPECT_EQ(&v[0], &x);
     }
     for (auto&& x : reverse_view(v)) {
@@ -63,7 +63,7 @@ TEST(ranges, reverse_view_double_lvalue) {
     for (auto& x : reverse_view(reverse_view(v))) {
         EXPECT_EQ(&v[0], &x);
     }
-    for (auto const& x : reverse_view(reverse_view(v))) {
+    for (const auto& x : reverse_view(reverse_view(v))) {
         EXPECT_EQ(&v[0], &x);
     }
     for (auto&& x : reverse_view(reverse_view(v))) {
@@ -99,6 +99,7 @@ struct inc_dead {
     inc_dead(inc_dead&&) = delete;
     inc_dead& operator=(const inc_dead&) = delete;
     inc_dead& operator=(inc_dead&&) = delete;
+
     ~inc_dead() { ++*p; }
 };
 
@@ -117,7 +118,8 @@ TEST(ranges, reverse_view_on_xvalue_lifetime) {
 TEST(ranges, reverse_view_double_on_xvalue_lifetime) {
     int dead = 0;
     for (auto& x [[maybe_unused]] :
-            reverse_view(reverse_view(array{inc_dead{&dead}, inc_dead{&dead}}))) {
+         reverse_view(reverse_view(array{inc_dead{&dead}, inc_dead{&dead}})))
+    {
         EXPECT_EQ(dead, 0);
     }
     EXPECT_EQ(dead, 2);
@@ -175,11 +177,11 @@ TEST(ranges, enumerate_view_lvalue_ref) {
 TEST(ranges, enumerate_view_lvalue_cref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
-    for (auto const& x : v) {
+    for (const auto& x : v) {
         static_assert(is_same_v<decltype(x), const int&>);
         EXPECT_EQ(&x, v0_addr);
     }
-    for (auto const& [i, x] : enumerate_view(v)) {
+    for (const auto& [i, x] : enumerate_view(v)) {
         static_assert(is_same_v<decltype(i), size_t>);
         static_assert(is_same_v<decltype(x), const int>);
         EXPECT_EQ(&x, v0_addr);
@@ -235,11 +237,11 @@ TEST(ranges, enumerate_view_const_lvalue_ref) {
 TEST(ranges, enumerate_view_const_lvalue_cref) {
     const vector<int> v{1};
     auto v0_addr = &v[0];
-    for (auto const& x : v) {
+    for (const auto& x : v) {
         static_assert(is_same_v<decltype(x), const int&>);
         EXPECT_EQ(&x, v0_addr);
     }
-    for (auto const& [i, x] : enumerate_view(v)) {
+    for (const auto& [i, x] : enumerate_view(v)) {
         static_assert(is_same_v<decltype(i), size_t>);
         static_assert(is_same_v<decltype(x), const int>);
         EXPECT_EQ(&x, v0_addr);
@@ -299,13 +301,13 @@ TEST(ranges, enumerate_view_xvalue_ref) {
 TEST(ranges, enumerate_view_xvalue_cref) {
     vector<int> v{1};
     auto v0_addr = &v[0];
-    for (auto const& x : std::move(v)) {
+    for (const auto& x : std::move(v)) {
         static_assert(is_same_v<decltype(x), const int&>);
         EXPECT_EQ(&x, v0_addr);
     }
     v = {1};
     v0_addr = &v[0];
-    for (auto const& [i, x] : enumerate_view(std::move(v))) {
+    for (const auto& [i, x] : enumerate_view(std::move(v))) {
         static_assert(is_same_v<decltype(i), size_t>);
         static_assert(is_same_v<decltype(x), const int>);
         EXPECT_EQ(&x, v0_addr);
@@ -363,11 +365,11 @@ TEST(ranges, enumerate_view_const_elems_lvalue_ref) {
 TEST(ranges, enumerate_view_const_elems_lvalue_cref) {
     array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
-    for (auto const& x : a) {
+    for (const auto& x : a) {
         static_assert(is_same_v<decltype(x), const string&>);
         EXPECT_EQ(&x, a0_addr);
     }
-    for (auto const& [i, x] : enumerate_view(a)) {
+    for (const auto& [i, x] : enumerate_view(a)) {
         static_assert(is_same_v<decltype(i), size_t>);
         static_assert(is_same_v<decltype(x), const string>);
         EXPECT_EQ(&x, a0_addr);
@@ -423,11 +425,11 @@ TEST(ranges, enumerate_view_const_elems_const_lvalue_ref) {
 TEST(ranges, enumerate_view_const_elems_const_lvalue_cref) {
     const array<const string, 1> a{"abc"};
     auto a0_addr = &a[0];
-    for (auto const& x : a) {
+    for (const auto& x : a) {
         static_assert(is_same_v<decltype(x), const string&>);
         EXPECT_EQ(&x, a0_addr);
     }
-    for (auto const& [i, x] : enumerate_view(a)) {
+    for (const auto& [i, x] : enumerate_view(a)) {
         static_assert(is_same_v<decltype(i), size_t>);
         static_assert(is_same_v<decltype(x), const string>);
         EXPECT_EQ(&x, a0_addr);
@@ -496,7 +498,7 @@ TEST(ranges, enumerate_view_const_elems_xvalue_cref) {
     {
         array<const string, 1> a{"abc"};
         auto a0_addr = &a[0];
-        for (auto const& x : std::move(a)) {
+        for (const auto& x : std::move(a)) {
             static_assert(is_same_v<decltype(x), const string&>);
             EXPECT_EQ(&x, a0_addr);
         }
@@ -504,7 +506,7 @@ TEST(ranges, enumerate_view_const_elems_xvalue_cref) {
     {
         array<const string, 1> a{"abc"};
         auto a0_addr = &a[0];
-        for (auto const& [i, x] : enumerate_view(std::move(a))) {
+        for (const auto& [i, x] : enumerate_view(std::move(a))) {
             static_assert(is_same_v<decltype(i), size_t>);
             static_assert(is_same_v<decltype(x), const string>);
             EXPECT_EQ(&x, a0_addr);
@@ -536,12 +538,14 @@ TEST(ranges, enumerate_view_const_elems_xvalue_uref) {
 namespace {
 struct lifetime_tester {
     int* p_;
-    explicit lifetime_tester(int* p)
-    : p_(p) {}
+
+    explicit lifetime_tester(int* p) : p_(p) {}
+
     lifetime_tester(const lifetime_tester&) = delete;
     lifetime_tester(lifetime_tester&&) = delete;
     lifetime_tester& operator=(const lifetime_tester&) = delete;
     lifetime_tester& operator=(lifetime_tester&&) = delete;
+
     ~lifetime_tester() { *p_ = 42; }
 };
 } // namespace
@@ -594,7 +598,7 @@ TEST(ranges, enumerate_view_reverse_lvalue_ref) {
 TEST(ranges, enumerate_view_reverse_lvalue_cref) {
     vector<int> v{8, 4, 7};
     vector<pair<size_t, int>> res;
-    for (auto const& [i, x] : enumerate_view(reverse_view(v))) {
+    for (const auto& [i, x] : enumerate_view(reverse_view(v))) {
         static_assert(is_same_v<decltype(i), size_t>);
         static_assert(is_same_v<decltype(x), const int>);
         EXPECT_EQ(&x, &v.rbegin()[i]);

@@ -33,9 +33,7 @@ class InplaceArray {
     }
 
 public:
-    InplaceArray()
-    : max_size_(N)
-    , p_(a_) {}
+    InplaceArray() : max_size_(N), p_(a_) {}
 
     explicit InplaceArray(size_t n)
     : size_(n)
@@ -62,11 +60,9 @@ private:
 
 public:
     template <size_t N1>
-    explicit InplaceArray(const InplaceArray<T, N1>& a)
-    : InplaceArray(std::in_place, a) {}
+    explicit InplaceArray(const InplaceArray<T, N1>& a) : InplaceArray(std::in_place, a) {}
 
-    InplaceArray(const InplaceArray& a)
-    : InplaceArray(std::in_place, a) {}
+    InplaceArray(const InplaceArray& a) : InplaceArray(std::in_place, a) {}
 
 private:
     template <size_t N1>
@@ -91,11 +87,9 @@ private:
 
 public:
     template <size_t N1>
-    explicit InplaceArray(InplaceArray<T, N1>&& a)
-    : InplaceArray(std::in_place, std::move(a)) {}
+    explicit InplaceArray(InplaceArray<T, N1>&& a) : InplaceArray(std::in_place, std::move(a)) {}
 
-    InplaceArray(InplaceArray&& a) noexcept
-    : InplaceArray(std::in_place, std::move(a)) {}
+    InplaceArray(InplaceArray&& a) noexcept : InplaceArray(std::in_place, std::move(a)) {}
 
     template <size_t N1>
     InplaceArray& operator=(const InplaceArray<T, N1>& a) {
@@ -288,8 +282,7 @@ private:
     private:
         Elem* p = nullptr;
 
-        explicit Iterator(Elem* x)
-        : p(x) {}
+        explicit Iterator(Elem* x) : p(x) {}
 
         friend class InplaceArray;
 
@@ -358,6 +351,7 @@ public:
     using const_iterator = Iterator<const T>;
 
     static_assert(sizeof(Elem) == sizeof(T), "Needed by data()");
+
     T* data() noexcept { return std::addressof(front()); }
 
     [[nodiscard]] const T* data() const noexcept { return std::addressof(front()); }

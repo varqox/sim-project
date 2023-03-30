@@ -16,16 +16,20 @@ TEST(concat_tostr, concat_tostr) {
 
     EXPECT_NE(StringView("a\0\0abc", 6), concat_tostr('a', '\0', '\0', "abcd"));
 
-    EXPECT_EQ("abc true 0 1 -1 2 3 -3 false",
-            concat_tostr(
-                    "abc ", true, " ", 0, ' ', 1, ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ', false));
+    EXPECT_EQ(
+        "abc true 0 1 -1 2 3 -3 false",
+        concat_tostr("abc ", true, " ", 0, ' ', 1, ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ', false)
+    );
 
     EXPECT_EQ(" bac-1234567890123456789\t", concat_tostr(" bac", -1234567890123456789, '\t'));
 }
 
 template <size_t... Idx1, size_t... Idx2, class... Args>
-static string concat_and_back_insert_impl(std::tuple<Args&&...> args,
-        std::index_sequence<Idx1...> /*unused*/, std::index_sequence<Idx2...> /*unused*/) {
+static string concat_and_back_insert_impl(
+    std::tuple<Args&&...> args,
+    std::index_sequence<Idx1...> /*unused*/,
+    std::index_sequence<Idx2...> /*unused*/
+) {
     string str = concat_tostr(std::get<Idx1>(args)...);
     back_insert(str, std::get<Idx2>(args)...);
     return str;
@@ -35,8 +39,11 @@ static string concat_and_back_insert_impl(std::tuple<Args&&...> args,
 // and returns back_insert(concat_tostr(left), right)
 template <size_t LEFT_ARGS_NO = 0, class... Args>
 static string concat_and_back_insert(Args&... args) {
-    return concat_and_back_insert_impl(std::forward_as_tuple(std::forward<Args>(args)...),
-            meta::span<0, LEFT_ARGS_NO>(), meta::span<LEFT_ARGS_NO, sizeof...(args)>());
+    return concat_and_back_insert_impl(
+        std::forward_as_tuple(std::forward<Args>(args)...),
+        meta::span<0, LEFT_ARGS_NO>(),
+        meta::span<LEFT_ARGS_NO, sizeof...(args)>()
+    );
 }
 
 // For every split of args into two parts left and right checks that
@@ -58,8 +65,26 @@ TEST(concat_tostr, back_insert) {
     test_back_insert_on(__LINE__, "ab c de", "a", 'b', ' ', CStringView("c "), string("de"));
     test_back_insert_on(__LINE__, StringView("a\0\0abc", 6), 'a', '\0', '\0', StringView("abc"));
 
-    test_back_insert_on(__LINE__, "abc true 0 1 -1 2 3 -3 false", "abc ", true, " ", 0, ' ', 1, ' ',
-            -1, " ", 2, ' ', 3, ' ', -3, ' ', false);
+    test_back_insert_on(
+        __LINE__,
+        "abc true 0 1 -1 2 3 -3 false",
+        "abc ",
+        true,
+        " ",
+        0,
+        ' ',
+        1,
+        ' ',
+        -1,
+        " ",
+        2,
+        ' ',
+        3,
+        ' ',
+        -3,
+        ' ',
+        false
+    );
 
     test_back_insert_on(__LINE__, " bac-1234567890123456789\t", " bac", -1234567890123456789, '\t');
 }

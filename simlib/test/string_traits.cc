@@ -92,20 +92,28 @@ TEST(string_traits, is_word) {
         EXPECT_EQ(bool(is_alnum(c) or c == '-' or c == '_'), is_word(c));
     }
 
-    EXPECT_EQ(true,
-            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    "-_"));
+    EXPECT_EQ(
+        true,
+        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "-_")
+    );
 
     EXPECT_EQ(false, is_word(""));
-    EXPECT_EQ(false,
-            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ@"
-                    "KLMNOPQRSTUVWXYZ-_"));
-    EXPECT_EQ(false,
-            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ#"
-                    "KLMNOPQRSTUVWXYZ-_"));
-    EXPECT_EQ(false,
-            is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ`"
-                    "KLMNOPQRSTUVWXYZ-_"));
+    EXPECT_EQ(
+        false,
+        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ@"
+                "KLMNOPQRSTUVWXYZ-_")
+    );
+    EXPECT_EQ(
+        false,
+        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ#"
+                "KLMNOPQRSTUVWXYZ-_")
+    );
+    EXPECT_EQ(
+        false,
+        is_word("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ`"
+                "KLMNOPQRSTUVWXYZ-_")
+    );
 }
 
 // NOLINTNEXTLINE

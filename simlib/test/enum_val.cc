@@ -96,7 +96,8 @@ static void test_implicit_const_conversion() {
     const EnumVal a = Enum::A;
     using UT = typename decltype(a)::ValType;
     static_assert(
-            not std::is_convertible_v<decltype((a)), UT>, "implicit conversion is disallowed");
+        not std::is_convertible_v<decltype((a)), UT>, "implicit conversion is disallowed"
+    );
     static_assert(std::is_constructible_v<const UT&, decltype((a))>);
     static_assert(not std::is_constructible_v<UT&&, decltype((a))>);
     static_assert(not std::is_constructible_v<UT&, decltype((a))>);
@@ -115,7 +116,8 @@ static void test_implicit_conversion() {
     EnumVal a = Enum::A;
     using UT = typename decltype(a)::ValType;
     static_assert(
-            not std::is_convertible_v<decltype((a)), UT>, "implicit conversion is disallowed");
+        not std::is_convertible_v<decltype((a)), UT>, "implicit conversion is disallowed"
+    );
     static_assert(std::is_constructible_v<const UT&, decltype((a))>);
     static_assert(not std::is_constructible_v<UT&&, decltype((a))>);
     static_assert(std::is_constructible_v<UT&, decltype((a))>);

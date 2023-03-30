@@ -55,8 +55,7 @@ private:
 public:
     struct NoMoreElems {};
 
-    explicit BoundedQueue(unsigned max_size = SEM_VALUE_MAX)
-    : free_slots_(max_size) {}
+    explicit BoundedQueue(unsigned max_size = SEM_VALUE_MAX) : free_slots_(max_size) {}
 
     BoundedQueue(const BoundedQueue&) = delete;
     BoundedQueue(BoundedQueue&&) = delete;

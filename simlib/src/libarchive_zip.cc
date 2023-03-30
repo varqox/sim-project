@@ -10,7 +10,8 @@
 
 template <class Func>
 static void update_add_file_to_zip_impl(
-        Func&& apply_file, StringView new_filename, FilePath zip_filename, bool easy_case = false) {
+    Func&& apply_file, StringView new_filename, FilePath zip_filename, bool easy_case = false
+) {
     constexpr const char* command = "zip";
 
     Spawner::ExitStat es;
@@ -33,7 +34,8 @@ static void update_add_file_to_zip_impl(
         auto pos = new_filename.rfind('/');
         // If we have to create directories first
         if (pos != StringView::npos and
-                mkdir_r(concat_tostr(tmpdir.path(), new_filename.substr(0, pos)))) {
+            mkdir_r(concat_tostr(tmpdir.path(), new_filename.substr(0, pos))))
+        {
             THROW("mkdir() failed", errmsg());
         }
 
@@ -54,26 +56,36 @@ static void update_add_file_to_zip_impl(
         std::vector<std::string> zip_args;
         back_insert(zip_args, command, "-q", "-r", zip_filename, new_filename.to_string());
 
-        es = Spawner::run(zip_args[0], zip_args,
-                {
-                        -1,
-                        zip_output,
-                        zip_output,
-                        tmpdir.path(),
-                });
+        es = Spawner::run(
+            zip_args[0],
+            zip_args,
+            {
+                -1,
+                zip_output,
+                zip_output,
+                tmpdir.path(),
+            }
+        );
     }
 
     if (es.si.code != CLD_EXITED or es.si.status != 0) {
         (void)lseek(zip_output, 0, SEEK_SET);
-        THROW("Updating/adding file to zip error: ", es.message, "; ", command, "'s output:\n",
-                get_file_contents(zip_output));
+        THROW(
+            "Updating/adding file to zip error: ",
+            es.message,
+            "; ",
+            command,
+            "'s output:\n",
+            get_file_contents(zip_output)
+        );
     }
 }
 
 void update_add_file_to_zip(FilePath filename, StringView new_filename, FilePath zip_filename) {
     if (new_filename.empty()) {
-        return update_add_file_to_zip_impl([](auto&& /*unused*/, auto&& /*unused*/) {},
-                StringView(filename), zip_filename, true);
+        return update_add_file_to_zip_impl(
+            [](auto&& /*unused*/, auto&& /*unused*/) {}, StringView(filename), zip_filename, true
+        );
     }
 
     // Remove Trailing '/'
@@ -82,36 +94,41 @@ void update_add_file_to_zip(FilePath filename, StringView new_filename, FilePath
     }
 
     return update_add_file_to_zip_impl(
-            [&](decltype(get_cwd())& cwd, FilePath dest_file) {
-                if (new_filename.back() != '/') {
-                    throw_assert(filename.size() > 0);
-                    // Make filename absolute
-                    if (filename[0] != '/') {
-                        cwd = get_cwd();
-                        auto old_size = cwd.size;
-                        cwd.append(filename);
-                        filename = cwd;
-                        cwd.size = old_size; // Restore cwd to contain only CWD
-                    }
-
-                    if (symlink(filename, dest_file)) {
-                        THROW("symlink() failed", errmsg());
-                    }
+        [&](decltype(get_cwd())& cwd, FilePath dest_file) {
+            if (new_filename.back() != '/') {
+                throw_assert(filename.size() > 0);
+                // Make filename absolute
+                if (filename[0] != '/') {
+                    cwd = get_cwd();
+                    auto old_size = cwd.size;
+                    cwd.append(filename);
+                    filename = cwd;
+                    cwd.size = old_size; // Restore cwd to contain only CWD
                 }
-            },
-            new_filename, zip_filename);
+
+                if (symlink(filename, dest_file)) {
+                    THROW("symlink() failed", errmsg());
+                }
+            }
+        },
+        new_filename,
+        zip_filename
+    );
 }
 
 void update_add_data_to_zip(
-        StringView data, const StringView& new_filename, FilePath zip_filename) {
+    StringView data, const StringView& new_filename, FilePath zip_filename
+) {
     throw_assert(!new_filename.empty());
     return update_add_file_to_zip_impl(
-            [&](decltype(get_cwd())& /*unused*/, FilePath dest_file) {
-                if (CStringView(dest_file).back() != '/') { // Dest file is a directory
-                    put_file_contents(dest_file, data);
-                }
-            },
-            new_filename, zip_filename);
+        [&](decltype(get_cwd())& /*unused*/, FilePath dest_file) {
+            if (CStringView(dest_file).back() != '/') { // Dest file is a directory
+                put_file_contents(dest_file, data);
+            }
+        },
+        new_filename,
+        zip_filename
+    );
 }
 
 #endif // __has_include

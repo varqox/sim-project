@@ -106,22 +106,29 @@ private:
 public:
     template <class Handler>
     handler_id_t add_file_handler(int fd, FileEvent events, Handler&& handler) {
-        static_assert(std::is_invocable_r_v<void, Handler, FileEvent> or
-                std::is_invocable_r_v<void, Handler>);
+        static_assert(std::is_invocable_r_v<void, Handler, FileEvent> or std::is_invocable_r_v<void, Handler>);
 
         STACK_UNWINDING_MARK;
         if constexpr (not std::is_invocable_r_v<void, Handler, FileEvent>) {
             STACK_UNWINDING_MARK;
-            return add_file_handler(fd, events,
-                    [handler = std::forward<Handler>(handler)](
-                            FileEvent /*unused*/) mutable { handler(); });
+            return add_file_handler(
+                fd,
+                events,
+                [handler = std::forward<Handler>(handler)](FileEvent /*unused*/) mutable {
+                    handler();
+                }
+            );
 
         } else {
             auto handler_id = new_handler_id();
-            handlers_.emplace(handler_id,
-                    FileHandler{std::make_shared<std::function<void(FileEvent)>>(
-                                        std::forward<Handler>(handler)),
-                            events, poll_events_.size()});
+            handlers_.emplace(
+                handler_id,
+                FileHandler{
+                    std::make_shared<std::function<void(FileEvent)>>(std::forward<Handler>(handler)
+                    ),
+                    events,
+                    poll_events_.size()}
+            );
             try {
                 poll_events_idx_to_hid_.emplace_back(handler_id);
                 try {

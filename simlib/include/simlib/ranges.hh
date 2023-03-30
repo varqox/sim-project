@@ -11,8 +11,11 @@ struct reverse_view_impl {
     T range;
 
     constexpr auto begin() { return std::rbegin(range); }
+
     constexpr auto end() { return std::rend(range); }
+
     constexpr auto rbegin() { return std::begin(range); }
+
     constexpr auto rend() { return std::end(range); }
 };
 
@@ -43,8 +46,10 @@ struct enumerate_view_iter {
 
     using IterTraits = std::iterator_traits<Iter>;
 
-    std::conditional_t<std::is_const_v<std::remove_reference_t<typename IterTraits::reference>>,
-            const enumerate_view_iter&, enumerate_view_iter&>
+    std::conditional_t<
+        std::is_const_v<std::remove_reference_t<typename IterTraits::reference>>,
+        const enumerate_view_iter&,
+        enumerate_view_iter&>
     operator*() {
         return *this;
     }
@@ -106,6 +111,7 @@ struct enumerate_view_struct {
     constexpr auto begin() {
         return enumerate_view_iter<decltype(std::begin(range)), T>{0, std::begin(range)};
     }
+
     constexpr auto end() {
         return enumerate_view_iter<decltype(std::begin(range)), T>{0, std::end(range)};
     }

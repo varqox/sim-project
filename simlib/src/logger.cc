@@ -4,9 +4,7 @@
 
 using std::string;
 
-Logger::Logger(FilePath filename)
-: f_(fopen(filename, "abe"))
-, opened_(true) {
+Logger::Logger(FilePath filename) : f_(fopen(filename, "abe")), opened_(true) {
     if (f_ == nullptr) {
         THROW("fopen('", filename, "') failed", errmsg());
     }
@@ -23,7 +21,8 @@ void Logger::open(FilePath filename) {
 }
 
 void Logger::Appender::flush_impl(
-        const char* format1, const char* format2, const char* format3) noexcept {
+    const char* format1, const char* format2, const char* format3
+) noexcept {
     if (flushed_) {
         return;
     }
@@ -31,8 +30,13 @@ void Logger::Appender::flush_impl(
     if (logger_.lock()) {
         if (label_) {
             try {
-                fprintf(logger_.f_, format1, mysql_localdate().c_str(),
-                        static_cast<int>(buff_.size), buff_.data());
+                fprintf(
+                    logger_.f_,
+                    format1,
+                    mysql_localdate().c_str(),
+                    static_cast<int>(buff_.size),
+                    buff_.data()
+                );
             } catch (const std::exception&) {
                 fprintf(logger_.f_, format2, static_cast<int>(buff_.size), buff_.data());
             }

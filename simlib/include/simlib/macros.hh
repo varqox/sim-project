@@ -28,9 +28,9 @@
 //   FOLDR(XX, (1)(2)(3,4)(5)()(6), 42)
 // expands to:
 //   XX((1), XX((2), XX((3,4), XX((5), XX((), XX((6), 42))))))
-#define FOLDR(macro, seq, ...)                                                  \
-    IMPL_FOLDR_EXTRACT_RES(EXPAND(EXPAND(IMPL_FOLDR_PREPARE_PREFIX(seq) DEFER2( \
-            IMPL_FOLDR_EVAL_USING_START)(macro, __VA_ARGS__) IMPL_FOLDR_PREPARE_SUFFIX(seq))))
+#define FOLDR(macro, seq, ...)                                         \
+    IMPL_FOLDR_EXTRACT_RES(EXPAND(EXPAND(IMPL_FOLDR_PREPARE_PREFIX(seq \
+    ) DEFER2(IMPL_FOLDR_EVAL_USING_START)(macro, __VA_ARGS__) IMPL_FOLDR_PREPARE_SUFFIX(seq))))
 #define IMPL_FOLDR_EXTRACT_RES(...) IMPL_FOLDR_EXTRACT_RES2(__VA_ARGS__)
 #define IMPL_FOLDR_EXTRACT_RES2(macro, ...) __VA_ARGS__
 #define IMPL_FOLDR_EVAL_USING(...) IMPL_FOLDR_EVAL_USING_IMPL(__VA_ARGS__)
@@ -68,10 +68,11 @@
 
 #define IMPL_MAP_DELIM_FUNC(...) IMPL_MAP_DELIM_FUNC2(__VA_ARGS__)
 #define IMPL_MAP_DELIM_FUNC_SPLIT_FIRST_ARG(arg, prev_arg, acc) arg, prev_arg acc
-#define IMPL_MAP_DELIM_FUNC2(macro, delimiter_func, first_args, rest_args) \
-    MAP(macro, first_args)                                                 \
-    IMPL_MAP_DELIM_FUNC_EXTRACT_RES(                                       \
-            FOLDR(IMPL_MAP_DELIM_FUNC_APPLY, rest_args, macro, delimiter_func, ))
+#define IMPL_MAP_DELIM_FUNC2(macro, delimiter_func, first_args, rest_args)   \
+    MAP(macro, first_args)                                                   \
+    IMPL_MAP_DELIM_FUNC_EXTRACT_RES(                                         \
+        FOLDR(IMPL_MAP_DELIM_FUNC_APPLY, rest_args, macro, delimiter_func, ) \
+    )
 #define IMPL_MAP_DELIM_FUNC_APPLY(args, macro, delimiter_func, ...) \
     macro, delimiter_func, delimiter_func() macro args __VA_ARGS__
 #define IMPL_MAP_DELIM_FUNC_EXTRACT_RES(...) IMPL_MAP_DELIM_FUNC_EXTRACT_RES2(__VA_ARGS__)

@@ -227,39 +227,39 @@ TEST(file_manip, copy_r) {
     };
 
     vector<FileInfo> orig_files = {
-            {"a", random_bytes(1023)},
-            {"b", random_bytes(1024)},
-            {"c", random_bytes(1025)},
-            {"dir/a", random_bytes(1023)},
-            {"dir/aa", random_bytes(100000)},
-            {"dir/b", random_bytes(1024)},
-            {"dir/bb", random_bytes(100000)},
-            {"dir/c", random_bytes(1025)},
-            {"dir/cc", random_bytes(100000)},
-            {"dir/dir/a", random_bytes(1023)},
-            {"dir/dir/aa", random_bytes(100000)},
-            {"dir/dir/b", random_bytes(1024)},
-            {"dir/dir/bb", random_bytes(100000)},
-            {"dir/dir/c", random_bytes(1025)},
-            {"dir/dir/cc", random_bytes(100000)},
-            {"dir/dir/xxx/a", random_bytes(1023)},
-            {"dir/dir/xxx/aa", random_bytes(100000)},
-            {"dir/dir/xxx/b", random_bytes(1024)},
-            {"dir/dir/xxx/bb", random_bytes(100000)},
-            {"dir/dir/xxx/c", random_bytes(1025)},
-            {"dir/dir/xxx/cc", random_bytes(100000)},
-            {"dir/dur/a", random_bytes(1023)},
-            {"dir/dur/aa", random_bytes(100000)},
-            {"dir/dur/b", random_bytes(1024)},
-            {"dir/dur/bb", random_bytes(100000)},
-            {"dir/dur/c", random_bytes(1025)},
-            {"dir/dur/cc", random_bytes(100000)},
-            {"dir/dur/xxx/a", random_bytes(1023)},
-            {"dir/dur/xxx/aa", random_bytes(100000)},
-            {"dir/dur/xxx/b", random_bytes(1024)},
-            {"dir/dur/xxx/bb", random_bytes(100000)},
-            {"dir/dur/xxx/c", random_bytes(1025)},
-            {"dir/dur/xxx/cc", random_bytes(100000)},
+        {"a", random_bytes(1023)},
+        {"b", random_bytes(1024)},
+        {"c", random_bytes(1025)},
+        {"dir/a", random_bytes(1023)},
+        {"dir/aa", random_bytes(100000)},
+        {"dir/b", random_bytes(1024)},
+        {"dir/bb", random_bytes(100000)},
+        {"dir/c", random_bytes(1025)},
+        {"dir/cc", random_bytes(100000)},
+        {"dir/dir/a", random_bytes(1023)},
+        {"dir/dir/aa", random_bytes(100000)},
+        {"dir/dir/b", random_bytes(1024)},
+        {"dir/dir/bb", random_bytes(100000)},
+        {"dir/dir/c", random_bytes(1025)},
+        {"dir/dir/cc", random_bytes(100000)},
+        {"dir/dir/xxx/a", random_bytes(1023)},
+        {"dir/dir/xxx/aa", random_bytes(100000)},
+        {"dir/dir/xxx/b", random_bytes(1024)},
+        {"dir/dir/xxx/bb", random_bytes(100000)},
+        {"dir/dir/xxx/c", random_bytes(1025)},
+        {"dir/dir/xxx/cc", random_bytes(100000)},
+        {"dir/dur/a", random_bytes(1023)},
+        {"dir/dur/aa", random_bytes(100000)},
+        {"dir/dur/b", random_bytes(1024)},
+        {"dir/dur/bb", random_bytes(100000)},
+        {"dir/dur/c", random_bytes(1025)},
+        {"dir/dur/cc", random_bytes(100000)},
+        {"dir/dur/xxx/a", random_bytes(1023)},
+        {"dir/dur/xxx/aa", random_bytes(100000)},
+        {"dir/dur/xxx/b", random_bytes(1024)},
+        {"dir/dur/xxx/bb", random_bytes(100000)},
+        {"dir/dur/xxx/c", random_bytes(1025)},
+        {"dir/dur/xxx/cc", random_bytes(100000)},
     };
 
     throw_assert(is_sorted(orig_files));
@@ -284,7 +284,8 @@ TEST(file_manip, copy_r) {
                     self(self);
                 } else {
                     res.push_back(
-                            {curr_path.to_string(), get_file_contents(concat(prefix, curr_path))});
+                        {curr_path.to_string(), get_file_contents(concat(prefix, curr_path))}
+                    );
                 }
             });
         };
@@ -305,14 +306,14 @@ TEST(file_manip, copy_r) {
         return res;
     };
 
-    auto check_equality = [&](const vector<FileInfo>& fir, const vector<FileInfo>& sec,
-                                  size_t line) {
+    auto check_equality = [&](const vector<FileInfo>& fir, const vector<FileInfo>& sec, size_t line
+                          ) {
         size_t len = max(fir.size(), sec.size());
         for (size_t i = 0; i < len; ++i) {
             if (i < fir.size() and i < sec.size()) {
                 if (not(fir[i] == sec[i])) {
                     ADD_FAILURE_AT(__FILE__, line)
-                            << "Unequal files:\t" << fir[i].path << "\t" << sec[i].path;
+                        << "Unequal files:\t" << fir[i].path << "\t" << sec[i].path;
                 }
 
                 continue;

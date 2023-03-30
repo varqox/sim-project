@@ -12,8 +12,7 @@ public:
     // Does NOT change current working directory
     DirectoryChanger() = default;
 
-    explicit DirectoryChanger(FilePath new_wd)
-    : old_cwd(".", O_RDONLY | O_CLOEXEC) {
+    explicit DirectoryChanger(FilePath new_wd) : old_cwd(".", O_RDONLY | O_CLOEXEC) {
         if (old_cwd == -1) {
             THROW("open() failed", errmsg());
         }

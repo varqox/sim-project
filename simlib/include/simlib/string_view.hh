@@ -35,16 +35,13 @@ public:
 
     template <size_t N, typename T = Char, std::enable_if_t<std::is_const_v<T>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr StringBase(const StaticCStringBuff<N>& s) noexcept
-    : str(s.data())
-    , len(s.size()) {}
+    constexpr StringBase(const StaticCStringBuff<N>& s) noexcept : str(s.data())
+                                                                 , len(s.size()) {}
 
     constexpr StringBase(std::nullptr_t) = delete;
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr StringBase(pointer s) noexcept
-    : str(s)
-    , len(std::char_traits<char>::length(s)) {}
+    constexpr StringBase(pointer s) noexcept : str(s), len(std::char_traits<char>::length(s)) {}
 
     template <typename T = Char, std::enable_if_t<std::is_const_v<T>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
@@ -52,9 +49,7 @@ public:
     : str(s)
     , len(std::char_traits<char>::length(s)) {}
 
-    constexpr StringBase(pointer s, size_type n) noexcept
-    : str(s)
-    , len(n) {}
+    constexpr StringBase(pointer s, size_type n) noexcept : str(s), len(n) {}
 
     template <typename T = Char, std::enable_if_t<std::is_const_v<T>, int> = 0>
     constexpr StringBase(const std::remove_const_t<Char>* s, size_type n) noexcept
@@ -77,10 +72,11 @@ public:
     constexpr StringBase(const StringBase&) noexcept = default;
     constexpr StringBase(StringBase&&) noexcept = default;
 
-    template <class T,
-            std::enable_if_t<std::is_rvalue_reference_v<T&&> and
-                            not std::is_same_v<std::decay_t<T>, StringBase>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            std::is_rvalue_reference_v<T&&> and not std::is_same_v<std::decay_t<T>, StringBase>,
+            int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     StringBase(T&&) = delete; // Protect from assigning unsafe data
 
@@ -89,10 +85,11 @@ public:
 
     constexpr StringBase& operator=(std::nullptr_t) = delete;
 
-    template <class T,
-            std::enable_if_t<std::is_rvalue_reference_v<T&&> and
-                            not std::is_convertible_v<T&&, StringBase>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            std::is_rvalue_reference_v<T&&> and not std::is_convertible_v<T&&, StringBase>,
+            int> = 0>
     StringBase& operator=(T&&) = delete; // Protect from assigning unsafe data
 
     ~StringBase() = default;
@@ -258,28 +255,29 @@ public:
         return find(s.substr(beg1));
     }
 
-    [[nodiscard]] constexpr size_type find(
-            const StringBase& s, size_type beg1, size_type endi1) const {
+    [[nodiscard]] constexpr size_type
+    find(const StringBase& s, size_type beg1, size_type endi1) const {
         return find(s.substr(beg1, std::min(endi1, len) - beg1));
     }
 
-    [[nodiscard]] constexpr size_type find(
-            size_type beg, const StringBase& s, size_type beg1 = 0) const {
+    [[nodiscard]] constexpr size_type
+    find(size_type beg, const StringBase& s, size_type beg1 = 0) const {
         return substr(beg).find(s.substr(beg1, len - beg1));
     }
 
-    [[nodiscard]] constexpr size_type find(
-            size_type beg, const StringBase& s, size_type beg1, size_type endi1) const {
+    [[nodiscard]] constexpr size_type
+    find(size_type beg, const StringBase& s, size_type beg1, size_type endi1) const {
         return substr(beg).find(s.substr(beg1, std::min(endi1, len) - beg1));
     }
 
-    [[nodiscard]] constexpr size_type find(
-            size_type beg, size_type endi, const StringBase& s, size_type beg1 = 0) const {
+    [[nodiscard]] constexpr size_type
+    find(size_type beg, size_type endi, const StringBase& s, size_type beg1 = 0) const {
         return substr(beg, endi).find(s.substr(beg1, len - beg1));
     }
 
-    [[nodiscard]] constexpr size_type find(size_type beg, size_type endi, const StringBase& s,
-            size_type beg1, size_type endi1) const {
+    [[nodiscard]] constexpr size_type find(
+        size_type beg, size_type endi, const StringBase& s, size_type beg1, size_type endi1
+    ) const {
         return substr(beg, endi).find(s.substr(beg1, std::min(endi1, len) - beg1));
     }
 
@@ -349,28 +347,29 @@ public:
         return rfind(s.substr(beg1, len - beg1));
     }
 
-    [[nodiscard]] constexpr size_type rfind(
-            const StringBase& s, size_type beg1, size_type endi1) const {
+    [[nodiscard]] constexpr size_type
+    rfind(const StringBase& s, size_type beg1, size_type endi1) const {
         return rfind(s.substr(beg1, std::min(endi1, len) - beg1));
     }
 
-    [[nodiscard]] constexpr size_type rfind(
-            size_type beg, const StringBase& s, size_type beg1 = 0) const {
+    [[nodiscard]] constexpr size_type
+    rfind(size_type beg, const StringBase& s, size_type beg1 = 0) const {
         return substr(beg).rfind(s.substr(beg1, len - beg1));
     }
 
-    [[nodiscard]] constexpr size_type rfind(
-            size_type beg, const StringBase& s, size_type beg1, size_type endi1) const {
+    [[nodiscard]] constexpr size_type
+    rfind(size_type beg, const StringBase& s, size_type beg1, size_type endi1) const {
         return substr(beg).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
     }
 
-    [[nodiscard]] constexpr size_type rfind(
-            size_type beg, size_type endi, const StringBase& s, size_type beg1 = 0) const {
+    [[nodiscard]] constexpr size_type
+    rfind(size_type beg, size_type endi, const StringBase& s, size_type beg1 = 0) const {
         return substr(beg, endi).rfind(s.substr(beg1, len - beg1));
     }
 
-    [[nodiscard]] constexpr size_type rfind(size_type beg, size_type endi, const StringBase& s,
-            size_type beg1, size_type endi1) const {
+    [[nodiscard]] constexpr size_type rfind(
+        size_type beg, size_type endi, const StringBase& s, size_type beg1, size_type endi1
+    ) const {
         return substr(beg, endi).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
     }
 
@@ -438,8 +437,8 @@ constexpr std::string& operator+=(std::string& str, const StringBase<Char>& s) {
 }
 
 template <class CharT, class Traits, class Char>
-constexpr std::basic_ostream<CharT, Traits>& operator<<(
-        std::basic_ostream<CharT, Traits>& os, const StringBase<Char>& s) {
+constexpr std::basic_ostream<CharT, Traits>&
+operator<<(std::basic_ostream<CharT, Traits>& os, const StringBase<Char>& s) {
     return os.write(s.data(), s.size());
 }
 
@@ -453,17 +452,16 @@ public:
     StringView(StringView&&) noexcept = default;
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr StringView(const StringBase& s) noexcept
-    : StringBase(s) {}
+    constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr StringView(StringBase&& s) noexcept
-    : StringBase(s) {}
+    constexpr StringView(StringBase&& s) noexcept : StringBase(s) {}
 
-    template <class T,
-            std::enable_if_t<std::is_rvalue_reference_v<T&&> and
-                            not std::is_same_v<std::decay_t<T>, StringView>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            std::is_rvalue_reference_v<T&&> and not std::is_same_v<std::decay_t<T>, StringView>,
+            int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     StringView(T&&) = delete; // Protect from assigning unsafe data
 
@@ -477,10 +475,11 @@ public:
         return *this;
     }
 
-    template <class T,
-            std::enable_if_t<std::is_rvalue_reference_v<T&&> and
-                            not std::is_convertible_v<T&&, StringView>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            std::is_rvalue_reference_v<T&&> and not std::is_convertible_v<T&&, StringView>,
+            int> = 0>
     StringView& operator=(T&&) = delete; // Protect from assigning unsafe data
 
     ~StringView() = default;
@@ -634,13 +633,15 @@ constexpr StringView intentional_unsafe_string_view(T&& str) noexcept {
 
 // comparison operators
 constexpr bool operator==(StringView a, StringView b) noexcept {
-    return (a.size() == b.size() &&
-            std::char_traits<char>::compare(a.data(), b.data(), a.size()) == 0);
+    return (
+        a.size() == b.size() && std::char_traits<char>::compare(a.data(), b.data(), a.size()) == 0
+    );
 }
 
 constexpr bool operator!=(StringView a, StringView b) noexcept {
-    return (a.size() != b.size() ||
-            std::char_traits<char>::compare(a.data(), b.data(), a.size()) != 0);
+    return (
+        a.size() != b.size() || std::char_traits<char>::compare(a.data(), b.data(), a.size()) != 0
+    );
 }
 
 constexpr bool operator<(const StringView& a, const StringView& b) noexcept {
@@ -661,46 +662,35 @@ constexpr bool operator>=(const StringView& a, const StringView& b) noexcept {
 
 class CStringView : public StringBase<const char> {
 public:
-    constexpr CStringView()
-    : StringBase("", 0) {}
+    constexpr CStringView() : StringBase("", 0) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr CStringView(std::nullptr_t)
-    : CStringView() {}
+    constexpr CStringView(std::nullptr_t) : CStringView() {}
 
     template <size_t N>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr CStringView(const char (&s)[N])
-    : StringBase(s, std::char_traits<char>::length(s)) {}
+    constexpr CStringView(const char (&s)[N]) : StringBase(s, std::char_traits<char>::length(s)) {}
 
     // Do not treat as possible string literal
     template <size_t N>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr CStringView(char (&s)[N])
-    : StringBase(s) {}
+    constexpr CStringView(char (&s)[N]) : StringBase(s) {}
 
     template <size_t N>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr CStringView(const StaticCStringBuff<N>& s)
-    : StringBase(s) {}
+    constexpr CStringView(const StaticCStringBuff<N>& s) : StringBase(s) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    CStringView(const std::string& s) noexcept
-    : StringBase(s.data(), s.size()) {}
+    CStringView(const std::string& s) noexcept : StringBase(s.data(), s.size()) {}
 
     // Be careful with the constructor below! @p s cannot be null
-    constexpr explicit CStringView(pointer s) noexcept
-    : StringBase(s) {
-        assert(s);
-    }
+    constexpr explicit CStringView(pointer s) noexcept : StringBase(s) { assert(s); }
 
     // Be careful with the constructor below! @p s cannot be null
-    constexpr explicit CStringView(char* s) noexcept
-    : CStringView(static_cast<pointer>(s)) {}
+    constexpr explicit CStringView(char* s) noexcept : CStringView(static_cast<pointer>(s)) {}
 
     // Be careful with the constructor below! @p s cannot be null
-    constexpr CStringView(pointer s, size_type n) noexcept
-    : StringBase(s, n) {
+    constexpr CStringView(pointer s, size_type n) noexcept : StringBase(s, n) {
         assert(s);
         assert(s[n] == '\0');
     }
@@ -722,19 +712,21 @@ public:
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr operator StringView() && noexcept { return {data(), size()}; }
 
-    template <class T,
-            std::enable_if_t<std::is_rvalue_reference_v<T&&> and
-                            not std::is_same_v<std::decay_t<T>, CStringView>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            std::is_rvalue_reference_v<T&&> and not std::is_same_v<std::decay_t<T>, CStringView>,
+            int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     CStringView(T&&) = delete; // Protect from assigning unsafe data
 
     ~CStringView() = default;
 
-    template <class T,
-            std::enable_if_t<std::is_rvalue_reference_v<T&&> and
-                            not std::is_convertible_v<T&&, CStringView>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            std::is_rvalue_reference_v<T&&> and not std::is_convertible_v<T&&, CStringView>,
+            int> = 0>
     CStringView& operator=(T&&) = delete; // Protect from assigning unsafe data
 
     [[nodiscard]] constexpr CStringView substr(size_type pos) const {
@@ -765,8 +757,9 @@ constexpr CStringView intentional_unsafe_cstring_view(T&& str) noexcept {
     return CStringView(static_cast<const T&>(str));
 }
 
-constexpr StringView substring(const StringView& str, StringView::size_type beg,
-        StringView::size_type end = StringView::npos) {
+constexpr StringView substring(
+    const StringView& str, StringView::size_type beg, StringView::size_type end = StringView::npos
+) {
     return str.substring(beg, end);
 }
 

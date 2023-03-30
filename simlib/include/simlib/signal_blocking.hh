@@ -10,7 +10,7 @@ private:
     sigset_t old_mask{};
 
 public:
-    const static sigset_t empty_mask, full_mask;
+    static const sigset_t empty_mask, full_mask;
 
     SignalBlockerBase() noexcept { block(); }
 

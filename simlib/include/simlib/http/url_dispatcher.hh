@@ -56,8 +56,11 @@ private:
             if constexpr (is_literal_component<ArgT>) {
                 return handler_args_tuple<ParsedComponentsTuple, idx + 1, Args...>();
             } else {
-                return handler_args_tuple<ParsedComponentsTuple, idx + 1, Args...,
-                        typename ArgT::T>();
+                return handler_args_tuple<
+                    ParsedComponentsTuple,
+                    idx + 1,
+                    Args...,
+                    typename ArgT::T>();
             }
         }
     }
@@ -79,9 +82,11 @@ private:
         }
     }
 
-    template <const char* url, class ParsedComponentsTuple,
-            size_t idxp1 = std::tuple_size_v<ParsedComponentsTuple>,
-            size_t res_beg = StringView{url}.size()>
+    template <
+        const char* url,
+        class ParsedComponentsTuple,
+        size_t idxp1 = std::tuple_size_v<ParsedComponentsTuple>,
+        size_t res_beg = StringView{url}.size()>
     [[nodiscard]] static constexpr StringView get_literal_suffix() {
         static_assert(url[0] == '/');
         if constexpr (idxp1 == 0) {
@@ -104,13 +109,13 @@ private:
         using HandlerArgsTuple = decltype(handler_args_tuple<ParsedComponentsTuple>());
 
         static constexpr StringView literal_prefix =
-                get_literal_prefix<url_pattern, ParsedComponentsTuple>();
+            get_literal_prefix<url_pattern, ParsedComponentsTuple>();
         static constexpr StringView literal_suffix =
-                get_literal_suffix<url_pattern, ParsedComponentsTuple>();
+            get_literal_suffix<url_pattern, ParsedComponentsTuple>();
 
         template <size_t component_idx = 0, class... ParsedArgs>
-        [[nodiscard]] static constexpr std::optional<HandlerArgsTuple> try_parse(
-                StringView url, ParsedArgs&&... parsed_args) {
+        [[nodiscard]] static constexpr std::optional<HandlerArgsTuple>
+        try_parse(StringView url, ParsedArgs&&... parsed_args) {
             if constexpr (component_idx == std::tuple_size_v<ParsedComponentsTuple>) {
                 if (url.empty()) {
                     return std::tuple(std::forward<ParsedArgs>(parsed_args)...);
@@ -120,7 +125,7 @@ private:
                 return std::nullopt; // url is too short
             } else {
                 using ExpectedComponent =
-                        std::tuple_element_t<component_idx, ParsedComponentsTuple>;
+                    std::tuple_element_t<component_idx, ParsedComponentsTuple>;
                 if constexpr (component_idx == 0) {
                     // ^ Optimization, because invariant holds that url begins
                     // with '/' if component_idx > 0
@@ -137,7 +142,8 @@ private:
                         return std::nullopt;
                     }
                     return try_parse<component_idx + 1>(
-                            url, std::forward<ParsedArgs>(parsed_args)...);
+                        url, std::forward<ParsedArgs>(parsed_args)...
+                    );
                 } else {
                     // Variable
                     auto opt = ExpectedComponent::parser(component);
@@ -145,7 +151,8 @@ private:
                         return std::nullopt;
                     }
                     return try_parse<component_idx + 1>(
-                            url, std::forward<ParsedArgs>(parsed_args)..., std::move(*opt));
+                        url, std::forward<ParsedArgs>(parsed_args)..., std::move(*opt)
+                    );
                 }
             }
         }
@@ -165,8 +172,12 @@ private:
     }
 
 public:
-    template <const char* url, size_t url_idx, class ParsedComponentsTuple, size_t cp_idx,
-            auto... CustomParsers>
+    template <
+        const char* url,
+        size_t url_idx,
+        class ParsedComponentsTuple,
+        size_t cp_idx,
+        auto... CustomParsers>
     [[nodiscard]] static constexpr auto parse_url() {
         static_assert(url[0] == '/');
         constexpr StringView suffix{url + url_idx};
@@ -181,94 +192,112 @@ public:
             if constexpr (has_prefix(component, "{") and has_suffix(component, "}")) {
                 // Parse variables
                 if constexpr (component == "{i8}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<int8_t> (*)(StringView)>(
-                                    str2num<int8_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<int8_t> (*)(StringView)>(str2num<int8_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{u8}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<uint8_t> (*)(StringView)>(
-                                    str2num<uint8_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<uint8_t> (*)(StringView)>(str2num<uint8_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{i16}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<int16_t> (*)(StringView)>(
-                                    str2num<int16_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<int16_t> (*)(StringView)>(str2num<int16_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{u16}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<uint16_t> (*)(StringView)>(
-                                    str2num<uint16_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<uint16_t> (*)(StringView)>(str2num<uint16_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{i32}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<int32_t> (*)(StringView)>(
-                                    str2num<int32_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<int32_t> (*)(StringView)>(str2num<int32_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{u32}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<uint32_t> (*)(StringView)>(
-                                    str2num<uint32_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<uint32_t> (*)(StringView)>(str2num<uint32_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{i64}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<int64_t> (*)(StringView)>(
-                                    str2num<int64_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<int64_t> (*)(StringView)>(str2num<int64_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{u64}") {
-                    using NextComponent =
-                            VariableComponent<static_cast<std::optional<uint64_t> (*)(StringView)>(
-                                    str2num<uint64_t>)>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    using NextComponent = VariableComponent<
+                        static_cast<std::optional<uint64_t> (*)(StringView)>(str2num<uint64_t>)>;
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{string}") {
                     using NextComponent = VariableComponent<str_component_parser>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx, CustomParsers...>();
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx,
+                        CustomParsers...>();
                 } else if constexpr (component == "{custom}") {
                     static_assert(
-                            cp_idx < sizeof...(CustomParsers), "Too few custom parsers specified");
+                        cp_idx < sizeof...(CustomParsers), "Too few custom parsers specified"
+                    );
                     using NextComponent = VariableComponent<get_arg<cp_idx, CustomParsers...>()>;
-                    return parse_url<url, new_url_idx,
-                            decltype(tuple_cat(
-                                    ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                            cp_idx + 1, CustomParsers...>();
+                    return parse_url<
+                        url,
+                        new_url_idx,
+                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                        cp_idx + 1,
+                        CustomParsers...>();
                 } else {
-                    static_assert(url_idx & 0,
-                            "Unsupported variable component, check url "
-                            "at position url_idx + 1");
+                    static_assert(
+                        url_idx & 0,
+                        "Unsupported variable component, check url "
+                        "at position url_idx + 1"
+                    );
                 }
             } else {
                 // Literal
                 using NextComponent = LiteralComponent<url, url_idx + 1, component.size()>;
-                return parse_url<url, new_url_idx,
-                        decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
-                        cp_idx, CustomParsers...>();
+                return parse_url<
+                    url,
+                    new_url_idx,
+                    decltype(tuple_cat(ParsedComponentsTuple{}, std::tuple<NextComponent>{})),
+                    cp_idx,
+                    CustomParsers...>();
             }
         }
     }
@@ -278,7 +307,7 @@ public:
 
 template <const char* url, auto... CustomParsers>
 using UrlParser =
-        decltype(detail::UrlParsing::parse_url<url, 0, std::tuple<>, 0, CustomParsers...>());
+    decltype(detail::UrlParsing::parse_url<url, 0, std::tuple<>, 0, CustomParsers...>());
 
 template <class ResponseT>
 class UrlDispatcher {
@@ -290,13 +319,16 @@ class UrlDispatcher {
 
     // Number of '/' => url's literal prefix => url's literal suffix => vector
     // of (url pattern, handler)
-    std::map<size_t,
-            std::map<StringView,
-                    std::map<StringView,
-                            std::vector<std::pair<StringView,
-                                    std::function<std::optional<ResponseT>(StringView)>>>,
-                            ReverseComparer>>>
-            handlers_;
+    std::map<
+        size_t,
+        std::map<
+            StringView,
+            std::map<
+                StringView,
+                std::vector<
+                    std::pair<StringView, std::function<std::optional<ResponseT>(StringView)>>>,
+                ReverseComparer>>>
+        handlers_;
 
     static constexpr size_t count_slash(StringView str) {
         size_t res = 0;
@@ -310,19 +342,23 @@ class UrlDispatcher {
 
 public:
     template <class... Params>
-    static strongly_typed_function<ResponseT(Params...)> params_to_handler_type_impl(
-            const std::tuple<Params...>&);
+    static strongly_typed_function<ResponseT(Params...)>
+    params_to_handler_type_impl(const std::tuple<Params...>&);
 
     template <class... PrefixParam, class... Param, class... SuffixParam>
     static strongly_typed_function<ResponseT(PrefixParam..., Param..., SuffixParam...)>
-    handler_impl(const std::tuple<PrefixParam...>&, const std::tuple<Param...>&,
-            const std::tuple<SuffixParam...>&);
+    handler_impl(const std::tuple<PrefixParam...>&, const std::tuple<Param...>&, const std::tuple<SuffixParam...>&);
 
-    template <class PrefixParamTuple, class SuffixParamTuple, const char* url_pattern,
-            auto... CustomParsers>
-    using HandlerImpl = decltype(handler_impl(std::declval<PrefixParamTuple>(),
-            std::declval<typename UrlParser<url_pattern, CustomParsers...>::HandlerArgsTuple>(),
-            std::declval<SuffixParamTuple>()));
+    template <
+        class PrefixParamTuple,
+        class SuffixParamTuple,
+        const char* url_pattern,
+        auto... CustomParsers>
+    using HandlerImpl = decltype(handler_impl(
+        std::declval<PrefixParamTuple>(),
+        std::declval<typename UrlParser<url_pattern, CustomParsers...>::HandlerArgsTuple>(),
+        std::declval<SuffixParamTuple>()
+    ));
 
     template <const char* url_pattern, auto... CustomParsers>
     using Handler = HandlerImpl<std::tuple<>, std::tuple<>, url_pattern, CustomParsers...>;
@@ -331,16 +367,18 @@ public:
     void add_handler(Handler<url_pattern, CustomParsers...> handler) {
         using UP = UrlParser<url_pattern, CustomParsers...>;
         constexpr size_t slashes = count_slash(url_pattern);
-        handlers_[slashes][UP::literal_prefix][UP::literal_suffix].emplace_back(url_pattern,
-                [handler = std::move(handler)](StringView url) -> std::optional<ResponseT> {
-                    auto args_tuple_opt = UP::try_parse(url);
-                    if (not args_tuple_opt) {
-                        debuglog("                parsing failed");
-                        return std::nullopt;
-                    }
-                    debuglog("                parsing succeeded");
-                    return std::apply(handler, std::move(*args_tuple_opt));
-                });
+        handlers_[slashes][UP::literal_prefix][UP::literal_suffix].emplace_back(
+            url_pattern,
+            [handler = std::move(handler)](StringView url) -> std::optional<ResponseT> {
+                auto args_tuple_opt = UP::try_parse(url);
+                if (not args_tuple_opt) {
+                    debuglog("                parsing failed");
+                    return std::nullopt;
+                }
+                debuglog("                parsing succeeded");
+                return std::apply(handler, std::move(*args_tuple_opt));
+            }
+        );
     }
 
     void debug_dump() const {
@@ -368,7 +406,7 @@ public:
     /// crave for when deciding url patterns.
     [[nodiscard]] std::vector<std::pair<StringView, StringView>> all_potential_collisions() const {
         auto foreach_handler = [](const typename decltype(handlers_)::mapped_type& prefix_map,
-                                       auto&& callback) {
+                                  auto&& callback) {
             for (auto& [prefix, suffix_map] : prefix_map) {
                 for (auto& [suffix, handlers_vec] : suffix_map) {
                     for (auto& [url_pattern, handler] : handlers_vec) {
@@ -387,29 +425,33 @@ public:
         std::vector<std::pair<StringView, StringView>> res;
         for (auto& [slashes, pref_map] : handlers_) {
             std::optional<StringView> prev_url_a;
-            foreach_handler(pref_map,
-                    [&, &pref_map = pref_map](
-                            StringView pref_a, StringView suff_a, StringView url_a) {
-                        // Single url_pattern with two handlers is also a collision
-                        if (std::exchange(prev_url_a, url_a) == url_a) {
-                            debuglog("collision: ", url_a, ' ', url_a);
-                            res.emplace_back(url_a, url_a);
-                        }
+            foreach_handler(
+                pref_map,
+                [&, &pref_map = pref_map](StringView pref_a, StringView suff_a, StringView url_a) {
+                    // Single url_pattern with two handlers is also a collision
+                    if (std::exchange(prev_url_a, url_a) == url_a) {
+                        debuglog("collision: ", url_a, ' ', url_a);
+                        res.emplace_back(url_a, url_a);
+                    }
 
-                        foreach_handler(pref_map,
-                                [&](StringView pref_b, StringView suff_b, StringView url_b) {
-                                    // Consider each pair only once and skip pairs of the form
-                                    // (x, x)
-                                    if (url_a.data() >= url_b.data()) {
-                                        return;
-                                    }
-                                    if (unordered_has_prefix(pref_a, pref_b) and
-                                            unordered_has_suffix(suff_a, suff_b)) {
-                                        debuglog("collision: ", url_a, ' ', url_b);
-                                        res.emplace_back(url_a, url_b);
-                                    }
-                                });
-                    });
+                    foreach_handler(
+                        pref_map,
+                        [&](StringView pref_b, StringView suff_b, StringView url_b) {
+                            // Consider each pair only once and skip pairs of the form
+                            // (x, x)
+                            if (url_a.data() >= url_b.data()) {
+                                return;
+                            }
+                            if (unordered_has_prefix(pref_a, pref_b) and
+                                unordered_has_suffix(suff_a, suff_b))
+                            {
+                                debuglog("collision: ", url_a, ' ', url_b);
+                                res.emplace_back(url_a, url_b);
+                            }
+                        }
+                    );
+                }
+            );
         }
         return res;
     }

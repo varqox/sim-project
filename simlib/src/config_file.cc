@@ -183,7 +183,8 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
         // Interior
         if (is_in_array) { // Value in an array
             while (buff[i + 1] != '\n' and buff[i + 1] != '#' and buff[i + 1] != ']' and
-                    buff[i + 1] != ',') {
+                   buff[i + 1] != ',')
+            {
                 ++i;
             }
 

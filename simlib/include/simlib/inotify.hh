@@ -35,7 +35,9 @@ public:
 class SilentWatchingLog : public WatchingLog {
 public:
     void could_not_watch(const std::string& /*path*/, int /*errnum*/) override {}
+
     void read_failed(int /*errnum*/) override {}
+
     void started_watching(const std::string& /*file*/) override {}
 };
 
@@ -71,10 +73,10 @@ class FileModificationMonitor {
     bool processing_unwatched_files_is_scheduled_ = false;
 
     static constexpr auto events_requiring_handler = IN_MODIFY | // modification
-            IN_CREATE | IN_MOVED_TO; // file creation
+        IN_CREATE | IN_MOVED_TO; // file creation
 
     static constexpr auto all_events = events_requiring_handler | IN_MOVE_SELF | // deletion
-            IN_EXCL_UNLINK; // do not monitor unlinked files
+        IN_EXCL_UNLINK; // do not monitor unlinked files
 
     struct simlib_inotify_event {
         decltype(inotify_event::wd) wd{};

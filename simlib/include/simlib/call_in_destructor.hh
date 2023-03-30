@@ -9,8 +9,7 @@ class CallInDtor {
 
 public:
     // NOLINTNEXTLINE(google-explicit-constructor)
-    CallInDtor(Func func) try
-    : func_(std::move(func))
+    CallInDtor(Func func) try : func_(std::move(func))
     {
     } catch (...) {
         func();
@@ -20,10 +19,7 @@ public:
     CallInDtor(const CallInDtor&) = delete;
     CallInDtor& operator=(const CallInDtor&) = delete;
 
-    CallInDtor(CallInDtor&& cid) noexcept
-    : func_(std::move(cid.func_)) {
-        cid.cancel();
-    }
+    CallInDtor(CallInDtor&& cid) noexcept : func_(std::move(cid.func_)) { cid.cancel(); }
 
     CallInDtor& operator=(CallInDtor&& cid) noexcept {
         func_ = std::move(cid.func_);

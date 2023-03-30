@@ -9,16 +9,14 @@ class FileDescriptor {
     int fd_;
 
 public:
-    explicit FileDescriptor(int fd = -1) noexcept
-    : fd_(fd) {}
+    explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
     explicit FileDescriptor(FilePath filename, int flags, mode_t mode = S_0644) noexcept
     : fd_(::open(filename, flags, mode)) {}
 
     FileDescriptor(const FileDescriptor&) = delete;
 
-    FileDescriptor(FileDescriptor&& fd) noexcept
-    : fd_(fd.release()) {}
+    FileDescriptor(FileDescriptor&& fd) noexcept : fd_(fd.release()) {}
 
     FileDescriptor& operator=(const FileDescriptor&) = delete;
 

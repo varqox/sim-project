@@ -132,7 +132,8 @@ TEST(FilePath, assignment_from_string) {
 TEST(FilePath, assignment_from_inplace_buff) {
     auto test = [](auto&& arg) {
         static_assert(
-                not std::is_assignable_v<FilePath, InplaceBuff<16>>, "assigning temporary is evil");
+            not std::is_assignable_v<FilePath, InplaceBuff<16>>, "assigning temporary is evil"
+        );
         string str(arg);
         InplaceBuff<16> ib(arg);
         FilePath x = "";

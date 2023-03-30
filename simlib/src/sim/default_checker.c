@@ -27,11 +27,17 @@ int are_equal(char* s1, size_t l1, char* s2, size_t l2) {
 #ifdef NDEBUG
 #define my_assert(...) ((void)0)
 #else
-#define my_assert(expr)                                                                  \
-    ((expr) ? (void)0                                                                    \
-            : (fprintf(stderr, "%s:%i %s: Assertion `%s' failed.\n", __FILE__, __LINE__, \
-                       __PRETTY_FUNCTION__, #expr),                                      \
-                      exit(1)))
+#define my_assert(expr)                                  \
+    ((expr) ? (void)0                                    \
+            : (fprintf(                                  \
+                   stderr,                               \
+                   "%s:%i %s: Assertion `%s' failed.\n", \
+                   __FILE__,                             \
+                   __LINE__,                             \
+                   __PRETTY_FUNCTION__,                  \
+                   #expr                                 \
+               ),                                        \
+               exit(1)))
 #endif
 
 int main(int argc, char** argv) {
@@ -62,14 +68,22 @@ int main(int argc, char** argv) {
     char* lout = NULL;
     char* lans = NULL;
 
-    while (read1 = getline(&lout, &len1, fout), read2 = getline(&lans, &len2, fans),
-            read1 != -1 && read2 != -1)
+    while (read1 = getline(&lout, &len1, fout),
+           read2 = getline(&lans, &len2, fans),
+           read1 != -1 && read2 != -1)
     {
         ++line;
 
         if (0 != are_equal(lout, read1, lans, read2)) {
-            fprintf(stderr, "WRONG\n0\nLine %zu: read: '%.77s%s', expected: '%.77s%s'\n", line,
-                    lans, (strlen(lans) > 77 ? "..." : ""), lout, (strlen(lout) > 77 ? "..." : ""));
+            fprintf(
+                stderr,
+                "WRONG\n0\nLine %zu: read: '%.77s%s', expected: '%.77s%s'\n",
+                line,
+                lans,
+                (strlen(lans) > 77 ? "..." : ""),
+                lout,
+                (strlen(lout) > 77 ? "..." : "")
+            );
             return 0;
         }
     }
@@ -78,8 +92,13 @@ int main(int argc, char** argv) {
         ++line;
 
         if (0 != are_equal(lout, read1, lans, 0)) {
-            fprintf(stderr, "WRONG\n0\nLine %zu: read: EOF, expected: '%.157s%s'\n", line, lout,
-                    (strlen(lout) > 157 ? "..." : ""));
+            fprintf(
+                stderr,
+                "WRONG\n0\nLine %zu: read: EOF, expected: '%.157s%s'\n",
+                line,
+                lout,
+                (strlen(lout) > 157 ? "..." : "")
+            );
             return 0;
         }
 
@@ -90,8 +109,13 @@ int main(int argc, char** argv) {
         ++line;
 
         if (0 != are_equal(lans, read2, lout, 0)) {
-            fprintf(stderr, "WRONG\n0\nLine %zu: read: '%.157s%s', expected: EOF\n", line, lans,
-                    (strlen(lans) > 157 ? "..." : ""));
+            fprintf(
+                stderr,
+                "WRONG\n0\nLine %zu: read: '%.157s%s', expected: EOF\n",
+                line,
+                lans,
+                (strlen(lans) > 157 ? "..." : "")
+            );
             return 0;
         }
 

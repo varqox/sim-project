@@ -53,8 +53,8 @@ static_assert(Result<double, double>{Err{3.14}} != Result<double, double>{Ok{3.1
 static_assert(Result<double, const char*>{Ok{42.0}} == Result<int, string_view>{Ok{42}});
 static_assert(Result<double, const char*>{Err{"abc"}} == Result<int, string_view>{Err{"abc"sv}});
 static_assert(!(Result<double, const char*>{Ok{42.1}} == Result<int, string_view>{Ok{42}}));
-static_assert(
-        !(Result<double, const char*>{Err{"abcd"}} == Result<int, string_view>{Err{"abc"sv}}));
+static_assert(!(Result<double, const char*>{Err{"abcd"}} == Result<int, string_view>{Err{"abc"sv}})
+);
 static_assert(!(Result<double, const char*>{Ok{42.0}} == Result<int, string_view>{Err{""sv}}));
 static_assert(!(Result<double, const char*>{Err{"abc"}} == Result<int, string_view>{Ok{42}}));
 

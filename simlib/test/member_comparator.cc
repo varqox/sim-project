@@ -18,57 +18,65 @@ struct Foo {
 // NOLINTNEXTLINE
 TEST(member_comparator, MEMBER_COMPARATOR_order) {
     vector<Foo> v = {
-            {4, "d"},
-            {2, "c"},
-            {1, "a"},
-            {3, "b"},
+        {4, "d"},
+        {2, "c"},
+        {1, "a"},
+        {3, "b"},
     };
 
     std::sort(v.begin(), v.end(), MEMBER_COMPARATOR(Foo, x){});
-    EXPECT_EQ(v,
-            (decltype(v){
-                    {1, "a"},
-                    {2, "c"},
-                    {3, "b"},
-                    {4, "d"},
-            }));
+    EXPECT_EQ(
+        v,
+        (decltype(v){
+            {1, "a"},
+            {2, "c"},
+            {3, "b"},
+            {4, "d"},
+        })
+    );
 
     std::sort(v.begin(), v.end(), MEMBER_COMPARATOR(Foo, str){});
-    EXPECT_EQ(v,
-            (decltype(v){
-                    {1, "a"},
-                    {3, "b"},
-                    {2, "c"},
-                    {4, "d"},
-            }));
+    EXPECT_EQ(
+        v,
+        (decltype(v){
+            {1, "a"},
+            {3, "b"},
+            {2, "c"},
+            {4, "d"},
+        })
+    );
 }
 
 // NOLINTNEXTLINE
 TEST(member_comparator, TRANSPARENT_MEMBER_COMPARATOR_order) {
     vector<Foo> v = {
-            {4, "d"},
-            {2, "c"},
-            {1, "a"},
-            {3, "b"},
+        {4, "d"},
+        {2, "c"},
+        {1, "a"},
+        {3, "b"},
     };
 
     std::sort(v.begin(), v.end(), TRANSPARENT_MEMBER_COMPARATOR(Foo, x){});
-    EXPECT_EQ(v,
-            (decltype(v){
-                    {1, "a"},
-                    {2, "c"},
-                    {3, "b"},
-                    {4, "d"},
-            }));
+    EXPECT_EQ(
+        v,
+        (decltype(v){
+            {1, "a"},
+            {2, "c"},
+            {3, "b"},
+            {4, "d"},
+        })
+    );
 
     std::sort(v.begin(), v.end(), TRANSPARENT_MEMBER_COMPARATOR(Foo, str){});
-    EXPECT_EQ(v,
-            (decltype(v){
-                    {1, "a"},
-                    {3, "b"},
-                    {2, "c"},
-                    {4, "d"},
-            }));
+    EXPECT_EQ(
+        v,
+        (decltype(v){
+            {1, "a"},
+            {3, "b"},
+            {2, "c"},
+            {4, "d"},
+        })
+    );
 }
 
 // NOLINTNEXTLINE

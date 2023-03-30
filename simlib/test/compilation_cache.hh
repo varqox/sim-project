@@ -26,9 +26,9 @@ public:
         assert(has_suffix(cache_dir_, "/"));
     }
 
-    [[nodiscard]] bool is_cached(
-            StringView in_cache_path, std::chrono::system_clock::time_point file_mtime) const {
-        struct stat64 cached_stat {};
+    [[nodiscard]] bool
+    is_cached(StringView in_cache_path, std::chrono::system_clock::time_point file_mtime) const {
+        struct stat64 cached_stat = {};
         if (stat64(FilePath(cached_path(in_cache_path)), &cached_stat)) {
             if (errno == ENOENT) {
                 return false; // No record in cache

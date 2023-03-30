@@ -35,8 +35,7 @@ public:
     explicit Logger(FilePath filename);
 
     // Like use(), it accept nullptr for which a dummy logger is created
-    explicit Logger(FILE* stream) noexcept
-    : f_(stream) {}
+    explicit Logger(FILE* stream) noexcept : f_(stream) {}
 
     Logger(const Logger&) = delete;
     Logger(Logger&&) = delete;
@@ -84,8 +83,7 @@ public:
         bool label_{};
         InplaceBuff<8192> buff_;
 
-        explicit Appender(Logger& logger)
-        : logger_(logger) {}
+        explicit Appender(Logger& logger) : logger_(logger) {}
 
         template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
         explicit Appender(Logger& logger, Args&&... args)
@@ -176,9 +174,7 @@ public:
 
     DoubleAppender(const DoubleAppender&) = delete;
 
-    DoubleAppender(DoubleAppender&& dl) noexcept
-    : app_(std::move(dl.app_))
-    , str_(dl.str_) {}
+    DoubleAppender(DoubleAppender&& dl) noexcept : app_(std::move(dl.app_)), str_(dl.str_) {}
 
     DoubleAppender& operator=(const DoubleAppender&) = delete;
     DoubleAppender& operator=(DoubleAppender&&) = delete;

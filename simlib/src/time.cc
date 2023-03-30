@@ -39,15 +39,14 @@ string localdate(CStringView format, time_t curr_time) {
 }
 
 bool is_datetime(const CStringView& str) noexcept {
-    struct tm t {};
+    struct tm t = {};
     return (str.size() == 19 && strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
 }
 
 time_t str_to_time_t(CStringView str, CStringView format) noexcept {
-    struct tm t {};
+    struct tm t = {};
     if (!strptime(str.c_str(), format.c_str(), &t)) {
         return -1;
     }
-
     return timegm(&t);
 }

@@ -93,9 +93,11 @@ InplaceBuff<N> decode_uri(StringView str) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = 0;
         if (str[i] == '%' and i + 2 < str.size() and is_xdigit(str[i + 1]) and
-                is_xdigit(str[i + 2])) {
+            is_xdigit(str[i + 2]))
+        {
             c = static_cast<char>(
-                    static_cast<unsigned char>((hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2])));
+                static_cast<unsigned char>((hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2]))
+            );
             i += 2;
         } else if (str[i] == '+') {
             c = ' ';
@@ -173,8 +175,9 @@ std::string json_stringify(Arg&&... arg) {
 
 // Converts whole @p str to @p T or returns std::nullopt on errors like value
 // represented in @p str is too big or invalid
-template <class T,
-        std::enable_if_t<std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> = 0>
+template <
+    class T,
+    std::enable_if_t<std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> = 0>
 constexpr std::optional<T> str2num(StringView str) noexcept {
     if constexpr (std::is_same_v<T, bool>) {
         auto opt = str2num<uint8_t>(str);
@@ -224,9 +227,9 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 
 // Converts whole @p str to @p T or returns std::nullopt on errors like value
 // represented in @p str is too big or invalid
-template <class T,
-        std::enable_if_t<not std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>,
-                int> = 0>
+template <
+    class T,
+    std::enable_if_t<not std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>, int> = 0>
 std::optional<T> str2num(StringView str) noexcept {
 #if 0 // TODO: use it when std::from_chars for double becomes implemented in libstdc++ (also
       // remove always false from the above and include <cstdlib>)
@@ -306,8 +309,8 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  * @return formatted string
  */
 template <size_t N = 32>
-InplaceBuff<N> padded_string(
-        StringView str, size_t len, Adjustment adj = RIGHT, char filler = ' ') {
+InplaceBuff<N>
+padded_string(StringView str, size_t len, Adjustment adj = RIGHT, char filler = ' ') {
     if (len <= str.size()) {
         return InplaceBuff<N>(str);
     }

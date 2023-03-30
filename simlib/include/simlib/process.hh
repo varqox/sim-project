@@ -34,8 +34,8 @@ std::string executable_path(pid_t tid);
  * @errors Exceptions from get_cwd() or if opendir(2) fails then
  *   std::runtime_error will be thrown
  */
-std::vector<pid_t> find_processes_by_executable_path(
-        std::vector<std::string> exec_set, bool include_me = false);
+std::vector<pid_t>
+find_processes_by_executable_path(std::vector<std::string> exec_set, bool include_me = false);
 /**
  * @brief Kills processes that have executable files in @p exec_set
  * @details First tries with SIGTERM, but after @p wait_timeout sends SIGKILL if
@@ -47,9 +47,12 @@ std::vector<pid_t> find_processes_by_executable_path(
  * @param kill_after_waiting whether to send SIGKILL if process is still alive
  *   after wait_timeout
  */
-void kill_processes_by_exec(std::vector<std::string> exec_set,
-        std::optional<std::chrono::duration<double>> wait_timeout = std::nullopt,
-        bool kill_after_waiting = false, int terminate_signal = SIGTERM);
+void kill_processes_by_exec(
+    std::vector<std::string> exec_set,
+    std::optional<std::chrono::duration<double>> wait_timeout = std::nullopt,
+    bool kill_after_waiting = false,
+    int terminate_signal = SIGTERM
+);
 
 enum class ArchKind : int8_t {
     i386 = 0,

@@ -21,15 +21,13 @@ class strongly_typed_function<Ret(Args...)> : public std::function<Ret(Args...)>
 
 public:
     // NOLINTNEXTLINE(google-explicit-constructor)
-    strongly_typed_function(Ret (*f)(Args...))
-    : std::function<Ret(Args...)>(f) {}
+    strongly_typed_function(Ret (*f)(Args...)) : std::function<Ret(Args...)>(f) {}
 
-    template <class Func,
-            class = std::void_t<decltype(detail::has_signature<Func, Ret, Args...>(
-                    &Func::operator()))>>
+    template <
+        class Func,
+        class = std::void_t<decltype(detail::has_signature<Func, Ret, Args...>(&Func::operator()))>>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    strongly_typed_function(Func f)
-    : std::function<Ret(Args...)>(std::move(f)) {}
+    strongly_typed_function(Func f) : std::function<Ret(Args...)>(std::move(f)) {}
 
     strongly_typed_function(const strongly_typed_function&) = default;
     strongly_typed_function(strongly_typed_function&&) noexcept = default;

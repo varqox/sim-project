@@ -2,13 +2,17 @@
 #include <simlib/constructor_traits.hh>
 
 struct A {};
+
 struct B {};
 
 struct Tester {
     // NOLINTNEXTLINE(google-explicit-constructor)
     Tester(A /*unused*/) {}
+
     Tester(A /*unused*/, A /*unused*/) {}
+
     explicit Tester(B /*unused*/) {}
+
     explicit Tester(B /*unused*/, B /*unused*/) {}
 };
 

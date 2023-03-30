@@ -22,8 +22,7 @@ public:
     ~MutexedValue() = default;
 
     template <class... Args>
-    explicit MutexedValue(Args&&... args)
-    : value_(std::forward<Args>(args)...) {}
+    explicit MutexedValue(Args&&... args) : value_(std::forward<Args>(args)...) {}
 
     std::pair<std::lock_guard<std::mutex>, T&> get() { return {std::lock_guard(mtx_), value_}; }
 

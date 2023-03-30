@@ -22,9 +22,7 @@ public:
 
     SharedMemorySegment(const SharedMemorySegment&) = delete;
 
-    SharedMemorySegment(SharedMemorySegment&& sms) noexcept
-    : id_(sms.id_)
-    , addr_(sms.addr_) {
+    SharedMemorySegment(SharedMemorySegment&& sms) noexcept : id_(sms.id_), addr_(sms.addr_) {
         sms.addr_ = nullptr;
     }
 

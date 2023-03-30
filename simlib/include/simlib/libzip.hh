@@ -36,12 +36,11 @@ class ZipEntry {
 
 public:
     ZipEntry(const ZipEntry&) = delete;
-    ZipEntry(ZipEntry&& ze) noexcept
-    : zfile_(std::exchange(ze.zfile_, nullptr)) {}
+
+    ZipEntry(ZipEntry&& ze) noexcept : zfile_(std::exchange(ze.zfile_, nullptr)) {}
 
 private:
-    explicit ZipEntry(zip_file_t* zfile)
-    : zfile_(zfile) {}
+    explicit ZipEntry(zip_file_t* zfile) : zfile_(zfile) {}
 
     explicit operator bool() const noexcept { return zfile_; }
 
@@ -105,7 +104,7 @@ private:
     ZipSource(zip_t* zip, const char* fname, zip_uint64_t start, zip_int64_t len)
     : zsource_(zip_source_file(zip, fname, start, len)) {
         STACK_UNWINDING_MARK;
-        struct stat st {};
+        struct stat st = {};
         if (lstat(fname, &st)) {
             THROW("lstat()", errmsg());
         }
@@ -119,7 +118,7 @@ private:
     ZipSource(zip_t* zip, FILE* file, zip_uint64_t start, zip_int64_t len)
     : zsource_(zip_source_filep(zip, file, start, len)) {
         STACK_UNWINDING_MARK;
-        struct stat st {};
+        struct stat st = {};
         if (fstat(fileno(file), &st)) {
             THROW("lstat()", errmsg());
         }
@@ -130,8 +129,14 @@ private:
         }
     }
 
-    ZipSource(zip_t* zip, zip_t* src_zip, zip_uint64_t srcidx, zip_flags_t flags,
-            zip_uint64_t start, zip_int64_t len)
+    ZipSource(
+        zip_t* zip,
+        zip_t* src_zip,
+        zip_uint64_t srcidx,
+        zip_flags_t flags,
+        zip_uint64_t start,
+        zip_int64_t len
+    )
     : zsource_(zip_source_zip(zip, src_zip, srcidx, flags, start, len)) {
         STACK_UNWINDING_MARK;
         zip_uint8_t opsys = 0;
@@ -151,8 +156,7 @@ private:
 public:
     ZipSource(const ZipSource&) = delete;
 
-    ZipSource(ZipSource&& zs) noexcept
-    : zsource_(std::exchange(zs.zsource_, nullptr)) {}
+    ZipSource(ZipSource&& zs) noexcept : zsource_(std::exchange(zs.zsource_, nullptr)) {}
 
     ZipSource& operator=(const ZipSource&) = delete;
 
@@ -222,8 +226,7 @@ public:
 
     ZipFile(const ZipFile&) = delete;
 
-    ZipFile(ZipFile&& zf) noexcept
-    : zip_(std::exchange(zf.zip_, nullptr)) {}
+    ZipFile(ZipFile&& zf) noexcept : zip_(std::exchange(zf.zip_, nullptr)) {}
 
     ZipFile& operator=(const ZipFile&) = delete;
 
@@ -322,7 +325,8 @@ public:
     }
 
     void extract_to_file(
-            index_t index, FilePath fpath, std::optional<mode_t> permissions = std::nullopt) {
+        index_t index, FilePath fpath, std::optional<mode_t> permissions = std::nullopt
+    ) {
         STACK_UNWINDING_MARK;
         mode_t mode = [&]() -> mode_t {
             if (permissions) {
@@ -357,7 +361,8 @@ public:
         }
 
         if (zip_file_set_external_attributes(
-                    zip_, idx, 0, ZIP_OPSYS_UNIX, (S_IFDIR | (permissions & ALLPERMS)) << 16))
+                zip_, idx, 0, ZIP_OPSYS_UNIX, (S_IFDIR | (permissions & ALLPERMS)) << 16
+            ))
         {
             THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
         }
@@ -384,8 +389,13 @@ public:
     }
 
     // By default whole file (len == -1 means reading till the end of file)
-    ZipSource source_zip(ZipFile& src_zip, index_t src_idx, zip_flags_t flags = 0,
-            zip_uint64_t start = 0, zip_int64_t len = -1) {
+    ZipSource source_zip(
+        ZipFile& src_zip,
+        index_t src_idx,
+        zip_flags_t flags = 0,
+        zip_uint64_t start = 0,
+        zip_int64_t len = -1
+    ) {
         return {zip_, src_zip, static_cast<zip_uint64_t>(src_idx), flags, start, len};
     }
 
@@ -401,8 +411,9 @@ public:
     // has some problems if you do not do so (e.g. with source created from zip
     // archive).
     // @p compression_level == 0 means default compression level
-    index_t file_add(FilePath name, ZipSource&& source, zip_flags_t flags = 0,
-            zip_uint32_t compression_level = 4) {
+    index_t file_add(
+        FilePath name, ZipSource&& source, zip_flags_t flags = 0, zip_uint32_t compression_level = 4
+    ) {
         STACK_UNWINDING_MARK;
         // Directory has to be added via zip_dir_add()
         if (has_suffix(name.to_cstr(), "/")) {
@@ -421,7 +432,9 @@ public:
         CallInDtor idx_deleter = [&] { (void)zip_delete(zip_, idx); };
 
         if (zip_file_set_external_attributes(
-                    zip_, idx, 0, source.opsys_, source.external_attributes_)) {
+                zip_, idx, 0, source.opsys_, source.external_attributes_
+            ))
+        {
             THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
         }
 
@@ -435,15 +448,18 @@ public:
     }
 
     // @p compression_level == 0 means default compression level
-    void file_replace(index_t index, ZipSource&& source, zip_flags_t flags = 0,
-            zip_uint32_t compression_level = 4) {
+    void file_replace(
+        index_t index, ZipSource&& source, zip_flags_t flags = 0, zip_uint32_t compression_level = 4
+    ) {
         STACK_UNWINDING_MARK;
         if (zip_file_replace(zip_, index, source.zsource_, flags)) {
             THROW("zip_file_replace() - ", zip_strerror(zip_));
         }
 
         if (zip_file_set_external_attributes(
-                    zip_, index, 0, source.opsys_, source.external_attributes_)) {
+                zip_, index, 0, source.opsys_, source.external_attributes_
+            ))
+        {
             THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
         }
 

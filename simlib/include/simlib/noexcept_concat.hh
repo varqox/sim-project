@@ -20,7 +20,7 @@ struct NoexceptStringMaxLength<char[N]> : std::integral_constant<size_t, N - 1> 
 
 template <class T>
 constexpr inline size_t noexcept_string_max_length =
-        detail::NoexceptStringMaxLength<std::remove_cv_t<std::remove_reference_t<T>>>::value;
+    detail::NoexceptStringMaxLength<std::remove_cv_t<std::remove_reference_t<T>>>::value;
 
 template <class T>
 constexpr decltype(auto) noexcept_stringify(T&& x) noexcept {
@@ -53,9 +53,10 @@ constexpr auto noexcept_string_data(const char (&str)[N]) noexcept {
 
 namespace detail {
 
-template <class T,
-        class = decltype(noexcept_string_length(
-                noexcept_stringify(std::forward<T>(std::declval<T>()))))>
+template <
+    class T,
+    class = decltype(noexcept_string_length(noexcept_stringify(std::forward<T>(std::declval<T>())))
+    )>
 constexpr auto is_noexcept_string_argument(int) -> std::true_type;
 
 template <class>
@@ -65,7 +66,7 @@ constexpr auto is_noexcept_string_argument(...) -> std::false_type;
 
 template <class T>
 constexpr inline bool is_noexcept_string_argument =
-        decltype(detail::is_noexcept_string_argument<T>(0))::value;
+    decltype(detail::is_noexcept_string_argument<T>(0))::value;
 
 template <class... Args, std::enable_if_t<(is_noexcept_string_argument<Args> and ...), int> = 0>
 [[nodiscard]] constexpr auto noexcept_concat(Args&&... args) noexcept {

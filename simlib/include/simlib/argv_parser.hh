@@ -7,9 +7,7 @@ class ArgvParser {
     const char* const* argv_;
 
 public:
-    ArgvParser(int argc, const char* const* argv)
-    : argc_(std::max(argc, 0))
-    , argv_(argv) {}
+    ArgvParser(int argc, const char* const* argv) : argc_(std::max(argc, 0)), argv_(argv) {}
 
     ArgvParser(const ArgvParser&) = default;
     ArgvParser(ArgvParser&&) noexcept = default;

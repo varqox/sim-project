@@ -39,8 +39,7 @@ class Builder {
 protected:
     std::string& str;
 
-    explicit Builder(std::string& str)
-    : str{str} {}
+    explicit Builder(std::string& str) : str{str} {}
 
     template <class... Arg>
     void append_raw_value(Arg&&... arg) {
@@ -52,8 +51,8 @@ protected:
         using DT = std::decay_t<T>;
         if constexpr (std::is_same_v<DT, bool>) {
             append_raw_value(val ? "true" : "false");
-        } else if constexpr (std::is_same_v<DT, std::nullptr_t> or
-                std::is_same_v<DT, std::nullopt_t>) {
+        } else if constexpr (std::is_same_v<DT, std::nullptr_t> or std::is_same_v<DT, std::nullopt_t>)
+        {
             append_raw_value("null");
         } else if constexpr (std::is_integral_v<DT>) {
             append_raw_value(val);
@@ -86,10 +85,7 @@ class ArrayBuilder : Builder {
     friend class Builder;
     friend class Array;
 
-    explicit ArrayBuilder(std::string& str)
-    : Builder{str} {
-        str += '[';
-    }
+    explicit ArrayBuilder(std::string& str) : Builder{str} { str += '['; }
 
     void end() {
         if (str.back() == ',') {
@@ -125,10 +121,7 @@ class ObjectBuilder : Builder {
     friend class Builder;
     friend class Object;
 
-    explicit ObjectBuilder(std::string& str)
-    : Builder{str} {
-        str += '{';
-    }
+    explicit ObjectBuilder(std::string& str) : Builder{str} { str += '{'; }
 
     void end() {
         if (str.back() == ',') {
@@ -194,8 +187,7 @@ class Object
 : detail::StringWrapper
 , public ObjectBuilder {
 public:
-    Object()
-    : ObjectBuilder{StringWrapper::str} {}
+    Object() : ObjectBuilder{StringWrapper::str} {}
 
     std::string into_str() && {
         end();
@@ -207,8 +199,7 @@ class Array
 : detail::StringWrapper
 , public ArrayBuilder {
 public:
-    Array()
-    : ArrayBuilder{StringWrapper::str} {}
+    Array() : ArrayBuilder{StringWrapper::str} {}
 
     std::string into_str() && {
         end();

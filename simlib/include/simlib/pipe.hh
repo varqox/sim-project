@@ -17,7 +17,7 @@ inline std::optional<Pipe> pipe2(int flags) noexcept {
         return std::nullopt;
     }
     return Pipe{
-            .readable = FileDescriptor{pfd[0]},
-            .writable = FileDescriptor{pfd[1]},
+        .readable = FileDescriptor{pfd[0]},
+        .writable = FileDescriptor{pfd[1]},
     };
 }

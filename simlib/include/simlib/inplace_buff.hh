@@ -115,7 +115,8 @@ public:
 
 protected:
     constexpr InplaceBuffBase(
-            size_t s, size_t max_s, char* p, char* p_value_when_unallocated) noexcept
+        size_t s, size_t max_s, char* p, char* p_value_when_unallocated
+    ) noexcept
     : size(s)
     , max_size_(max_s)
     , p_(p)
@@ -169,11 +170,10 @@ private:
 public:
     static constexpr size_t max_static_size = N;
 
-    constexpr InplaceBuff() noexcept
-    : InplaceBuffBase(0, N, nullptr, nullptr) {
+    constexpr InplaceBuff() noexcept : InplaceBuffBase(0, N, nullptr, nullptr) {
         // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
         p_value_when_unallocated_ =
-                a_.data(); // a_ is uninitialized in the call to InplaceBuffBase()
+            a_.data(); // a_ is uninitialized in the call to InplaceBuffBase()
         p_ = p_value_when_unallocated_;
     }
 
@@ -181,17 +181,15 @@ public:
     : InplaceBuffBase(n, std::max(N, n), nullptr, nullptr) {
         // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
         p_value_when_unallocated_ =
-                a_.data(); // a_ is uninitialized in the call to InplaceBuffBase()
+            a_.data(); // a_ is uninitialized in the call to InplaceBuffBase()
         p_ = (n <= N ? p_value_when_unallocated_ : new char[n]);
     }
 
-    constexpr InplaceBuff(const InplaceBuff& ibuff)
-    : InplaceBuff(ibuff.size) {
+    constexpr InplaceBuff(const InplaceBuff& ibuff) : InplaceBuff(ibuff.size) {
         std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
     }
 
-    InplaceBuff(InplaceBuff&& ibuff) noexcept
-    : InplaceBuff() {
+    InplaceBuff(InplaceBuff&& ibuff) noexcept : InplaceBuff() {
         if (ibuff.is_allocated()) {
             // Steal the allocated string
             p_ = std::exchange(ibuff.p_, ibuff.p_value_when_unallocated_);
@@ -202,35 +200,41 @@ public:
         }
     }
 
-    template <class T,
-            std::enable_if_t<not std::is_integral_v<std::decay_t<T>> and
-                            not std::is_same_v<std::decay_t<T>, InplaceBuff>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            not std::is_integral_v<std::decay_t<T>> and
+                not std::is_same_v<std::decay_t<T>, InplaceBuff>,
+            int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload): see enable_if
-    constexpr explicit InplaceBuff(T&& str)
-    : InplaceBuff(string_length(str)) {
+    constexpr explicit InplaceBuff(T&& str) : InplaceBuff(string_length(str)) {
         std::copy(::data(str), ::data(str) + size, p_);
     }
 
     // Used to unify constructors, as constructor taking one argument is
     // explicit
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
-    constexpr explicit InplaceBuff(std::in_place_t /*unused*/, Args&&... args)
-    : InplaceBuff() {
+    constexpr explicit InplaceBuff(std::in_place_t /*unused*/, Args&&... args) : InplaceBuff() {
         append(std::forward<Args>(args)...);
     }
 
-    template <class Arg1, class Arg2, class... Args,
-            std::enable_if_t<not std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg1>>,
-                                     std::in_place_t>,
-                    int> = 0>
+    template <
+        class Arg1,
+        class Arg2,
+        class... Args,
+        std::enable_if_t<
+            not std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg1>>, std::in_place_t>,
+            int> = 0>
     constexpr InplaceBuff(Arg1&& arg1, Arg2&& arg2, Args&&... args)
-    : InplaceBuff(std::in_place, std::forward<Arg1>(arg1), std::forward<Arg2>(arg2),
-              std::forward<Args>(args)...) {}
+    : InplaceBuff(
+          std::in_place,
+          std::forward<Arg1>(arg1),
+          std::forward<Arg2>(arg2),
+          std::forward<Args>(args)...
+      ) {}
 
     template <size_t M, std::enable_if_t<M != N, int> = 0>
-    explicit InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
-    : InplaceBuff() {
+    explicit InplaceBuff(InplaceBuff<M>&& ibuff) noexcept : InplaceBuff() {
         if (ibuff.is_allocated() and ibuff.size > N) {
             // Steal the allocated string
             p_ = std::exchange(ibuff.p_, ibuff.p_value_when_unallocated_);

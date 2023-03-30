@@ -31,12 +31,10 @@ public:
 
     ~EnumVal() = default;
 
-    constexpr explicit EnumVal(ValType val)
-    : val_(val) {}
+    constexpr explicit EnumVal(ValType val) : val_(val) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr EnumVal(Enum val)
-    : val_(static_cast<ValType>(val)) {}
+    constexpr EnumVal(Enum val) : val_(static_cast<ValType>(val)) {}
 
     constexpr EnumVal& operator=(Enum val) {
         val_ = static_cast<ValType>(val);
@@ -73,16 +71,13 @@ public:
 
     ~EnumVal() = default;
 
-    constexpr explicit EnumVal(ValType val)
-    : val_(val) {}
+    constexpr explicit EnumVal(ValType val) : val_(val) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr EnumVal(Enum val)
-    : val_(static_cast<ValType>(val)) {}
+    constexpr EnumVal(Enum val) : val_(static_cast<ValType>(val)) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr EnumVal(typename Enum::Enum val)
-    : val_(static_cast<ValType>(val)) {}
+    constexpr EnumVal(typename Enum::Enum val) : val_(static_cast<ValType>(val)) {}
 
     constexpr EnumVal& operator=(Enum val) {
         val_ = static_cast<ValType>(val);
@@ -125,4 +120,4 @@ template <class...>
 constexpr inline bool is_enum_val_with_string_conversions = false;
 template <class T>
 constexpr inline bool is_enum_val_with_string_conversions<EnumVal<T>> =
-        is_enum_with_string_conversions<T>;
+    is_enum_with_string_conversions<T>;

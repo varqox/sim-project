@@ -10,8 +10,7 @@ class ErrDefer {
 
 public:
     // NOLINTNEXTLINE(google-explicit-constructor)
-    ErrDefer(Func func) try
-    : func_(std::move(func))
+    ErrDefer(Func func) try : func_(std::move(func))
     {
     } catch (...) {
         func();

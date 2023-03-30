@@ -27,15 +27,19 @@
 
 #define E(...) eprintf(__VA_ARGS__)
 
-#define throw_assert(expr)                                                                 \
-    ((expr) ? (void)0                                                                      \
-            : throw std::runtime_error(concat_tostr(__FILE__ ":" STRINGIZE(__LINE__) ": ", \
-                      __PRETTY_FUNCTION__, ": Assertion `" #expr "` failed.")))
+#define throw_assert(expr)                                                                          \
+    ((expr)                                                                                         \
+         ? (void)0                                                                                  \
+         : throw std::runtime_error(concat_tostr(                                                   \
+               __FILE__                                                                             \
+               ":" STRINGIZE(__LINE__) ": ", __PRETTY_FUNCTION__, ": Assertion `" #expr "` failed." \
+           )))
 
 // Very useful - includes exception origin
-#define THROW(...)            \
-    throw std::runtime_error( \
-            concat_tostr(__VA_ARGS__, " (thrown at " __FILE__ ":" STRINGIZE(__LINE__) ")"))
+#define THROW(...)                                                                     \
+    throw std::runtime_error(                                                          \
+        concat_tostr(__VA_ARGS__, " (thrown at " __FILE__ ":" STRINGIZE(__LINE__) ")") \
+    )
 
 namespace simlib_debug {
 
@@ -55,14 +59,15 @@ inline const char* what_of(const std::exception& e) { return e.what(); }
 inline auto errmsg(int errnum) noexcept {
     constexpr StringView s1 = " - ";
     constexpr auto bytes_for_error_description =
-            64; // At the time of writing, longest error description is 50 bytes in
-                // size (including null terminator)
+        64; // At the time of writing, longest error description is 50 bytes in
+            // size (including null terminator)
     constexpr StringView s2 = " (os error ";
     auto errnum_str = to_string(errnum);
     constexpr StringView s3 = ")";
-    StaticCStringBuff<s1.size() + bytes_for_error_description + s2.size() +
-            decltype(errnum_str)::max_size() + s3.size()>
-            res;
+    StaticCStringBuff<
+        s1.size() + bytes_for_error_description + s2.size() + decltype(errnum_str)::max_size() +
+        s3.size()>
+        res;
     size_t pos = 0;
     // Prefix
     for (auto c : s1) {
@@ -160,20 +165,22 @@ public:
 
 #define STACK_UNWINDING_MARK                                                                       \
     ::stack_unwinding::StackGuard STACK_UNWINDING_MARK_CONCAT(stack_unwind_mark_no_, __COUNTER__)( \
-            __FILE__, __LINE__, __PRETTY_FUNCTION__)
+        __FILE__, __LINE__, __PRETTY_FUNCTION__                                                    \
+    )
 
-#define ERRLOG_CATCH(...)                                                            \
-    do {                                                                             \
-        auto tmplog = errlog(__FILE__ ":" STRINGIZE(__LINE__) ": Caught exception",  \
-                ::simlib_debug::is_va_empty(__VA_ARGS__) ? "" : " -> ",              \
-                ::simlib_debug::what_of(__VA_ARGS__), "\nStack unwinding marks:\n"); \
-                                                                                     \
-        size_t i = 0;                                                                \
-        for (auto const& mark : ::stack_unwinding::StackGuard::marks_collected)      \
-            tmplog('[', i++, "] ", mark.description, "\n");                          \
-                                                                                     \
-        tmplog.flush_no_nl();                                                        \
-        ::stack_unwinding::StackGuard::marks_collected.clear();                      \
+#define ERRLOG_CATCH(...)                                                                                                                                                            \
+    do {                                                                                                                                                                             \
+        auto tmplog = errlog(                                                                                                                                                        \
+            __FILE__                                                                                                                                                                 \
+            ":" STRINGIZE(__LINE__) ": Caught exception", ::simlib_debug::is_va_empty(__VA_ARGS__) ? "" : " -> ", ::simlib_debug::what_of(__VA_ARGS__), "\nStack unwinding marks:\n" \
+        );                                                                                                                                                                           \
+                                                                                                                                                                                     \
+        size_t i = 0;                                                                                                                                                                \
+        for (auto const& mark : ::stack_unwinding::StackGuard::marks_collected)                                                                                                      \
+            tmplog('[', i++, "] ", mark.description, "\n");                                                                                                                          \
+                                                                                                                                                                                     \
+        tmplog.flush_no_nl();                                                                                                                                                        \
+        ::stack_unwinding::StackGuard::marks_collected.clear();                                                                                                                      \
     } while (false)
 
 class ThrowingIsBug {

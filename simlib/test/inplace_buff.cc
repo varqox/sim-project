@@ -163,10 +163,12 @@ void test_constructors_and_assignments(size_t max_size, size_t max_other_size) {
     }
     if constexpr (curr_other_n + 1 < max_other_n) {
         return test_constructors_and_assignments<max_n, max_other_n, curr_n, curr_other_n + 1>(
-                max_size, max_other_size);
+            max_size, max_other_size
+        );
     } else if constexpr (curr_n + 1 < max_n) {
         return test_constructors_and_assignments<max_n, max_other_n, curr_n + 1, 0>(
-                max_size, max_other_size);
+            max_size, max_other_size
+        );
     }
 }
 

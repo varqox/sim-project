@@ -13,13 +13,13 @@ class PackageContents {
     };
 
     InplaceBuff<0> buff;
+
     struct Comparer {
         struct is_transparent;
 
         decltype(buff)* buff_ref;
 
-        explicit Comparer(decltype(buff)& br)
-        : buff_ref(&br) {}
+        explicit Comparer(decltype(buff)& br) : buff_ref(&br) {}
 
         static StringView to_str(StringView str) noexcept { return str; }
 

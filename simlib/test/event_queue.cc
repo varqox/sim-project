@@ -121,7 +121,7 @@ TEST(EventQueue, add_repeating_handler) {
 
     EventQueue eq;
     eq.add_repeating_handler(20us, [&, iter = 0]() mutable {
-        order += char('a' + iter);
+        order += static_cast<char>('a' + iter);
         ++iter;
 
         EXPECT_LE(start + iter * 20us, system_clock::now());
@@ -140,41 +140,46 @@ TEST(EventQueue, adding_mutable_handler) {
 
     eq.add_ready_handler([&, x = 0]() mutable {
         ++x;
-        ++times;
+        assert(x == 1);
+        times += x;
     });
 
     eq.add_time_handler(0ns, [&, x = 0]() mutable {
         ++x;
-        ++times;
+        assert(x == 1);
+        times += x;
     });
 
     eq.add_time_handler(system_clock::now(), [&, x = 0]() mutable {
         ++x;
-        ++times;
+        assert(x == 1);
+        times += x;
     });
 
     eq.add_repeating_handler(0ns, [&, x = 0]() mutable {
         ++x;
-        ++times;
+        assert(x == 1);
+        times += x;
         return stop_repeating;
     });
 
     FileDescriptor fd("/dev/null", O_RDONLY);
     ASSERT_TRUE(fd.is_open());
     EventQueue::handler_id_t hid =
-            eq.add_file_handler(fd, FileEvent::READABLE, [&, x = 0]() mutable {
-                ++x;
-                ++times;
-                eq.remove_handler(hid);
-            });
+        eq.add_file_handler(fd, FileEvent::READABLE, [&, x = 0]() mutable {
+            ++x;
+            assert(x == 1);
+            times += x;
+            eq.remove_handler(hid);
+        });
 
     EXPECT_EQ(times, 0);
     eq.run();
     EXPECT_EQ(times, 5);
 }
 
-static void pause_immediately_from_handler(
-        const std::function<void(EventQueue&, size_t&)>& stopper_installer) {
+static void
+pause_immediately_from_handler(const std::function<void(EventQueue&, size_t&)>& stopper_installer) {
     EventQueue eq;
     size_t times = 0;
 
@@ -459,34 +464,40 @@ TEST(EventQueue, remove_time_handler) {
 // NOLINTNEXTLINE
 TEST(EventQueue_DeathTest, time_handler_removes_itself) {
     EXPECT_EXIT(
-            {
-                EventQueue eq;
-                EventQueue::handler_id_t hid;
-                hid = eq.add_time_handler(system_clock::now(), [&] { eq.remove_handler(hid); });
-                eq.run();
-            },
-            ::testing::KilledBySignal(SIGABRT), "BUG");
+        {
+            EventQueue eq;
+            EventQueue::handler_id_t hid;
+            hid = eq.add_time_handler(system_clock::now(), [&] { eq.remove_handler(hid); });
+            eq.run();
+        },
+        ::testing::KilledBySignal(SIGABRT),
+        "BUG"
+    );
 
     EXPECT_EXIT(
-            {
-                EventQueue eq;
-                EventQueue::handler_id_t hid;
-                hid = eq.add_time_handler(0ns, [&] { eq.remove_handler(hid); });
-                eq.run();
-            },
-            ::testing::KilledBySignal(SIGABRT), "BUG");
+        {
+            EventQueue eq;
+            EventQueue::handler_id_t hid;
+            hid = eq.add_time_handler(0ns, [&] { eq.remove_handler(hid); });
+            eq.run();
+        },
+        ::testing::KilledBySignal(SIGABRT),
+        "BUG"
+    );
 }
 
 // NOLINTNEXTLINE
 TEST(EventQueue_DeathTest, ready_handler_removes_itself) {
     EXPECT_EXIT(
-            {
-                EventQueue eq;
-                EventQueue::handler_id_t hid;
-                hid = eq.add_ready_handler([&] { eq.remove_handler(hid); });
-                eq.run();
-            },
-            ::testing::KilledBySignal(SIGABRT), "BUG");
+        {
+            EventQueue eq;
+            EventQueue::handler_id_t hid;
+            hid = eq.add_ready_handler([&] { eq.remove_handler(hid); });
+            eq.run();
+        },
+        ::testing::KilledBySignal(SIGABRT),
+        "BUG"
+    );
 }
 
 // NOLINTNEXTLINE
@@ -563,23 +574,23 @@ TEST(EventQueue, file_only_fairness) {
 
     FileDescriptor fd_a("/dev/zero", O_RDONLY);
     EventQueue::handler_id_t file_a_hid =
-            eq.add_file_handler(fd_a, FileEvent::READABLE, [&](FileEvent /*unused*/) {
-                if (iters_b + iters_b > 500) {
-                    return eq.remove_handler(file_a_hid);
-                }
+        eq.add_file_handler(fd_a, FileEvent::READABLE, [&](FileEvent /*unused*/) {
+            if (iters_b + iters_b > 500) {
+                return eq.remove_handler(file_a_hid);
+            }
 
-                ++iters_a;
-            });
+            ++iters_a;
+        });
 
     FileDescriptor fd_b("/dev/null", O_WRONLY);
     EventQueue::handler_id_t file_b_hid =
-            eq.add_file_handler(fd_b, FileEvent::WRITEABLE, [&](FileEvent /*unused*/) {
-                if (iters_b + iters_b > 500) {
-                    return eq.remove_handler(file_b_hid);
-                }
+        eq.add_file_handler(fd_b, FileEvent::WRITEABLE, [&](FileEvent /*unused*/) {
+            if (iters_b + iters_b > 500) {
+                return eq.remove_handler(file_b_hid);
+            }
 
-                ++iters_b;
-            });
+            ++iters_b;
+        });
 
     EXPECT_EQ(iters_a, 0);
     EXPECT_EQ(iters_b, 0);
@@ -616,18 +627,18 @@ TEST(EventQueue, time_file_fairness) {
     FileDescriptor fd("/dev/zero", O_RDONLY);
     int file_iters = 0;
     EventQueue::handler_id_t hid =
-            eq.add_file_handler(fd, FileEvent::READABLE, [&](FileEvent /*unused*/) {
-                if (stop) {
-                    return eq.remove_handler(hid);
-                }
+        eq.add_file_handler(fd, FileEvent::READABLE, [&](FileEvent /*unused*/) {
+            if (stop) {
+                return eq.remove_handler(hid);
+            }
 
-                if (system_clock::now() > start + 10s) {
-                    FAIL();
-                    return eq.remove_handler(hid);
-                }
+            if (system_clock::now() > start + 10s) {
+                FAIL();
+                return eq.remove_handler(hid);
+            }
 
-                ++file_iters;
-            });
+            ++file_iters;
+        });
 
     eq.add_repeating_handler(10us, [&] {
         if (looper_iters > 4 and file_iters > 4 and time_handler_run) {
@@ -656,33 +667,33 @@ TEST(EventQueue, full_fairness) {
 
     FileDescriptor fd_a("/dev/zero", O_RDONLY);
     EventQueue::handler_id_t file_a_hid =
-            eq.add_file_handler(fd_a, FileEvent::READABLE, [&](FileEvent /*unused*/) {
-                if (stop) {
-                    return eq.remove_handler(file_a_hid);
-                }
+        eq.add_file_handler(fd_a, FileEvent::READABLE, [&](FileEvent /*unused*/) {
+            if (stop) {
+                return eq.remove_handler(file_a_hid);
+            }
 
-                if (system_clock::now() > start + 10s) {
-                    FAIL();
-                    return eq.remove_handler(file_a_hid);
-                }
+            if (system_clock::now() > start + 10s) {
+                FAIL();
+                return eq.remove_handler(file_a_hid);
+            }
 
-                ++iters_a;
-            });
+            ++iters_a;
+        });
 
     FileDescriptor fd_b("/dev/null", O_WRONLY);
     EventQueue::handler_id_t file_b_hid =
-            eq.add_file_handler(fd_b, FileEvent::WRITEABLE, [&](FileEvent /*unused*/) {
-                if (stop) {
-                    return eq.remove_handler(file_b_hid);
-                }
+        eq.add_file_handler(fd_b, FileEvent::WRITEABLE, [&](FileEvent /*unused*/) {
+            if (stop) {
+                return eq.remove_handler(file_b_hid);
+            }
 
-                if (system_clock::now() > start + 10s) {
-                    FAIL();
-                    return eq.remove_handler(file_b_hid);
-                }
+            if (system_clock::now() > start + 10s) {
+                FAIL();
+                return eq.remove_handler(file_b_hid);
+            }
 
-                ++iters_b;
-            });
+            ++iters_b;
+        });
 
     uint looper_iters = 0;
     function<void()> looper = [&] {
@@ -741,18 +752,18 @@ TEST(EventQueue, file_unready_read_and_close_event) {
     int round = 0;
     std::array expected_events = {FileEvent::READABLE, FileEvent::CLOSED};
     EventQueue::handler_id_t hid =
-            eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
-                eq.add_ready_handler([&] { (void)wfd.close(); });
-                EXPECT_EQ(events, expected_events[round++]);
-                if (events == FileEvent::CLOSED) {
-                    return eq.remove_handler(hid);
-                }
+        eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
+            eq.add_ready_handler([&] { (void)wfd.close(); });
+            EXPECT_EQ(events, expected_events[round++]);
+            if (events == FileEvent::CLOSED) {
+                return eq.remove_handler(hid);
+            }
 
-                int rc = read(rfd, buff.data(), buff.size());
-                ASSERT_EQ(rc, sizeof("Test"));
-                buff.resize(rc - 1);
-                ASSERT_EQ(buff, "Test");
-            });
+            int rc = read(rfd, buff.data(), buff.size());
+            ASSERT_EQ(rc, sizeof("Test"));
+            buff.resize(rc - 1);
+            ASSERT_EQ(buff, "Test");
+        });
 
     EXPECT_EQ(round, 0);
     eq.run();
@@ -771,11 +782,11 @@ TEST(EventQueue, file_simultaneous_read_and_close_event) {
     int times = 0;
     EventQueue eq;
     EventQueue::handler_id_t hid =
-            eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
-                ++times;
-                EXPECT_EQ(events, FileEvent::READABLE | FileEvent::CLOSED);
-                eq.remove_handler(hid);
-            });
+        eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
+            ++times;
+            EXPECT_EQ(events, FileEvent::READABLE | FileEvent::CLOSED);
+            eq.remove_handler(hid);
+        });
 
     EXPECT_EQ(times, 0);
     eq.run();
@@ -803,10 +814,10 @@ TEST(EventQueue, file_handler_removing_itself) {
     EventQueue eq;
     int iters = 0;
     EventQueue::handler_id_t hid =
-            eq.add_file_handler(fd, FileEvent::READABLE, [&](FileEvent /*unused*/) {
-                ++iters;
-                eq.remove_handler(hid);
-            });
+        eq.add_file_handler(fd, FileEvent::READABLE, [&](FileEvent /*unused*/) {
+            ++iters;
+            eq.remove_handler(hid);
+        });
 
     EXPECT_EQ(iters, 0);
     eq.run();
@@ -930,10 +941,13 @@ TEST(EventQueue, adding_new_file_handlers_after_removing_old_ones) {
         eq.add_ready_handler([&] {
             for (int j = 0; j < handlers_to_add; ++j) {
                 auto hid = eq.add_file_handler(
-                        fd, FileEvent::READABLE, [&eq, &iters, &hids, idx = hids.size()] {
-                            ++iters[idx];
-                            eq.remove_handler(hids[idx]);
-                        });
+                    fd,
+                    FileEvent::READABLE,
+                    [&eq, &iters, &hids, idx = hids.size()] {
+                        ++iters[idx];
+                        eq.remove_handler(hids[idx]);
+                    }
+                );
 
                 hids.emplace_back(hid);
                 iters.emplace_back(0);

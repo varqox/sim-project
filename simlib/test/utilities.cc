@@ -96,6 +96,7 @@ TEST(utilities, filter_return_type) {
     static_assert(std::is_same_v<set<int>&, decltype(filter(s, true_pred))>);
     // xvalue
     static_assert(std::is_same_v<set<int>, decltype(filter(set<int>{}, true_pred))>);
+
     // Check move only type
     struct Foo {
         Foo() = default;
@@ -106,8 +107,11 @@ TEST(utilities, filter_return_type) {
         ~Foo() = default;
 
         static int* begin() noexcept { return nullptr; }
+
         static int* end() noexcept { return nullptr; }
+
         void erase(int* /*unused*/) noexcept {}
     };
+
     (void)Foo(filter(Foo(), [](int /*unused*/) { return true; }));
 }

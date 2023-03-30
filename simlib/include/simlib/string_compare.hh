@@ -113,8 +113,7 @@ class SpecialStrCompare {
     Func func;
 
 public:
-    explicit SpecialStrCompare(Func f)
-    : func(std::move(f)) {}
+    explicit SpecialStrCompare(Func f) : func(std::move(f)) {}
 
     template <class A, class B>
     bool operator()(A&& a, B&& b) const {
@@ -123,8 +122,7 @@ public:
 };
 
 struct LowerStrCompare : public SpecialStrCompare<int (*)(int)> {
-    LowerStrCompare()
-    : SpecialStrCompare(to_lower) {}
+    LowerStrCompare() : SpecialStrCompare(to_lower) {}
 };
 
 // Compares two strings: @p str[beg, end) and @p s
@@ -151,7 +149,7 @@ bool slow_equal(const char* str1, const char* str2, size_t len) noexcept;
 
 inline bool slow_equal(StringView str1, StringView str2) noexcept {
     return slow_equal(str1.data(), str2.data(), std::min(str1.size(), str2.size())) &&
-            str1.size() == str2.size();
+        str1.size() == str2.size();
 }
 
 /// Checks whether string @p s consist only of digits and is not greater than

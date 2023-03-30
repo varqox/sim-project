@@ -32,11 +32,12 @@
  */
 template <class Main, class Cleanup, class... Signals>
 auto handle_signals_while_running(
-        Main&& main_func, Cleanup&& cleanup_before_getting_killed, Signals... signals);
+    Main&& main_func, Cleanup&& cleanup_before_getting_killed, Signals... signals
+);
 
 class HandleSignalsWhileRunning {
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-    inline static FileDescriptor signal_eventfd{};
+    static inline FileDescriptor signal_eventfd{};
 
     static uint64_t pack_signum(int signum) noexcept {
         static_assert(sizeof(int) == 4, "Needed for the below hack to work properly");
@@ -59,17 +60,22 @@ class HandleSignalsWhileRunning {
 public:
     template <class Main, class Cleanup, class... Signals>
     friend auto handle_signals_while_running(
-            Main&& main_func, Cleanup&& cleanup_before_getting_killed, Signals... signals) {
+        Main&& main_func, Cleanup&& cleanup_before_getting_killed, Signals... signals
+    ) {
         static_assert(std::is_invocable_v<Main>, "main_func has to take no arguments");
-        static_assert(std::is_invocable_v<Cleanup, int>,
-                "cleanup_before_getting_killed has to take one argument -- "
-                "killing signal number");
-        static_assert((std::is_same_v<Signals, int> and ...),
-                "signals parameters have to be from of SIGINT, SIGTERM, etc.");
+        static_assert(
+            std::is_invocable_v<Cleanup, int>,
+            "cleanup_before_getting_killed has to take one argument -- killing signal number"
+        );
+        static_assert(
+            (std::is_same_v<Signals, int> and ...),
+            "signals parameters have to be from of SIGINT, SIGTERM, etc."
+        );
 
-        assert(not HandleSignalsWhileRunning::signal_eventfd.is_open() and
-                "This function is already running, using this function "
-                "simultaneously is impossible");
+        assert(
+            not HandleSignalsWhileRunning::signal_eventfd.is_open() and
+            "This function is already running, using this function simultaneously is impossible"
+        );
 
         // Prepare signal eventfd
         HandleSignalsWhileRunning::signal_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
@@ -94,7 +100,7 @@ public:
         }
 
         // Signal control
-        struct sigaction sa {};
+        struct sigaction sa = {};
         memset(&sa, 0, sizeof(sa));
         sa.sa_handler = HandleSignalsWhileRunning::signal_handler;
         // Intercept signals, to allow a dedicated thread to consume them
@@ -108,8 +114,8 @@ public:
             constexpr int signal_efd_idx = 0;
             constexpr int main_func_ended_efd_idx = 1;
             std::array<pollfd, 2> pfds{{
-                    {HandleSignalsWhileRunning::signal_eventfd, POLLIN, 0},
-                    {main_func_ended_eventfd, POLLIN, 0},
+                {HandleSignalsWhileRunning::signal_eventfd, POLLIN, 0},
+                {main_func_ended_eventfd, POLLIN, 0},
             }};
             for (int rc = 0;;) {
                 rc = poll(pfds.data(), 2, -1);
@@ -129,8 +135,9 @@ public:
 
             if (pfds[signal_efd_idx].revents & POLLIN) {
                 uint64_t packed_signum = 0;
-                auto read_bytes = read(HandleSignalsWhileRunning::signal_eventfd, &packed_signum,
-                        sizeof(packed_signum));
+                auto read_bytes = read(
+                    HandleSignalsWhileRunning::signal_eventfd, &packed_signum, sizeof(packed_signum)
+                );
                 assert(read_bytes == sizeof(packed_signum));
                 int signum = HandleSignalsWhileRunning::unpack_signum(packed_signum);
 
@@ -153,9 +160,11 @@ public:
                 }
             }
 
-            assert((pfds[main_func_ended_efd_idx].revents & POLLIN) and
-                    "There should be no other cases than the two handled here: "
-                    "signal or main_func ended");
+            assert(
+                (pfds[main_func_ended_efd_idx].revents & POLLIN) and
+                "There should be no other cases than the two handled here: signal or main_func "
+                "ended"
+            );
             // Signal did not happen before the main has ended, so we are done
         });
 

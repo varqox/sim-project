@@ -34,9 +34,9 @@ class RandomDevice {
 public:
     using result_type = uint64_t;
 
-    constexpr static result_type min() noexcept { return std::numeric_limits<result_type>::min(); }
+    static constexpr result_type min() noexcept { return std::numeric_limits<result_type>::min(); }
 
-    constexpr static result_type max() noexcept { return std::numeric_limits<result_type>::max(); }
+    static constexpr result_type max() noexcept { return std::numeric_limits<result_type>::max(); }
 
 private:
     std::array<result_type, 256 / sizeof(result_type)> buff{};
@@ -74,7 +74,8 @@ inline RandomDevice& get_random_generator() {
 template <class T>
 constexpr T get_random(T&& a, T&& b) {
     return std::uniform_int_distribution<T>(std::forward<T>(a), std::forward<T>(b))(
-            get_random_generator());
+        get_random_generator()
+    );
 }
 
 template <class Iter>

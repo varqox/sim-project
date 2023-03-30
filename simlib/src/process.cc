@@ -109,8 +109,12 @@ vector<pid_t> find_processes_by_executable_path(vector<string> exec_set, bool in
     return res;
 }
 
-void kill_processes_by_exec(vector<string> exec_set, optional<duration<double>> wait_timeout,
-        bool kill_after_waiting, int terminate_signal) {
+void kill_processes_by_exec(
+    vector<string> exec_set,
+    optional<duration<double>> wait_timeout,
+    bool kill_after_waiting,
+    int terminate_signal
+) {
     STACK_UNWINDING_MARK;
     // TODO: change every ProcStatFileContents::get() to open file by
     // FileDescriptor and use ProcStatFileContents::from_proc_stat_contents()
@@ -124,7 +128,8 @@ void kill_processes_by_exec(vector<string> exec_set, optional<duration<double>> 
     for (pid_t pid : find_processes_by_executable_path(std::move(exec_set))) {
         try {
             victims.emplace_back(
-                    pid, ProcStatFileContents::get(pid).field(START_TIME_FID).to_string());
+                pid, ProcStatFileContents::get(pid).field(START_TIME_FID).to_string()
+            );
         } catch (...) {
             // Ignore if process already died
             if (kill(pid, 0) == 0 or errno != ESRCH) {
@@ -153,10 +158,10 @@ void kill_processes_by_exec(vector<string> exec_set, optional<duration<double>> 
 
     auto proc_uptime = get_file_contents("/proc/uptime");
     auto current_uptime = to_string(
-            str2num<double>(StringView(proc_uptime).extract_leading(not_fn(is_space<char>)))
-                            .value() *
-                    static_cast<double>(ticks_per_second),
-            0);
+        str2num<double>(StringView(proc_uptime).extract_leading(not_fn(is_space<char>))).value() *
+            static_cast<double>(ticks_per_second),
+        0
+    );
 
     // If one of the processes has just appeared, wait for a clock tick
     // to distinguish it from a new process that may appear just after killing

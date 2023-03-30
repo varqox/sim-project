@@ -62,15 +62,15 @@ bool is_datetime(const CStringView& str) noexcept;
  *
  * @errors The same that occur for strptime(3) and timegm(3)
  */
-time_t str_to_time_t(
-        CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) noexcept;
+time_t
+str_to_time_t(CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) noexcept;
 
 /**
  * @brief Converts a @p str containing time in format @p format to time_point
  * @errors The same that occur for str_to_time_t() but thrown as exceptions
  */
-inline std::chrono::system_clock::time_point str_to_time_point(
-        CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
+inline std::chrono::system_clock::time_point
+str_to_time_point(CStringView str, CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
     time_t t = str_to_time_t(str, format);
     if (t == -1) {
         THROW("str_to_time_t()", errmsg());
@@ -148,6 +148,7 @@ constexpr timeval operator-(timeval a, timeval b) noexcept {
 constexpr timeval& operator+=(timeval& a, timeval b) noexcept { return (a = a + b); }
 
 constexpr timeval& operator-=(timeval& a, timeval b) noexcept { return (a = a - b); }
+
 constexpr bool operator==(timeval a, timeval b) noexcept {
     return (a.tv_sec == b.tv_sec and a.tv_usec == b.tv_usec);
 }
@@ -172,7 +173,8 @@ namespace detail {
 
 template <class T>
 constexpr size_t append_decimal_point_with_digits(
-        char* buff, uint max_precision, uint precision, bool trim_zeros, T val) noexcept {
+    char* buff, uint max_precision, uint precision, bool trim_zeros, T val
+) noexcept {
     assert(precision <= max_precision);
     buff[0] = '.';
     for (size_t i = max_precision; i > 0; --i) {
@@ -197,8 +199,8 @@ constexpr size_t append_decimal_point_with_digits(
 constexpr auto timespec_to_string(timespec ts, uint precision, bool trim_zeros = true) noexcept {
     auto sec_str = to_string(ts.tv_sec);
     StaticCStringBuff<decltype(sec_str)::max_size() + 10> res = sec_str;
-    res.len_ += detail::append_decimal_point_with_digits(
-            res.end(), 9, precision, trim_zeros, ts.tv_nsec);
+    res.len_ +=
+        detail::append_decimal_point_with_digits(res.end(), 9, precision, trim_zeros, ts.tv_nsec);
     *res.end() = '\0';
     return res;
 }
@@ -206,8 +208,8 @@ constexpr auto timespec_to_string(timespec ts, uint precision, bool trim_zeros =
 constexpr auto timeval_to_string(timeval tv, uint precision, bool trim_zeros = true) noexcept {
     auto sec_str = to_string(tv.tv_sec);
     StaticCStringBuff<decltype(sec_str)::max_size() + 7> res = sec_str;
-    res.len_ += detail::append_decimal_point_with_digits(
-            res.end(), 6, precision, trim_zeros, tv.tv_usec);
+    res.len_ +=
+        detail::append_decimal_point_with_digits(res.end(), 6, precision, trim_zeros, tv.tv_usec);
     *res.end() = '\0';
     return res;
 }
@@ -236,11 +238,13 @@ constexpr bool is_power_of_10(T x) noexcept {
  *
  * @return floating-point @p dur in seconds as string
  */
-template <class Rep, class Period,
-        size_t N = decltype(to_string(std::declval<Rep>()))::max_size() +
-                3> // +3 for sign, terminating null and decimal point
-constexpr StaticCStringBuff<N> to_string(
-        const std::chrono::duration<Rep, Period>& dur, bool trim_zeros = true) noexcept {
+template <
+    class Rep,
+    class Period,
+    size_t N = decltype(to_string(std::declval<Rep>()))::max_size() +
+        3> // +3 for sign, terminating null and decimal point
+constexpr StaticCStringBuff<N>
+to_string(const std::chrono::duration<Rep, Period>& dur, bool trim_zeros = true) noexcept {
     static_assert(Period::num == 1, "Needed below");
     static_assert(is_power_of_10(Period::den), "Needed below");
     auto dec_dur = std::chrono::duration_cast<std::chrono::duration<intmax_t>>(dur);

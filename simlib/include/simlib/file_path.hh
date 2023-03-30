@@ -29,14 +29,10 @@ public:
     , size_(str.size()) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr FilePath(const CStringView& str) noexcept
-    : str_(str.c_str())
-    , size_(str.size()) {}
+    constexpr FilePath(const CStringView& str) noexcept : str_(str.c_str()), size_(str.size()) {}
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    FilePath(const std::string& str) noexcept
-    : str_(str.c_str())
-    , size_(str.size()) {}
+    FilePath(const std::string& str) noexcept : str_(str.c_str()), size_(str.size()) {}
 
     template <size_t N>
     // NOLINTNEXTLINE(google-explicit-constructor)

@@ -113,7 +113,8 @@
  * @return 0 on success, -1 on error (errno is set respectively)
  */
 [[nodiscard]] int copyat_using_rename(
-        int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode) noexcept;
+    int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode
+) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -128,8 +129,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat(
-        int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode) noexcept;
+[[nodiscard]] int
+copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -142,8 +143,8 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat_using_rename(
-        int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
+[[nodiscard]] int
+copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
@@ -225,7 +226,8 @@
  * thus preventing the race.
  */
 void thread_fork_safe_copyat(
-        int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode);
+    int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode
+);
 
 /**
  * Copy function that protects from a nasty race condition that may result when
@@ -321,12 +323,10 @@ public:
     RemoverBase(const RemoverBase&&) = delete;
     RemoverBase& operator=(const RemoverBase&&) = delete;
 
-    explicit RemoverBase(FilePath str)
-    : RemoverBase(str.data(), str.size()) {}
+    explicit RemoverBase(FilePath str) : RemoverBase(str.data(), str.size()) {}
 
     /// If @p str is null then @p len is ignored
-    RemoverBase(const char* str, size_t len)
-    : name(len + 1) {
+    RemoverBase(const char* str, size_t len) : name(len + 1) {
         if (len != 0) {
             strncpy(name.data(), str, len + 1);
         }

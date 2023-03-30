@@ -68,5 +68,6 @@ public:
  *       [@p buff_len - @p suffix_len, @p buff_len) is undefined in this case.
  *   - any other error returned by openat(2)
  */
-std::optional<FileDescriptor> create_unique_file(int dirfd, char* path_buff, size_t buff_len,
-        size_t suffix_len, int open_flags, mode_t mode) noexcept;
+std::optional<FileDescriptor> create_unique_file(
+    int dirfd, char* path_buff, size_t buff_len, size_t suffix_len, int open_flags, mode_t mode
+) noexcept;

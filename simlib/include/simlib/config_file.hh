@@ -14,8 +14,7 @@ public:
         std::string diagnostics_;
 
     public:
-        explicit ParseError(const std::string& msg)
-        : runtime_error(msg) {}
+        explicit ParseError(const std::string& msg) : runtime_error(msg) {}
 
         template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
         ParseError(size_t line, size_t pos, Args&&... msg)

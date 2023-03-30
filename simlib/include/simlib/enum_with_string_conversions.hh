@@ -21,11 +21,9 @@
         MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_STATIC_VARIANTS, seq)                      \
                                                                                          \
         /* NOLINTNEXTLINE */                                                             \
-        constexpr enum_name(Enum x = {})                                                 \
-        : val{x} {}                                                                      \
+        constexpr enum_name(Enum x = {}) : val{x} {}                                     \
                                                                                          \
-        constexpr explicit enum_name(UnderlyingType x)                                   \
-        : val{x} {}                                                                      \
+        constexpr explicit enum_name(UnderlyingType x) : val{x} {}                       \
                                                                                          \
         constexpr operator Enum() const noexcept { return val; }                         \
                                                                                          \
@@ -92,4 +90,4 @@ constexpr auto has_enum_with_string_conversions_marker(...) -> std::false_type;
 
 template <class T>
 constexpr inline bool is_enum_with_string_conversions =
-        decltype(detail::has_enum_with_string_conversions_marker<T>(0))::value;
+    decltype(detail::has_enum_with_string_conversions_marker<T>(0))::value;

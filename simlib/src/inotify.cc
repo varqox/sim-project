@@ -73,6 +73,7 @@ void FileModificationMonitor::process_event(const simlib_inotify_event& event) {
         run_modification_handler(finfo, finfo->path);
     }
 }
+
 void FileModificationMonitor::schedule_processing_unwatched_files() {
     if (processing_unwatched_files_is_scheduled_ or unwatched_files_.empty()) {
         return;
@@ -127,7 +128,7 @@ void FileModificationMonitor::run_modification_handler(const FileInfo* finfo, St
 
     // Schedule handling
     auto [it, inserted] =
-            deferred_modification_handlers_.try_emplace(std::move(file_path_to_use), 0);
+        deferred_modification_handlers_.try_emplace(std::move(file_path_to_use), 0);
     assert(inserted);
     it->second = eq_.add_time_handler(finfo->stillness_threshold, [&, it = it] {
         event_handler_(it->first);
