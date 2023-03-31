@@ -450,6 +450,8 @@ Sandbox::Sandbox() : x86_ctx_(seccomp_init(SCMP_ACT_TRAP)) {
     seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(arch_prctl), 0);
     // readlink
     seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(readlink), 0);
+    // readlinkat
+    seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(readlinkat), 0);
 
     // Monitor memory for changes of tracee's virtual memory size
     {
