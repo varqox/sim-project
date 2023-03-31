@@ -1,5 +1,5 @@
-#include "templates.hh"
 #include "../sip_error.hh"
+#include "templates.hh"
 
 #include <cstdlib>
 #include <simlib/debug.hh>
@@ -14,9 +14,11 @@ static auto user_templates_dir() {
     static constexpr StringView templates_home_subdir = "/.config/sip/templates/";
     static auto home = getenv("HOME");
     if (not home) {
-        log_warning("failed to get variable HOME from the environment, not "
-                    "searching for templates in ~",
-                templates_home_subdir);
+        log_warning(
+            "failed to get variable HOME from the environment, not "
+            "searching for templates in ~",
+            templates_home_subdir
+        );
     }
     return concat(home, templates_home_subdir);
 }
@@ -41,11 +43,13 @@ extern const unsigned char gen_cc[];
 extern const unsigned gen_cc_len;
 }
 
-static string get_template(StringView template_name, const unsigned char* default_template,
-        unsigned default_template_len) {
+static string get_template(
+    StringView template_name, const unsigned char* default_template, unsigned default_template_len
+) {
     static auto templates_dir = user_templates_dir();
     FileDescriptor fd(
-            intentional_unsafe_cstring_view(concat(templates_dir, template_name)), O_RDONLY);
+        intentional_unsafe_cstring_view(concat(templates_dir, template_name)), O_RDONLY
+    );
     if (fd.is_open()) {
         return get_file_contents(fd);
     }
@@ -82,7 +86,8 @@ string checker_cc() { return get_template("checker.cc", ::checker_cc, ::checker_
 
 string interactive_checker_cc() {
     return get_template(
-            "interactive_checker.cc", ::interactive_checker_cc, ::interactive_checker_cc_len);
+        "interactive_checker.cc", ::interactive_checker_cc, ::interactive_checker_cc_len
+    );
 }
 
 string sim_statement_cls() {
@@ -91,9 +96,11 @@ string sim_statement_cls() {
 
 string statement_tex(StringView problem_name, optional<uint64_t> memory_limit) {
     string full_template_str = get_template("statement.tex", ::statement_tex, ::statement_tex_len);
-    return replace(full_template_str, std::pair("<<<name>>>", problem_name),
-            std::pair(
-                    "<<<mem>>>", (memory_limit ? concat(*memory_limit >> 20, " MiB") : concat())));
+    return replace(
+        full_template_str,
+        std::pair("<<<name>>>", problem_name),
+        std::pair("<<<mem>>>", (memory_limit ? concat(*memory_limit >> 20, " MiB") : concat()))
+    );
 }
 
 string gen_cc() { return get_template("gen.cc", ::gen_cc, ::gen_cc_len); }

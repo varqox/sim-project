@@ -1,7 +1,7 @@
-#include "sip_package.hh"
 #include "compilation_cache.hh"
 #include "constants.hh"
 #include "sip_error.hh"
+#include "sip_package.hh"
 #include "sipfile.hh"
 #include "templates/templates.hh"
 #include "utils.hh"
@@ -102,17 +102,20 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
         }
 
         if (sim::filename_to_lang(test.generator) == sim::SolutionLanguage::UNKNOWN) {
-            log_warning("generator source file `", test.generator,
-                    "` has an invalid extension. It will be treated as a shell "
-                    "command.\n"
-                    "  To remove this warning you have to choose one of the "
-                    "following options:\n"
-                    "    1. Change specified generator in Sipfile to a valid source "
-                    "file e.g. utils/gen.cpp\n"
-                    "    2. Rename the generator source file to have appropriate "
-                    "extension e.g. utils/gen.cpp\n"
-                    "    3. If it is a shell command or a binary file, prefix the "
-                    "generator with sh: in Sipfile - e.g. sh:echo");
+            log_warning(
+                "generator source file `",
+                test.generator,
+                "` has an invalid extension. It will be treated as a shell "
+                "command.\n"
+                "  To remove this warning you have to choose one of the "
+                "following options:\n"
+                "    1. Change specified generator in Sipfile to a valid source "
+                "file e.g. utils/gen.cpp\n"
+                "    2. Rename the generator source file to have appropriate "
+                "extension e.g. utils/gen.cpp\n"
+                "    3. If it is a shell command or a binary file, prefix the "
+                "generator with sh: in Sipfile - e.g. sh:echo"
+            );
 
             return concat(test.generator);
         }
@@ -152,32 +155,54 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
             fputc('\n', stderr);
         }
     };
-    auto es = Spawner::run("sh", {"sh", "-c", concat_tostr(generator, ' ', test.generator_args)},
-            Spawner::Options(-1, FileDescriptor(in_file, O_WRONLY | O_CREAT | O_TRUNC), errfd));
+    auto es = Spawner::run(
+        "sh",
+        {"sh", "-c", concat_tostr(generator, ' ', test.generator_args)},
+        Spawner::Options(-1, FileDescriptor(in_file, O_WRONLY | O_CREAT | O_TRUNC), errfd)
+    );
 
     if (es.si.code == CLD_EXITED and es.si.status == 0) { // OK
-        stdlog(" \033[1;32mdone\033[m in ", to_string(floor_to_10ms(es.cpu_runtime), false),
-                " [ RT: ", to_string(floor_to_10ms(es.runtime), false), " ]");
+        stdlog(
+            " \033[1;32mdone\033[m in ",
+            to_string(floor_to_10ms(es.cpu_runtime), false),
+            " [ RT: ",
+            to_string(floor_to_10ms(es.runtime), false),
+            " ]"
+        );
         print_errfd();
     } else { // RTE
-        stdlog(" \033[1;31mfailed\033[m in ", to_string(floor_to_10ms(es.cpu_runtime), false),
-                " [ RT: ", to_string(floor_to_10ms(es.runtime), false), " ] (", es.message, ')');
+        stdlog(
+            " \033[1;31mfailed\033[m in ",
+            to_string(floor_to_10ms(es.cpu_runtime), false),
+            " [ RT: ",
+            to_string(floor_to_10ms(es.runtime), false),
+            " ] (",
+            es.message,
+            ')'
+        );
         print_errfd();
         throw SipError("failed to generate test: ", test.name, " seed: ", seed);
     }
 }
 
-sim::JudgeReport::Test SipPackage::generate_test_output_file(
-        const sim::Simfile::Test& test, SipJudgeLogger& logger) {
+sim::JudgeReport::Test
+SipPackage::generate_test_output_file(const sim::Simfile::Test& test, SipJudgeLogger& logger) {
     STACK_UNWINDING_MARK;
 
     stdlog("generating ", test.name, ".out...").flush_no_nl();
 
-    auto es = jworker.value().run_solution(
-            test.in, test.out.value(), test.time_limit, test.memory_limit);
+    auto es =
+        jworker.value().run_solution(test.in, test.out.value(), test.time_limit, test.memory_limit);
 
-    sim::JudgeReport::Test res(test.name, sim::JudgeReport::Test::OK, es.cpu_runtime,
-            test.time_limit, es.vm_peak, test.memory_limit, string{});
+    sim::JudgeReport::Test res(
+        test.name,
+        sim::JudgeReport::Test::OK,
+        es.cpu_runtime,
+        test.time_limit,
+        es.vm_peak,
+        test.memory_limit,
+        string{}
+    );
 
     if (es.si.code == CLD_EXITED and es.si.status == 0 and res.runtime <= res.time_limit) {
         // OK
@@ -236,14 +261,19 @@ SipPackage::SipPackage() {
 
 void SipPackage::warn_about_tests_not_specified_as_static_or_generated() {
     prepare_tests_files();
-    for (auto const& [test_name, test] : tests_files->tests) {
+    for (const auto& [test_name, test] : tests_files->tests) {
         assert(test.in.has_value() or test.out.has_value());
         StringView test_file = test.in ? *test.in : test.out.value();
         if (sipfile.get_static_tests().find(test_name) == sipfile.get_static_tests().end() and
-                sipfile.get_gen_tests().find(test_name) == sipfile.get_gen_tests().end())
+            sipfile.get_gen_tests().find(test_name) == sipfile.get_gen_tests().end())
         {
-            log_warning("test `", test_name, "` (file: ", test_file,
-                    ") is neither specified as static nor as generated in Sipfile");
+            log_warning(
+                "test `",
+                test_name,
+                "` (file: ",
+                test_file,
+                ") is neither specified as static nor as generated in Sipfile"
+            );
         }
     }
 }
@@ -260,9 +290,12 @@ void SipPackage::generate_test_input_files() {
     // Check for tests that are both static and generated
     for (StringView test : sipfile.get_static_tests()) {
         if (sipfile.get_gen_tests().find(test) != sipfile.get_gen_tests().end()) {
-            log_warning("test `", test,
-                    "` is specified as static and as generated - treating "
-                    "it as generated");
+            log_warning(
+                "test `",
+                test,
+                "` is specified as static and as generated - treating "
+                "it as generated"
+            );
         }
     }
 
@@ -287,14 +320,16 @@ void SipPackage::generate_test_input_files() {
     if (not sipfile.get_gen_tests().empty()) {
         sipfile.load_base_seed();
     }
-    for (auto const& test : sipfile.get_gen_tests()) {
+    for (const auto& test : sipfile.get_gen_tests()) {
         auto it = tests_files->tests.find(test.name);
         if (it == tests_files->tests.end() or not it->second.in.has_value()) {
             generate_test_input_file(
-                    test, intentional_unsafe_cstring_view(concat(in_dir, test.name, ".in")));
+                test, intentional_unsafe_cstring_view(concat(in_dir, test.name, ".in"))
+            );
         } else {
             generate_test_input_file(
-                    test, intentional_unsafe_cstring_view(concat(it->second.in.value())));
+                test, intentional_unsafe_cstring_view(concat(it->second.in.value()))
+            );
         }
     }
 
@@ -321,9 +356,9 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
     prepare_tests_files();
 
     // Remove tests that have no corresponding input file
-    auto const& limits = simfile.config_file().get_var("limits").as_array();
+    const auto& limits = simfile.config_file().get_var("limits").as_array();
     vector<string> new_limits;
-    for (auto const& entry : limits) {
+    for (const auto& entry : limits) {
         StringView test_name = StringView(entry).extract_leading(std::not_fn(is_space<char>));
         auto it = tests_files->tests.find(test_name);
         if (it == tests_files->tests.end() or not it->second.in.has_value()) {
@@ -334,7 +369,8 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
     }
 
     replace_variable_in_simfile(
-            "limits", intentional_unsafe_string_view(simfile.dump_limits_value()), false);
+        "limits", intentional_unsafe_string_view(simfile.dump_limits_value()), false
+    );
 }
 
 void SipPackage::generate_test_output_files() {
@@ -350,7 +386,7 @@ void SipPackage::generate_test_output_files() {
 
     prepare_tests_files();
     // Create out/ dir if needed
-    for (auto const& [_, test] : tests_files->tests) {
+    for (const auto& [_, test] : tests_files->tests) {
         if (test.in.has_value() and has_prefix(*test.in, "in/")) {
             if (mkdir("out") == -1 and errno != EEXIST) {
                 throw SipError("failed to create directory out/ (mkdir()", errmsg(), ')');
@@ -363,14 +399,14 @@ void SipPackage::generate_test_output_files() {
     // warnings about them
     remove_tests_with_no_input_file_from_limits_in_simfile();
     // Warn about orphaned .out files
-    for (auto const& [test_name, test] : tests_files->tests) {
+    for (const auto& [test_name, test] : tests_files->tests) {
         if (not test.in.has_value()) {
             log_warning("orphaned test out file: ", test.out.value());
         }
     }
 
     std::set<StringView> tests_excluded_from_generating_output; // (test name)
-    for (auto const& test_name : sipfile.get_static_tests()) {
+    for (const auto& test_name : sipfile.get_static_tests()) {
         auto it = tests_files->tests.find(test_name);
         if (it == tests_files->tests.end()) {
             log_warning("static test ", test_name, " has no files");
@@ -385,7 +421,7 @@ void SipPackage::generate_test_output_files() {
 
     // Create (or truncate) .out files to generate, as rebuild_full_simfile()
     // needs both .in and .out files to exist to register the test
-    for (auto const& [test_name, test] : tests_files->tests) {
+    for (const auto& [test_name, test] : tests_files->tests) {
         if (not test.in.has_value() or tests_excluded_from_generating_output.count(test_name)) {
             continue;
         }
@@ -410,7 +446,7 @@ void SipPackage::generate_test_output_files() {
     sim::JudgeReport jrep2;
     SipJudgeLogger logger{full_simfile};
     logger.begin(false);
-    for (auto const& group : full_simfile.tgroups) {
+    for (const auto& group : full_simfile.tgroups) {
         auto p = sim::Simfile::TestNameComparator::split(group.tests[0].name);
         if (p.gid != "0") {
             logger.begin(true); // Assumption: initial tests come as first
@@ -418,7 +454,7 @@ void SipPackage::generate_test_output_files() {
 
         auto& judge_report = (p.gid != "0" ? jrep2 : jrep1);
         judge_report.groups.emplace_back();
-        for (auto const& test : group.tests) {
+        for (const auto& test : group.tests) {
             if (tests_excluded_from_generating_output.count(test.name)) {
                 continue; // Also note that time limit for these tests will be
                           // default time limit
@@ -430,7 +466,8 @@ void SipPackage::generate_test_output_files() {
 
     // Adjust time limits
     sim::Conver::reset_time_limits_using_jugde_reports(
-            full_simfile, jrep1, jrep2, conver_options(false).rtl_opts);
+        full_simfile, jrep1, jrep2, conver_options(false).rtl_opts
+    );
     jworker = std::nullopt; // Time limits have changed
 }
 
@@ -464,7 +501,8 @@ void SipPackage::judge_solution(StringView solution) {
     // Adjust time limits according to the main solution judge times
     if (solution == full_simfile.solutions.front()) {
         sim::Conver::reset_time_limits_using_jugde_reports(
-                full_simfile, jrep1, jrep2, conver_options(false).rtl_opts);
+            full_simfile, jrep1, jrep2, conver_options(false).rtl_opts
+        );
         jworker = std::nullopt; // Time limits have changed
     }
 
@@ -512,7 +550,7 @@ static void remove_elf_files_and_empty_dirs() {
             Defer path_guard = [&path, len = path.size] { path.size = len; };
             path.append(file->d_name);
             bool is_dir =
-                    (file->d_type == DT_UNKNOWN ? is_directory(path) : file->d_type == DT_DIR);
+                (file->d_type == DT_UNKNOWN ? is_directory(path) : file->d_type == DT_DIR);
             if (is_dir) {
                 path.append('/');
                 bool empty = self(self);
@@ -552,7 +590,7 @@ void SipPackage::remove_generated_test_files() {
     prepare_tests_files();
     stdlog("Removing generated test files...").flush_no_nl();
     // Remove generated .in and .out files
-    for (auto const& test : sipfile.get_gen_tests()) {
+    for (const auto& test : sipfile.get_gen_tests()) {
         auto it = tests_files->tests.find(test.name);
         if (it != tests_files->tests.end()) {
             if (it->second.in.has_value()) {
@@ -576,11 +614,11 @@ void SipPackage::remove_test_files_not_specified_in_sipfile() {
     prepare_tests_files();
     stdlog("Removing test files that are not specified as generated or"
            " static...")
-            .flush_no_nl();
+        .flush_no_nl();
 
-    for (auto const& [test_name, test] : tests_files->tests) {
-        auto const& static_tests = sipfile.get_static_tests();
-        auto const& gen_tests = sipfile.get_gen_tests();
+    for (const auto& [test_name, test] : tests_files->tests) {
+        const auto& static_tests = sipfile.get_static_tests();
+        const auto& gen_tests = sipfile.get_gen_tests();
         bool is_static = static_tests.find(test_name) != static_tests.end();
         bool is_generated = gen_tests.find(test_name) != gen_tests.end();
         if (is_static or is_generated) {
@@ -627,9 +665,11 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
     using std::chrono_literals::operator""ns;
 
     copts.max_time_limit = std::chrono::duration_cast<decltype(copts.max_time_limit)>(
-            sim::Conver::solution_runtime_to_time_limit(
-                    get_default_time_limit(), SOLUTION_RUNTIME_COEFFICIENT, MIN_TIME_LIMIT) +
-            0.5ns);
+        sim::Conver::solution_runtime_to_time_limit(
+            get_default_time_limit(), SOLUTION_RUNTIME_COEFFICIENT, MIN_TIME_LIMIT
+        ) +
+        0.5ns
+    );
 
     return copts;
 }
@@ -640,7 +680,7 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
     sim::Conver conver;
     conver.package_path(".");
     sim::Conver::ConstructionResult cr =
-            conver.construct_simfile(conver_options(set_default_time_limits));
+        conver.construct_simfile(conver_options(set_default_time_limits));
 
     // Filter out every line except warnings
     StringView report = conver.report();
@@ -676,7 +716,8 @@ void SipPackage::save_scoring() {
     stdlog("Saving scoring...").flush_no_nl();
 
     replace_variable_in_simfile(
-            "scoring", intentional_unsafe_string_view(full_simfile.dump_scoring_value()), false);
+        "scoring", intentional_unsafe_string_view(full_simfile.dump_scoring_value()), false
+    );
 
     stdlog(" done.");
 }
@@ -686,7 +727,8 @@ void SipPackage::save_limits() {
     stdlog("Saving limits...").flush_no_nl();
 
     replace_variable_in_simfile(
-            "limits", intentional_unsafe_string_view(full_simfile.dump_limits_value()), false);
+        "limits", intentional_unsafe_string_view(full_simfile.dump_limits_value()), false
+    );
 
     stdlog(" done.");
 }
@@ -697,8 +739,13 @@ void SipPackage::save_template(StringView template_name) {
     auto save_from_template = [&](CStringView path, StringView description, const string& content) {
         if (path_exists(path)) {
             assert(!description.empty());
-            throw SipError("File ", path, " already exists. To replace it with the default ",
-                    description, " template, remove the file and try again.");
+            throw SipError(
+                "File ",
+                path,
+                " already exists. To replace it with the default ",
+                description,
+                " template, remove the file and try again."
+            );
         }
         put_file_contents(path, content);
     };
@@ -708,16 +755,21 @@ void SipPackage::save_template(StringView template_name) {
         simfile.load_global_memory_limit_only();
         (void)mkdir("doc");
         save_from_template(
-                "doc/sim-statement.cls", "sim statement class", templates::sim_statement_cls());
-        save_from_template("doc/statement.tex", "statement",
-                templates::statement_tex(simfile.name.value(), simfile.global_mem_limit));
+            "doc/sim-statement.cls", "sim statement class", templates::sim_statement_cls()
+        );
+        save_from_template(
+            "doc/statement.tex",
+            "statement",
+            templates::statement_tex(simfile.name.value(), simfile.global_mem_limit)
+        );
     } else if (template_name == "checker") {
         simfile.load_interactive();
         (void)mkdir("check");
-        save_from_template("check/checker.cc",
-                simfile.interactive ? "interactive checker" : "checker",
-                simfile.interactive ? templates::interactive_checker_cc()
-                                    : templates::checker_cc());
+        save_from_template(
+            "check/checker.cc",
+            simfile.interactive ? "interactive checker" : "checker",
+            simfile.interactive ? templates::interactive_checker_cc() : templates::checker_cc()
+        );
     } else if (template_name == "gen") {
         (void)mkdir("utils");
         save_from_template("utils/gen.cc", "test generator", templates::gen_cc());
@@ -734,9 +786,11 @@ static void compile_tex_file(StringView file) {
     setenv("TEXINPUTS", concat_tostr(".:", path_dirpath(file), ':').data(), true);
     // It is necessary (essential) to run latex two times
     for (int iter = 0; iter < 2; ++iter) {
-        auto es = Spawner::run("pdflatex",
-                {"pdflatex", "-halt-on-error", "-output-dir=utils/latex", file.to_string()},
-                {-1, STDOUT_FILENO, STDERR_FILENO});
+        auto es = Spawner::run(
+            "pdflatex",
+            {"pdflatex", "-halt-on-error", "-output-dir=utils/latex", file.to_string()},
+            {-1, STDOUT_FILENO, STDERR_FILENO}
+        );
 
         if (es.si.code != CLD_EXITED or es.si.status != 0) {
             // During watching it is not intended to stop on compilation error
@@ -786,11 +840,14 @@ void SipPackage::compile_tex_files(ArgvParser args, bool watch) {
     STACK_UNWINDING_MARK;
 
     const char* empty_str = "";
-    set tex_files = files_matching_patterns([](StringView str) { return has_suffix(str, ".tex"); },
-            args.size() > 0 ? args : ArgvParser(1, &empty_str));
+    set tex_files = files_matching_patterns(
+        [](StringView str) { return has_suffix(str, ".tex"); },
+        args.size() > 0 ? args : ArgvParser(1, &empty_str)
+    );
     if (tex_files.empty()) {
-        log_warning("no .tex file ", args.size() > 0 ? "matching specified patterns " : "",
-                "was found");
+        log_warning(
+            "no .tex file ", args.size() > 0 ? "matching specified patterns " : "", "was found"
+        );
         return;
     }
 
@@ -798,7 +855,7 @@ void SipPackage::compile_tex_files(ArgvParser args, bool watch) {
         throw SipError("failed to create directory utils/latex/ (mkdir_r()", errmsg(), ')');
     }
 
-    for (auto const& file : tex_files) {
+    for (const auto& file : tex_files) {
         compile_tex_file(file);
     }
 
@@ -809,9 +866,12 @@ void SipPackage::compile_tex_files(ArgvParser args, bool watch) {
 
 void progress_callback(zip_t* /*unused*/, double p, void* /*unused*/) {
     using std::chrono::duration;
-    stdlog("\033[2K\033[GZipping... Progress: ",
-            to_string(duration<int, std::deci>(int(p * 1e3)), false), '%')
-            .flush_no_nl();
+    stdlog(
+        "\033[2K\033[GZipping... Progress: ",
+        to_string(duration<int, std::deci>(int(p * 1e3)), false),
+        '%'
+    )
+        .flush_no_nl();
 }
 
 void SipPackage::archive_into_zip(CStringView dest_file) {
@@ -842,9 +902,14 @@ void SipPackage::archive_into_zip(CStringView dest_file) {
     stdlog("\033[2K\033[GZipping... done.");
 }
 
-void SipPackage::replace_variable_in_configfile(const ConfigFile& cf, FilePath configfile_path,
-        StringView configfile_contents, StringView var_name, std::optional<StringView> replacement,
-        bool escape_replacement) {
+void SipPackage::replace_variable_in_configfile(
+    const ConfigFile& cf,
+    FilePath configfile_path,
+    StringView configfile_contents,
+    StringView var_name,
+    std::optional<StringView> replacement,
+    bool escape_replacement
+) {
     STACK_UNWINDING_MARK;
 
     std::ofstream out(configfile_path.data());
@@ -895,8 +960,13 @@ void SipPackage::replace_variable_in_configfile(const ConfigFile& cf, FilePath c
     out << '\n';
 }
 
-void SipPackage::replace_variable_in_configfile(const ConfigFile& cf, FilePath configfile_path,
-        StringView configfile_contents, StringView var_name, const vector<string>& replacement) {
+void SipPackage::replace_variable_in_configfile(
+    const ConfigFile& cf,
+    FilePath configfile_path,
+    StringView configfile_contents,
+    StringView var_name,
+    const vector<string>& replacement
+) {
     STACK_UNWINDING_MARK;
 
     std::ofstream out(configfile_path.data());
@@ -935,41 +1005,59 @@ void SipPackage::replace_variable_in_configfile(const ConfigFile& cf, FilePath c
 }
 
 void SipPackage::replace_variable_in_simfile(
-        StringView var_name, std::optional<StringView> replacement, bool escape_replacement) {
+    StringView var_name, std::optional<StringView> replacement, bool escape_replacement
+) {
     STACK_UNWINDING_MARK;
 
-    replace_variable_in_configfile(simfile.config_file(), "Simfile", simfile_contents, var_name,
-            replacement, escape_replacement);
+    replace_variable_in_configfile(
+        simfile.config_file(),
+        "Simfile",
+        simfile_contents,
+        var_name,
+        replacement,
+        escape_replacement
+    );
     simfile_contents = get_file_contents("Simfile");
     reload_simfile_from_str(simfile_contents);
 }
 
 void SipPackage::replace_variable_in_simfile(
-        StringView var_name, const vector<string>& replacement) {
+    StringView var_name, const vector<string>& replacement
+) {
     STACK_UNWINDING_MARK;
 
     replace_variable_in_configfile(
-            simfile.config_file(), "Simfile", simfile_contents, var_name, replacement);
+        simfile.config_file(), "Simfile", simfile_contents, var_name, replacement
+    );
     simfile_contents = get_file_contents("Simfile");
     reload_simfile_from_str(simfile_contents);
 }
 
 void SipPackage::replace_variable_in_sipfile(
-        StringView var_name, StringView replacement, bool escape_replacement) {
+    StringView var_name, StringView replacement, bool escape_replacement
+) {
     STACK_UNWINDING_MARK;
 
-    replace_variable_in_configfile(sipfile.config_file(), "Sipfile", sipfile_contents, var_name,
-            replacement, escape_replacement);
+    replace_variable_in_configfile(
+        sipfile.config_file(),
+        "Sipfile",
+        sipfile_contents,
+        var_name,
+        replacement,
+        escape_replacement
+    );
     sipfile_contents = get_file_contents("Sipfile");
     reload_sipfile_from_str(sipfile_contents);
 }
 
 void SipPackage::replace_variable_in_sipfile(
-        StringView var_name, const vector<string>& replacement) {
+    StringView var_name, const vector<string>& replacement
+) {
     STACK_UNWINDING_MARK;
 
     replace_variable_in_configfile(
-            sipfile.config_file(), "Sipfile", sipfile_contents, var_name, replacement);
+        sipfile.config_file(), "Sipfile", sipfile_contents, var_name, replacement
+    );
     sipfile_contents = get_file_contents("Sipfile");
     reload_sipfile_from_str(sipfile_contents);
 }
@@ -980,8 +1068,8 @@ void SipPackage::create_default_directory_structure() {
     stdlog("Creating directories...").flush_no_nl();
 
     if ((mkdir("check") == -1 and errno != EEXIST) or (mkdir("doc") == -1 and errno != EEXIST) or
-            (mkdir("in") == -1 and errno != EEXIST) or (mkdir("out") == -1 and errno != EEXIST) or
-            (mkdir("prog") == -1 and errno != EEXIST) or (mkdir("utils") == -1 and errno != EEXIST))
+        (mkdir("in") == -1 and errno != EEXIST) or (mkdir("out") == -1 and errno != EEXIST) or
+        (mkdir("prog") == -1 and errno != EEXIST) or (mkdir("utils") == -1 and errno != EEXIST))
     {
         THROW("mkdir()", errmsg());
     }
@@ -1027,7 +1115,7 @@ void SipPackage::create_default_simfile(std::optional<CStringView> problem_name)
     stdlog("Creating Simfile...").flush_no_nl();
 
     auto package_dir_filename =
-            path_filename(intentional_unsafe_string_view(get_cwd()).without_suffix(1)).to_string();
+        path_filename(intentional_unsafe_string_view(get_cwd()).without_suffix(1)).to_string();
     if (access("Simfile", F_OK) == 0) {
         simfile_contents = get_file_contents("Simfile");
         reload_simfile_from_str(simfile_contents);
@@ -1059,21 +1147,34 @@ void SipPackage::create_default_simfile(std::optional<CStringView> problem_name)
         // Memory limit
         constexpr char mem_limit_var_name[] = "memory_limit";
         if (not simfile.config_file().get_var(mem_limit_var_name).is_set()) {
-            replace_variable_in_simfile(mem_limit_var_name,
-                    intentional_unsafe_string_view(to_string(DEFAULT_MEMORY_LIMIT)));
+            replace_variable_in_simfile(
+                mem_limit_var_name, intentional_unsafe_string_view(to_string(DEFAULT_MEMORY_LIMIT))
+            );
         }
 
     } else if (problem_name.has_value()) {
-        put_file_contents("Simfile",
-                intentional_unsafe_string_view(
-                        concat("name: ", ConfigFile::escape_string(problem_name.value()),
-                                "\nmemory_limit: ", DEFAULT_MEMORY_LIMIT, '\n')));
+        put_file_contents(
+            "Simfile",
+            intentional_unsafe_string_view(concat(
+                "name: ",
+                ConfigFile::escape_string(problem_name.value()),
+                "\nmemory_limit: ",
+                DEFAULT_MEMORY_LIMIT,
+                '\n'
+            ))
+        );
 
     } else if (not package_dir_filename.empty()) {
-        put_file_contents("Simfile",
-                intentional_unsafe_string_view(
-                        concat("name: ", ConfigFile::escape_string(package_dir_filename),
-                                "\nmemory_limit: ", DEFAULT_MEMORY_LIMIT, '\n')));
+        put_file_contents(
+            "Simfile",
+            intentional_unsafe_string_view(concat(
+                "name: ",
+                ConfigFile::escape_string(package_dir_filename),
+                "\nmemory_limit: ",
+                DEFAULT_MEMORY_LIMIT,
+                '\n'
+            ))
+        );
 
     } else { // iff absolute path of dir is /
         throw SipError("problem name was neither provided as a command-line"

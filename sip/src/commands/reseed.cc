@@ -24,7 +24,8 @@ void reseed() {
         }
     }
     sp.replace_variable_in_sipfile(
-            "base_seed", intentional_unsafe_string_view(to_string(sp.sipfile.base_seed)));
+        "base_seed", intentional_unsafe_string_view(to_string(sp.sipfile.base_seed))
+    );
 }
 
 } // namespace commands

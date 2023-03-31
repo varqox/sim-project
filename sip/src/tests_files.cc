@@ -1,5 +1,5 @@
-#include "tests_files.hh"
 #include "sip_error.hh"
+#include "tests_files.hh"
 
 static StringView get_test_name(StringView test_path) {
     test_path = test_path.substring(0, test_path.rfind('.'));
@@ -19,9 +19,14 @@ TestsFiles::TestsFiles() {
             if (it == tests.end()) {
                 tests.emplace(test_name, file);
             } else if (it->second.in.has_value()) {
-                throw SipError("input file of test ", it->first,
-                        " was found in more than one location: ", it->second.in.value(), " and ",
-                        file);
+                throw SipError(
+                    "input file of test ",
+                    it->first,
+                    " was found in more than one location: ",
+                    it->second.in.value(),
+                    " and ",
+                    file
+                );
             } else {
                 it->second.in = file;
             }
@@ -32,9 +37,14 @@ TestsFiles::TestsFiles() {
             if (it == tests.end()) {
                 tests.emplace(test_name, file);
             } else if (it->second.out.has_value()) {
-                throw SipError("output file of test ", it->first,
-                        " was found in more than one location: ", it->second.out.value(), " and ",
-                        file);
+                throw SipError(
+                    "output file of test ",
+                    it->first,
+                    " was found in more than one location: ",
+                    it->second.out.value(),
+                    " and ",
+                    file
+                );
             } else {
                 it->second.out = file;
             }

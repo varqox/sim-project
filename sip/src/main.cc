@@ -252,5 +252,6 @@ void cleanup_before_getting_killed(int signum) {
 
 int main(int argc, char** argv) {
     return handle_signals_while_running(
-            [&] { return real_main(argc, argv); }, cleanup_before_getting_killed, SIGINT, SIGTERM);
+        [&] { return real_main(argc, argv); }, cleanup_before_getting_killed, SIGINT, SIGTERM
+    );
 }

@@ -14,7 +14,7 @@ bool is_subsequence(T&& subseqence, U&& sequence) noexcept {
     }
 
     size_t i = 0;
-    for (auto const& x : sequence) {
+    for (const auto& x : sequence) {
         if (x == subseqence[i] and ++i == subseqence.size()) {
             return true;
         }
@@ -38,8 +38,8 @@ bool matches_pattern(StringView pattern, StringView str) noexcept {
     return is_subsequence(pattern, str.substring(0, pos));
 }
 
-set<string> files_matching_patterns(
-        std::function<bool(StringView)> file_qualifies, ArgvParser cmd_args) {
+set<string>
+files_matching_patterns(std::function<bool(StringView)> file_qualifies, ArgvParser cmd_args) {
     set<string> res;
     sim::PackageContents pc;
     pc.load_from_directory(".");

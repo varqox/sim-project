@@ -15,11 +15,17 @@ using namespace std;
 #ifdef NDEBUG
 #define my_assert(...) ((void)0)
 #else
-#define my_assert(expr)                                                                  \
-    ((expr) ? (void)0                                                                    \
-            : (fprintf(stderr, "%s:%i %s: Assertion `%s' failed.\n", __FILE__, __LINE__, \
-                       __PRETTY_FUNCTION__, #expr),                                      \
-                      exit(1)))
+#define my_assert(expr)                                  \
+    ((expr) ? (void)0                                    \
+            : (fprintf(                                  \
+                   stderr,                               \
+                   "%s:%i %s: Assertion `%s' failed.\n", \
+                   __FILE__,                             \
+                   __LINE__,                             \
+                   __PRETTY_FUNCTION__,                  \
+                   #expr                                 \
+               ),                                        \
+               exit(1)))
 #endif
 
 struct Verdict {
@@ -67,16 +73,17 @@ struct Verdict {
     template <class... Args>
     [[noreturn]] void wrong(Args&&... message) {
         std::visit(
-                [&](auto&& wr) {
-                    using T = decay_t<decltype(wr)>;
-                    if constexpr (is_same_v<T, OK>) {
-                        out << "OK\n" << wr.score << "\n";
-                    } else if constexpr (is_same_v<T, WRONG>) {
-                        out << "WRONG\n\n";
-                    }
-                    out << wr.message_prefix;
-                },
-                wrong_override);
+            [&](auto&& wr) {
+                using T = decay_t<decltype(wr)>;
+                if constexpr (is_same_v<T, OK>) {
+                    out << "OK\n" << wr.score << "\n";
+                } else if constexpr (is_same_v<T, WRONG>) {
+                    out << "WRONG\n\n";
+                }
+                out << wr.message_prefix;
+            },
+            wrong_override
+        );
 
         (out << ... << std::forward<Args>(message)) << endl;
         exit(0);
@@ -84,10 +91,13 @@ struct Verdict {
 } verdict;
 
 constexpr inline char space = ' ', newline = '\n';
+
 struct EofType {
 } eof;
+
 struct IgnoreSpacesType {
 } ignore_spaces;
+
 struct IgnoreWsType {
 } ignore_ws; // Every whitespace
 
@@ -116,9 +126,8 @@ struct character {
     array<char, N> options;
 
     template <class... Opts>
-    constexpr explicit character(char& c, Opts... opts)
-    : val(c)
-    , options{opts...} {
+    constexpr explicit character(char& c, Opts... opts) : val(c)
+                                                        , options{opts...} {
         static_assert((std::is_same_v<Opts, char> and ...));
     }
 };
@@ -245,11 +254,7 @@ private:
     }
 
 public:
-    Scanner(FILE* file, Mode mode)
-    : file_(file)
-    , mode_(mode) {
-        my_assert(file != nullptr);
-    }
+    Scanner(FILE* file, Mode mode) : file_(file), mode_(mode) { my_assert(file != nullptr); }
 
     Scanner(const Scanner&) = delete;
     Scanner(Scanner&&) = delete;
@@ -298,14 +303,19 @@ private:
         static_assert(N == sizeof...(Idx));
         int ch = 0;
         if (not getchar(ch)) {
-            fatal("Read EOF, expected one of characters:",
-                    space_char_description(c.options[Idx])...);
+            fatal(
+                "Read EOF, expected one of characters:", space_char_description(c.options[Idx])...
+            );
         }
 
         bool matches = ((ch == c.options[Idx]) or ...);
         if (not matches) {
-            fatal("Read ", char_description(ch),
-                    ", expected one of characters:", space_char_description(c.options[Idx])...);
+            fatal(
+                "Read ",
+                char_description(ch),
+                ", expected one of characters:",
+                space_char_description(c.options[Idx])...
+            );
         }
 
         c.val = ch;

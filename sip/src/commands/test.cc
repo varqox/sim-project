@@ -23,7 +23,7 @@ void test(ArgvParser args) {
         solutions_to_test.emplace(sp.full_simfile.solutions.front());
     }
 
-    for (auto const& solution : solutions_to_test) {
+    for (const auto& solution : solutions_to_test) {
         sp.judge_solution(solution);
         // Save limits only if Simfile is already created (because if it creates
         // a Simfile without memory limit it causes sip to fail in the next run)

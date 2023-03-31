@@ -7,6 +7,7 @@
 struct TestsFiles {
     struct Test {
         std::optional<StringView> in, out;
+
         explicit Test(StringView test_path) {
             if (has_suffix(test_path, ".in")) {
                 in = test_path;

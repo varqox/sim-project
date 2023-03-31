@@ -41,8 +41,8 @@ private:
 
     // Runs main solution on @p test.in and places the output in the @p test.out
     // file
-    sim::JudgeReport::Test generate_test_output_file(
-            const sim::Simfile::Test& test, SipJudgeLogger& logger);
+    sim::JudgeReport::Test
+    generate_test_output_file(const sim::Simfile::Test& test, SipJudgeLogger& logger);
 
     // Runs @p callback for each test in @p test_range
     void parse_test_range(StringView test_range, const std::function<void(StringView)>& callback);
@@ -111,32 +111,43 @@ public:
 
     // Replaces or creates variable in the specified config file
     // (deletes variable if @p replacement is not set)
-    static void replace_variable_in_configfile(const ConfigFile& cf, FilePath configfile_path,
-            StringView configfile_contents, StringView var_name,
-            std::optional<StringView> replacement, bool escape_replacement = true);
+    static void replace_variable_in_configfile(
+        const ConfigFile& cf,
+        FilePath configfile_path,
+        StringView configfile_contents,
+        StringView var_name,
+        std::optional<StringView> replacement,
+        bool escape_replacement = true
+    );
 
     // Replaces or creates variable in the specified config file
-    static void replace_variable_in_configfile(const ConfigFile& cf, FilePath configfile_path,
-            StringView configfile_contents, StringView var_name,
-            const std::vector<std::string>& replacement);
+    static void replace_variable_in_configfile(
+        const ConfigFile& cf,
+        FilePath configfile_path,
+        StringView configfile_contents,
+        StringView var_name,
+        const std::vector<std::string>& replacement
+    );
 
     // Replaces or creates variable in the Simfile (deletes variable if
     // @p replacement is not set)
-    void replace_variable_in_simfile(StringView var_name, std::optional<StringView> replacement,
-            bool escape_replacement = true);
+    void replace_variable_in_simfile(
+        StringView var_name, std::optional<StringView> replacement, bool escape_replacement = true
+    );
 
     // Replaces or creates variable in the Simfile
-    void replace_variable_in_simfile(
-            StringView var_name, const std::vector<std::string>& replacement);
+    void
+    replace_variable_in_simfile(StringView var_name, const std::vector<std::string>& replacement);
 
     // Replaces or creates variable in the Sipfile (deletes variable if
     // @p replacement is empty)
     void replace_variable_in_sipfile(
-            StringView var_name, StringView replacement, bool escape_replacement = true);
+        StringView var_name, StringView replacement, bool escape_replacement = true
+    );
 
     // Replaces or creates variable in the Sipfile
-    void replace_variable_in_sipfile(
-            StringView var_name, const std::vector<std::string>& replacement);
+    void
+    replace_variable_in_sipfile(StringView var_name, const std::vector<std::string>& replacement);
 
     // Creates the directory structure of a Sip package in the current directory
     static void create_default_directory_structure();
