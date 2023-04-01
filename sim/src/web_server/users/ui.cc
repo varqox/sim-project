@@ -1,6 +1,7 @@
-#include "ui.hh"
 #include "../http/response.hh"
 #include "../web_worker/context.hh"
+#include "ui.hh"
+
 #include <simlib/string_view.hh>
 
 using sim::users::User;
@@ -20,25 +21,31 @@ Response sign_out(Context& ctx) { return ctx.response_ui("Sign out", "sign_out()
 Response add(Context& ctx) { return ctx.response_ui("Add user", "add_user()"); }
 
 Response edit(Context& ctx, decltype(User::id) user_id) {
-    return ctx.response_ui(intentional_unsafe_string_view(concat("Edit user ", user_id)),
-            intentional_unsafe_string_view(concat("edit_user(", user_id, ')')));
+    return ctx.response_ui(
+        intentional_unsafe_string_view(concat("Edit user ", user_id)),
+        intentional_unsafe_string_view(concat("edit_user(", user_id, ')'))
+    );
 }
 
 Response change_password(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_ui(
-            intentional_unsafe_string_view(concat("Change password of the user ", user_id)),
-            intentional_unsafe_string_view(concat("change_user_password(", user_id, ')')));
+        intentional_unsafe_string_view(concat("Change password of the user ", user_id)),
+        intentional_unsafe_string_view(concat("change_user_password(", user_id, ')'))
+    );
 }
 
 Response delete_(Context& ctx, decltype(User::id) user_id) {
-    return ctx.response_ui(intentional_unsafe_string_view(concat("Delete user ", user_id)),
-            intentional_unsafe_string_view(concat("delete_user(", user_id, ')')));
+    return ctx.response_ui(
+        intentional_unsafe_string_view(concat("Delete user ", user_id)),
+        intentional_unsafe_string_view(concat("delete_user(", user_id, ')'))
+    );
 }
 
 Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_ui(
-            intentional_unsafe_string_view(concat("Merge user ", user_id, " into another")),
-            intentional_unsafe_string_view(concat("merge_user(", user_id, ')')));
+        intentional_unsafe_string_view(concat("Merge user ", user_id, " into another")),
+        intentional_unsafe_string_view(concat("merge_user(", user_id, ')'))
+    );
 }
 
 } // namespace web_server::users::ui

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../web_worker/context.hh"
+
 #include <sim/problems/problem.hh>
 #include <sim/users/user.hh>
 
@@ -28,11 +29,12 @@ struct ProblemsListCapabilities {
     bool web_ui_show_updated_at_column : 1;
 };
 
-ProblemsListCapabilities list_all_problems(
-        const decltype(web_worker::Context::session)& session) noexcept;
+ProblemsListCapabilities list_all_problems(const decltype(web_worker::Context::session)& session
+) noexcept;
 
-ProblemsListCapabilities list_user_problems(const decltype(web_worker::Context::session)& session,
-        decltype(sim::users::User::id) user_id) noexcept;
+ProblemsListCapabilities list_user_problems(
+    const decltype(web_worker::Context::session)& session, decltype(sim::users::User::id) user_id
+) noexcept;
 
 struct ProblemCapabilities {
     bool view : 1;
@@ -56,8 +58,10 @@ struct ProblemCapabilities {
     bool merge_other_problem_into_this_problem : 1;
 };
 
-ProblemCapabilities problem(const decltype(web_server::web_worker::Context::session)& session,
-        decltype(sim::problems::Problem::type) problem_type,
-        decltype(sim::problems::Problem::owner_id) problem_owner_id) noexcept;
+ProblemCapabilities problem(
+    const decltype(web_server::web_worker::Context::session)& session,
+    decltype(sim::problems::Problem::type) problem_type,
+    decltype(sim::problems::Problem::owner_id) problem_owner_id
+) noexcept;
 
 } // namespace web_server::capabilities

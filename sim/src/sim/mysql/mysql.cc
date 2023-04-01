@@ -20,8 +20,12 @@ Connection make_conn_with_credential_file(FilePath filename) {
     // Connect
     try {
         Connection conn;
-        conn.connect(cf["host"].as_string(), cf["user"].as_string(), cf["password"].as_string(),
-                cf["db"].as_string());
+        conn.connect(
+            cf["host"].as_string(),
+            cf["user"].as_string(),
+            cf["password"].as_string(),
+            cf["db"].as_string()
+        );
         return conn;
 
     } catch (const std::exception& e) {

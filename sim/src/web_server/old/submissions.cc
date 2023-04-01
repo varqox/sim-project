@@ -1,4 +1,5 @@
 #include "sim.hh"
+
 #include <sim/submissions/submission.hh>
 
 using sim::contest_users::ContestUser;
@@ -25,9 +26,11 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 }
 
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
-        decltype(Submission::owner) submission_owner, Submission::Type stype,
-        std::optional<ContestUser::Mode> cu_mode,
-        decltype(Problem::owner_id) problem_owner) noexcept {
+    decltype(Submission::owner) submission_owner,
+    Submission::Type stype,
+    std::optional<ContestUser::Mode> cu_mode,
+    decltype(Problem::owner_id) problem_owner
+) noexcept {
     using PERM = SubmissionPermissions;
     using STYPE = Submission::Type;
     using CUM = ContestUser::Mode;
@@ -40,12 +43,12 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 
     static_assert(static_cast<uint>(PERM::NONE) == 0, "Needed below");
     PERM PERM_SUBMISSION_ADMIN = PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FINAL_REPORT |
-            PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
-            (is_one_of(stype, STYPE::NORMAL, STYPE::IGNORED) ? PERM::CHANGE_TYPE | PERM::DELETE
-                                                             : PERM::NONE);
+        PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
+        (is_one_of(stype, STYPE::NORMAL, STYPE::IGNORED) ? PERM::CHANGE_TYPE | PERM::DELETE
+                                                         : PERM::NONE);
 
     if (session->user_type == User::Type::ADMIN or
-            (cu_mode.has_value() and is_one_of(cu_mode.value(), CUM::MODERATOR, CUM::OWNER)))
+        (cu_mode.has_value() and is_one_of(cu_mode.value(), CUM::MODERATOR, CUM::OWNER)))
     {
         return overall_perms | PERM_SUBMISSION_ADMIN;
     }
@@ -55,7 +58,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
     if (session.has_value() and problem_owner and session->user_id == problem_owner.value()) {
         if (stype == STYPE::PROBLEM_SOLUTION) {
             return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FINAL_REPORT |
-                    PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
+                PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
         }
 
         if (submission_owner and session->user_id == submission_owner.value()) {
@@ -63,7 +66,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
         }
 
         return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FINAL_REPORT |
-                PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
+            PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
     }
 
     if (session.has_value() and submission_owner and session->user_id == submission_owner.value()) {

@@ -18,7 +18,7 @@ struct ContestRound {
     sql_fields::InfDatetime full_results;
     sql_fields::InfDatetime ranking_exposure;
 
-    constexpr static auto primary_key = PrimaryKey{&ContestRound::id};
+    static constexpr auto primary_key = PrimaryKey{&ContestRound::id};
 };
 
 } // namespace sim::contest_rounds

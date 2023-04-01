@@ -18,7 +18,7 @@ struct Session {
     sql_fields::Blob<128> user_agent;
     sql_fields::Datetime expires;
 
-    constexpr static auto primary_key = PrimaryKey{&Session::id};
+    static constexpr auto primary_key = PrimaryKey{&Session::id};
 
     static constexpr auto short_session_max_lifetime = std::chrono::hours{1};
     static constexpr auto long_session_max_lifetime = std::chrono::hours{30 * 24}; // 30 days

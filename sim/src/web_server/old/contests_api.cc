@@ -1,6 +1,7 @@
 #include "../capabilities/contests.hh"
 #include "../http/form_validation.hh"
 #include "sim.hh"
+
 #include <cstdint>
 #include <map>
 #include <sim/contest_problems/contest_problem.hh>
@@ -36,9 +37,12 @@ using std::pair;
 
 namespace web_server::old {
 
-inline bool whether_to_show_full_status(sim::contests::Permissions cperms,
-        const InfDatetime& full_results, const decltype(mysql_date())& curr_mysql_date,
-        ContestProblem::ScoreRevealing score_revealing) {
+inline bool whether_to_show_full_status(
+    sim::contests::Permissions cperms,
+    const InfDatetime& full_results,
+    const decltype(mysql_date())& curr_mysql_date,
+    ContestProblem::ScoreRevealing score_revealing
+) {
     // TODO: check append_submission_status() for making it use the new function
     if (uint(cperms & sim::contests::Permissions::ADMIN) or full_results <= curr_mysql_date) {
         return true;
@@ -53,9 +57,12 @@ inline bool whether_to_show_full_status(sim::contests::Permissions cperms,
     __builtin_unreachable();
 }
 
-inline bool whether_to_show_score(sim::contests::Permissions cperms,
-        const InfDatetime& full_results, const decltype(mysql_date())& curr_mysql_date,
-        ContestProblem::ScoreRevealing score_revealing) {
+inline bool whether_to_show_score(
+    sim::contests::Permissions cperms,
+    const InfDatetime& full_results,
+    const decltype(mysql_date())& curr_mysql_date,
+    ContestProblem::ScoreRevealing score_revealing
+) {
     // TODO: check append_submission_status() for making it use the new function
     if (uint(cperms & sim::contests::Permissions::ADMIN)) {
         return true;
@@ -74,10 +81,14 @@ inline bool whether_to_show_score(sim::contests::Permissions cperms,
     __builtin_unreachable();
 }
 
-inline static InplaceBuff<32> color_class_json(sim::contests::Permissions cperms,
-        const InfDatetime& full_results, const decltype(mysql_date())& curr_mysql_date,
-        optional<Submission::Status> full_status, optional<Submission::Status> initial_status,
-        ContestProblem::ScoreRevealing score_revealing) {
+static inline InplaceBuff<32> color_class_json(
+    sim::contests::Permissions cperms,
+    const InfDatetime& full_results,
+    const decltype(mysql_date())& curr_mysql_date,
+    optional<Submission::Status> full_status,
+    optional<Submission::Status> initial_status,
+    ContestProblem::ScoreRevealing score_revealing
+) {
 
     if (whether_to_show_full_status(cperms, full_results, curr_mysql_date, score_revealing)) {
         if (full_status.has_value()) {
@@ -92,7 +103,8 @@ inline static InplaceBuff<32> color_class_json(sim::contests::Permissions cperms
 
 template <class T>
 static void append_contest_actions_str(
-        T& str, capabilities::Contests caps_contests, sim::contests::Permissions perms) {
+    T& str, capabilities::Contests caps_contests, sim::contests::Permissions perms
+) {
     STACK_UNWINDING_MARK;
     using P = sim::contests::Permissions;
 
@@ -129,8 +141,12 @@ class ContestInfoResponseBuilder {
     std::map<uint64_t, InfDatetime> round_to_full_results_;
 
 public:
-    ContestInfoResponseBuilder(ContentType& resp_content, capabilities::Contests caps_contests,
-            sim::contests::Permissions contest_perms, std::string curr_date)
+    ContestInfoResponseBuilder(
+        ContentType& resp_content,
+        capabilities::Contests caps_contests,
+        sim::contests::Permissions contest_perms,
+        std::string curr_date
+    )
     : content_(resp_content)
     , caps_contests_(caps_contests)
     , contest_perms_(contest_perms)
@@ -172,8 +188,13 @@ public:
     }
 
     void append_contest(const Contest& contest) {
-        content_.append("\n[", contest.id, ',', json_stringify(contest.name),
-                (contest.is_public ? ",true," : ",false,"));
+        content_.append(
+            "\n[",
+            contest.id,
+            ',',
+            json_stringify(contest.name),
+            (contest.is_public ? ",true," : ",false,")
+        );
         append_contest_actions_str(content_, caps_contests_, contest_perms_);
 
         content_.append("],\n["); // TODO: this is ugly...
@@ -200,8 +221,10 @@ public:
         content_.append("\n],\n[");
     }
 
-    void append_problem(const ContestProblem& contest_problem,
-            const sim::contest_problems::ExtraIterateData& extra_data) {
+    void append_problem(
+        const ContestProblem& contest_problem,
+        const sim::contest_problems::ExtraIterateData& extra_data
+    ) {
         auto& cp = contest_problem;
         // clang-format off
         content_.append(
@@ -244,10 +267,12 @@ void Sim::api_contests() {
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
     qfields.append("SELECT c.id, c.name, c.is_public, cu.mode");
-    qwhere.append(" FROM contests c LEFT JOIN contest_users cu ON "
-                  "cu.contest_id=c.id AND cu.user_id=",
-            (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id))
-                                 : StringView("''")));
+    qwhere.append(
+        " FROM contests c LEFT JOIN contest_users cu ON "
+        "cu.contest_id=c.id AND cu.user_id=",
+        (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id))
+                             : StringView("''"))
+    );
 
     enum ColumnIdx { CID, CNAME, IS_PUBLIC, USER_MODE };
 
@@ -296,8 +321,9 @@ void Sim::api_contests() {
             } else if (arg_id == "N") {
                 qwhere_append("c.is_public=0");
             } else {
-                return api_error400(intentional_unsafe_string_view(
-                        concat("Invalid is_public condition: ", arg_id)));
+                return api_error400(
+                    intentional_unsafe_string_view(concat("Invalid is_public condition: ", arg_id))
+                );
             }
 
             mask |= PUBLIC_COND;
@@ -334,14 +360,15 @@ void Sim::api_contests() {
         StringView cid = res[CID];
         StringView name = res[CNAME];
         bool is_public = WONT_THROW(str2num<bool>(res[IS_PUBLIC]).value());
-        auto cumode = (res.is_null(USER_MODE)
-                        ? std::nullopt
-                        : optional(ContestUser::Mode(WONT_THROW(
-                                  str2num<ContestUser::Mode::UnderlyingType>(res[USER_MODE])
-                                          .value()))));
+        auto cumode =
+            (res.is_null(USER_MODE)
+                 ? std::nullopt
+                 : optional(ContestUser::Mode(WONT_THROW(
+                       str2num<ContestUser::Mode::UnderlyingType>(res[USER_MODE]).value()
+                   ))));
         auto contest_perms = sim::contests::get_permissions(
-                (session.has_value() ? optional(session->user_type) : std::nullopt), is_public,
-                cumode);
+            (session.has_value() ? optional(session->user_type) : std::nullopt), is_public, cumode
+        );
 
         // Id
         append(",\n[", cid, ",");
@@ -391,8 +418,13 @@ void Sim::api_contest() {
     auto transaction = mysql.start_transaction();
     auto curr_date = mysql_date();
 
-    auto contest_opt = sim::contests::get(mysql, sim::contests::GetIdKind::CONTEST, contest_id,
-            (session.has_value() ? optional{session->user_id} : std::nullopt), curr_date);
+    auto contest_opt = sim::contests::get(
+        mysql,
+        sim::contests::GetIdKind::CONTEST,
+        contest_id,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        curr_date
+    );
     if (not contest_opt) {
         return api_error404();
     }
@@ -432,19 +464,30 @@ void Sim::api_contest() {
     resp_builder.append_field_names();
     resp_builder.append_contest(contest);
 
-    sim::contest_rounds::iterate(mysql, sim::contest_rounds::IterateIdKind::CONTEST, contest_id,
-            contest_perms, curr_date,
-            [&](const ContestRound& round) { resp_builder.append_round(round); });
+    sim::contest_rounds::iterate(
+        mysql,
+        sim::contest_rounds::IterateIdKind::CONTEST,
+        contest_id,
+        contest_perms,
+        curr_date,
+        [&](const ContestRound& round) { resp_builder.append_round(round); }
+    );
 
     resp_builder.start_appending_problems();
 
-    sim::contest_problems::iterate(mysql, sim::contest_problems::IterateIdKind::CONTEST, contest_id,
-            contest_perms, (session.has_value() ? optional{session->user_id} : std::nullopt),
-            (session.has_value() ? optional{session->user_type} : std::nullopt), curr_date,
-            [&](const ContestProblem& contest_problem,
-                    const sim::contest_problems::ExtraIterateData& extra_data) {
-                resp_builder.append_problem(contest_problem, extra_data);
-            });
+    sim::contest_problems::iterate(
+        mysql,
+        sim::contest_problems::IterateIdKind::CONTEST,
+        contest_id,
+        contest_perms,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        (session.has_value() ? optional{session->user_type} : std::nullopt),
+        curr_date,
+        [&](const ContestProblem& contest_problem,
+            const sim::contest_problems::ExtraIterateData& extra_data) {
+            resp_builder.append_problem(contest_problem, extra_data);
+        }
+    );
 
     resp_builder.stop_appending_problems();
 }
@@ -457,9 +500,13 @@ void Sim::api_contest_round(StringView contest_round_id) {
     auto transaction = mysql.start_transaction();
     auto curr_date = mysql_date();
 
-    auto contest_opt =
-            sim::contests::get(mysql, sim::contests::GetIdKind::CONTEST_ROUND, contest_round_id,
-                    (session.has_value() ? optional{session->user_id} : std::nullopt), curr_date);
+    auto contest_opt = sim::contests::get(
+        mysql,
+        sim::contests::GetIdKind::CONTEST_ROUND,
+        contest_round_id,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        curr_date
+    );
     if (not contest_opt) {
         return api_error404();
     }
@@ -470,9 +517,14 @@ void Sim::api_contest_round(StringView contest_round_id) {
     }
 
     optional<ContestRound> contest_round_opt;
-    sim::contest_rounds::iterate(mysql, sim::contest_rounds::IterateIdKind::CONTEST_ROUND,
-            contest_round_id, contest_perms, curr_date,
-            [&](const ContestRound& cr) { contest_round_opt = cr; });
+    sim::contest_rounds::iterate(
+        mysql,
+        sim::contest_rounds::IterateIdKind::CONTEST_ROUND,
+        contest_round_id,
+        contest_perms,
+        curr_date,
+        [&](const ContestRound& cr) { contest_round_opt = cr; }
+    );
 
     if (not contest_round_opt) {
         return error500(); // Contest round have to exist after successful sim::contests::get()
@@ -510,14 +562,19 @@ void Sim::api_contest_round(StringView contest_round_id) {
 
     resp_builder.start_appending_problems();
 
-    sim::contest_problems::iterate(mysql, sim::contest_problems::IterateIdKind::CONTEST_ROUND,
-            contest_round_id, contest_perms,
-            (session.has_value() ? optional{session->user_id} : std::nullopt),
-            (session.has_value() ? optional{session->user_type} : std::nullopt), curr_date,
-            [&](const ContestProblem& contest_problem,
-                    const sim::contest_problems::ExtraIterateData& extra_data) {
-                resp_builder.append_problem(contest_problem, extra_data);
-            });
+    sim::contest_problems::iterate(
+        mysql,
+        sim::contest_problems::IterateIdKind::CONTEST_ROUND,
+        contest_round_id,
+        contest_perms,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        (session.has_value() ? optional{session->user_type} : std::nullopt),
+        curr_date,
+        [&](const ContestProblem& contest_problem,
+            const sim::contest_problems::ExtraIterateData& extra_data) {
+            resp_builder.append_problem(contest_problem, extra_data);
+        }
+    );
 
     resp_builder.stop_appending_problems();
 }
@@ -530,9 +587,13 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
     auto transaction = mysql.start_transaction();
     auto curr_date = mysql_date();
 
-    auto contest_opt =
-            sim::contests::get(mysql, sim::contests::GetIdKind::CONTEST_PROBLEM, contest_problem_id,
-                    (session.has_value() ? optional{session->user_id} : std::nullopt), curr_date);
+    auto contest_opt = sim::contests::get(
+        mysql,
+        sim::contests::GetIdKind::CONTEST_PROBLEM,
+        contest_problem_id,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        curr_date
+    );
     if (not contest_opt) {
         return api_error404();
     }
@@ -543,14 +604,19 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
     }
 
     optional<pair<ContestProblem, sim::contest_problems::ExtraIterateData>> contest_problem_info;
-    sim::contest_problems::iterate(mysql, sim::contest_problems::IterateIdKind::CONTEST_PROBLEM,
-            contest_problem_id, contest_perms,
-            (session.has_value() ? optional{session->user_id} : std::nullopt),
-            (session.has_value() ? optional{session->user_type} : std::nullopt), curr_date,
-            [&](const ContestProblem& contest_problem,
-                    const sim::contest_problems::ExtraIterateData& extra_data) {
-                contest_problem_info.emplace(contest_problem, extra_data);
-            });
+    sim::contest_problems::iterate(
+        mysql,
+        sim::contest_problems::IterateIdKind::CONTEST_PROBLEM,
+        contest_problem_id,
+        contest_perms,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        (session.has_value() ? optional{session->user_type} : std::nullopt),
+        curr_date,
+        [&](const ContestProblem& contest_problem,
+            const sim::contest_problems::ExtraIterateData& extra_data) {
+            contest_problem_info.emplace(contest_problem, extra_data);
+        }
+    );
 
     if (not contest_problem_info) {
         return error500(); // Contest problem have to exist after successful
@@ -573,7 +639,8 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
     if (next_arg == "rejudge_all_submissions") {
         transaction.rollback(); // We only read data...
         return api_contest_problem_rejudge_all_submissions(
-                contest_problem_id, contest_perms, problem_id_str);
+            contest_problem_id, contest_perms, problem_id_str
+        );
     }
     if (next_arg == "edit") {
         transaction.rollback(); // We only read data...
@@ -593,9 +660,14 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
     resp_builder.append_field_names();
     resp_builder.append_contest(contest);
 
-    sim::contest_rounds::iterate(mysql, sim::contest_rounds::IterateIdKind::CONTEST_PROBLEM,
-            contest_problem_id, contest_perms, curr_date,
-            [&](const ContestRound& cr) { resp_builder.append_round(cr); });
+    sim::contest_rounds::iterate(
+        mysql,
+        sim::contest_rounds::IterateIdKind::CONTEST_PROBLEM,
+        contest_problem_id,
+        contest_perms,
+        curr_date,
+        [&](const ContestRound& cr) { resp_builder.append_round(cr); }
+    );
 
     resp_builder.start_appending_problems();
     resp_builder.append_problem(contest_problem, contest_problem_extra_data);
@@ -633,9 +705,10 @@ void Sim::api_contest_create(capabilities::Contests caps_contests) {
 
     auto contest_id = stmt.insert_id();
     // Add user to owners
-    mysql.prepare("INSERT contest_users(user_id, contest_id, mode) "
-                  "VALUES(?, ?, ?)")
-            .bind_and_execute(session->user_id, contest_id, EnumVal(ContestUser::Mode::OWNER));
+    mysql
+        .prepare("INSERT contest_users(user_id, contest_id, mode) "
+                 "VALUES(?, ?, ?)")
+        .bind_and_execute(session->user_id, contest_id, EnumVal(ContestUser::Mode::OWNER));
 
     transaction.commit();
     append(contest_id);
@@ -671,9 +744,13 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     auto transaction = mysql.start_transaction();
     auto curr_date = mysql_date();
 
-    auto source_contest_opt =
-            sim::contests::get(mysql, sim::contests::GetIdKind::CONTEST, source_contest_id,
-                    (session.has_value() ? optional{session->user_id} : std::nullopt), curr_date);
+    auto source_contest_opt = sim::contests::get(
+        mysql,
+        sim::contests::GetIdKind::CONTEST,
+        source_contest_id,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        curr_date
+    );
     if (not source_contest_opt) {
         return api_error404("There is no contest with this id that you can clone");
     }
@@ -685,33 +762,44 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
 
     // Collect contest rounds to clone
     std::map<decltype(ContestRound::item), ContestRound> contest_rounds;
-    sim::contest_rounds::iterate(mysql, sim::contest_rounds::IterateIdKind::CONTEST,
-            source_contest_id, source_contest_perms, curr_date,
-            [&](const ContestRound& cr) { contest_rounds.emplace(cr.item, cr); });
+    sim::contest_rounds::iterate(
+        mysql,
+        sim::contest_rounds::IterateIdKind::CONTEST,
+        source_contest_id,
+        source_contest_perms,
+        curr_date,
+        [&](const ContestRound& cr) { contest_rounds.emplace(cr.item, cr); }
+    );
 
     // Collect contest problems to clone
     std::map<pair<decltype(ContestRound::id), decltype(ContestProblem::item)>, ContestProblem>
-            contest_problems;
+        contest_problems;
 
     optional<ContestProblem> unclonable_contest_problem;
-    sim::contest_problems::iterate(mysql, sim::contest_problems::IterateIdKind::CONTEST,
-            source_contest_id, source_contest_perms,
-            (session.has_value() ? optional{session->user_id} : std::nullopt),
-            (session.has_value() ? optional{session->user_type} : std::nullopt), curr_date,
-            [&](const ContestProblem& cp,
-                    const sim::contest_problems::ExtraIterateData& extra_data) {
-                contest_problems.emplace(pair(cp.contest_round_id, cp.item), cp);
-                if (uint(~extra_data.problem_perms & sim::problems::Permissions::VIEW)) {
-                    unclonable_contest_problem = cp;
-                }
-            });
+    sim::contest_problems::iterate(
+        mysql,
+        sim::contest_problems::IterateIdKind::CONTEST,
+        source_contest_id,
+        source_contest_perms,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        (session.has_value() ? optional{session->user_type} : std::nullopt),
+        curr_date,
+        [&](const ContestProblem& cp, const sim::contest_problems::ExtraIterateData& extra_data) {
+            contest_problems.emplace(pair(cp.contest_round_id, cp.item), cp);
+            if (uint(~extra_data.problem_perms & sim::problems::Permissions::VIEW)) {
+                unclonable_contest_problem = cp;
+            }
+        }
+    );
 
     if (unclonable_contest_problem) {
-        return api_error403(intentional_unsafe_string_view(
-                concat("You have no permissions to clone the contest problem with id ",
-                        unclonable_contest_problem->id,
-                        " because you have no permission to attach the problem with id ",
-                        unclonable_contest_problem->problem_id, " to a contest round")));
+        return api_error403(intentional_unsafe_string_view(concat(
+            "You have no permissions to clone the contest problem with id ",
+            unclonable_contest_problem->id,
+            " because you have no permission to attach the problem with id ",
+            unclonable_contest_problem->problem_id,
+            " to a contest round"
+        )));
     }
 
     // Add contest
@@ -734,7 +822,8 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
                          "full_results, ranking_exposure) VALUES(?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, r] : contest_rounds) {
         stmt.bind_and_execute(
-                r.contest_id, r.name, r.item, r.begins, r.ends, r.full_results, r.ranking_exposure);
+            r.contest_id, r.name, r.item, r.begins, r.ends, r.full_results, r.ranking_exposure
+        );
         old_round_id_to_new_id.emplace(r.id, stmt.insert_id());
     }
 
@@ -760,21 +849,30 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
                          " item, method_of_choosing_final_submission, score_revealing) "
                          "VALUES(?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, cp] : contest_problems) {
-        stmt.bind_and_execute(cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item,
-                cp.method_of_choosing_final_submission, cp.score_revealing);
+        stmt.bind_and_execute(
+            cp.contest_round_id,
+            cp.contest_id,
+            cp.problem_id,
+            cp.name,
+            cp.item,
+            cp.method_of_choosing_final_submission,
+            cp.score_revealing
+        );
     }
 
     // Add user to owners
-    mysql.prepare("INSERT contest_users(user_id, contest_id, mode) "
-                  "VALUES(?, ?, ?)")
-            .bind_and_execute(session->user_id, new_contest_id, EnumVal(ContestUser::Mode::OWNER));
+    mysql
+        .prepare("INSERT contest_users(user_id, contest_id, mode) "
+                 "VALUES(?, ?, ?)")
+        .bind_and_execute(session->user_id, new_contest_id, EnumVal(ContestUser::Mode::OWNER));
 
     transaction.commit();
     append(new_contest_id);
 }
 
 void Sim::api_contest_edit(
-        StringView contest_id, sim::contests::Permissions perms, bool is_public) {
+    StringView contest_id, sim::contests::Permissions perms, bool is_public
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -792,7 +890,7 @@ void Sim::api_contest_edit(
     }
 
     bool make_submitters_contestants =
-            (not will_be_public and request.form_fields.contains("make_submitters_contestants"));
+        (not will_be_public and request.form_fields.contains("make_submitters_contestants"));
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -801,13 +899,14 @@ void Sim::api_contest_edit(
     auto transaction = mysql.start_transaction();
     // Update contest
     mysql.prepare("UPDATE contests SET name=?, is_public=? WHERE id=?")
-            .bind_and_execute(name, will_be_public, contest_id);
+        .bind_and_execute(name, will_be_public, contest_id);
 
     if (make_submitters_contestants) {
-        mysql.prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "
-                      "SELECT owner, ?, ? FROM submissions "
-                      "WHERE contest_id=? GROUP BY owner")
-                .bind_and_execute(contest_id, EnumVal(ContestUser::Mode::CONTESTANT), contest_id);
+        mysql
+            .prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "
+                     "SELECT owner, ?, ? FROM submissions "
+                     "WHERE contest_id=? GROUP BY owner")
+            .bind_and_execute(contest_id, EnumVal(ContestUser::Mode::CONTESTANT), contest_id);
     }
 
     transaction.commit();
@@ -828,9 +927,14 @@ void Sim::api_contest_delete(StringView contest_id, sim::contests::Permissions p
     auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
                               " added, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
-    stmt.bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-            default_priority(Job::Type::DELETE_CONTEST), EnumVal(Job::Type::DELETE_CONTEST),
-            mysql_date(), contest_id);
+    stmt.bind_and_execute(
+        session->user_id,
+        EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::DELETE_CONTEST),
+        EnumVal(Job::Type::DELETE_CONTEST),
+        mysql_date(),
+        contest_id
+    );
 
     sim::jobs::notify_job_server();
     append(stmt.insert_id());
@@ -853,9 +957,11 @@ void Sim::api_contest_round_create(StringView contest_id, sim::contests::Permiss
     form_validate_not_blank(begins, "begins", "Begin time", is_safe_inf_timestamp);
     form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
     form_validate_not_blank(
-            full_results, "full_results", "Full results time", is_safe_inf_timestamp);
+        full_results, "full_results", "Full results time", is_safe_inf_timestamp
+    );
     form_validate_not_blank(
-            ranking_expo, "ranking_expo", "Show ranking since", is_safe_inf_timestamp);
+        ranking_expo, "ranking_expo", "Show ranking since", is_safe_inf_timestamp
+    );
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -868,10 +974,15 @@ void Sim::api_contest_round_create(StringView contest_id, sim::contests::Permiss
                               "SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?,"
                               " ? "
                               "FROM contest_rounds WHERE contest_id=?");
-    stmt.bind_and_execute(contest_id, name, inf_timestamp_to_InfDatetime(begins).to_str(),
-            inf_timestamp_to_InfDatetime(ends).to_str(),
-            inf_timestamp_to_InfDatetime(full_results).to_str(),
-            inf_timestamp_to_InfDatetime(ranking_expo).to_str(), contest_id);
+    stmt.bind_and_execute(
+        contest_id,
+        name,
+        inf_timestamp_to_InfDatetime(begins).to_str(),
+        inf_timestamp_to_InfDatetime(ends).to_str(),
+        inf_timestamp_to_InfDatetime(full_results).to_str(),
+        inf_timestamp_to_InfDatetime(ranking_expo).to_str(),
+        contest_id
+    );
 
     append(stmt.insert_id());
 }
@@ -886,7 +997,8 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     // Validate fields
     StringView source_contest_round_id;
     form_validate_not_blank(
-            source_contest_round_id, "source_contest_round", "ID of the contest round to clone");
+        source_contest_round_id, "source_contest_round", "ID of the contest round to clone"
+    );
 
     CStringView name;
     CStringView begins;
@@ -897,9 +1009,11 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     form_validate_not_blank(begins, "begins", "Begin time", is_safe_inf_timestamp);
     form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
     form_validate_not_blank(
-            full_results, "full_results", "Full results time", is_safe_inf_timestamp);
+        full_results, "full_results", "Full results time", is_safe_inf_timestamp
+    );
     form_validate_not_blank(
-            ranking_expo, "ranking_expo", "Show ranking since", is_safe_inf_timestamp);
+        ranking_expo, "ranking_expo", "Show ranking since", is_safe_inf_timestamp
+    );
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -908,9 +1022,13 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     auto transaction = mysql.start_transaction();
     auto curr_date = mysql_date();
 
-    auto source_contest_opt = sim::contests::get(mysql, sim::contests::GetIdKind::CONTEST_ROUND,
-            source_contest_round_id,
-            (session.has_value() ? optional{session->user_id} : std::nullopt), curr_date);
+    auto source_contest_opt = sim::contests::get(
+        mysql,
+        sim::contests::GetIdKind::CONTEST_ROUND,
+        source_contest_round_id,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        curr_date
+    );
     if (not source_contest_opt) {
         return api_error404("There is no contest round with this id that you can clone");
     }
@@ -921,16 +1039,21 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     optional<ContestRound> contest_round_opt;
-    sim::contest_rounds::iterate(mysql, sim::contest_rounds::IterateIdKind::CONTEST_ROUND,
-            source_contest_round_id, source_contest_perms, curr_date,
-            [&](const ContestRound& cr) { contest_round_opt = cr; });
+    sim::contest_rounds::iterate(
+        mysql,
+        sim::contest_rounds::IterateIdKind::CONTEST_ROUND,
+        source_contest_round_id,
+        source_contest_perms,
+        curr_date,
+        [&](const ContestRound& cr) { contest_round_opt = cr; }
+    );
     if (not contest_round_opt) {
         return error500(); // Contest round have to exist after successful sim::contests::get()
     }
 
     auto& contest_round = contest_round_opt.value();
     contest_round.contest_id =
-            WONT_THROW(str2num<decltype(contest_round.contest_id)>(contest_id).value());
+        WONT_THROW(str2num<decltype(contest_round.contest_id)>(contest_id).value());
     if (not name.empty()) {
         contest_round.name = name;
     }
@@ -942,24 +1065,30 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     // Collect contest problems to clone
     std::map<decltype(ContestProblem::item), ContestProblem> contest_problems;
     optional<ContestProblem> unclonable_contest_problem;
-    sim::contest_problems::iterate(mysql, sim::contest_problems::IterateIdKind::CONTEST_ROUND,
-            source_contest_round_id, source_contest_perms,
-            (session.has_value() ? optional{session->user_id} : std::nullopt),
-            (session.has_value() ? optional{session->user_type} : std::nullopt), curr_date,
-            [&](const ContestProblem& cp,
-                    const sim::contest_problems::ExtraIterateData& extra_data) {
-                contest_problems.emplace(cp.item, cp);
-                if (uint(~extra_data.problem_perms & sim::problems::Permissions::VIEW)) {
-                    unclonable_contest_problem = cp;
-                }
-            });
+    sim::contest_problems::iterate(
+        mysql,
+        sim::contest_problems::IterateIdKind::CONTEST_ROUND,
+        source_contest_round_id,
+        source_contest_perms,
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        (session.has_value() ? optional{session->user_type} : std::nullopt),
+        curr_date,
+        [&](const ContestProblem& cp, const sim::contest_problems::ExtraIterateData& extra_data) {
+            contest_problems.emplace(cp.item, cp);
+            if (uint(~extra_data.problem_perms & sim::problems::Permissions::VIEW)) {
+                unclonable_contest_problem = cp;
+            }
+        }
+    );
 
     if (unclonable_contest_problem) {
-        return api_error403(intentional_unsafe_string_view(
-                concat("You have no permissions to clone the contest problem with id ",
-                        unclonable_contest_problem->id,
-                        " because you have no permission to attach the problem with id ",
-                        unclonable_contest_problem->problem_id, " to a contest round")));
+        return api_error403(intentional_unsafe_string_view(concat(
+            "You have no permissions to clone the contest problem with id ",
+            unclonable_contest_problem->id,
+            " because you have no permission to attach the problem with id ",
+            unclonable_contest_problem->problem_id,
+            " to a contest round"
+        )));
     }
 
     // Add contest round
@@ -967,8 +1096,15 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
                               " full_results, ranking_exposure) "
                               "SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
                               "FROM contest_rounds WHERE contest_id=?");
-    stmt.bind_and_execute(contest_id, contest_round.name, contest_round.begins, contest_round.ends,
-            contest_round.full_results, contest_round.ranking_exposure, contest_id);
+    stmt.bind_and_execute(
+        contest_id,
+        contest_round.name,
+        contest_round.begins,
+        contest_round.ends,
+        contest_round.full_results,
+        contest_round.ranking_exposure,
+        contest_id
+    );
     auto new_round_id = stmt.insert_id();
 
     // Update contest problems to fit into new contest round
@@ -986,8 +1122,15 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
                          " item, method_of_choosing_final_submission, score_revealing) "
                          "VALUES(?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, cp] : contest_problems) {
-        stmt.bind_and_execute(cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item,
-                cp.method_of_choosing_final_submission, cp.score_revealing);
+        stmt.bind_and_execute(
+            cp.contest_round_id,
+            cp.contest_id,
+            cp.problem_id,
+            cp.name,
+            cp.item,
+            cp.method_of_choosing_final_submission,
+            cp.score_revealing
+        );
     }
 
     transaction.commit();
@@ -995,7 +1138,8 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
 }
 
 void Sim::api_contest_round_edit(
-        decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms) {
+    decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1012,9 +1156,11 @@ void Sim::api_contest_round_edit(
     form_validate_not_blank(begins, "begins", "Begin time", is_safe_inf_timestamp);
     form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
     form_validate_not_blank(
-            full_results, "full_results", "Full results time", is_safe_inf_timestamp);
+        full_results, "full_results", "Full results time", is_safe_inf_timestamp
+    );
     form_validate_not_blank(
-            ranking_expo, "ranking_expo", "Show ranking since", is_safe_inf_timestamp);
+        ranking_expo, "ranking_expo", "Show ranking since", is_safe_inf_timestamp
+    );
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -1026,14 +1172,19 @@ void Sim::api_contest_round_edit(
                               "SET name=?, begins=?, ends=?, full_results=?,"
                               " ranking_exposure=? "
                               "WHERE id=?");
-    stmt.bind_and_execute(name, inf_timestamp_to_InfDatetime(begins).to_str(),
-            inf_timestamp_to_InfDatetime(ends).to_str(),
-            inf_timestamp_to_InfDatetime(full_results).to_str(),
-            inf_timestamp_to_InfDatetime(ranking_expo).to_str(), contest_round_id);
+    stmt.bind_and_execute(
+        name,
+        inf_timestamp_to_InfDatetime(begins).to_str(),
+        inf_timestamp_to_InfDatetime(ends).to_str(),
+        inf_timestamp_to_InfDatetime(full_results).to_str(),
+        inf_timestamp_to_InfDatetime(ranking_expo).to_str(),
+        contest_round_id
+    );
 }
 
 void Sim::api_contest_round_delete(
-        decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms) {
+    decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1048,9 +1199,14 @@ void Sim::api_contest_round_delete(
     auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
                               " added, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
-    stmt.bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-            default_priority(Job::Type::DELETE_CONTEST_ROUND),
-            EnumVal(Job::Type::DELETE_CONTEST_ROUND), mysql_date(), contest_round_id);
+    stmt.bind_and_execute(
+        session->user_id,
+        EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::DELETE_CONTEST_ROUND),
+        EnumVal(Job::Type::DELETE_CONTEST_ROUND),
+        mysql_date(),
+        contest_round_id
+    );
 
     sim::jobs::notify_job_server();
 
@@ -1060,18 +1216,22 @@ void Sim::api_contest_round_delete(
 namespace params {
 
 constexpr http::ApiParam contest_problem_problem_id{
-        &ContestProblem::problem_id, "problem_id", "Problem ID"};
+    &ContestProblem::problem_id, "problem_id", "Problem ID"};
 constexpr http::ApiParam contest_problem_name{&ContestProblem::name, "name", "Problem's name"};
 constexpr http::ApiParam contest_problem_method_of_choosing_final_submission{
-        &ContestProblem::method_of_choosing_final_submission, "method_of_choosing_final_submission",
-        "Method of choosing final submission"};
+    &ContestProblem::method_of_choosing_final_submission,
+    "method_of_choosing_final_submission",
+    "Method of choosing final submission"};
 constexpr http::ApiParam contest_problem_score_revealing{
-        &ContestProblem::score_revealing, "score_revealing", "Score revealing"};
+    &ContestProblem::score_revealing, "score_revealing", "Score revealing"};
 
 } // namespace params
 
-void Sim::api_contest_problem_add(decltype(Contest::id) contest_id,
-        decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms) {
+void Sim::api_contest_problem_add(
+    decltype(Contest::id) contest_id,
+    decltype(ContestRound::id) contest_round_id,
+    sim::contests::Permissions perms
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1095,14 +1255,17 @@ void Sim::api_contest_problem_add(decltype(Contest::id) contest_id,
     decltype(Problem::name) problem_name;
     stmt.res_bind_all(problem_owner_id, problem_type, problem_name);
     if (not stmt.next()) {
-        return api_error404(intentional_unsafe_string_view(
-                concat("No problem was found with ID = ", problem_id)));
+        return api_error404(
+            intentional_unsafe_string_view(concat("No problem was found with ID = ", problem_id))
+        );
     }
 
     auto problem_perms = sim::problems::get_permissions(
-            (session.has_value() ? optional{session->user_id} : std::nullopt),
-            (session.has_value() ? optional{session->user_type} : std::nullopt), problem_owner_id,
-            problem_type);
+        (session.has_value() ? optional{session->user_id} : std::nullopt),
+        (session.has_value() ? optional{session->user_type} : std::nullopt),
+        problem_owner_id,
+        problem_type
+    );
     if (uint(~problem_perms & sim::problems::Permissions::VIEW)) {
         return api_error403("You have no permissions to use this problem");
     }
@@ -1115,38 +1278,53 @@ void Sim::api_contest_problem_add(decltype(Contest::id) contest_id,
                          "FROM contest_problems "
                          "WHERE contest_round_id=?");
     static_assert( // NOLINTNEXTLINE(misc-redundant-expression)
-            decltype(ContestProblem::name)::max_len >= decltype(Problem::name)::max_len,
-            "Contest problem name has to be able to hold the attached problem's name");
-    stmt.bind_and_execute(contest_round_id, contest_id, problem_id,
-            (name.size == 0 ? problem_name : name), method_of_choosing_final_submission,
-            score_revealing, contest_round_id);
+        decltype(ContestProblem::name)::max_len >= decltype(Problem::name)::max_len,
+        "Contest problem name has to be able to hold the attached problem's name"
+    );
+    stmt.bind_and_execute(
+        contest_round_id,
+        contest_id,
+        problem_id,
+        (name.size == 0 ? problem_name : name),
+        method_of_choosing_final_submission,
+        score_revealing,
+        contest_round_id
+    );
 
     transaction.commit();
     append(stmt.insert_id());
 }
 
 void Sim::api_contest_problem_rejudge_all_submissions(
-        StringView contest_problem_id, sim::contests::Permissions perms, StringView problem_id) {
+    StringView contest_problem_id, sim::contests::Permissions perms, StringView problem_id
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
         return api_error403();
     }
 
-    mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                  " added, aux_id, info, data) "
-                  "SELECT ?, ?, ?, ?, ?, id, ?, '' "
-                  "FROM submissions WHERE contest_problem_id=? ORDER BY id")
-            .bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-                    default_priority(Job::Type::REJUDGE_SUBMISSION),
-                    EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(),
-                    sim::jobs::dump_string(problem_id), contest_problem_id);
+    mysql
+        .prepare("INSERT jobs (creator, status, priority, type,"
+                 " added, aux_id, info, data) "
+                 "SELECT ?, ?, ?, ?, ?, id, ?, '' "
+                 "FROM submissions WHERE contest_problem_id=? ORDER BY id")
+        .bind_and_execute(
+            session->user_id,
+            EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::REJUDGE_SUBMISSION),
+            EnumVal(Job::Type::REJUDGE_SUBMISSION),
+            mysql_date(),
+            sim::jobs::dump_string(problem_id),
+            contest_problem_id
+        );
 
     sim::jobs::notify_job_server();
 }
 
 void Sim::api_contest_problem_edit(
-        StringView contest_problem_id, sim::contests::Permissions perms) {
+    StringView contest_problem_id, sim::contests::Permissions perms
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1167,8 +1345,8 @@ void Sim::api_contest_problem_edit(
                               "FROM contest_problems WHERE id=?");
     stmt.bind_and_execute(contest_problem_id);
 
-    decltype(ContestProblem::method_of_choosing_final_submission)
-            old_method_of_choosing_final_submission;
+    decltype(ContestProblem::method_of_choosing_final_submission
+    ) old_method_of_choosing_final_submission;
     decltype(ContestProblem::score_revealing) old_score_revealing;
     stmt.res_bind_all(old_method_of_choosing_final_submission, old_score_revealing);
     if (not stmt.next()) {
@@ -1176,21 +1354,25 @@ void Sim::api_contest_problem_edit(
                 // been deleted)
     }
 
-    bool reselect_final_sumbissions = (old_method_of_choosing_final_submission !=
-                    method_of_choosing_final_submission or
-            (method_of_choosing_final_submission ==
-                            ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE and
-                    score_revealing != old_score_revealing));
+    bool reselect_final_sumbissions =
+        (old_method_of_choosing_final_submission != method_of_choosing_final_submission or
+         (method_of_choosing_final_submission ==
+              ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE and
+          score_revealing != old_score_revealing));
 
     if (reselect_final_sumbissions) {
         // Queue reselecting final submissions
         stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
                              " aux_id, info, data) "
                              "VALUES(?, ?, ?, ?, ?, ?, '', '')");
-        stmt.bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-                default_priority(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
-                EnumVal(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM), mysql_date(),
-                contest_problem_id);
+        stmt.bind_and_execute(
+            session->user_id,
+            EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
+            EnumVal(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
+            mysql_date(),
+            contest_problem_id
+        );
 
         append(stmt.insert_id());
     }
@@ -1200,14 +1382,16 @@ void Sim::api_contest_problem_edit(
                          "SET name=?, score_revealing=?, method_of_choosing_final_submission=? "
                          "WHERE id=?");
     stmt.bind_and_execute(
-            name, score_revealing, method_of_choosing_final_submission, contest_problem_id);
+        name, score_revealing, method_of_choosing_final_submission, contest_problem_id
+    );
 
     transaction.commit();
     sim::jobs::notify_job_server();
 }
 
 void Sim::api_contest_problem_delete(
-        StringView contest_problem_id, sim::contests::Permissions perms) {
+    StringView contest_problem_id, sim::contests::Permissions perms
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1222,9 +1406,14 @@ void Sim::api_contest_problem_delete(
     auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
                               " added, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
-    stmt.bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-            default_priority(Job::Type::DELETE_CONTEST_PROBLEM),
-            EnumVal(Job::Type::DELETE_CONTEST_PROBLEM), mysql_date(), contest_problem_id);
+    stmt.bind_and_execute(
+        session->user_id,
+        EnumVal(Job::Status::PENDING),
+        default_priority(Job::Type::DELETE_CONTEST_PROBLEM),
+        EnumVal(Job::Type::DELETE_CONTEST_PROBLEM),
+        mysql_date(),
+        contest_problem_id
+    );
 
     sim::jobs::notify_job_server();
     append(stmt.insert_id());
@@ -1254,8 +1443,7 @@ struct SubmissionOwner {
     InplaceBuff<32> name; // static size is set manually to save memory
 
     template <class... Args>
-    explicit SubmissionOwner(uint64_t sowner, Args&&... args)
-    : id(sowner) {
+    explicit SubmissionOwner(uint64_t sowner, Args&&... args) : id(sowner) {
         name.append(std::forward<Args>(args)...);
     }
 
@@ -1266,8 +1454,9 @@ struct SubmissionOwner {
 
 } // anonymous namespace
 
-void Sim::api_contest_ranking(sim::contests::Permissions perms,
-        StringView submissions_query_id_name, StringView query_id) {
+void Sim::api_contest_ranking(
+    sim::contests::Permissions perms, StringView submissions_query_id_name, StringView query_id
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::VIEW)) {
@@ -1279,9 +1468,11 @@ void Sim::api_contest_ranking(sim::contests::Permissions perms,
 
     // Gather submissions owners
     auto stmt = mysql.prepare(intentional_unsafe_string_view(concat(
-            "SELECT u.id, u.first_name, u.last_name FROM submissions s JOIN "
-            "users u ON s.owner=u.id WHERE s.",
-            submissions_query_id_name, "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id")));
+        "SELECT u.id, u.first_name, u.last_name FROM submissions s JOIN "
+        "users u ON s.owner=u.id WHERE s.",
+        submissions_query_id_name,
+        "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id"
+    )));
     stmt.bind_and_execute(query_id);
 
     decltype(User::id) u_id = 0;
@@ -1324,9 +1515,20 @@ void Sim::api_contest_ranking(sim::contests::Permissions perms,
            "ORDER BY sf.owner");
         // clang-format on
         stmt.bind_and_execute(
-                std::forward<decltype(extra_bind_params)>(extra_bind_params)..., query_id);
-        stmt.res_bind_all(cr_id, cr_full_results, cp_id, cp_score_revealing, s_owner, sf_id,
-                sf_full_status, sf_score, si_id, si_initial_status);
+            std::forward<decltype(extra_bind_params)>(extra_bind_params)..., query_id
+        );
+        stmt.res_bind_all(
+            cr_id,
+            cr_full_results,
+            cp_id,
+            cp_score_revealing,
+            s_owner,
+            sf_id,
+            sf_full_status,
+            sf_score,
+            si_id,
+            si_initial_status
+        );
     };
 
     auto curr_date = mysql_date();
@@ -1382,7 +1584,7 @@ void Sim::api_contest_ranking(sim::contests::Permissions perms,
 
             prev_owner = s_owner;
             show_owner_and_submission_id =
-                    (is_admin or (session.has_value() and session_uid == s_owner));
+                (is_admin or (session.has_value() and session_uid == s_owner));
             // Owner
             if (show_owner_and_submission_id) {
                 append(s_owner);
@@ -1394,7 +1596,7 @@ void Sim::api_contest_ranking(sim::contests::Permissions perms,
         }
 
         bool show_full_status =
-                whether_to_show_full_status(perms, cr_full_results, curr_date, cp_score_revealing);
+            whether_to_show_full_status(perms, cr_full_results, curr_date, cp_score_revealing);
 
         append("\n[");
         if (not show_owner_and_submission_id) {
@@ -1409,7 +1611,7 @@ void Sim::api_contest_ranking(sim::contests::Permissions perms,
         append_submission_status(si_initial_status, sf_full_status, show_full_status);
 
         bool show_score =
-                whether_to_show_score(perms, cr_full_results, curr_date, cp_score_revealing);
+            whether_to_show_score(perms, cr_full_results, curr_date, cp_score_revealing);
         if (show_score) {
             append(',', sf_score, "],");
         } else {

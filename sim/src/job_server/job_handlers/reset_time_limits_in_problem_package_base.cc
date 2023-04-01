@@ -1,5 +1,5 @@
-#include "reset_time_limits_in_problem_package_base.hh"
 #include "../main.hh"
+#include "reset_time_limits_in_problem_package_base.hh"
 
 #include <sim/judging_config.hh>
 #include <simlib/sim/problem_package.hh>
@@ -18,7 +18,8 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(FilePath pac
     job_log("Model solution: ", simfile.solutions[0]);
 
     auto compilation_errors = compile_solution_from_problem_package(
-            simfile.solutions[0], sim::filename_to_lang(simfile.solutions[0]));
+        simfile.solutions[0], sim::filename_to_lang(simfile.solutions[0])
+    );
     if (compilation_errors.has_value()) {
         return set_failure();
     }

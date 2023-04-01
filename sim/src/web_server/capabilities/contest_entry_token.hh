@@ -2,6 +2,7 @@
 
 #include "../web_worker/context.hh"
 #include "contest.hh"
+
 #include <optional>
 #include <sim/contest_users/contest_user.hh>
 
@@ -21,8 +22,11 @@ enum class ContestEntryTokenKind {
     SHORT,
 };
 
-ContestEntryToken contest_entry_token_for(ContestEntryTokenKind token_kind,
-        const decltype(web_worker::Context::session)& session, const Contest& caps_contest,
-        std::optional<decltype(sim::contest_users::ContestUser::mode)> contest_user_mode) noexcept;
+ContestEntryToken contest_entry_token_for(
+    ContestEntryTokenKind token_kind,
+    const decltype(web_worker::Context::session)& session,
+    const Contest& caps_contest,
+    std::optional<decltype(sim::contest_users::ContestUser::mode)> contest_user_mode
+) noexcept;
 
 } // namespace web_server::capabilities

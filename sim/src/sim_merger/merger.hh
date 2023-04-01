@@ -3,6 +3,7 @@
 #include "../sql_tables.hh"
 #include "primary_keys_from_jobs.hh"
 #include "sim_merger.hh"
+
 #include <map>
 #include <sim/primary_key.hh>
 #include <type_traits>
@@ -35,8 +36,17 @@ public:
 
 private:
     void log() {
-        auto tmplog = stdlog("\033[2K\033[G", header_, ' ', iter_, " / ", iters_num_, " = ",
-                iters_num_ > 0 ? 100 * iter_ / iters_num_ : 100, "%");
+        auto tmplog = stdlog(
+            "\033[2K\033[G",
+            header_,
+            ' ',
+            iter_,
+            " / ",
+            iters_num_,
+            " = ",
+            iters_num_ > 0 ? 100 * iter_ / iters_num_ : 100,
+            "%"
+        );
         if (iter_ < iters_num_) {
             tmplog.flush_no_nl();
         }
@@ -44,8 +54,13 @@ private:
 };
 
 template <class CollA, class CollB, class FuncA, class FuncB, class Compare>
-void merge(CollA&& collection_a, CollB&& collection_b, FuncA&& a_merge, FuncB&& b_merge,
-        Compare&& is_left_lower) {
+void merge(
+    CollA&& collection_a,
+    CollB&& collection_b,
+    FuncA&& a_merge,
+    FuncB&& b_merge,
+    Compare&& is_left_lower
+) {
     auto a_beg = std::begin(collection_a);
     auto a_end = std::end(collection_a);
     auto b_beg = std::begin(collection_b);
@@ -90,12 +105,12 @@ enum class IdKind { Main, Other };
 
 template <class Record>
 class Merger : public MergerBase {
-    constexpr static bool debug = false;
+    static constexpr bool debug = false;
 
     const std::string sql_table_name_;
 
 protected:
-    constexpr static auto primary_key = Record::primary_key;
+    static constexpr auto primary_key = Record::primary_key;
     using PrimaryKeyType = typename decltype(Record::primary_key)::Type;
 
     PrimaryKeyType last_new_id_ = {};
@@ -106,8 +121,7 @@ protected:
         std::vector<PrimaryKeyType> main_ids = {};
         std::vector<PrimaryKeyType> other_ids = {};
 
-        explicit NewRecord(const Record& new_data)
-        : data(new_data) {}
+        explicit NewRecord(const Record& new_data) : data(new_data) {}
     };
 
     struct RecordSet {
@@ -129,16 +143,21 @@ protected:
             }
         }
 
-        RecordSet(IdKind my_kind, std::string my_sql_tbl_name, StringView my_sql_tbl_prefix,
-                PrimaryKeysWithTime<PrimaryKeyType> my_ids)
+        RecordSet(
+            IdKind my_kind,
+            std::string my_sql_tbl_name,
+            StringView my_sql_tbl_prefix,
+            PrimaryKeysWithTime<PrimaryKeyType> my_ids
+        )
         : kind(my_kind)
         , sql_table_name(std::move(my_sql_tbl_name))
         , sql_table_prefix(my_sql_tbl_prefix)
         , ids(std::move(my_ids)) {}
 
     public:
-        void add_record(Record record,
-                std::chrono::system_clock::time_point closest_creation_time_approximation) {
+        void add_record(
+            Record record, std::chrono::system_clock::time_point closest_creation_time_approximation
+        ) {
             ids.add_id(primary_key.get(record), closest_creation_time_approximation);
             table.emplace_back(std::move(record));
         }
@@ -163,12 +182,13 @@ protected:
     template <class Func>
     void merge(Func&& try_to_merge_into_an_existing_new_record) {
         constexpr bool takes_two_arguments =
-                std::is_invocable_r_v<NewRecord*, Func, const Record&, IdKind>;
+            std::is_invocable_r_v<NewRecord*, Func, const Record&, IdKind>;
         static_assert(
-                std::is_invocable_r_v<NewRecord*, Func, const Record&> or takes_two_arguments);
+            std::is_invocable_r_v<NewRecord*, Func, const Record&> or takes_two_arguments
+        );
 
         auto try_merging_into_existing_new_record_wrapper = [&](const Record& x,
-                                                                    IdKind kind) -> NewRecord* {
+                                                                IdKind kind) -> NewRecord* {
             if constexpr (takes_two_arguments) {
                 return try_to_merge_into_an_existing_new_record(x, kind);
             } else {
@@ -179,12 +199,18 @@ protected:
 
         using std::chrono::system_clock;
 
-        auto process_id = [&](RecordSet& record_set, PrimaryKeyType id,
-                                  system_clock::time_point tp) {
+        auto process_id = [&](RecordSet& record_set, PrimaryKeyType id, system_clock::time_point tp
+                          ) {
             auto log_added = [&](PrimaryKeyType new_id) {
                 if constexpr (debug) {
-                    stdlog("Added ", id_info(id, record_set.kind), " with new id: ", new_id, "  ",
-                            mysql_date(system_clock::to_time_t(tp)));
+                    stdlog(
+                        "Added ",
+                        id_info(id, record_set.kind),
+                        " with new id: ",
+                        new_id,
+                        "  ",
+                        mysql_date(system_clock::to_time_t(tp))
+                    );
                 } else {
                     (void)new_id; // Suppress GCC warning
                 }
@@ -201,7 +227,7 @@ protected:
 
             const auto& record = record_set.table[it->second];
             NewRecord* new_record =
-                    try_merging_into_existing_new_record_wrapper(record, record_set.kind);
+                try_merging_into_existing_new_record_wrapper(record, record_set.kind);
             if (not new_record) {
                 new_record = &new_table_.emplace_back(record);
                 primary_key.set(new_record->data, pre_merge_record_id_to_post_merge_record_id(id));
@@ -222,22 +248,22 @@ protected:
 
         using IdsElem = std::pair<const PrimaryKeyType, system_clock::time_point>;
         sim_merger::merge(
-                main_.ids.ids, other_.ids.ids,
-                [&](const IdsElem& main_elem) {
-                    process_id(main_, main_elem.first, main_elem.second);
-                },
-                [&](const IdsElem& other_elem) {
-                    process_id(other_, other_elem.first, other_elem.second);
-                },
-                [&](const auto& main_elem, const auto& other_elem) {
-                    auto& [main_id, main_tp] = main_elem;
-                    auto& [other_id, other_tp] = other_elem;
-                    return main_tp <= other_tp;
-                });
+            main_.ids.ids,
+            other_.ids.ids,
+            [&](const IdsElem& main_elem) { process_id(main_, main_elem.first, main_elem.second); },
+            [&](const IdsElem& other_elem) {
+                process_id(other_, other_elem.first, other_elem.second);
+            },
+            [&](const auto& main_elem, const auto& other_elem) {
+                auto& [main_id, main_tp] = main_elem;
+                auto& [other_id, other_tp] = other_elem;
+                return main_tp <= other_tp;
+            }
+        );
     }
 
-    virtual PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
-            const PrimaryKeyType& record_id) {
+    virtual PrimaryKeyType
+    pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id) {
         STACK_UNWINDING_MARK;
         (void)record_id;
         if constexpr (std::is_integral_v<PrimaryKeyType>) {
@@ -250,11 +276,13 @@ protected:
 
     virtual void merge() = 0;
 
-    Merger(StringView orig_sql_table_name, PrimaryKeysWithTime<PrimaryKeyType> main_ids,
-            PrimaryKeysWithTime<PrimaryKeyType> other_ids)
+    Merger(
+        StringView orig_sql_table_name,
+        PrimaryKeysWithTime<PrimaryKeyType> main_ids,
+        PrimaryKeysWithTime<PrimaryKeyType> other_ids
+    )
     : sql_table_name_(orig_sql_table_name.to_string())
-    , main_{IdKind::Main, concat_tostr(main_sim_table_prefix, orig_sql_table_name),
-              main_sim_table_prefix, std::move(main_ids)}
+    , main_{IdKind::Main, concat_tostr(main_sim_table_prefix, orig_sql_table_name), main_sim_table_prefix, std::move(main_ids)}
     , other_{IdKind::Other, orig_sql_table_name.to_string(), "", std::move(other_ids)} {
         STACK_UNWINDING_MARK;
 

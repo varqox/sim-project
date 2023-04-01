@@ -19,19 +19,17 @@ public:
     InfDatetime& operator=(InfDatetime&&) noexcept = default;
     ~InfDatetime() override = default;
 
-    explicit InfDatetime(const sim::InfDatetime& dt)
-    : Varbinary(dt.to_str()) {}
+    explicit InfDatetime(const sim::InfDatetime& dt) : Varbinary(dt.to_str()) {}
 
-    explicit InfDatetime(sim::InfDatetime&& dt)
-    : Varbinary(dt.to_str()) {}
+    explicit InfDatetime(sim::InfDatetime&& dt) : Varbinary(dt.to_str()) {}
 
-    template <class T,
-            std::enable_if_t<std::is_convertible_v<T, StringView> and
-                            !std::is_same_v<std::decay_t<T>, InfDatetime>,
-                    int> = 0>
+    template <
+        class T,
+        std::enable_if_t<
+            std::is_convertible_v<T, StringView> and !std::is_same_v<std::decay_t<T>, InfDatetime>,
+            int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
-    explicit InfDatetime(T&& str)
-    : InfDatetime(sim::InfDatetime(std::forward<T>(str))) {}
+    explicit InfDatetime(T&& str) : InfDatetime(sim::InfDatetime(std::forward<T>(str))) {}
 
     InfDatetime& operator=(const sim::InfDatetime& dt) {
         Varbinary::operator=(dt.to_str());
@@ -55,6 +53,7 @@ public:
 
     // NOLINTNEXTLINE(google-explicit-constructor)
     operator sim::InfDatetime() { return as_inf_datetime(); }
+
     // NOLINTNEXTLINE(google-explicit-constructor)
     operator sim::InfDatetime() const { return as_inf_datetime(); }
 

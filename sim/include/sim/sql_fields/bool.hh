@@ -15,8 +15,7 @@ public:
     constexpr Bool() = default;
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr Bool(bool val)
-    : val{val} {}
+    constexpr Bool(bool val) : val{val} {}
 
     constexpr Bool(const Bool&) = default;
     constexpr Bool(Bool&&) noexcept = default;
@@ -28,6 +27,7 @@ public:
         val = other;
         return *this;
     }
+
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr operator bool() const noexcept { return val; }
 

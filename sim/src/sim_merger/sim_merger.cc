@@ -1,4 +1,3 @@
-#include "sim_merger.hh"
 #include "contest_entry_tokens.hh"
 #include "contest_files.hh"
 #include "contest_problems.hh"
@@ -10,8 +9,10 @@
 #include "problem_tags.hh"
 #include "problems.hh"
 #include "sessions.hh"
+#include "sim_merger.hh"
 #include "submissions.hh"
 #include "users.hh"
+
 #include <iostream>
 #include <sim/mysql/mysql.hh>
 #include <simlib/config_file.hh>
@@ -39,10 +40,16 @@ static void load_tables_from_other_sim_backup() {
     }
 
     Spawner::Options opts = {fd, STDOUT_FILENO, STDERR_FILENO};
-    auto es = Spawner::run("mysql",
-            {"mysql", "-u", cf["user"].as_string(), concat_tostr("-p", cf["password"].as_string()),
-                    cf["db"].as_string(), "-B"},
-            opts);
+    auto es = Spawner::run(
+        "mysql",
+        {"mysql",
+         "-u",
+         cf["user"].as_string(),
+         concat_tostr("-p", cf["password"].as_string()),
+         cf["db"].as_string(),
+         "-B"},
+        opts
+    );
     if (es.si.code != CLD_EXITED or es.si.status != 0) {
         THROW("loading dump.sql failed: ", es.message);
     }
@@ -62,18 +69,21 @@ static void print_help(const char* program_name) {
     }
 
     errlog.label(false);
-    errlog("Usage: ", program_name,
-            " [options] <sim_build> <other_sim_build_backup>\n"
-            "  Where sim_build is a path to build directory of a Sim to which "
-            "merged will be Sim with a backup of build placed in "
-            "sim_other_backup_build path\n"
-            "\n"
-            "Options:\n"
-            "  -h, --help            Display this information\n"
-            "  -q, --quiet           Quiet mode\n"
-            "  -r, --reset-new-problems-time-limits\n"
-            "                        Adds jobs to reset added problems' time "
-            "limits");
+    errlog(
+        "Usage: ",
+        program_name,
+        " [options] <sim_build> <other_sim_build_backup>\n"
+        "  Where sim_build is a path to build directory of a Sim to which "
+        "merged will be Sim with a backup of build placed in "
+        "sim_other_backup_build path\n"
+        "\n"
+        "Options:\n"
+        "  -h, --help            Display this information\n"
+        "  -q, --quiet           Quiet mode\n"
+        "  -r, --reset-new-problems-time-limits\n"
+        "                        Adds jobs to reset added problems' time "
+        "limits"
+    );
 }
 
 static CmdOptions parse_cmd_options(int& argc, char** argv) {
@@ -92,8 +102,8 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
             { // Quiet mode
                 stdlog.open("/dev/null");
 
-            } else if (0 == strcmp(argv[i], "-r") or
-                    0 == strcmp(argv[i], "--reset-new-problems-time-limits")) {
+            } else if (0 == strcmp(argv[i], "-r") or 0 == strcmp(argv[i], "--reset-new-problems-time-limits"))
+            {
                 cmd_options.reset_new_problems_time_limits = true;
 
             } else { // Unknown
@@ -113,7 +123,7 @@ static int true_main(int argc, char** argv) {
     STACK_UNWINDING_MARK;
 
     // Signal control
-    struct sigaction sa {};
+    struct sigaction sa = {};
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_IGN; // NOLINT
 
@@ -141,7 +151,7 @@ static int true_main(int argc, char** argv) {
     }
 
     if (path_absolute(main_sim_build, get_cwd().to_string()) ==
-            path_absolute(other_sim_build, get_cwd().to_string()))
+        path_absolute(other_sim_build, get_cwd().to_string()))
     {
         errlog.label(false);
         errlog("sim_build and other_sim_build_backup cannot refer to the same "
@@ -173,7 +183,8 @@ static int true_main(int argc, char** argv) {
     if (access(concat(other_sim_build, "dump.sql"), F_OK) != 0) {
         stdlog("File ", other_sim_build, "dump.sql does not exists -> asking git to restore it");
         auto es = Spawner::run(
-                "git", {"git", "-C", other_sim_build.to_string(), "checkout", "--", "dump.sql"});
+            "git", {"git", "-C", other_sim_build.to_string(), "checkout", "--", "dump.sql"}
+        );
         if (es.si.code != CLD_EXITED or es.si.status != 0) {
             errlog("Git failed: ", es.message);
             return 1;
@@ -244,7 +255,8 @@ static int true_main(int argc, char** argv) {
 
     stdlog("\033[1;36mMerging problems\033[m...");
     ProblemsMerger problems(
-            ids_from_both_jobs, internal_files, users, cmd_options.reset_new_problems_time_limits);
+        ids_from_both_jobs, internal_files, users, cmd_options.reset_new_problems_time_limits
+    );
     mergers.emplace_back(&problems);
 
     stdlog("\033[1;36mMerging problem tags\033[m...");
@@ -276,13 +288,28 @@ static int true_main(int argc, char** argv) {
     mergers.emplace_back(&contest_entry_tokens);
 
     stdlog("\033[1;36mMerging submissions\033[m...");
-    SubmissionsMerger submissions(ids_from_both_jobs, internal_files, users, problems,
-            contest_problems, contest_rounds, contests);
+    SubmissionsMerger submissions(
+        ids_from_both_jobs,
+        internal_files,
+        users,
+        problems,
+        contest_problems,
+        contest_rounds,
+        contests
+    );
     mergers.emplace_back(&submissions);
 
     stdlog("\033[1;36mMerging jobs\033[m...");
-    JobsMerger jobs(ids_from_both_jobs, internal_files, users, submissions, problems, contests,
-            contest_rounds, contest_problems);
+    JobsMerger jobs(
+        ids_from_both_jobs,
+        internal_files,
+        users,
+        submissions,
+        problems,
+        contests,
+        contest_rounds,
+        contest_problems
+    );
     mergers.emplace_back(&jobs);
 
     stdlog("\033[1;32mEverything merged (unsaved so far)\033[m\nProceed with "

@@ -5,6 +5,7 @@
 #include "../http/response.hh"
 #include "../web_worker/context.hh"
 #include "../web_worker/web_worker.hh"
+
 #include <sim/contest_files/permissions.hh>
 #include <sim/contest_rounds/contest_round.hh>
 #include <sim/contests/contest.hh>
@@ -100,10 +101,12 @@ class Sim final {
     void api_job_download_log();
 
     void api_job_download_uploaded_package(
-            std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type);
+        std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type
+    );
 
     void api_job_download_uploaded_statement(
-            std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type, StringView info);
+        std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type, StringView info
+    );
 
     // problems_api.cc
     void api_problems();
@@ -117,7 +120,8 @@ class Sim final {
     void api_statement_impl(uint64_t problem_file_id, StringView problem_label, StringView simfile);
 
     void api_problem_statement(
-            StringView problem_label, StringView simfile, sim::problems::Permissions perms);
+        StringView problem_label, StringView simfile, sim::problems::Permissions perms
+    );
 
     void api_problem_download(StringView problem_label, sim::problems::Permissions perms);
 
@@ -140,8 +144,11 @@ class Sim final {
     void api_problem_attaching_contest_problems(sim::problems::Permissions perms);
 
     // submissions_api.cc
-    void append_submission_status(sim::submissions::Submission::Status initial_status,
-            sim::submissions::Submission::Status full_status, bool show_full_status);
+    void append_submission_status(
+        sim::submissions::Submission::Status initial_status,
+        sim::submissions::Submission::Status full_status,
+        bool show_full_status
+    );
 
     void api_submissions();
 
@@ -180,29 +187,38 @@ class Sim final {
 
     void api_contest_round_clone(StringView contest_id, sim::contests::Permissions perms);
 
-    void api_contest_round_edit(decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
-            sim::contests::Permissions perms);
+    void api_contest_round_edit(
+        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        sim::contests::Permissions perms
+    );
 
-    void api_contest_round_delete(decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
-            sim::contests::Permissions perms);
+    void api_contest_round_delete(
+        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        sim::contests::Permissions perms
+    );
 
     void api_contest_problem_statement(StringView problem_id);
 
-    void api_contest_problem_add(decltype(sim::contests::Contest::id) contest_id,
-            decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
-            sim::contests::Permissions perms);
+    void api_contest_problem_add(
+        decltype(sim::contests::Contest::id) contest_id,
+        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        sim::contests::Permissions perms
+    );
 
     void api_contest_problem_rejudge_all_submissions(
-            StringView contest_problem_id, sim::contests::Permissions perms, StringView problem_id);
+        StringView contest_problem_id, sim::contests::Permissions perms, StringView problem_id
+    );
 
     void api_contest_problem_edit(StringView contest_problem_id, sim::contests::Permissions perms);
 
-    void api_contest_problem_delete(
-            StringView contest_problem_id, sim::contests::Permissions perms);
+    void
+    api_contest_problem_delete(StringView contest_problem_id, sim::contests::Permissions perms);
 
-    void api_contest_ranking(sim::contests::Permissions perms,
-            StringView submissions_query_id_name, // TODO: change to id_kind
-            StringView query_id);
+    void api_contest_ranking(
+        sim::contests::Permissions perms,
+        StringView submissions_query_id_name, // TODO: change to id_kind
+        StringView query_id
+    );
 
     // contest_users_api.cc
 
@@ -224,8 +240,8 @@ class Sim final {
 
     void api_contest_file_add();
 
-    void api_contest_file_download(
-            StringView contest_file_id, sim::contest_files::Permissions perms);
+    void
+    api_contest_file_download(StringView contest_file_id, sim::contest_files::Permissions perms);
 
     void api_contest_file_edit(StringView contest_file_id, sim::contest_files::Permissions perms);
 
@@ -254,7 +270,8 @@ class Sim final {
     template <class... Args>
     void add_notification(StringView css_classes, Args&&... message) {
         notifications.append(
-                "<pre class=\"", css_classes, "\">", std::forward<Args>(message)..., "</pre>");
+            "<pre class=\"", css_classes, "\">", std::forward<Args>(message)..., "</pre>"
+        );
     }
 
     template <class... Args>
@@ -268,7 +285,8 @@ class Sim final {
     // 403
     void error403() {
         error_page_template(
-                "403 Forbidden", "403", "Sorry, but you're not allowed to see anything here.");
+            "403 Forbidden", "403", "Sorry, but you're not allowed to see anything here."
+        );
     }
 
     // 404
@@ -282,7 +300,8 @@ class Sim final {
     // 501
     void error501() {
         error_page_template(
-                "501 Not Implemented", "501", "This feature has not been implemented yet...");
+            "501 Not Implemented", "501", "This feature has not been implemented yet..."
+        );
     }
 
     /* ============================== Forms ============================== */
@@ -292,8 +311,8 @@ class Sim final {
     /// Returns true if and only if the field @p name exists and its value is no
     /// longer than max_size
     template <class T> // TODO: deprecate with reason "use FormValidator"
-    bool form_validate(
-            T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
+    bool
+    form_validate(T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
         STACK_UNWINDING_MARK;
 
         const auto value = request.form_fields.get(name);
@@ -304,8 +323,9 @@ class Sim final {
         }
         if (value->size() > max_size) {
             form_validation_error = true;
-            add_notification("error", html_escape(name_to_print), " cannot be longer than ",
-                    max_size, " bytes");
+            add_notification(
+                "error", html_escape(name_to_print), " cannot be longer than ", max_size, " bytes"
+            );
             return false;
         }
 
@@ -315,10 +335,17 @@ class Sim final {
 
     /// Validates field and (if not blank) checks it by comp
     template < // TODO: deprecate with reason "use FormValidator"
-            class T, class Checker,
-            typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
-    bool form_validate(T& var, const std::string& name, StringView name_to_print, Checker&& check,
-            StringView error_msg = {}, size_t max_size = -1) {
+        class T,
+        class Checker,
+        typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
+    bool form_validate(
+        T& var,
+        const std::string& name,
+        StringView name_to_print,
+        Checker&& check,
+        StringView error_msg = {},
+        size_t max_size = -1
+    ) {
         STACK_UNWINDING_MARK;
 
         if (form_validate(var, name, name_to_print, max_size)) {
@@ -340,7 +367,8 @@ class Sim final {
     /// Like validate() but also validate not blank
     template <class T> // TODO: deprecate with reason "use FormValidator"
     bool form_validate_not_blank(
-            T& var, const std::string& name, StringView name_to_print, size_t max_size = -1) {
+        T& var, const std::string& name, StringView name_to_print, size_t max_size = -1
+    ) {
         STACK_UNWINDING_MARK;
 
         const auto value = request.form_fields.get(name);
@@ -356,8 +384,9 @@ class Sim final {
         }
         if (value->size() > max_size) {
             form_validation_error = true;
-            add_notification("error", html_escape(name_to_print), " cannot be longer than ",
-                    max_size, " bytes");
+            add_notification(
+                "error", html_escape(name_to_print), " cannot be longer than ", max_size, " bytes"
+            );
             return false;
         }
 
@@ -367,10 +396,17 @@ class Sim final {
 
     /// Validates field and checks it by comp
     template < // TODO: deprecate with reason "use FormValidator"
-            class T, class Checker,
-            typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
-    bool form_validate_not_blank(T& var, const std::string& name, StringView name_to_print,
-            Checker&& check, StringView error_msg = {}, size_t max_size = -1) {
+        class T,
+        class Checker,
+        typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
+    bool form_validate_not_blank(
+        T& var,
+        const std::string& name,
+        StringView name_to_print,
+        Checker&& check,
+        StringView error_msg = {},
+        size_t max_size = -1
+    ) {
         STACK_UNWINDING_MARK;
 
         if (form_validate_not_blank(var, name, name_to_print, max_size)) {
@@ -393,8 +429,8 @@ class Sim final {
     ///  or sets an error if no file as @p name was submitted. To obtain the
     // users's filename of the uploaded file use: request.form_data.get_or(name, "")
     template <class T> // TODO: deprecate with reason "use FormValidator"
-    bool form_validate_file_path_not_blank(
-            T& var, const std::string& name, StringView name_to_print) {
+    bool
+    form_validate_file_path_not_blank(T& var, const std::string& name, StringView name_to_print) {
         STACK_UNWINDING_MARK;
 
         const auto file = request.form_fields.file_path(name);
@@ -449,7 +485,8 @@ private:
      * @return ORed permissions flags
      */
     Sim::UserPermissions users_get_permissions(
-            decltype(sim::users::User::id) user_id, sim::users::User::Type utype) noexcept;
+        decltype(sim::users::User::id) user_id, sim::users::User::Type utype
+    ) noexcept;
 
     // Queries MySQL
     UserPermissions users_get_permissions(decltype(sim::users::User::id) user_id);
@@ -491,8 +528,11 @@ private:
     JobPermissions jobs_get_overall_permissions() noexcept;
 
     // Session must be open to access the jobs
-    JobPermissions jobs_get_permissions(std::optional<StringView> creator_id,
-            sim::jobs::Job::Type job_type, sim::jobs::Job::Status job_status) noexcept;
+    JobPermissions jobs_get_permissions(
+        std::optional<StringView> creator_id,
+        sim::jobs::Job::Type job_type,
+        sim::jobs::Job::Status job_status
+    ) noexcept;
 
     // Used to get granted permissions to the problem jobs
     JobPermissions jobs_granted_permissions_problem(StringView problem_id);
@@ -546,19 +586,23 @@ private:
 
     // Returns only the overall permissions
     ContestUserPermissions contest_user_get_overall_permissions(
-            std::optional<sim::contest_users::ContestUser::Mode> viewer_mode) noexcept;
+        std::optional<sim::contest_users::ContestUser::Mode> viewer_mode
+    ) noexcept;
 
     ContestUserPermissions contest_user_get_permissions(
-            std::optional<sim::contest_users::ContestUser::Mode> viewer_mode,
-            std::optional<sim::contest_users::ContestUser::Mode> user_mode) noexcept;
+        std::optional<sim::contest_users::ContestUser::Mode> viewer_mode,
+        std::optional<sim::contest_users::ContestUser::Mode> user_mode
+    ) noexcept;
 
     // Returns (viewer mode, perms), queries MySQL
     std::pair<std::optional<sim::contest_users::ContestUser::Mode>, Sim::ContestUserPermissions>
     contest_user_get_overall_permissions(StringView contest_id);
 
     // Returns (viewer mode, perms, user's mode), queries MySQL
-    std::tuple<std::optional<sim::contest_users::ContestUser::Mode>, Sim::ContestUserPermissions,
-            std::optional<sim::contest_users::ContestUser::Mode>>
+    std::tuple<
+        std::optional<sim::contest_users::ContestUser::Mode>,
+        Sim::ContestUserPermissions,
+        std::optional<sim::contest_users::ContestUser::Mode>>
     contest_user_get_permissions(StringView contest_id, StringView user_id);
 
     /* ============================= Submissions =============================
@@ -586,10 +630,11 @@ private:
     SubmissionPermissions submissions_get_overall_permissions() noexcept;
 
     SubmissionPermissions submissions_get_permissions(
-            decltype(sim::submissions::Submission::owner) submission_owner,
-            sim::submissions::Submission::Type stype,
-            std::optional<sim::contest_users::ContestUser::Mode> cu_mode,
-            decltype(sim::problems::Problem::owner_id) problem_owner) noexcept;
+        decltype(sim::submissions::Submission::owner) submission_owner,
+        sim::submissions::Submission::Type stype,
+        std::optional<sim::contest_users::ContestUser::Mode> cu_mode,
+        decltype(sim::problems::Problem::owner_id) problem_owner
+    ) noexcept;
 
     StringView submissions_sid;
     uint64_t submissions_file_id{};

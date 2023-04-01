@@ -60,13 +60,23 @@ void Sim::contests_contest(StringView contest_id) {
             next_arg = url_args.extract_next_arg();
             if (next_arg == "change_mode") {
                 page_template("Change contest user mode");
-                append("change_contest_user_mode(false, ", contest_id, ",", user_id,
-                        ", window.location.hash);");
+                append(
+                    "change_contest_user_mode(false, ",
+                    contest_id,
+                    ",",
+                    user_id,
+                    ", window.location.hash);"
+                );
 
             } else if (next_arg == "expel") {
                 page_template("Expel user from the contest");
-                append("expel_contest_user(false, ", contest_id, ",", user_id,
-                        ", window.location.hash);");
+                append(
+                    "expel_contest_user(false, ",
+                    contest_id,
+                    ",",
+                    user_id,
+                    ", window.location.hash);"
+                );
 
             } else {
                 error404();
@@ -119,24 +129,28 @@ void Sim::contests_contest_problem(StringView contest_problem_id) {
 
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg.empty()) {
-        page_template(
-                intentional_unsafe_string_view(concat("Contest problem ", contest_problem_id)));
+        page_template(intentional_unsafe_string_view(concat("Contest problem ", contest_problem_id))
+        );
         append("view_contest_problem(false, ", contest_problem_id, ", window.location.hash);");
 
     } else if (next_arg == "edit") {
-        page_template(intentional_unsafe_string_view(
-                concat("Edit contest problem ", contest_problem_id)));
+        page_template(
+            intentional_unsafe_string_view(concat("Edit contest problem ", contest_problem_id))
+        );
         append("edit_contest_problem(false, ", contest_problem_id, ", window.location.hash);");
 
     } else if (next_arg == "submit") {
         page_template(
-                intentional_unsafe_string_view(concat("Submit a solution ", contest_problem_id)));
-        append("add_contest_submission(false, undefined, undefined, {id:", contest_problem_id,
-                "});");
+            intentional_unsafe_string_view(concat("Submit a solution ", contest_problem_id))
+        );
+        append(
+            "add_contest_submission(false, undefined, undefined, {id:", contest_problem_id, "});"
+        );
 
     } else if (next_arg == "delete") {
-        page_template(intentional_unsafe_string_view(
-                concat("Delete contest problem ", contest_problem_id)));
+        page_template(
+            intentional_unsafe_string_view(concat("Delete contest problem ", contest_problem_id))
+        );
         append("delete_contest_problem(false, ", contest_problem_id, ", window.location.hash);");
 
     } else {

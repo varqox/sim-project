@@ -10,7 +10,7 @@ namespace sim::internal_files {
 struct InternalFile {
     uint64_t id;
 
-    constexpr static auto primary_key = PrimaryKey{&InternalFile::id};
+    static constexpr auto primary_key = PrimaryKey{&InternalFile::id};
 };
 
 constexpr CStringView dir = "internal_files/";

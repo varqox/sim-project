@@ -1,4 +1,5 @@
 #include "sim.hh"
+
 #include <sim/problems/permissions.hh>
 
 namespace web_server::old {
@@ -29,8 +30,9 @@ void Sim::problems_problem() {
         append("view_problem(false, ", problems_pid, ", window.location.hash);");
 
     } else if (next_arg == "submit") {
-        page_template(intentional_unsafe_string_view(
-                concat("Submit solution to the problem ", problems_pid)));
+        page_template(
+            intentional_unsafe_string_view(concat("Submit solution to the problem ", problems_pid))
+        );
         append("add_problem_submission(false, {id:", problems_pid, "})");
 
     } else if (next_arg == "edit") {
@@ -43,7 +45,8 @@ void Sim::problems_problem() {
 
     } else if (next_arg == "reset_time_limits") {
         page_template(
-                intentional_unsafe_string_view(concat("Reset problem time limits ", problems_pid)));
+            intentional_unsafe_string_view(concat("Reset problem time limits ", problems_pid))
+        );
         append("reset_problem_time_limits(false, ", problems_pid, ");");
 
     } else if (next_arg == "delete") {

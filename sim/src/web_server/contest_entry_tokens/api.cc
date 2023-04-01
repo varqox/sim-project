@@ -1,8 +1,9 @@
-#include "api.hh"
 #include "../capabilities/contest.hh"
 #include "../capabilities/contest_entry_token.hh"
 #include "../http/response.hh"
 #include "../web_worker/context.hh"
+#include "api.hh"
+
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -33,7 +34,7 @@ struct TokensInfo {
     mysql::Optional<decltype(ContestEntryToken::token)> token;
     mysql::Optional<decltype(ContestEntryToken::short_token)::value_type> short_token;
     mysql::Optional<decltype(ContestEntryToken::short_token_expiration)::value_type>
-            short_token_expiration;
+        short_token_expiration;
     std::string curr_time;
     web_server::capabilities::Contest caps_contest;
 };
@@ -41,16 +42,18 @@ struct TokensInfo {
 std::optional<TokensInfo> tokens_info_for(Context& ctx, decltype(Contest::id) contest_id) {
     TokensInfo ti;
     auto stmt =
-            ctx.mysql.prepare("SELECT c.is_public, cu.mode, cet.token, cet.short_token, "
-                              "cet.short_token_expiration "
-                              "FROM contests c "
-                              "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
-                              "LEFT JOIN contest_entry_tokens cet ON cet.contest_id=c.id "
-                              "WHERE c.id=?");
+        ctx.mysql.prepare("SELECT c.is_public, cu.mode, cet.token, cet.short_token, "
+                          "cet.short_token_expiration "
+                          "FROM contests c "
+                          "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
+                          "LEFT JOIN contest_entry_tokens cet ON cet.contest_id=c.id "
+                          "WHERE c.id=?");
     stmt.bind_and_execute(
-            ctx.session ? std::optional{ctx.session->user_id} : std::nullopt, contest_id);
+        ctx.session ? std::optional{ctx.session->user_id} : std::nullopt, contest_id
+    );
     stmt.res_bind_all(
-            ti.contest_is_public, ti.cu_mode, ti.token, ti.short_token, ti.short_token_expiration);
+        ti.contest_is_public, ti.cu_mode, ti.token, ti.short_token, ti.short_token_expiration
+    );
     if (not stmt.next()) {
         return std::nullopt;
     }
@@ -61,7 +64,7 @@ std::optional<TokensInfo> tokens_info_for(Context& ctx, decltype(Contest::id) co
         ti.short_token_expiration = std::nullopt;
     }
     ti.caps_contest =
-            web_server::capabilities::contest_for(ctx.session, ti.contest_is_public, ti.cu_mode);
+        web_server::capabilities::contest_for(ctx.session, ti.contest_is_public, ti.cu_mode);
     return ti;
 }
 
@@ -82,35 +85,43 @@ struct TokenContestInfo {
     web_server::capabilities::ContestEntryToken caps_token;
 };
 
-std::optional<TokenContestInfo> token_contest_info_for(
-        Context& ctx, StringView token_or_short_token) {
+std::optional<TokenContestInfo>
+token_contest_info_for(Context& ctx, StringView token_or_short_token) {
     TokenContestInfo tci;
     decltype(Contest::is_public) contest_is_public;
     mysql::Optional<decltype(ContestUser::mode)> cu_mode;
-    static_assert(decltype(ContestEntryToken::token)::max_len !=
-                    decltype(ContestEntryToken::short_token)::value_type::max_len,
-            "These cannot be equal because this would cause conflict in selecting the token "
-            "in "
-            "the below query");
+    static_assert(
+        decltype(ContestEntryToken::token)::max_len !=
+            decltype(ContestEntryToken::short_token)::value_type::max_len,
+        "These cannot be equal because this would cause conflict in selecting the token "
+        "in "
+        "the below query"
+    );
     auto token_kind = token_or_short_token.size() == decltype(ContestEntryToken::token)::max_len
-            ? ContestEntryTokenKind::NORMAL
-            : ContestEntryTokenKind::SHORT;
+        ? ContestEntryTokenKind::NORMAL
+        : ContestEntryTokenKind::SHORT;
     auto stmt = ctx.mysql.prepare(
-            "SELECT c.id, c.name, c.is_public, cu.mode "
-            "FROM contest_entry_tokens cet "
-            "LEFT JOIN contests c ON c.id = cet.contest_id "
-            "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
-            "WHERE cet.token=? OR (cet.short_token=? AND cet.short_token_expiration<?)");
-    stmt.bind_and_execute(ctx.session ? std::optional{ctx.session->user_id} : std::nullopt,
-            token_or_short_token, token_or_short_token, mysql_date());
+        "SELECT c.id, c.name, c.is_public, cu.mode "
+        "FROM contest_entry_tokens cet "
+        "LEFT JOIN contests c ON c.id = cet.contest_id "
+        "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
+        "WHERE cet.token=? OR (cet.short_token=? AND cet.short_token_expiration<?)"
+    );
+    stmt.bind_and_execute(
+        ctx.session ? std::optional{ctx.session->user_id} : std::nullopt,
+        token_or_short_token,
+        token_or_short_token,
+        mysql_date()
+    );
     stmt.res_bind_all(tci.contest_id, tci.contest_name, contest_is_public, cu_mode);
     if (not stmt.next()) {
         return std::nullopt;
     }
     tci.caps_contest =
-            web_server::capabilities::contest_for(ctx.session, contest_is_public, cu_mode);
+        web_server::capabilities::contest_for(ctx.session, contest_is_public, cu_mode);
     tci.caps_token = web_server::capabilities::contest_entry_token_for(
-            token_kind, ctx.session, tci.caps_contest, cu_mode);
+        token_kind, ctx.session, tci.caps_contest, cu_mode
+    );
     return tci;
 }
 
@@ -129,8 +140,8 @@ auto random_token() {
 }
 
 auto random_short_token() {
-    return sim::generate_random_token(
-            decltype(ContestEntryToken::short_token)::value_type::max_len);
+    return sim::generate_random_token(decltype(ContestEntryToken::short_token)::value_type::max_len
+    );
 }
 
 } // namespace
@@ -153,7 +164,8 @@ Response view(Context& ctx, decltype(Contest::id) contest_id) {
         };
 
         auto token_caps = capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode);
+            ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (token_caps.view) {
             obj.prop_obj("token", [&](auto& obj) {
                 obj.prop("value", ti.token);
@@ -161,9 +173,9 @@ Response view(Context& ctx, decltype(Contest::id) contest_id) {
             });
         }
 
-        auto short_token_caps =
-                capabilities::contest_entry_token_for(capabilities::ContestEntryTokenKind::SHORT,
-                        ctx.session, ti.caps_contest, ti.cu_mode);
+        auto short_token_caps = capabilities::contest_entry_token_for(
+            capabilities::ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (short_token_caps.view) {
             obj.prop_obj("short_token", [&](auto& obj) {
                 obj.prop("value", ti.short_token);
@@ -179,7 +191,8 @@ Response view(Context& ctx, decltype(Contest::id) contest_id) {
 Response add(Context& ctx, decltype(Contest::id) contest_id) {
     return with_tokens_info(ctx, contest_id, [&](TokensInfo&& ti) {
         auto token_caps = capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode);
+            ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (not token_caps.create) {
             return ctx.response_403();
         }
@@ -187,8 +200,8 @@ Response add(Context& ctx, decltype(Contest::id) contest_id) {
             return ctx.response_400("Contest already has an entry token");
         }
         auto stmt =
-                ctx.mysql.prepare("INSERT IGNORE contest_entry_tokens(token, contest_id, "
-                                  "short_token, short_token_expiration) VALUES(?, ?, NULL, NULL)");
+            ctx.mysql.prepare("INSERT IGNORE contest_entry_tokens(token, contest_id, "
+                              "short_token, short_token_expiration) VALUES(?, ?, NULL, NULL)");
         do {
             stmt.bind_and_execute(random_token(), contest_id);
         } while (stmt.affected_rows() == 0);
@@ -199,15 +212,16 @@ Response add(Context& ctx, decltype(Contest::id) contest_id) {
 Response regen(Context& ctx, decltype(Contest::id) contest_id) {
     return with_tokens_info(ctx, contest_id, [&](TokensInfo&& ti) {
         auto token_caps = capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode);
+            ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (not token_caps.regen) {
             return ctx.response_403();
         }
         if (not ti.token) {
             return ctx.response_400("Contest does not have an entry token");
         }
-        auto stmt = ctx.mysql.prepare(
-                "UPDATE IGNORE contest_entry_tokens SET token=? WHERE contest_id=?");
+        auto stmt =
+            ctx.mysql.prepare("UPDATE IGNORE contest_entry_tokens SET token=? WHERE contest_id=?");
         do {
             stmt.bind_and_execute(random_token(), contest_id);
         } while (stmt.affected_rows() == 0);
@@ -218,13 +232,15 @@ Response regen(Context& ctx, decltype(Contest::id) contest_id) {
 Response delete_(Context& ctx, decltype(Contest::id) contest_id) {
     return with_tokens_info(ctx, contest_id, [&](TokensInfo&& ti) {
         auto token_caps = capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode);
+            ContestEntryTokenKind::NORMAL, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (not token_caps.delete_) {
             return ctx.response_403();
         }
         assert(capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode)
-                        .delete_);
+                   ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode
+        )
+                   .delete_);
         auto stmt = ctx.mysql.prepare("DELETE FROM contest_entry_tokens WHERE contest_id=?");
         stmt.bind_and_execute(contest_id);
         return ctx.response_ok();
@@ -235,8 +251,8 @@ static void set_or_regen_short_token(mysql::Connection& mysql, decltype(Contest:
     auto stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens SET short_token=?, "
                               "short_token_expiration=? WHERE "
                               "contest_id=? AND (short_token IS NULL or short_token!=?)");
-    auto exp_datetime = mysql_date(
-            std::chrono::system_clock::now() + ContestEntryToken::short_token_max_lifetime);
+    auto exp_datetime =
+        mysql_date(std::chrono::system_clock::now() + ContestEntryToken::short_token_max_lifetime);
     do {
         auto new_short_token = random_short_token();
         stmt.bind_and_execute(new_short_token, exp_datetime, contest_id, new_short_token);
@@ -246,7 +262,8 @@ static void set_or_regen_short_token(mysql::Connection& mysql, decltype(Contest:
 Response add_short(Context& ctx, decltype(Contest::id) contest_id) {
     return with_tokens_info(ctx, contest_id, [&](TokensInfo&& ti) {
         auto token_caps = capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode);
+            ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (not token_caps.create) {
             return ctx.response_403();
         }
@@ -264,7 +281,8 @@ Response add_short(Context& ctx, decltype(Contest::id) contest_id) {
 Response regen_short(Context& ctx, decltype(Contest::id) contest_id) {
     return with_tokens_info(ctx, contest_id, [&](TokensInfo&& ti) {
         auto token_caps = capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode);
+            ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (not token_caps.regen) {
             return ctx.response_403();
         }
@@ -279,7 +297,8 @@ Response regen_short(Context& ctx, decltype(Contest::id) contest_id) {
 Response delete_short(Context& ctx, decltype(Contest::id) contest_id) {
     return with_tokens_info(ctx, contest_id, [&](TokensInfo&& ti) {
         auto token_caps = capabilities::contest_entry_token_for(
-                ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode);
+            ContestEntryTokenKind::SHORT, ctx.session, ti.caps_contest, ti.cu_mode
+        );
         if (not token_caps.delete_) {
             return ctx.response_403();
         }
@@ -312,10 +331,12 @@ Response use(Context& ctx, StringView token_or_short_token) {
         }
 
         auto stmt = ctx.mysql.prepare(
-                "INSERT IGNORE contest_users(user_id, contest_id, mode) VALUES(?, ?, ?)");
+            "INSERT IGNORE contest_users(user_id, contest_id, mode) VALUES(?, ?, ?)"
+        );
         assert(ctx.session);
         stmt.bind_and_execute(
-                ctx.session->user_id, tci.contest_id, EnumVal{ContestUser::Mode::CONTESTANT});
+            ctx.session->user_id, tci.contest_id, EnumVal{ContestUser::Mode::CONTESTANT}
+        );
         if (stmt.affected_rows() == 0) {
             return ctx.response_400("You already participate in the contest");
         }

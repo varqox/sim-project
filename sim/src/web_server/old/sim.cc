@@ -1,6 +1,7 @@
-#include "sim.hh"
 #include "../http/request.hh"
 #include "../http/response.hh"
+#include "sim.hh"
+
 #include <memory>
 #include <simlib/mysql/mysql.hh>
 #include <simlib/path.hh>
@@ -64,7 +65,8 @@ http::Response Sim::handle(http::Request req) {
                 // If no session is open, load value from cookie to pass
                 // verification
                 if (session_open() and
-                        request.form_fields.get("csrf_token").value_or("") != session->csrf_token) {
+                    request.form_fields.get("csrf_token").value_or("") != session->csrf_token)
+                {
                     error403();
                     goto cleanup;
                 }
@@ -163,14 +165,17 @@ void Sim::main_page() {
 void Sim::static_file() {
     STACK_UNWINDING_MARK;
 
-    string file_path = concat_tostr("static",
-            path_absolute(intentional_unsafe_string_view(
-                    decode_uri(substring(request.target, 1, request.target.find('?'))))));
+    string file_path = concat_tostr(
+        "static",
+        path_absolute(intentional_unsafe_string_view(
+            decode_uri(substring(request.target, 1, request.target.find('?')))
+        ))
+    );
     // Extract path (ignore query)
     D(stdlog(file_path);)
 
     // Get file stat
-    struct stat attr {};
+    struct stat attr = {};
     if (stat(file_path.c_str(), &attr) != -1) {
         // Extract time of last modification
         resp.headers["last-modified"] = date("%a, %d %b %Y %H:%M:%S GMT", attr.st_mtime);
@@ -178,12 +183,12 @@ void Sim::static_file() {
 
         // If "If-Modified-Since" header is set and its value is not lower than
         // attr.st_mtime
-        struct tm client_mtime {};
+        struct tm client_mtime = {};
         auto if_modified_since = request.headers.get("if-modified-since");
         if (if_modified_since and
-                strptime(if_modified_since->data(), "%a, %d %b %Y %H:%M:%S GMT", &client_mtime) !=
-                        nullptr and
-                timegm(&client_mtime) >= attr.st_mtime)
+            strptime(if_modified_since->data(), "%a, %d %b %Y %H:%M:%S GMT", &client_mtime) !=
+                nullptr and
+            timegm(&client_mtime) >= attr.st_mtime)
         {
             resp.status_code = "304 Not Modified";
             return;

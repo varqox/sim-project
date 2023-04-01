@@ -1,5 +1,5 @@
-#include "delete_internal_file.hh"
 #include "../main.hh"
+#include "delete_internal_file.hh"
 
 #include <sim/internal_files/internal_file.hh>
 

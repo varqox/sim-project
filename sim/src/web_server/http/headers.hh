@@ -47,8 +47,11 @@ public:
     [[nodiscard]] bool is_empty() const noexcept { return entries_.empty(); }
 
     [[nodiscard]] auto begin() noexcept { return entries_.begin(); }
+
     [[nodiscard]] auto begin() const noexcept { return entries_.begin(); }
+
     [[nodiscard]] auto end() noexcept { return entries_.end(); }
+
     [[nodiscard]] auto end() const noexcept { return entries_.end(); }
 
     void clear() noexcept { entries_.clear(); }

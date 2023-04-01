@@ -11,11 +11,12 @@ class PrimaryKey {
     std::tuple<T Class::*...> member_ptrs;
 
 public:
-    using Type = std::conditional_t<sizeof...(T) == 1, std::tuple_element_t<0, std::tuple<T...>>,
-            std::tuple<T...>>;
+    using Type = std::conditional_t<
+        sizeof...(T) == 1,
+        std::tuple_element_t<0, std::tuple<T...>>,
+        std::tuple<T...>>;
 
-    constexpr explicit PrimaryKey(T Class::*... member_ptrs)
-    : member_ptrs{member_ptrs...} {}
+    constexpr explicit PrimaryKey(T Class::*... member_ptrs) : member_ptrs{member_ptrs...} {}
 
     [[nodiscard]] Type get(const Class& obj) const {
         return std::apply(do_get, std::tuple_cat(std::tie(obj), member_ptrs));

@@ -1,6 +1,7 @@
-#include "context.hh"
 #include "../http/response.hh"
 #include "../ui_template.hh"
+#include "context.hh"
+
 #include <chrono>
 #include <optional>
 #include <sim/random.hh>
@@ -21,8 +22,8 @@ void Context::open_session() {
     }
     Session s;
     auto stmt =
-            mysql.prepare("SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
-                          "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
+        mysql.prepare("SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
+                      "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
     stmt.bind_and_execute(session_id, mysql_date());
     stmt.res_bind_all(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
     if (not stmt.next()) {
@@ -44,39 +45,49 @@ void Context::close_session() {
     session = std::nullopt;
 }
 
-void Context::create_session(decltype(Session::user_id) user_id,
-        decltype(Session::user_type) user_type, decltype(Session::username) username,
-        decltype(Session::data) data, bool long_exiration) {
+void Context::create_session(
+    decltype(Session::user_id) user_id,
+    decltype(Session::user_type) user_type,
+    decltype(Session::username) username,
+    decltype(Session::data) data,
+    bool long_exiration
+) {
     assert(not session);
     // Remove expired sessions
     mysql.prepare("DELETE FROM sessions WHERE expires<?").bind_and_execute(mysql_date());
     // Create a new session
     Session s = {
-            .id = {},
-            .csrf_token = {},
-            .user_id = user_id,
-            .user_type = user_type,
-            .username = std::move(username),
-            .data = std::move(data),
-            .orig_data = {},
+        .id = {},
+        .csrf_token = {},
+        .user_id = user_id,
+        .user_type = user_type,
+        .username = std::move(username),
+        .data = std::move(data),
+        .orig_data = {},
     };
     s.orig_data = s.data;
     s.csrf_token = sim::generate_random_token(decltype(s.csrf_token)::max_len);
     auto stmt = mysql.prepare("INSERT IGNORE INTO sessions(id, csrf_token, user_id, data, "
                               "user_agent, expires) VALUES(?, ?, ?, ?, ?, ?)");
     auto expires_tp = std::chrono::system_clock::now() +
-            (long_exiration ? sim::sessions::Session::long_session_max_lifetime
-                            : sim::sessions::Session::short_session_max_lifetime);
+        (long_exiration ? sim::sessions::Session::long_session_max_lifetime
+                        : sim::sessions::Session::short_session_max_lifetime);
     auto expires_str = mysql_date(expires_tp);
     do {
         s.id = sim::generate_random_token(decltype(s.id)::max_len);
-        stmt.bind_and_execute(s.id, s.csrf_token, s.user_id, s.data,
-                request.headers.get("user-agent").value_or(""), expires_str);
+        stmt.bind_and_execute(
+            s.id,
+            s.csrf_token,
+            s.user_id,
+            s.data,
+            request.headers.get("user-agent").value_or(""),
+            expires_str
+        );
     } while (stmt.affected_rows() == 0);
 
     auto exp_time_t = long_exiration
-            ? std::optional{std::chrono::system_clock::to_time_t(expires_tp)}
-            : std::nullopt;
+        ? std::optional{std::chrono::system_clock::to_time_t(expires_tp)}
+        : std::nullopt;
 
     cookie_changes.set("session", s.id, exp_time_t, "/", true, true);
     cookie_changes.set("csrf_token", s.csrf_token, exp_time_t, "/", false, true);
@@ -98,8 +109,12 @@ bool Context::session_has_expired() noexcept {
     return !request.get_cookie(Session::id_cookie_name).empty() and !session.has_value();
 }
 
-Response response(StringView status_code, decltype(Context::cookie_changes)&& cookie_changes,
-        StringView content, StringView content_type) {
+Response response(
+    StringView status_code,
+    decltype(Context::cookie_changes)&& cookie_changes,
+    StringView content,
+    StringView content_type
+) {
     auto resp = Response{Response::TEXT, status_code};
     resp.headers["content-type"] = content_type.to_string();
     resp.cookies = std::move(cookie_changes);
@@ -113,7 +128,8 @@ Response Context::response_ok(StringView content, StringView content_type) {
 
 Response Context::response_json(StringView content) {
     return response(
-            "200 OK", std::move(cookie_changes), content, "application/json; charset=utf-8");
+        "200 OK", std::move(cookie_changes), content, "application/json; charset=utf-8"
+    );
 }
 
 Response Context::response_400(StringView content, StringView content_type) {
@@ -139,22 +155,25 @@ Response Context::response_403(StringView content, StringView content_type) {
 
 http::Response Context::response_404() {
     static constexpr CStringView session_expired_msg =
-            "Your session has expired, please try to sign in and then try again.";
+        "Your session has expired, please try to sign in and then try again.";
     auto content = session_has_expired() ? session_expired_msg : "";
     return response(
-            "404 Not Found", std::move(cookie_changes), content, "text/plain; charset=utf-8");
+        "404 Not Found", std::move(cookie_changes), content, "text/plain; charset=utf-8"
+    );
 }
 
 Response Context::response_ui(StringView title, StringView javascript_code) {
     auto resp = response_ok("", "text/html; charset=utf-8");
     // TODO: merge *_ui_template into one function after getting rid of the old code requiring
     // the split form
-    begin_ui_template(resp,
-            {
-                    .title = title,
-                    .session = session,
-                    .notifications = "",
-            });
+    begin_ui_template(
+        resp,
+        {
+            .title = title,
+            .session = session,
+            .notifications = "",
+        }
+    );
     resp.content.append(javascript_code);
     end_ui_template(resp);
     return resp;

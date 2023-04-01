@@ -1,5 +1,5 @@
-#include "reselect_final_submissions_in_contest_problem.hh"
 #include "../main.hh"
+#include "reselect_final_submissions_in_contest_problem.hh"
 
 #include <sim/submissions/update_final.hh>
 

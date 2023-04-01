@@ -1,4 +1,3 @@
-#include "ui_template.hh"
 #include "capabilities/contests.hh"
 #include "capabilities/jobs.hh"
 #include "capabilities/logs.hh"
@@ -6,7 +5,9 @@
 #include "capabilities/submissions.hh"
 #include "capabilities/users.hh"
 #include "http/response.hh"
+#include "ui_template.hh"
 #include "web_worker/web_worker.hh"
+
 #include <chrono>
 #include <sim/sessions/session.hh>
 #include <sim/users/user.hh>
@@ -41,8 +42,9 @@ static StringView get_hash_of() {
             }
         }();
         return to_string(std::chrono::duration_cast<std::chrono::microseconds>(
-                get_modification_time(path).time_since_epoch())
-                                 .count());
+                             get_modification_time(path).time_since_epoch()
+        )
+                             .count());
     }();
     return str;
 }
@@ -54,21 +56,21 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
     resp.headers["X-Frame-Options"] = "DENY";
     resp.headers["x-content-type-options"] = "nosniff";
     resp.headers["Content-Security-Policy"] =
-            "default-src 'none'; "
-            "style-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this
-                                                 // requires CppSyntaxHighlighter to be
-                                                 // implemented in some different way either in
-                                                 // JS or styles in styles.css)
-            "script-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this
-                                                  // requires no inline js, so url dispatch in
-                                                  // UI is done from scripts.js and we provide
-                                                  // required parameters (when generating
-                                                  // ui_template response) not inside <script>
-                                                  // tag but in some other way)
-            "connect-src 'self'; "
-            "object-src 'self'; "
-            "frame-src 'self'; "
-            "img-src 'self'; ";
+        "default-src 'none'; "
+        "style-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this
+                                             // requires CppSyntaxHighlighter to be
+                                             // implemented in some different way either in
+                                             // JS or styles in styles.css)
+        "script-src 'self' 'unsafe-inline'; " // TODO: get rid of unsafe-inline (this
+                                              // requires no inline js, so url dispatch in
+                                              // UI is done from scripts.js and we provide
+                                              // required parameters (when generating
+                                              // ui_template response) not inside <script>
+                                              // tag but in some other way)
+        "connect-src 'self'; "
+        "object-src 'self'; "
+        "frame-src 'self'; "
+        "img-src 'self'; ";
 
     // Disable X-XSS-Protection, as it may be used to misbehave the whole website
     resp.headers["X-XSS-Protection"] = "0";
@@ -109,14 +111,15 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
         obj.prop_obj("jobs", [&](auto& obj) {
             obj.prop("ui_view", capabilities::jobs_for(session).web_ui_view);
         });
-        obj.prop_obj("logs",
-                [&](auto& obj) { obj.prop("ui_view", capabilities::logs_for(session).view); });
+        obj.prop_obj("logs", [&](auto& obj) {
+            obj.prop("ui_view", capabilities::logs_for(session).view);
+        });
         obj.prop_obj("problems", [&](auto& obj) {
             const auto caps = capabilities::problems(session);
             obj.prop("ui_view", caps.web_ui_view);
             obj.prop("add_problem", caps.add_problem);
             auto fill_with_list_caps = [&](auto& obj,
-                                               const capabilities::ProblemsListCapabilities caps) {
+                                           const capabilities::ProblemsListCapabilities caps) {
                 obj.prop("query_all", caps.query_all);
                 obj.prop("query_with_type_public", caps.query_with_type_public);
                 obj.prop("query_with_type_contest_only", caps.query_with_type_contest_only);
@@ -130,7 +133,8 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             if (session) {
                 obj.prop_obj("list_my", [&](auto& obj) {
                     fill_with_list_caps(
-                            obj, capabilities::list_user_problems(session, session->user_id));
+                        obj, capabilities::list_user_problems(session, session->user_id)
+                    );
                 });
             }
         });

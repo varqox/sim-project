@@ -28,7 +28,7 @@ struct Problem {
     sql_fields::Datetime created_at;
     sql_fields::Datetime updated_at;
 
-    constexpr static auto primary_key = PrimaryKey{&Problem::id};
+    static constexpr auto primary_key = PrimaryKey{&Problem::id};
 
     static constexpr uint64_t new_statement_max_size = 10 << 20; // 10 MiB
 };

@@ -2,6 +2,7 @@
 
 #include "../http/request.hh"
 #include "../http/response.hh"
+
 #include <cstdint>
 #include <simlib/likely.hh>
 
@@ -35,9 +36,7 @@ private:
         size_t read_limit_;
 
     public:
-        LimitedReader(Connection& cn, size_t rl)
-        : conn_(cn)
-        , read_limit_(rl) {}
+        LimitedReader(Connection& cn, size_t rl) : conn_(cn), read_limit_(rl) {}
 
         [[nodiscard]] size_t limit() const { return read_limit_; }
 
@@ -95,7 +94,9 @@ public:
 
     http::Request get_request();
     void send(const char* str, size_t len);
+
     void send(const std::string& str) { send(str.c_str(), str.size()); }
+
     void send_response(const http::Response& res);
 };
 

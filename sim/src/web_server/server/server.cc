@@ -1,6 +1,7 @@
 #include "../logs.hh"
 #include "../old/sim.hh"
 #include "connection.hh"
+
 #include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
@@ -31,7 +32,8 @@ static void* worker(void* ptr) {
         for (;;) {
             // accept the connection
             FileDescriptor client_socket_fd{accept4(
-                    socket_fd, reinterpret_cast<sockaddr*>(&name), &client_name_len, SOCK_CLOEXEC)};
+                socket_fd, reinterpret_cast<sockaddr*>(&name), &client_name_len, SOCK_CLOEXEC
+            )};
             if (client_socket_fd == -1) {
                 continue;
             }
@@ -50,7 +52,8 @@ static void* worker(void* ptr) {
                 http::Response resp = sim_worker.handle(std::move(req));
 
                 auto microdur = std::chrono::duration_cast<std::chrono::microseconds>(
-                        steady_clock::now() - beg);
+                    steady_clock::now() - beg
+                );
                 stdlog("Response generated in ", to_string(microdur * 1000), " ms.");
 
                 conn.send_response(resp);
@@ -89,7 +92,7 @@ int main() {
     // Loggers
     // stdlog writes to stderr (like everything), so redirect stdout and stderr to the log file
     if (freopen(web_server::stdlog_file.data(), "a", stdout) == nullptr ||
-            dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
+        dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
         errlog("Failed to open `", web_server::stdlog_file, '`', errmsg());
         return 1;
@@ -103,7 +106,7 @@ int main() {
     }
 
     // Signal control
-    struct sigaction sa {};
+    struct sigaction sa = {};
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &exit;
 
@@ -230,8 +233,12 @@ int main() {
 
     std::vector<pthread_t> threads(workers);
     for (size_t i = 1; i < workers; ++i) {
-        pthread_create(&threads[i], &attr, web_server::server::worker,
-                reinterpret_cast<void*>(socket_fd)); // TODO: errors...
+        pthread_create(
+            &threads[i],
+            &attr,
+            web_server::server::worker,
+            reinterpret_cast<void*>(socket_fd)
+        ); // TODO: errors...
     }
     threads[0] = pthread_self();
     web_server::server::worker(reinterpret_cast<void*>(socket_fd));

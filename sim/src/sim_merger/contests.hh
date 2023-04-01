@@ -1,6 +1,7 @@
 #pragma once
 
 #include "merger.hh"
+
 #include <sim/contests/contest.hh>
 #include <sim/sql_fields/datetime.hh>
 #include <simlib/defer.hh>
@@ -13,20 +14,26 @@ class ContestsMerger : public Merger<sim::contests::Contest> {
 
         sim::contests::Contest c;
         mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
-        auto stmt = conn.prepare("SELECT c.id, c.name, c.is_public, MIN(s.submit_time) "
-                                 "FROM ",
-                record_set.sql_table_name, " c LEFT JOIN ", record_set.sql_table_prefix,
-                "submissions s "
-                "ON s.contest_id=c.id GROUP BY c.id");
+        auto stmt = conn.prepare(
+            "SELECT c.id, c.name, c.is_public, MIN(s.submit_time) "
+            "FROM ",
+            record_set.sql_table_name,
+            " c LEFT JOIN ",
+            record_set.sql_table_prefix,
+            "submissions s "
+            "ON s.contest_id=c.id GROUP BY c.id"
+        );
         stmt.bind_and_execute();
         stmt.res_bind_all(c.id, c.name, c.is_public, earliest_submit_time);
 
         auto curr_time = std::chrono::system_clock::now();
         while (stmt.next()) {
-            auto time = (earliest_submit_time.has_value()
-                            ? str_to_time_point(intentional_unsafe_cstring_view(
-                                      earliest_submit_time->to_string()))
-                            : curr_time);
+            auto time =
+                (earliest_submit_time.has_value()
+                     ? str_to_time_point(
+                           intentional_unsafe_cstring_view(earliest_submit_time->to_string())
+                       )
+                     : curr_time);
             record_set.add_record(c, time);
         }
     }
@@ -41,8 +48,8 @@ public:
         STACK_UNWINDING_MARK;
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
-                "INSERT INTO ", sql_table_name(), "(id, name, is_public) VALUES(?, ?, ?)");
+        auto stmt =
+            conn.prepare("INSERT INTO ", sql_table_name(), "(id, name, is_public) VALUES(?, ?, ?)");
 
         ProgressBar progress_bar("Contests saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
