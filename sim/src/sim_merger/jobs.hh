@@ -3,6 +3,7 @@
 #include "internal_files.hh"
 #include "submissions.hh"
 #include "users.hh"
+
 #include <sim/jobs/utils.hh>
 
 namespace sim_merger {
@@ -25,13 +26,26 @@ class JobsMerger : public Merger<sim::jobs::Job> {
         mysql::Optional<decltype(job.tmp_file_id)::value_type> m_tmp_file_id;
         mysql::Optional<decltype(job.creator)::value_type> m_creator;
         mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id;
-        auto stmt = conn.prepare("SELECT id, file_id, tmp_file_id, creator, type,"
-                                 " priority, status, added, aux_id, info, data "
-                                 "FROM ",
-                record_set.sql_table_name);
+        auto stmt = conn.prepare(
+            "SELECT id, file_id, tmp_file_id, creator, type,"
+            " priority, status, added, aux_id, info, data "
+            "FROM ",
+            record_set.sql_table_name
+        );
         stmt.bind_and_execute();
-        stmt.res_bind_all(job.id, m_file_id, m_tmp_file_id, m_creator, job.type, job.priority,
-                job.status, job.added, m_aux_id, job.info, job.data);
+        stmt.res_bind_all(
+            job.id,
+            m_file_id,
+            m_tmp_file_id,
+            m_creator,
+            job.type,
+            job.priority,
+            job.status,
+            job.added,
+            m_aux_id,
+            job.info,
+            job.data
+        );
         while (stmt.next()) {
             job.file_id = m_file_id.to_opt();
             job.tmp_file_id = m_tmp_file_id.to_opt();
@@ -111,7 +125,8 @@ class JobsMerger : public Merger<sim::jobs::Job> {
             }
 
             record_set.add_record(
-                    job, str_to_time_point(intentional_unsafe_cstring_view(job.added.to_string())));
+                job, str_to_time_point(intentional_unsafe_cstring_view(job.added.to_string()))
+            );
         }
     }
 
@@ -125,28 +140,47 @@ public:
         STACK_UNWINDING_MARK;
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
-                "(id, file_id, tmp_file_id, creator, type, priority,"
-                " status, added, aux_id, info, data) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        auto stmt = conn.prepare(
+            "INSERT INTO ",
+            sql_table_name(),
+            "(id, file_id, tmp_file_id, creator, type, priority,"
+            " status, added, aux_id, info, data) "
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
 
         ProgressBar progress_bar("Jobs saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
             Defer progressor = [&] { progress_bar.iter(); };
             const auto& x = new_record.data;
-            stmt.bind_and_execute(x.id, x.file_id, x.tmp_file_id, x.creator, x.type, x.priority,
-                    x.status, x.added, x.aux_id, x.info, x.data);
+            stmt.bind_and_execute(
+                x.id,
+                x.file_id,
+                x.tmp_file_id,
+                x.creator,
+                x.type,
+                x.priority,
+                x.status,
+                x.added,
+                x.aux_id,
+                x.info,
+                x.data
+            );
         }
 
         conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 
-    JobsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
-            const InternalFilesMerger& internal_files, const UsersMerger& users,
-            const SubmissionsMerger& submissions, const ProblemsMerger& problems,
-            const ContestsMerger& contests, const ContestRoundsMerger& contest_rounds,
-            const ContestProblemsMerger& contest_problems)
+    JobsMerger(
+        const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
+        const InternalFilesMerger& internal_files,
+        const UsersMerger& users,
+        const SubmissionsMerger& submissions,
+        const ProblemsMerger& problems,
+        const ContestsMerger& contests,
+        const ContestRoundsMerger& contest_rounds,
+        const ContestProblemsMerger& contest_problems
+    )
     : Merger("jobs", ids_from_both_jobs.main.jobs, ids_from_both_jobs.other.jobs)
     , internal_files_(internal_files)
     , users_(users)

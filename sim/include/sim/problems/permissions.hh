@@ -52,14 +52,20 @@ DECLARE_ENUM_UNARY_OPERATOR(Permissions, ~)
 DECLARE_ENUM_OPERATOR(Permissions, |)
 DECLARE_ENUM_OPERATOR(Permissions, &)
 
-Permissions get_permissions(std::optional<decltype(users::User::id)> user_id,
-        std::optional<users::User::Type> user_type, decltype(Problem::owner_id) problem_owner_id,
-        decltype(Problem::type) problem_type) noexcept;
+Permissions get_permissions(
+    std::optional<decltype(users::User::id)> user_id,
+    std::optional<users::User::Type> user_type,
+    decltype(Problem::owner_id) problem_owner_id,
+    decltype(Problem::type) problem_type
+) noexcept;
 
 template <class T>
-std::optional<Permissions> get_permissions(mysql::Connection& mysql, T&& problem_id,
-        std::optional<decltype(users::User::id)> user_id,
-        std::optional<users::User::Type> user_type) {
+std::optional<Permissions> get_permissions(
+    mysql::Connection& mysql,
+    T&& problem_id,
+    std::optional<decltype(users::User::id)> user_id,
+    std::optional<users::User::Type> user_type
+) {
     auto stmt = mysql.prepare("SELECT owner_id, type FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 

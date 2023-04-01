@@ -20,7 +20,7 @@ struct ContestUser {
     decltype(contests::Contest::id) contest_id;
     EnumVal<Mode> mode;
 
-    constexpr static auto primary_key = PrimaryKey{&ContestUser::user_id, &ContestUser::contest_id};
+    static constexpr auto primary_key = PrimaryKey{&ContestUser::user_id, &ContestUser::contest_id};
 };
 
 } // namespace sim::contest_users

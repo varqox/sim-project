@@ -95,9 +95,9 @@ public:
     }
 
     template <class T>
-    std::enable_if_t<std::is_convertible<T, StringView>::value &&
-                    !std::is_convertible<T, CStringView>::value,
-            InfDatetime&>
+    std::enable_if_t<
+        std::is_convertible<T, StringView>::value && !std::is_convertible<T, CStringView>::value,
+        InfDatetime&>
     from_str(T&& str) {
         auto x = concat<20>(str);
         return from_str(x.to_cstr());
@@ -155,8 +155,9 @@ inline InfDatetime inf_timestamp_to_InfDatetime(StringView str) {
     } else if (str == "-inf") {
         res.set_neg_inf();
     } else {
-        res.set_datetime(intentional_unsafe_cstring_view(
-                mysql_date(WONT_THROW(str2num<uint64_t>(str).value()))));
+        res.set_datetime(
+            intentional_unsafe_cstring_view(mysql_date(WONT_THROW(str2num<uint64_t>(str).value())))
+        );
     }
 
     return res;

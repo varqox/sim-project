@@ -2,6 +2,7 @@
 
 #include "cookies.hh"
 #include "headers.hh"
+
 #include <simlib/string_view.hh>
 
 namespace web_server::http {
@@ -9,6 +10,7 @@ namespace web_server::http {
 class Response {
 public:
     enum ContentType : uint8_t { TEXT, FILE, FILE_TO_REMOVE } content_type;
+
     InplaceBuff<100> status_code;
     Headers headers{};
     Cookies cookies{};

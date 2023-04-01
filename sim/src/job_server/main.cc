@@ -1,6 +1,7 @@
 #include "dispatcher.hh"
 #include "logs.hh"
 #include "notify_file.hh"
+
 #include <climits>
 #include <cstdint>
 #include <future>
@@ -61,7 +62,7 @@ public:
 
         bool operator==(Job x) const { return (id == x.id and priority == x.priority); }
 
-        constexpr static Job least() noexcept { return {UINT64_MAX, 0}; }
+        static constexpr Job least() noexcept { return {UINT64_MAX, 0}; }
     };
 
 private:
@@ -81,7 +82,7 @@ private:
         std::map<Job, ProblemJobs> queue; // (best problem's job => all jobs of the problem)
         std::map<int64_t, ProblemJobs> locked_problems; // (problem_id  => (locks, problem's jobs))
     } judge_jobs,
-            problem_management_jobs; // (judge jobs - they need judge machines)
+        problem_management_jobs; // (judge jobs - they need judge machines)
 
     std::set<Job> other_jobs;
 
@@ -90,8 +91,9 @@ private:
             if (!job_category.problem_info.empty()) {
                 stdlog("problem_info = {");
                 for (auto&& [prob_id, pinfo] : job_category.problem_info) {
-                    stdlog("   ", prob_id, " => {", pinfo.its_best_job.id, ", ", pinfo.locks_no,
-                            "},");
+                    stdlog(
+                        "   ", prob_id, " => {", pinfo.its_best_job.id, ", ", pinfo.locks_no, "},"
+                    );
                 }
                 stdlog("}");
             }
@@ -158,47 +160,49 @@ public:
 
             do {
                 DEBUG_JOB_SERVER(stdlog("DEBUG: Fetched from DB: job ", jid);)
-                auto queue_job = [&jid, &priority](auto& job_category, uint64_t problem_id,
-                                         bool locks_problem) {
-                    auto it = job_category.problem_info.find(problem_id);
-                    Job curr_job{jid, priority, locks_problem};
-                    if (it != job_category.problem_info.end()) {
-                        ProblemInfo& pinfo = it->second;
-                        Job best_job = pinfo.its_best_job;
-                        // Get the problem's jobs (the problem may be locked)
-                        auto& pjobs = (pinfo.locks_no > 0 ? job_category.locked_problems[problem_id]
-                                                          : job_category.queue[best_job]);
-                        // Ensure field 'problem_id' is set properly (in case of
-                        // element creation this line is necessary)
-                        pjobs.problem_id = problem_id;
-                        // Add job to queue
-                        pjobs.jobs.emplace(curr_job);
-                        // Alter the problem's best job
-                        if (curr_job < best_job) {
-                            pinfo.its_best_job = curr_job;
-                            // Update queue (rekey ProblemJobs)
-                            if (pinfo.locks_no == 0) {
-                                auto nh = job_category.queue.extract(best_job);
-                                nh.key() = curr_job;
-                                job_category.queue.insert(std::move(nh));
+                auto queue_job =
+                    [&jid, &priority](auto& job_category, uint64_t problem_id, bool locks_problem) {
+                        auto it = job_category.problem_info.find(problem_id);
+                        Job curr_job{jid, priority, locks_problem};
+                        if (it != job_category.problem_info.end()) {
+                            ProblemInfo& pinfo = it->second;
+                            Job best_job = pinfo.its_best_job;
+                            // Get the problem's jobs (the problem may be locked)
+                            auto& pjobs =
+                                (pinfo.locks_no > 0 ? job_category.locked_problems[problem_id]
+                                                    : job_category.queue[best_job]);
+                            // Ensure field 'problem_id' is set properly (in case of
+                            // element creation this line is necessary)
+                            pjobs.problem_id = problem_id;
+                            // Add job to queue
+                            pjobs.jobs.emplace(curr_job);
+                            // Alter the problem's best job
+                            if (curr_job < best_job) {
+                                pinfo.its_best_job = curr_job;
+                                // Update queue (rekey ProblemJobs)
+                                if (pinfo.locks_no == 0) {
+                                    auto nh = job_category.queue.extract(best_job);
+                                    nh.key() = curr_job;
+                                    job_category.queue.insert(std::move(nh));
+                                }
                             }
-                        }
 
-                    } else {
-                        job_category.problem_info[problem_id] = {curr_job, 0};
-                        // Add job to the queue (first one to this problem)
-                        auto& pjobs = job_category.queue[curr_job];
-                        pjobs.problem_id = problem_id;
-                        pjobs.jobs.emplace(curr_job);
-                    }
-                };
+                        } else {
+                            job_category.problem_info[problem_id] = {curr_job, 0};
+                            // Add job to the queue (first one to this problem)
+                            auto& pjobs = job_category.queue[curr_job];
+                            pjobs.problem_id = problem_id;
+                            pjobs.jobs.emplace(curr_job);
+                        }
+                    };
 
                 // Assign job to its category
                 switch (jtype) {
                 case JT::JUDGE_SUBMISSION:
                 case JT::REJUDGE_SUBMISSION: {
                     auto opt = str2num<uint64_t>(
-                            intentional_unsafe_string_view(sim::jobs::extract_dumped_string(info)));
+                        intentional_unsafe_string_view(sim::jobs::extract_dumped_string(info))
+                    );
                     if (not opt) {
                         THROW("Corrupted job's info field");
                     }
@@ -308,9 +312,7 @@ public:
         Job job = Job::least(); // If is invalid it will be the last in comparison
         uint64_t problem_id = 0;
 
-        JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc)
-        : jobs_queue(&jq)
-        , job_category(&jc) {}
+        JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc) : jobs_queue(&jq), job_category(&jc) {}
 
         JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc, Job j, uint64_t pid)
         : jobs_queue(&jq)
@@ -340,8 +342,9 @@ public:
 
             auto& pinfo = it->second;
             Job best_job = pinfo.its_best_job;
-            auto& pjobs = (pinfo.locks_no > 0 ? job_category->locked_problems[problem_id]
-                                              : job_category->queue[best_job]);
+            auto& pjobs =
+                (pinfo.locks_no > 0 ? job_category->locked_problems[problem_id]
+                                    : job_category->queue[best_job]);
 
             if (not pjobs.jobs.erase(job)) {
                 THROW("Job erasion did not take place since the erased job was "
@@ -406,12 +409,9 @@ public:
         Job job = Job::least(); // If is invalid it will be the last in comparison
 
         // NOLINTNEXTLINE(google-explicit-constructor)
-        OtherJobHolder(decltype(other_jobs)& o)
-        : oj(&o) {}
+        OtherJobHolder(decltype(other_jobs)& o) : oj(&o) {}
 
-        OtherJobHolder(decltype(other_jobs)& o, Job j)
-        : oj(&o)
-        , job(j) {}
+        OtherJobHolder(decltype(other_jobs)& o, Job j) : oj(&o), job(j) {}
 
         OtherJobHolder(const OtherJobHolder&) = delete;
         OtherJobHolder(OtherJobHolder&&) = default;
@@ -534,8 +534,7 @@ private:
         WorkersPool& wp_;
 
     public:
-        explicit Worker(WorkersPool& wp)
-        : wp_(wp) {
+        explicit Worker(WorkersPool& wp) : wp_(wp) {
             STACK_UNWINDING_MARK;
             auto tid = std::this_thread::get_id();
             lock_guard<mutex> lock(wp_.mtx_);
@@ -566,10 +565,10 @@ private:
             }
 
             if (wp_.worker_dies_callback_) {
-                EventsQueue::register_event(shared_function(
-                        [&callback = wp_.worker_dies_callback_, winfo = std::move(wi)]() mutable {
-                            callback(std::move(winfo));
-                        }));
+                EventsQueue::register_event(shared_function([&callback = wp_.worker_dies_callback_,
+                                                             winfo = std::move(wi)]() mutable {
+                    callback(std::move(winfo));
+                }));
             }
         }
 
@@ -609,8 +608,11 @@ public:
      *   id to handle as the first argument
      * @param idle_callback a function to call when a worker becomes idle
      */
-    WorkersPool(function<void(NextJob)> job_handler, function<void()> idle_callback,
-            function<void(WorkerInfo)> dead_callback)
+    WorkersPool(
+        function<void(NextJob)> job_handler,
+        function<void()> idle_callback,
+        function<void(WorkerInfo)> dead_callback
+    )
     : job_handler_(std::move(job_handler))
     , worker_becomes_idle_callback_(std::move(idle_callback))
     , worker_dies_callback_(std::move(dead_callback)) {
@@ -700,8 +702,9 @@ static void process_job(const WorkersPool::NextJob& job) {
 
     {
         auto stmt = job_server::mysql.prepare(
-                "SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
-                "FROM jobs WHERE id=? AND status!=?");
+            "SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
+            "FROM jobs WHERE id=? AND status!=?"
+        );
         stmt.bind_and_execute(job.id, EnumVal(sim::jobs::Job::Status::CANCELED));
         stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
 
@@ -712,7 +715,7 @@ static void process_job(const WorkersPool::NextJob& job) {
 
     // Mark as in progress
     job_server::mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-            .bind_and_execute(EnumVal(sim::jobs::Job::Status::IN_PROGRESS), job.id);
+        .bind_and_execute(EnumVal(sim::jobs::Job::Status::IN_PROGRESS), job.id);
 
     stdlog("Processing job ", job.id, "...");
 
@@ -728,8 +731,16 @@ static void process_job(const WorkersPool::NextJob& job) {
 static void process_local_job(const WorkersPool::NextJob& job) {
     STACK_UNWINDING_MARK;
 
-    stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ", job.problem_id,
-            ", locked: ", job.locked_its_problem, '}');
+    stdlog(
+        pthread_self(),
+        " got local job {id:",
+        job.id,
+        ", problem: ",
+        job.problem_id,
+        ", locked: ",
+        job.locked_its_problem,
+        '}'
+    );
 
     process_job(job);
 }
@@ -737,8 +748,16 @@ static void process_local_job(const WorkersPool::NextJob& job) {
 static void process_judge_job(const WorkersPool::NextJob& job) {
     STACK_UNWINDING_MARK;
 
-    stdlog(pthread_self(), " got judge job {id:", job.id, ", problem: ", job.problem_id,
-            ", locked: ", job.locked_its_problem, '}');
+    stdlog(
+        pthread_self(),
+        " got judge job {id:",
+        job.id,
+        ", problem: ",
+        job.problem_id,
+        ", locked: ",
+        job.locked_its_problem,
+        '}'
+    );
 
     process_job(job);
 }
@@ -746,38 +765,44 @@ static void process_judge_job(const WorkersPool::NextJob& job) {
 static void sync_and_assign_jobs();
 
 static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-        local_workers(process_local_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
-            STACK_UNWINDING_MARK;
+    local_workers(process_local_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
+        STACK_UNWINDING_MARK;
 
-            // Job has to be reset and cleanup to be done
-            if (not winfo.is_idle) {
-                if (winfo.next_job.locked_its_problem) {
-                    jobs_queue.unlock_problem(winfo.next_job.problem_id);
-                }
-
-                sim::jobs::restart_job(job_server::mysql,
-                        intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
+        // Job has to be reset and cleanup to be done
+        if (not winfo.is_idle) {
+            if (winfo.next_job.locked_its_problem) {
+                jobs_queue.unlock_problem(winfo.next_job.problem_id);
             }
 
-            EventsQueue::register_event([] { spawn_worker(local_workers); });
-        });
+            sim::jobs::restart_job(
+                job_server::mysql,
+                intentional_unsafe_string_view(to_string(winfo.next_job.id)),
+                false
+            );
+        }
+
+        EventsQueue::register_event([] { spawn_worker(local_workers); });
+    });
 
 static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-        judge_workers(process_judge_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
-            STACK_UNWINDING_MARK;
+    judge_workers(process_judge_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
+        STACK_UNWINDING_MARK;
 
-            // Job has to be reset and cleanup to be done
-            if (not winfo.is_idle) {
-                if (winfo.next_job.locked_its_problem) {
-                    jobs_queue.unlock_problem(winfo.next_job.problem_id);
-                }
-
-                sim::jobs::restart_job(job_server::mysql,
-                        intentional_unsafe_string_view(to_string(winfo.next_job.id)), false);
+        // Job has to be reset and cleanup to be done
+        if (not winfo.is_idle) {
+            if (winfo.next_job.locked_its_problem) {
+                jobs_queue.unlock_problem(winfo.next_job.problem_id);
             }
 
-            EventsQueue::register_event([] { spawn_worker(judge_workers); });
-        });
+            sim::jobs::restart_job(
+                job_server::mysql,
+                intentional_unsafe_string_view(to_string(winfo.next_job.id)),
+                false
+            );
+        }
+
+        EventsQueue::register_event([] { spawn_worker(judge_workers); });
+    });
 
 static void sync_and_assign_jobs() {
     STACK_UNWINDING_MARK;
@@ -794,10 +819,10 @@ static void sync_and_assign_jobs() {
     };
 
     array<SItem, 3> selector{{
-            // (is ok, best job)
-            {problem_job.ok(), problem_job},
-            {other_job.ok(), other_job},
-            {judge_job.ok(), judge_job},
+        // (is ok, best job)
+        {problem_job.ok(), problem_job},
+        {other_job.ok(), other_job},
+        {judge_job.ok(), judge_job},
     }};
 
     while (selector[0].ok or selector[1].ok or selector[2].ok) {
@@ -811,8 +836,15 @@ static void sync_and_assign_jobs() {
             }
         }
 
-        DEBUG_JOB_SERVER(stdlog("DEBUG: Got job: {id: ", best_job.id, ", pri: ", best_job.priority,
-                ", locks: ", best_job.locks_problem, "}"));
+        DEBUG_JOB_SERVER(stdlog(
+            "DEBUG: Got job: {id: ",
+            best_job.id,
+            ", pri: ",
+            best_job.priority,
+            ", locks: ",
+            best_job.locks_problem,
+            "}"
+        ));
 
         if (idx == 0) { // Problem job
             if (local_workers.pass_job(best_job.id, problem_job.problem_id, best_job.locks_problem))
@@ -927,7 +959,8 @@ static void events_loop() noexcept {
                     }
 
                     inotify_wd = inotify_add_watch(
-                            inotify_fd, job_server::notify_file.data(), IN_ATTRIB | IN_MOVE_SELF);
+                        inotify_fd, job_server::notify_file.data(), IN_ATTRIB | IN_MOVE_SELF
+                    );
                     if (inotify_wd == -1) {
                         errlog("inotify_add_watch() failed", errmsg());
                     } else {
@@ -1031,7 +1064,7 @@ static void events_loop() noexcept {
                     constexpr uint INFY_IDX = 0;
                     constexpr uint EQ_IDX = 1;
                     pollfd pfd[2] = {
-                            {inotify_fd, POLLIN, 0}, {EventsQueue::get_notifier_fd(), POLLIN, 0}};
+                        {inotify_fd, POLLIN, 0}, {EventsQueue::get_notifier_fd(), POLLIN, 0}};
 
                     for (;;) {
                         int rc = poll(pfd, 2, -1);
@@ -1090,14 +1123,21 @@ static void clean_up_db() {
         InplaceBuff<128> job_info;
         stmt.res_bind_all(job_id, job_type, job_info);
         while (stmt.next()) {
-            sim::jobs::restart_job(job_server::mysql,
-                    intentional_unsafe_string_view(to_string(job_id)), job_type, job_info, false);
+            sim::jobs::restart_job(
+                job_server::mysql,
+                intentional_unsafe_string_view(to_string(job_id)),
+                job_type,
+                job_info,
+                false
+            );
         }
 
         // Fix jobs that are noticed [ending] after the job-server died
         job_server::mysql.prepare("UPDATE jobs SET status=? WHERE status=?")
-                .bind_and_execute(EnumVal(sim::jobs::Job::Status::PENDING),
-                        EnumVal(sim::jobs::Job::Status::NOTICED_PENDING));
+            .bind_and_execute(
+                EnumVal(sim::jobs::Job::Status::PENDING),
+                EnumVal(sim::jobs::Job::Status::NOTICED_PENDING)
+            );
         transaction.commit();
 
     } catch (const std::exception& e) {
@@ -1121,7 +1161,7 @@ int main() {
     // stdlog, like everything, writes to stderr, so redirect stdout and stderr
     // to the log file
     if (freopen(job_server::stdlog_file.data(), "ae", stdout) == nullptr ||
-            dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
+        dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
     {
         errlog("Failed to open `", job_server::stdlog_file, '`', errmsg());
         return 1;
@@ -1135,7 +1175,7 @@ int main() {
     }
 
     // Install signal handlers
-    struct sigaction sa {};
+    struct sigaction sa = {};
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &exit;
 

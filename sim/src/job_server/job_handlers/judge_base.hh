@@ -27,15 +27,16 @@ private:
     // Iff compilation failed, compilation errors are returned
     template <class MethodPtr>
     std::optional<std::string> compile_solution_impl(
-            FilePath solution_path, sim::SolutionLanguage lang, MethodPtr compile_method);
+        FilePath solution_path, sim::SolutionLanguage lang, MethodPtr compile_method
+    );
 
 protected:
     // Iff compilation failed, compilation errors are returned
     std::optional<std::string> compile_solution(FilePath solution_path, sim::SolutionLanguage lang);
 
     // Iff compilation failed, compilation errors are returned
-    std::optional<std::string> compile_solution_from_problem_package(
-            FilePath solution_path, sim::SolutionLanguage lang);
+    std::optional<std::string>
+    compile_solution_from_problem_package(FilePath solution_path, sim::SolutionLanguage lang);
 
     std::optional<std::string> compile_checker();
 };

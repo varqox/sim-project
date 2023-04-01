@@ -33,7 +33,7 @@ struct ContestProblem {
     EnumVal<MethodOfChoosingFinalSubmission> method_of_choosing_final_submission;
     EnumVal<ScoreRevealing> score_revealing;
 
-    constexpr static auto primary_key = PrimaryKey{&ContestProblem::id};
+    static constexpr auto primary_key = PrimaryKey{&ContestProblem::id};
 };
 
 } // namespace sim::contest_problems

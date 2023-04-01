@@ -1,6 +1,7 @@
 #pragma once
 
 #include "merger.hh"
+
 #include <sim/internal_files/internal_file.hh>
 #include <simlib/defer.hh>
 #include <simlib/file_info.hh>
@@ -17,8 +18,8 @@ class InternalFilesMerger : public Merger<sim::internal_files::InternalFile> {
         stmt.bind_and_execute();
         stmt.res_bind_all(file.id);
         while (stmt.next()) {
-            auto mtime = get_modification_time(
-                    concat(record_set.sim_build(), "internal_files/", file.id));
+            auto mtime =
+                get_modification_time(concat(record_set.sim_build(), "internal_files/", file.id));
             record_set.add_record(file, mtime);
         }
     }
@@ -43,9 +44,12 @@ public:
         STACK_UNWINDING_MARK;
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
-                "(id) "
-                "VALUES(?)");
+        auto stmt = conn.prepare(
+            "INSERT INTO ",
+            sql_table_name(),
+            "(id) "
+            "VALUES(?)"
+        );
 
         auto bkp_path = internal_files_backup_path();
         auto dest_path = concat(main_sim_build, "internal_files/");
@@ -126,8 +130,11 @@ public:
     }
 
     explicit InternalFilesMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs)
-    : Merger("internal_files", ids_from_both_jobs.main.internal_files,
-              ids_from_both_jobs.other.internal_files) {
+    : Merger(
+          "internal_files",
+          ids_from_both_jobs.main.internal_files,
+          ids_from_both_jobs.other.internal_files
+      ) {
         STACK_UNWINDING_MARK;
         initialize();
     }

@@ -12,13 +12,13 @@ protected:
     const uint64_t job_id_;
     InplaceBuff<1 << 14> job_log_holder_;
 
-    explicit JobHandler(uint64_t job_id)
-    : job_id_(job_id) {}
+    explicit JobHandler(uint64_t job_id) : job_id_(job_id) {}
 
     template <class... Args>
     auto job_log(Args&&... args) {
         return DoubleAppender<decltype(job_log_holder_)>(
-                stdlog, job_log_holder_, std::forward<Args>(args)...);
+            stdlog, job_log_holder_, std::forward<Args>(args)...
+        );
     }
 
     template <class... Args>

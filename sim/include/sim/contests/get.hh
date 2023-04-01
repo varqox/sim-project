@@ -10,8 +10,12 @@ namespace sim::contests {
 enum class GetIdKind { CONTEST, CONTEST_ROUND, CONTEST_PROBLEM };
 
 template <class T, class U>
-std::optional<std::pair<Contest, Permissions>> get(mysql::Connection& mysql, GetIdKind id_kind,
-        T&& id, std::optional<U> user_id, CStringView curr_date) {
+std::optional<std::pair<Contest, Permissions>>
+get(mysql::Connection& mysql,
+    GetIdKind id_kind,
+    T&& id,
+    std::optional<U> user_id,
+    CStringView curr_date) {
     STACK_UNWINDING_MARK;
 
     InplaceBuff<64> fields{"c.id, c.name, c.is_public"};
@@ -46,16 +50,20 @@ std::optional<std::pair<Contest, Permissions>> get(mysql::Connection& mysql, Get
     mysql::Statement stmt;
     if (user_id) {
         fields.append(", u.type, cu.mode");
-        stmt = mysql.prepare("SELECT ", fields,
-                " "
-                "FROM contests c "
-                "LEFT JOIN users u ON u.id=? "
-                "LEFT JOIN contest_users cu ON cu.contest_id=c.id"
-                " AND cu.user_id=u.id ",
-                id_part_sql);
+        stmt = mysql.prepare(
+            "SELECT ",
+            fields,
+            " "
+            "FROM contests c "
+            "LEFT JOIN users u ON u.id=? "
+            "LEFT JOIN contest_users cu ON cu.contest_id=c.id"
+            " AND cu.user_id=u.id ",
+            id_part_sql
+        );
         stmt.bind_and_execute(user_id.value(), id);
         stmt.res_bind_all(
-                contest.id, contest.name, contest.is_public, round_begins, user_type, cu_mode);
+            contest.id, contest.name, contest.is_public, round_begins, user_type, cu_mode
+        );
 
     } else {
         stmt = mysql.prepare("SELECT ", fields, " FROM contests c ", id_part_sql);
@@ -69,7 +77,7 @@ std::optional<std::pair<Contest, Permissions>> get(mysql::Connection& mysql, Get
 
     auto contest_perms = get_permissions(user_type, contest.is_public, cu_mode);
     if (check_round_begins and uint(~contest_perms & Permissions::ADMIN) and
-            round_begins.value() > curr_date)
+        round_begins.value() > curr_date)
     {
         return std::nullopt;
     }

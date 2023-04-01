@@ -1,4 +1,5 @@
 #include "sim.hh"
+
 #include <sim/contest_users/contest_user.hh>
 #include <sim/users/user.hh>
 #include <simlib/time.hh>
@@ -10,8 +11,8 @@ using std::pair;
 
 namespace web_server::old {
 
-static Sim::ContestUserPermissions get_overall_perm(
-        std::optional<ContestUser::Mode> viewer_mode) noexcept {
+static Sim::ContestUserPermissions get_overall_perm(std::optional<ContestUser::Mode> viewer_mode
+) noexcept {
     using PERM = Sim::ContestUserPermissions;
     using CUM = ContestUser::Mode;
 
@@ -29,8 +30,8 @@ static Sim::ContestUserPermissions get_overall_perm(
     return PERM::NONE; // Shouldn't happen
 }
 
-Sim::ContestUserPermissions Sim::contest_user_get_overall_permissions(
-        std::optional<ContestUser::Mode> viewer_mode) noexcept {
+Sim::ContestUserPermissions
+Sim::contest_user_get_overall_permissions(std::optional<ContestUser::Mode> viewer_mode) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = ContestUserPermissions;
     using CUM = ContestUser::Mode;
@@ -47,8 +48,8 @@ Sim::ContestUserPermissions Sim::contest_user_get_overall_permissions(
 }
 
 Sim::ContestUserPermissions Sim::contest_user_get_permissions(
-        std::optional<ContestUser::Mode> viewer_mode,
-        std::optional<ContestUser::Mode> user_mode) noexcept {
+    std::optional<ContestUser::Mode> viewer_mode, std::optional<ContestUser::Mode> user_mode
+) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = ContestUserPermissions;
     using CUM = ContestUser::Mode;
@@ -68,14 +69,14 @@ Sim::ContestUserPermissions Sim::contest_user_get_permissions(
     switch (viewer_mode.value()) {
     case CUM::OWNER:
         return get_overall_perm(viewer_mode) | PERM::MAKE_CONTESTANT | PERM::MAKE_MODERATOR |
-                PERM::MAKE_OWNER | PERM::EXPEL;
+            PERM::MAKE_OWNER | PERM::EXPEL;
     case CUM::MODERATOR: {
         switch (user_mode.value()) {
         case CUM::OWNER: return get_overall_perm(viewer_mode);
         case CUM::MODERATOR:
         case CUM::CONTESTANT:
             return get_overall_perm(viewer_mode) | PERM::MAKE_CONTESTANT | PERM::MAKE_MODERATOR |
-                    PERM::EXPEL;
+                PERM::EXPEL;
         }
         return PERM::NONE; // Shouldn't happen
     }
@@ -106,8 +107,10 @@ Sim::contest_user_get_overall_permissions(StringView contest_id) {
     return {cu_mode, contest_user_get_overall_permissions(cu_mode)};
 }
 
-std::tuple<std::optional<ContestUser::Mode>, Sim::ContestUserPermissions,
-        std::optional<ContestUser::Mode>>
+std::tuple<
+    std::optional<ContestUser::Mode>,
+    Sim::ContestUserPermissions,
+    std::optional<ContestUser::Mode>>
 Sim::contest_user_get_permissions(StringView contest_id, StringView user_id) {
     STACK_UNWINDING_MARK;
 
@@ -188,7 +191,7 @@ void Sim::api_contest_users() {
         bool contest_id_condition_occurred = false;
 
         for (StringView next_arg = url_args.extract_next_arg(); not next_arg.empty();
-                next_arg = url_args.extract_next_arg())
+             next_arg = url_args.extract_next_arg())
         {
             auto arg = decode_uri(next_arg);
             char cond_c = arg[0];
@@ -209,7 +212,8 @@ void Sim::api_contest_users() {
                     qwhere.append(" AND cu.mode=", EnumVal(ContestUser::Mode::CONTESTANT).to_int());
                 } else {
                     return api_error400(
-                            intentional_unsafe_string_view(concat("Invalid user mode: ", arg_id)));
+                        intentional_unsafe_string_view(concat("Invalid user mode: ", arg_id))
+                    );
                 }
 
                 // NOLINTNEXTLINE(bugprone-branch-clone)
@@ -277,8 +281,17 @@ void Sim::api_contest_users() {
         }
 
         // User id, username, first name, last name
-        append("\n[", res[UID], ',', json_stringify(res[USERNAME]), ',', json_stringify(res[FNAME]),
-                ',', json_stringify(res[LNAME]), ',');
+        append(
+            "\n[",
+            res[UID],
+            ',',
+            json_stringify(res[USERNAME]),
+            ',',
+            json_stringify(res[FNAME]),
+            ',',
+            json_stringify(res[LNAME]),
+            ','
+        );
 
         // Mode
         EnumVal<CUM> mode(WONT_THROW(str2num<CUM::UnderlyingType>(res[MODE]).value()));
@@ -371,8 +384,13 @@ void Sim::api_contest_user_add(StringView contest_id) {
     }
 
     StringView user_id;
-    form_validate(user_id, "user_id", "User ID", static_cast<bool (*)(const StringView&)>(is_digit),
-            "User ID: invalid value");
+    form_validate(
+        user_id,
+        "user_id",
+        "User ID",
+        static_cast<bool (*)(const StringView&)>(is_digit),
+        "User ID: invalid value"
+    );
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -383,7 +401,7 @@ void Sim::api_contest_user_add(StringView contest_id) {
     }
 
     UserPermissions user_perms =
-            users_get_permissions(str2num<decltype(User::id)>(user_id).value_or(0));
+        users_get_permissions(str2num<decltype(User::id)>(user_id).value_or(0));
     if (uint(~user_perms & UserPermissions::VIEW)) {
         return api_error400("Specified user does not exist or you have no "
                             "permission to add them");
@@ -429,7 +447,7 @@ void Sim::api_contest_user_change_mode(StringView contest_id, StringView user_id
     }
 
     mysql.prepare("UPDATE contest_users SET mode=? WHERE contest_id=? AND user_id=?")
-            .bind_and_execute(new_mode, contest_id, user_id);
+        .bind_and_execute(new_mode, contest_id, user_id);
 }
 
 void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
@@ -442,7 +460,7 @@ void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
     }
 
     mysql.prepare("DELETE FROM contest_users WHERE contest_id=? AND user_id=?")
-            .bind_and_execute(contest_id, user_id);
+        .bind_and_execute(contest_id, user_id);
 }
 
 } // namespace web_server::old

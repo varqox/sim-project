@@ -15,7 +15,7 @@ struct ContestEntryToken {
     std::optional<sql_fields::Varbinary<8>> short_token;
     std::optional<sql_fields::Datetime> short_token_expiration;
 
-    constexpr static auto primary_key = PrimaryKey{&ContestEntryToken::token};
+    static constexpr auto primary_key = PrimaryKey{&ContestEntryToken::token};
 
     static constexpr auto short_token_max_lifetime = std::chrono::hours{1};
 };

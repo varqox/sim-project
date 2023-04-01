@@ -1,5 +1,5 @@
-#include "reset_problem_time_limits.hh"
 #include "../main.hh"
+#include "reset_problem_time_limits.hh"
 
 #include <sim/jobs/job.hh>
 #include <simlib/sim/problem_package.hh>
@@ -56,18 +56,24 @@ void ResetProblemTimeLimits::run() {
 
     const auto current_date = mysql_date();
     // Add job to delete old problem file
-    mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                  " added, aux_id, info, data) "
-                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems "
-                  "WHERE id=?")
-            .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
-                    default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
-                    current_date, problem_id_);
+    mysql
+        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+                 " added, aux_id, info, data) "
+                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems "
+                 "WHERE id=?")
+        .bind_and_execute(
+            EnumVal(Job::Type::DELETE_FILE),
+            default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING),
+            current_date,
+            problem_id_
+        );
 
     // Use new package as problem file
-    mysql.prepare("UPDATE problems SET file_id=?, simfile=?, updated_at=? "
-                  "WHERE id=?")
-            .bind_and_execute(new_file_id, new_simfile_, current_date, problem_id_);
+    mysql
+        .prepare("UPDATE problems SET file_id=?, simfile=?, updated_at=? "
+                 "WHERE id=?")
+        .bind_and_execute(new_file_id, new_simfile_, current_date, problem_id_);
 
     job_done();
 

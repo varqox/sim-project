@@ -1,4 +1,5 @@
 #include "cookies.hh"
+
 #include <ctime>
 #include <simlib/concat_tostr.hh>
 #include <simlib/debug.hh>
@@ -8,8 +9,14 @@ using std::string;
 
 namespace web_server::http {
 
-void Cookies::set(StringView name, StringView val, std::optional<time_t> expire,
-        std::optional<StringView> path, bool http_only, bool secure) {
+void Cookies::set(
+    StringView name,
+    StringView val,
+    std::optional<time_t> expire,
+    std::optional<StringView> path,
+    bool http_only,
+    bool secure
+) {
     string value = concat_tostr(val, "; SameSite=Lax");
     if (expire) {
         std::array<char, 64> buff{{}};

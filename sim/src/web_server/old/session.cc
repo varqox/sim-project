@@ -1,4 +1,5 @@
 #include "sim.hh"
+
 #include <chrono>
 #include <optional>
 #include <sim/random.hh>

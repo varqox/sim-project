@@ -58,7 +58,7 @@ struct Job {
     sql_fields::Blob<128> info;
     sql_fields::Blob<0> data;
 
-    constexpr static auto primary_key = PrimaryKey{&Job::id};
+    static constexpr auto primary_key = PrimaryKey{&Job::id};
 };
 
 constexpr uint64_t job_log_view_max_size = 128 << 10; // 128 KiB

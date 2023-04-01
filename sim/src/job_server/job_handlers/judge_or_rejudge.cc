@@ -1,5 +1,5 @@
-#include "judge_or_rejudge.hh"
 #include "../main.hh"
+#include "judge_or_rejudge.hh"
 
 #include <sim/submissions/submission.hh>
 #include <sim/submissions/update_final.hh>
@@ -26,21 +26,35 @@ void JudgeOrRejudge::run() {
     InplaceBuff<64> last_judgment;
     InplaceBuff<64> p_updated_at;
     EnumVal<Submission::Language> lang{};
-    stmt.res_bind_all(submission_file_id, lang, sowner, contest_problem_id, problem_id,
-            last_judgment, problem_file_id, p_updated_at);
+    stmt.res_bind_all(
+        submission_file_id,
+        lang,
+        sowner,
+        contest_problem_id,
+        problem_id,
+        last_judgment,
+        problem_file_id,
+        p_updated_at
+    );
     // If the submission doesn't exist (probably was removed)
     if (not stmt.next()) {
-        return set_failure("Failed the job of judging the submission ", submission_id_,
-                ", since there is no such submission.");
+        return set_failure(
+            "Failed the job of judging the submission ",
+            submission_id_,
+            ", since there is no such submission."
+        );
     }
 
     // If the problem wasn't modified since last judgment and submission has
     // already been rejudged after the job was created
     if (last_judgment > p_updated_at and last_judgment > job_creation_time_) {
         // Skip the job - the submission has already been rejudged
-        return job_cancelled("Skipped judging of the submission ", submission_id_,
-                " because it has already been rejudged after this "
-                "job had been scheduled");
+        return job_cancelled(
+            "Skipped judging of the submission ",
+            submission_id_,
+            " because it has already been rejudged after this "
+            "job had been scheduled"
+        );
     }
 
     std::string judging_began = mysql_date();
@@ -49,9 +63,10 @@ void JudgeOrRejudge::run() {
     load_problem_package(sim::internal_files::path_of(problem_file_id));
 
     auto update_submission = [&](decltype(Submission::initial_status) initial_status,
-                                     decltype(Submission::full_status) full_status,
-                                     std::optional<int64_t> score, auto&& initial_report,
-                                     auto&& final_report) {
+                                 decltype(Submission::full_status) full_status,
+                                 std::optional<int64_t> score,
+                                 auto&& initial_report,
+                                 auto&& final_report) {
         {
             auto transaction = mysql.start_transaction();
             sim::submissions::update_final_lock(mysql, sowner, problem_id);
@@ -74,12 +89,27 @@ void JudgeOrRejudge::run() {
                                  "WHERE id=?");
 
             if (is_fatal(full_status)) {
-                stmt.bind_and_execute(false, initial_status, full_status, nullptr, judging_began,
-                        initial_report, final_report, submission_id_);
+                stmt.bind_and_execute(
+                    false,
+                    initial_status,
+                    full_status,
+                    nullptr,
+                    judging_began,
+                    initial_report,
+                    final_report,
+                    submission_id_
+                );
             } else {
-                stmt.bind_and_execute((stype == ST::NORMAL and score.has_value()), initial_status,
-                        full_status, score, judging_began, initial_report, final_report,
-                        submission_id_);
+                stmt.bind_and_execute(
+                    (stype == ST::NORMAL and score.has_value()),
+                    initial_status,
+                    full_status,
+                    score,
+                    judging_began,
+                    initial_report,
+                    final_report,
+                    submission_id_
+                );
             }
 
             sim::submissions::update_final(mysql, sowner, problem_id, contest_problem_id, false);
@@ -89,13 +119,19 @@ void JudgeOrRejudge::run() {
     };
 
     auto compilation_errors =
-            compile_solution(sim::internal_files::path_of(submission_file_id), to_sol_lang(lang));
+        compile_solution(sim::internal_files::path_of(submission_file_id), to_sol_lang(lang));
     if (compilation_errors.has_value()) {
-        update_submission(Submission::Status::COMPILATION_ERROR,
-                Submission::Status::COMPILATION_ERROR, std::nullopt,
-                concat("<pre class=\"compilation-errors\">",
-                        html_escape(compilation_errors.value()), "</pre>"),
-                "");
+        update_submission(
+            Submission::Status::COMPILATION_ERROR,
+            Submission::Status::COMPILATION_ERROR,
+            std::nullopt,
+            concat(
+                "<pre class=\"compilation-errors\">",
+                html_escape(compilation_errors.value()),
+                "</pre>"
+            ),
+            ""
+        );
 
         return job_done();
     }
@@ -103,19 +139,32 @@ void JudgeOrRejudge::run() {
     // Compile checker
     compilation_errors = compile_checker();
     if (compilation_errors.has_value()) {
-        errlog("Job ", job_id_, " (submission ", submission_id_, ", problem ", problem_id,
-                "): Checker compilation failed");
-        update_submission(Submission::Status::CHECKER_COMPILATION_ERROR,
-                Submission::Status::CHECKER_COMPILATION_ERROR, std::nullopt, "", "");
+        errlog(
+            "Job ",
+            job_id_,
+            " (submission ",
+            submission_id_,
+            ", problem ",
+            problem_id,
+            "): Checker compilation failed"
+        );
+        update_submission(
+            Submission::Status::CHECKER_COMPILATION_ERROR,
+            Submission::Status::CHECKER_COMPILATION_ERROR,
+            std::nullopt,
+            "",
+            ""
+        );
 
         return job_done();
     }
 
-    auto send_judge_report = [&, initial_status = Submission::Status::OK,
-                                     initial_report = InplaceBuff<1 << 16>(),
-                                     initial_score = static_cast<int64_t>(0)](
-                                     const sim::JudgeReport& jreport, bool final,
-                                     bool partial) mutable {
+    auto send_judge_report = [&,
+                              initial_status = Submission::Status::OK,
+                              initial_report = InplaceBuff<1 << 16>(),
+                              initial_score = static_cast<int64_t>(0)](
+                                 const sim::JudgeReport& jreport, bool final, bool partial
+                             ) mutable {
         auto rep = construct_report(jreport, final);
         auto status = calc_status(jreport);
         // Count score
@@ -126,8 +175,18 @@ void JudgeOrRejudge::run() {
 
         // Log reports
         auto job_log_len = job_log_holder_.size;
-        job_log("Job ", job_id_, " -> submission ", submission_id_, " (problem ", problem_id, ")\n",
-                (partial ? "Partial j" : "J"), "udge report: ", jreport.judge_log);
+        job_log(
+            "Job ",
+            job_id_,
+            " -> submission ",
+            submission_id_,
+            " (problem ",
+            problem_id,
+            ")\n",
+            (partial ? "Partial j" : "J"),
+            "udge report: ",
+            jreport.judge_log
+        );
 
         stmt = mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
         stmt.bind_and_execute(get_log(), job_id_);
@@ -157,12 +216,16 @@ void JudgeOrRejudge::run() {
         // Judge
         sim::VerboseJudgeLogger logger(true);
 
-        sim::JudgeReport initial_jrep = jworker_.judge(false, logger,
-                [&](const sim::JudgeReport& partial) { send_judge_report(partial, false, true); });
+        sim::JudgeReport initial_jrep =
+            jworker_.judge(false, logger, [&](const sim::JudgeReport& partial) {
+                send_judge_report(partial, false, true);
+            });
         send_judge_report(initial_jrep, false, false);
 
-        sim::JudgeReport final_jrep = jworker_.judge(true, logger,
-                [&](const sim::JudgeReport& partial) { send_judge_report(partial, true, true); });
+        sim::JudgeReport final_jrep =
+            jworker_.judge(true, logger, [&](const sim::JudgeReport& partial) {
+                send_judge_report(partial, true, true);
+            });
         send_judge_report(final_jrep, true, false);
 
         // Log checker errors
@@ -170,8 +233,15 @@ void JudgeOrRejudge::run() {
             for (auto&& group : rep.groups) {
                 for (auto&& test : group.tests) {
                     if (test.status == sim::JudgeReport::Test::CHECKER_ERROR) {
-                        errlog("Checker error: submission ", submission_id_,
-                                " (problem id: ", problem_id, ") test `", test.name, '`');
+                        errlog(
+                            "Checker error: submission ",
+                            submission_id_,
+                            " (problem id: ",
+                            problem_id,
+                            ") test `",
+                            test.name,
+                            '`'
+                        );
                     }
                 }
             }
@@ -181,12 +251,23 @@ void JudgeOrRejudge::run() {
         for (auto&& rep : {initial_jrep, final_jrep}) {
             for (auto&& group : rep.groups) {
                 for (auto&& test : group.tests) {
-                    if (has_one_of_prefixes(test.comment,
-                                "Runtime error (Error: ", "Runtime error (failed to get syscall",
-                                "Runtime error (forbidden syscall"))
+                    if (has_one_of_prefixes(
+                            test.comment,
+                            "Runtime error (Error: ",
+                            "Runtime error (failed to get syscall",
+                            "Runtime error (forbidden syscall"
+                        ))
                     {
-                        errlog("Submission ", submission_id_, " (problem ", problem_id,
-                                "): ", test.name, " -> ", test.comment);
+                        errlog(
+                            "Submission ",
+                            submission_id_,
+                            " (problem ",
+                            problem_id,
+                            "): ",
+                            test.name,
+                            " -> ",
+                            test.comment
+                        );
                     }
                 }
             }
@@ -200,8 +281,9 @@ void JudgeOrRejudge::run() {
         job_log("Judge error.");
         job_log("Caught exception -> ", e.what());
 
-        update_submission(Submission::Status::JUDGE_ERROR, Submission::Status::JUDGE_ERROR,
-                std::nullopt, "", "");
+        update_submission(
+            Submission::Status::JUDGE_ERROR, Submission::Status::JUDGE_ERROR, std::nullopt, "", ""
+        );
 
         return job_done();
     }

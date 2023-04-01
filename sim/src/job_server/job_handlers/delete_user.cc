@@ -1,5 +1,5 @@
-#include "delete_user.hh"
 #include "../main.hh"
+#include "delete_user.hh"
 
 #include <sim/jobs/job.hh>
 #include <sim/users/user.hh>
@@ -30,13 +30,18 @@ void DeleteUser::run() {
     }
 
     // Add jobs to delete submission files
-    mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                  " added, aux_id, info, data) "
-                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
-                  " FROM submissions WHERE owner=?")
-            .bind_and_execute(EnumVal(Job::Type::DELETE_FILE),
-                    default_priority(Job::Type::DELETE_FILE), EnumVal(Job::Status::PENDING),
-                    mysql_date(), user_id_);
+    mysql
+        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+                 " added, aux_id, info, data) "
+                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
+                 " FROM submissions WHERE owner=?")
+        .bind_and_execute(
+            EnumVal(Job::Type::DELETE_FILE),
+            default_priority(Job::Type::DELETE_FILE),
+            EnumVal(Job::Status::PENDING),
+            mysql_date(),
+            user_id_
+        );
 
     // Delete user (all necessary actions will take place thanks to foreign key
     // constrains)

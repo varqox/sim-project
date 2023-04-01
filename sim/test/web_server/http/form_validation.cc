@@ -1,5 +1,6 @@
-#include "../../../src/web_server/http/form_validation.hh"
 #include "../../../src/web_server/http/form_fields.hh"
+#include "../../../src/web_server/http/form_validation.hh"
+
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -66,8 +67,8 @@ class ValidationTest {
         return Ok{abc};
     }
 
-    Result<optional<FieldType>, string> validate_allowed_only_if(
-            bool condition, optional<string> form_field_value) {
+    Result<optional<FieldType>, string>
+    validate_allowed_only_if(bool condition, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
         VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
             (abc, api_param, ALLOWED_ONLY_IF(condition))
@@ -76,8 +77,8 @@ class ValidationTest {
         return Ok{abc};
     }
 
-    Result<optional<FieldType>, string> validate_required_and_allowed_only_if(
-            bool condition, optional<string> form_field_value) {
+    Result<optional<FieldType>, string>
+    validate_required_and_allowed_only_if(bool condition, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
         VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
             (abc, api_param, REQUIRED_AND_ALLOWED_ONLY_IF(condition))
@@ -87,8 +88,7 @@ class ValidationTest {
     }
 
 public:
-    explicit ValidationTest(ApiParam<FieldType> api_param)
-    : api_param{std::move(api_param)} {
+    explicit ValidationTest(ApiParam<FieldType> api_param) : api_param{std::move(api_param)} {
         SCOPED_TRACE(__PRETTY_FUNCTION__);
         EXPECT_EQ(validate_required(nullopt), Err{"abc: ABC is not set"});
         EXPECT_EQ(validate_optional(nullopt), Ok{nullopt});
@@ -104,12 +104,18 @@ public:
         EXPECT_EQ(validate_required(form_field_value), expected_validation_result);
         EXPECT_EQ(validate_optional(form_field_value), expected_validation_result);
         EXPECT_EQ(validate_allowed_only_if(true, form_field_value), expected_validation_result);
-        EXPECT_EQ(validate_allowed_only_if(false, form_field_value),
-                Err{"abc: ABC should not be sent in the request at all"});
-        EXPECT_EQ(validate_required_and_allowed_only_if(true, form_field_value),
-                expected_validation_result);
-        EXPECT_EQ(validate_required_and_allowed_only_if(false, form_field_value),
-                Err{"abc: ABC should not be sent in the request at all"});
+        EXPECT_EQ(
+            validate_allowed_only_if(false, form_field_value),
+            Err{"abc: ABC should not be sent in the request at all"}
+        );
+        EXPECT_EQ(
+            validate_required_and_allowed_only_if(true, form_field_value),
+            expected_validation_result
+        );
+        EXPECT_EQ(
+            validate_required_and_allowed_only_if(false, form_field_value),
+            Err{"abc: ABC should not be sent in the request at all"}
+        );
     }
 };
 
@@ -151,8 +157,8 @@ static void test_int() {
     }
     VALIDATE_CHECK(t, concat_tostr(nl::max()), Ok{nl::max()});
     VALIDATE_CHECK(t, concat_tostr(nl::max() - 1), Ok{nl::max() - 1});
-    auto err_val_str = Err{concat_tostr(
-            "abc: ABC is not an integer from range [", nl::min(), ", ", nl::max(), "]")};
+    auto err_val_str = Err{
+        concat_tostr("abc: ABC is not an integer from range [", nl::min(), ", ", nl::max(), "]")};
     VALIDATE_CHECK(t, "", Err{err_val_str});
     VALIDATE_CHECK(t, "x", Err{err_val_str});
     VALIDATE_CHECK(t, "abc", Err{err_val_str});
@@ -184,8 +190,8 @@ TEST(form_validation, integers) {
 }
 
 template <class StrType>
-static void test_str_common(
-        ValidationTest<StrType>& t, std::optional<size_t> max_len = std::nullopt) {
+static void
+test_str_common(ValidationTest<StrType>& t, std::optional<size_t> max_len = std::nullopt) {
     const CStringView test_value = "test value";
     if (max_len >= test_value.size()) {
         VALIDATE_CHECK(t, test_value.to_string(), Ok{test_value});
@@ -201,8 +207,9 @@ static void test_str_common(
     if (max_len) {
         for (size_t len = *max_len + 1; len < *max_len + 16; ++len) {
             auto str = random_bytes(len);
-            VALIDATE_CHECK(t, str,
-                    Err{concat_tostr("abc: ABC cannot be longer than ", *max_len, " bytes")});
+            VALIDATE_CHECK(
+                t, str, Err{concat_tostr("abc: ABC cannot be longer than ", *max_len, " bytes")}
+            );
         }
     }
 }
@@ -281,16 +288,20 @@ TEST(form_validation, satisfying_predicate_string) {
     using sim::sql_fields::SatisfyingPredicate;
     static constexpr char predicate_description[] = "a string ending with \"xd\"";
     constexpr size_t varbinary_max_len = 14;
-    test_str<sim::sql_fields::SatisfyingPredicate<sim::sql_fields::Varbinary<varbinary_max_len>,
-            always_true, predicate_description>>(varbinary_max_len);
-    test_str<sim::sql_fields::SatisfyingPredicate<CStringView, always_true,
-            predicate_description>>();
-    test_str<sim::sql_fields::SatisfyingPredicate<sim::sql_fields::Blob<>, always_true,
-            predicate_description>>();
+    test_str<sim::sql_fields::SatisfyingPredicate<
+        sim::sql_fields::Varbinary<varbinary_max_len>,
+        always_true,
+        predicate_description>>(varbinary_max_len);
+    test_str<sim::sql_fields::SatisfyingPredicate<CStringView, always_true, predicate_description>>(
+    );
+    test_str<sim::sql_fields::
+                 SatisfyingPredicate<sim::sql_fields::Blob<>, always_true, predicate_description>>(
+    );
 
-    auto api_param_val =
-            api_param<SatisfyingPredicate<sim::sql_fields::Varbinary<varbinary_max_len>,
-                    ends_with_xd, predicate_description>>;
+    auto api_param_val = api_param<SatisfyingPredicate<
+        sim::sql_fields::Varbinary<varbinary_max_len>,
+        ends_with_xd,
+        predicate_description>>;
     for (auto api_param : {api_param_val, allow_blank(api_param_val)}) {
         ValidationTest t{api_param};
         VALIDATE_CHECK(t, "xd", Ok{"xd"});
@@ -335,8 +346,8 @@ class EnumCapsValidationTest {
         }
     }
 
-    Result<FieldType, string> validate_required(
-            array<bool, 3> caps, optional<string> form_field_value) {
+    Result<FieldType, string>
+    validate_required(array<bool, 3> caps, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
         VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
             (abc, api_param, REQUIRED_ENUM_CAPS(
@@ -349,8 +360,8 @@ class EnumCapsValidationTest {
         return Ok{abc};
     }
 
-    Result<optional<FieldType>, string> validate_optional(
-            array<bool, 3> caps, optional<string> form_field_value) {
+    Result<optional<FieldType>, string>
+    validate_optional(array<bool, 3> caps, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
         VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
             (abc, api_param, OPTIONAL_ENUM_CAPS(
@@ -364,7 +375,8 @@ class EnumCapsValidationTest {
     }
 
     Result<optional<FieldType>, string> validate_allowed_only_if(
-            bool condition, array<bool, 3> caps, optional<string> form_field_value) {
+        bool condition, array<bool, 3> caps, optional<string> form_field_value
+    ) {
         set_form_fields(std::move(form_field_value));
         VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
             (abc, api_param, ALLOWED_ONLY_IF_ENUM_CAPS(condition,
@@ -378,7 +390,8 @@ class EnumCapsValidationTest {
     }
 
     Result<optional<FieldType>, string> validate_required_and_allowed_only_if(
-            bool condition, array<bool, 3> caps, optional<string> form_field_value) {
+        bool condition, array<bool, 3> caps, optional<string> form_field_value
+    ) {
         set_form_fields(std::move(form_field_value));
         VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
             (abc, api_param, REQUIRED_AND_ALLOWED_ONLY_IF_ENUM_CAPS(condition,
@@ -402,10 +415,13 @@ public:
                     EXPECT_EQ(validate_optional(caps, nullopt), Ok{nullopt});
                     EXPECT_EQ(validate_allowed_only_if(true, caps, nullopt), Ok{nullopt});
                     EXPECT_EQ(validate_allowed_only_if(false, caps, nullopt), Ok{nullopt});
-                    EXPECT_EQ(validate_required_and_allowed_only_if(true, caps, nullopt),
-                            Err{"abc: ABC is not set"});
-                    EXPECT_EQ(validate_required_and_allowed_only_if(false, caps, nullopt),
-                            Ok{nullopt});
+                    EXPECT_EQ(
+                        validate_required_and_allowed_only_if(true, caps, nullopt),
+                        Err{"abc: ABC is not set"}
+                    );
+                    EXPECT_EQ(
+                        validate_required_and_allowed_only_if(false, caps, nullopt), Ok{nullopt}
+                    );
                 }
             }
         }
@@ -417,13 +433,20 @@ public:
         EXPECT_EQ(validate_required(caps, form_field_value), expected_validation_result);
         EXPECT_EQ(validate_optional(caps, form_field_value), expected_validation_result);
         EXPECT_EQ(
-                validate_allowed_only_if(true, caps, form_field_value), expected_validation_result);
-        EXPECT_EQ(validate_allowed_only_if(false, caps, form_field_value),
-                Err{"abc: ABC should not be sent in the request at all"});
-        EXPECT_EQ(validate_required_and_allowed_only_if(true, caps, form_field_value),
-                expected_validation_result);
-        EXPECT_EQ(validate_required_and_allowed_only_if(false, caps, form_field_value),
-                Err{"abc: ABC should not be sent in the request at all"});
+            validate_allowed_only_if(true, caps, form_field_value), expected_validation_result
+        );
+        EXPECT_EQ(
+            validate_allowed_only_if(false, caps, form_field_value),
+            Err{"abc: ABC should not be sent in the request at all"}
+        );
+        EXPECT_EQ(
+            validate_required_and_allowed_only_if(true, caps, form_field_value),
+            expected_validation_result
+        );
+        EXPECT_EQ(
+            validate_required_and_allowed_only_if(false, caps, form_field_value),
+            Err{"abc: ABC should not be sent in the request at all"}
+        );
     }
 };
 
@@ -441,15 +464,20 @@ TEST(form_validation, enum_val_with_string_conversions_enum_caps) {
 
                 for (auto [idx, str] : enumerate_view(std::array{"> 1 <", "> 2 <", "> 3 <"})) {
                     constexpr std::array variants = {
-                            TestEnum::FIRST, TestEnum::SECOND, TestEnum::THIRD};
+                        TestEnum::FIRST, TestEnum::SECOND, TestEnum::THIRD};
                     using RT = Result<TestEnum, const char*>;
-                    SCOPED_TRACE(concat_tostr(
-                            "idx: ", idx, " caps: {", cap0, ", ", cap1, ", ", cap2, "}"));
-                    VALIDATE_CHECK(t, caps, str,
-                            caps[idx] ? RT{Ok{variants[idx]}}
-                                      : RT{Err{"abc: ABC selects option to which you do not "
-                                               "have "
-                                               "permission"}});
+                    SCOPED_TRACE(
+                        concat_tostr("idx: ", idx, " caps: {", cap0, ", ", cap1, ", ", cap2, "}")
+                    );
+                    VALIDATE_CHECK(
+                        t,
+                        caps,
+                        str,
+                        caps[idx] ? RT{Ok{variants[idx]}}
+                                  : RT{Err{"abc: ABC selects option to which you do not "
+                                           "have "
+                                           "permission"}}
+                    );
                 }
             }
         }

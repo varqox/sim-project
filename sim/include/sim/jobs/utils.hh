@@ -10,8 +10,8 @@ namespace sim::jobs {
 
 /// Append an integer @p x in binary format to the @p buff
 template <class Integer>
-inline std::enable_if_t<std::is_integral<Integer>::value, void> append_dumped(
-        std::string& buff, Integer x) {
+inline std::enable_if_t<std::is_integral<Integer>::value, void>
+append_dumped(std::string& buff, Integer x) {
     buff.append(sizeof(x), '\0');
     for (uint i = 1, shift = 0; i <= sizeof(x); ++i, shift += 8) {
         buff[buff.size() - i] = (x >> shift) & 0xFF;
@@ -19,8 +19,8 @@ inline std::enable_if_t<std::is_integral<Integer>::value, void> append_dumped(
 }
 
 template <class Integer>
-inline std::enable_if_t<std::is_integral<Integer>::value, Integer> extract_dumped_int(
-        StringView& dumped_str) {
+inline std::enable_if_t<std::is_integral<Integer>::value, Integer>
+extract_dumped_int(StringView& dumped_str) {
     throw_assert(dumped_str.size() >= sizeof(Integer));
     Integer x = 0;
     for (int i = sizeof(x) - 1, shift = 0; i >= 0; --i, shift += 8) {
@@ -31,8 +31,8 @@ inline std::enable_if_t<std::is_integral<Integer>::value, Integer> extract_dumpe
 }
 
 template <class Integer>
-inline std::enable_if_t<std::is_integral<Integer>::value, void> extract_dumped(
-        Integer& x, StringView& dumped_str) {
+inline std::enable_if_t<std::is_integral<Integer>::value, void>
+extract_dumped(Integer& x, StringView& dumped_str) {
     x = extract_dumped_int<Integer>(dumped_str);
 }
 
@@ -108,13 +108,22 @@ struct AddProblemInfo {
     bool seek_for_new_tests = false;
     bool reset_scoring = false;
     sim::problems::Problem::Type problem_type = sim::problems::Problem::Type::PRIVATE;
+
     enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST; // TODO: remove this
 
     AddProblemInfo() = default;
 
-    AddProblemInfo(std::string n, std::string l, std::optional<uint64_t> ml,
-            std::optional<std::chrono::nanoseconds> gtl, bool rtl, bool is, bool sfnt, bool rs,
-            sim::problems::Problem::Type pt)
+    AddProblemInfo(
+        std::string n,
+        std::string l,
+        std::optional<uint64_t> ml,
+        std::optional<std::chrono::nanoseconds> gtl,
+        bool rtl,
+        bool is,
+        bool sfnt,
+        bool rs,
+        sim::problems::Problem::Type pt
+    )
     : name(std::move(n))
     , label(std::move(l))
     , memory_limit(ml)
@@ -139,7 +148,8 @@ struct AddProblemInfo {
         reset_scoring = (mask & 8);
 
         problem_type = EnumVal<sim::problems::Problem::Type>(
-                extract_dumped_int<sim::problems::Problem::Type::UnderlyingType>(str));
+            extract_dumped_int<sim::problems::Problem::Type::UnderlyingType>(str)
+        );
         stage = EnumVal<Stage>(extract_dumped_int<std::underlying_type_t<Stage>>(str));
     }
 
@@ -151,7 +161,7 @@ struct AddProblemInfo {
         append_dumped(res, global_time_limit);
 
         uint8_t mask = reset_time_limits | (int(ignore_simfile) << 1) |
-                (int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
+            (int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
         append_dumped(res, mask);
 
         append_dumped(res, EnumVal(problem_type).to_int());
@@ -162,8 +172,9 @@ struct AddProblemInfo {
 
 struct MergeProblemsInfo {
     decltype(sim::problems::Problem::id) target_problem_id{};
-    static_assert(sizeof(target_problem_id) == 8,
-            "Changing size needs updating column info in jobs table");
+    static_assert(
+        sizeof(target_problem_id) == 8, "Changing size needs updating column info in jobs table"
+    );
     bool rejudge_transferred_submissions{};
 
     MergeProblemsInfo() = default;
@@ -194,8 +205,7 @@ struct ChangeProblemStatementInfo {
 
     ChangeProblemStatementInfo() = default;
 
-    explicit ChangeProblemStatementInfo(StringView nsp)
-    : new_statement_path(nsp.to_string()) {}
+    explicit ChangeProblemStatementInfo(StringView nsp) : new_statement_path(nsp.to_string()) {}
 
     [[nodiscard]] std::string dump() const { return new_statement_path; }
 };
@@ -203,7 +213,8 @@ struct ChangeProblemStatementInfo {
 struct MergeUsersInfo {
     decltype(sim::users::User::id) target_user_id{};
     static_assert(
-            sizeof(target_user_id) == 8, "Changing size needs updating column info in jobs table");
+        sizeof(target_user_id) == 8, "Changing size needs updating column info in jobs table"
+    );
 
     MergeUsersInfo() = default;
 
@@ -219,8 +230,13 @@ struct MergeUsersInfo {
     }
 };
 
-void restart_job(mysql::Connection& mysql, StringView job_id, Job::Type job_type,
-        StringView job_info, bool notify_job_server);
+void restart_job(
+    mysql::Connection& mysql,
+    StringView job_id,
+    Job::Type job_type,
+    StringView job_info,
+    bool notify_job_server
+);
 
 void restart_job(mysql::Connection& mysql, StringView job_id, bool notify_job_server);
 

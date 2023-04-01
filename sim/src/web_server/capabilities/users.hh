@@ -27,8 +27,8 @@ struct UsersListCapabilities {
     bool view_all_with_type_normal : 1;
 };
 
-UsersListCapabilities list_all_users(
-        const decltype(web_worker::Context::session)& session) noexcept;
+UsersListCapabilities list_all_users(const decltype(web_worker::Context::session)& session
+) noexcept;
 
 struct UserCapabilities {
     bool view : 1;
@@ -48,8 +48,10 @@ struct UserCapabilities {
     bool merge_someone_into_this_user : 1;
 };
 
-UserCapabilities user(const decltype(web_worker::Context::session)& session,
-        decltype(sim::users::User::id) user_id,
-        decltype(sim::users::User::type) user_type) noexcept;
+UserCapabilities user(
+    const decltype(web_worker::Context::session)& session,
+    decltype(sim::users::User::id) user_id,
+    decltype(sim::users::User::type) user_type
+) noexcept;
 
 } // namespace web_server::capabilities

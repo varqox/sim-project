@@ -104,11 +104,13 @@ static void restart(const CmdOptions& cmd_options) {
     }
 
     using std::chrono::system_clock;
+
     struct Server {
         pid_t pid = -1;
         const string& path;
         system_clock::time_point last_spawn = system_clock::time_point::min();
     };
+
     auto spawn = [](Server& server) {
         while (true) {
             // Rate limiting
@@ -136,8 +138,8 @@ static void restart(const CmdOptions& cmd_options) {
         }
     };
     std::array<Server, 2> servers = {{
-            {-1, paths.sim_server},
-            {-1, paths.job_server},
+        {-1, paths.sim_server},
+        {-1, paths.job_server},
     }};
 
     if (cmd_options.make_background) {

@@ -12,7 +12,7 @@ struct Contest {
     sql_fields::Varbinary<128> name;
     sql_fields::Bool is_public;
 
-    constexpr static auto primary_key = PrimaryKey{&Contest::id};
+    static constexpr auto primary_key = PrimaryKey{&Contest::id};
 };
 
 } // namespace sim::contests

@@ -3,6 +3,7 @@
 #include "merger.hh"
 #include "primary_keys_from_jobs.hh"
 #include "problems.hh"
+
 #include <sim/problem_tags/problem_tag.hh>
 
 namespace sim_merger {
@@ -15,7 +16,7 @@ class ProblemTagsMerger : public Merger<sim::problem_tags::ProblemTag> {
 
         sim::problem_tags::ProblemTag ptag;
         auto stmt =
-                conn.prepare("SELECT problem_id, name, is_hidden FROM ", record_set.sql_table_name);
+            conn.prepare("SELECT problem_id, name, is_hidden FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(ptag.problem_id, ptag.name, ptag.is_hidden);
         while (stmt.next()) {
@@ -30,8 +31,8 @@ class ProblemTagsMerger : public Merger<sim::problem_tags::ProblemTag> {
         Merger::merge([&](const sim::problem_tags::ProblemTag& /*unused*/) { return nullptr; });
     }
 
-    PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(
-            const PrimaryKeyType& record_id) override {
+    PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id
+    ) override {
         return record_id;
     }
 
@@ -40,9 +41,12 @@ public:
         STACK_UNWINDING_MARK;
         auto transaction = conn.start_transaction();
         conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
-                "(problem_id, name, is_hidden) "
-                "VALUES(?, ?, ?)");
+        auto stmt = conn.prepare(
+            "INSERT INTO ",
+            sql_table_name(),
+            "(problem_id, name, is_hidden) "
+            "VALUES(?, ?, ?)"
+        );
 
         ProgressBar progress_bar("Problem tags saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
@@ -53,10 +57,15 @@ public:
 
         transaction.commit();
     }
-    ProblemTagsMerger(const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs,
-            const ProblemsMerger& problems)
-    : Merger("problem_tags", ids_from_both_jobs.main.problem_tags,
-              ids_from_both_jobs.other.problem_tags)
+
+    ProblemTagsMerger(
+        const PrimaryKeysFromMainAndOtherJobs& ids_from_both_jobs, const ProblemsMerger& problems
+    )
+    : Merger(
+          "problem_tags",
+          ids_from_both_jobs.main.problem_tags,
+          ids_from_both_jobs.other.problem_tags
+      )
     , problems_(problems) {
         STACK_UNWINDING_MARK;
         initialize();

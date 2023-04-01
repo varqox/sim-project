@@ -1,4 +1,5 @@
 #include "sim.hh"
+
 #include <cstdint>
 #include <sim/jobs/utils.hh>
 #include <sim/judging_config.hh>
@@ -47,12 +48,13 @@ void Sim::api_problems() {
     InplaceBuff<512> qwhere;
     qfields.append("SELECT p.id, p.created_at, p.type, p.name, p.label, p.owner_id, "
                    "u.username, s.full_status");
-    qwhere.append(" FROM problems p LEFT JOIN users u ON p.owner_id=u.id "
-                  "LEFT JOIN submissions s ON s.owner=",
-            (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id))
-                                 : "''"),
-            " AND s.problem_id=p.id AND s.problem_final=1 "
-            "WHERE TRUE"); // Needed to easily append constraints
+    qwhere.append(
+        " FROM problems p LEFT JOIN users u ON p.owner_id=u.id "
+        "LEFT JOIN submissions s ON s.owner=",
+        (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id)) : "''"),
+        " AND s.problem_id=p.id AND s.problem_final=1 "
+        "WHERE TRUE"
+    ); // Needed to easily append constraints
 
     enum ColumnIdx {
         PID,
@@ -67,7 +69,8 @@ void Sim::api_problems() {
     };
 
     auto overall_perms = sim::problems::get_overall_permissions(
-            session.has_value() ? std::optional{session->user_type} : std::nullopt);
+        session.has_value() ? std::optional{session->user_type} : std::nullopt
+    );
 
     // Choose problems to select
     if (not uint(overall_perms & OPERMS::VIEW_ALL)) {
@@ -76,16 +79,29 @@ void Sim::api_problems() {
             qwhere.append(" AND p.type=", EnumVal(Problem::Type::PUBLIC).to_int());
 
         } else if (session->user_type == User::Type::TEACHER) {
-            throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC) and
-                    uint(overall_perms & OPERMS::VIEW_WITH_TYPE_CONTEST_ONLY));
-            qwhere.append(" AND (p.type=", EnumVal(Problem::Type::PUBLIC).to_int(),
-                    " OR p.type=", EnumVal(Problem::Type::CONTEST_ONLY).to_int(),
-                    " OR p.owner_id=", session->user_id, ')');
+            throw_assert(
+                uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC) and
+                uint(overall_perms & OPERMS::VIEW_WITH_TYPE_CONTEST_ONLY)
+            );
+            qwhere.append(
+                " AND (p.type=",
+                EnumVal(Problem::Type::PUBLIC).to_int(),
+                " OR p.type=",
+                EnumVal(Problem::Type::CONTEST_ONLY).to_int(),
+                " OR p.owner_id=",
+                session->user_id,
+                ')'
+            );
 
         } else {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
-            qwhere.append(" AND (p.type=", EnumVal(Problem::Type::PUBLIC).to_int(),
-                    " OR p.owner_id=", session->user_id, ')');
+            qwhere.append(
+                " AND (p.type=",
+                EnumVal(Problem::Type::PUBLIC).to_int(),
+                " OR p.owner_id=",
+                session->user_id,
+                ')'
+            );
         }
     }
 
@@ -112,7 +128,8 @@ void Sim::api_problems() {
                 qwhere.append(" AND p.type=", EnumVal(Problem::Type::CONTEST_ONLY).to_int());
             } else {
                 return api_error400(
-                        intentional_unsafe_string_view(concat("Invalid problem type: ", arg_id)));
+                    intentional_unsafe_string_view(concat("Invalid problem type: ", arg_id))
+                );
             }
 
             mask |= PTYPE_COND;
@@ -135,8 +152,8 @@ void Sim::api_problems() {
         } else if (cond == 'u' and ~mask & USER_ID_COND) { // User (owner)
             // Prevent bypassing unset VIEW_OWNER permission
             if (not session.has_value() or
-                    (str2num<decltype(session->user_id)>(arg_id) != session->user_id and
-                            not uint(overall_perms & OPERMS::SELECT_BY_OWNER)))
+                (str2num<decltype(session->user_id)>(arg_id) != session->user_id and
+                 not uint(overall_perms & OPERMS::SELECT_BY_OWNER)))
             {
                 return api_error403("You have no permissions to select others' "
                                     "problems by their user id");
@@ -186,16 +203,17 @@ void Sim::api_problems() {
 
     while (res.next()) {
         EnumVal<Problem::Type> problem_type{
-                WONT_THROW(str2num<Problem::Type::UnderlyingType>(res[PTYPE]).value())};
+            WONT_THROW(str2num<Problem::Type::UnderlyingType>(res[PTYPE]).value())};
         auto problem_perms = sim::problems::get_permissions(
-                (session.has_value() ? std::optional{session->user_id} : std::nullopt),
-                (session.has_value() ? std::optional{session->user_type} : std::nullopt),
-                (res.is_null(OWNER_ID) ? std::nullopt
-                                       : decltype(Problem::owner_id)(WONT_THROW(
-                                                 str2num<decltype(Problem::owner_id)::value_type>(
-                                                         res[OWNER_ID])
-                                                         .value()))),
-                problem_type);
+            (session.has_value() ? std::optional{session->user_id} : std::nullopt),
+            (session.has_value() ? std::optional{session->user_type} : std::nullopt),
+            (res.is_null(OWNER_ID)
+                 ? std::nullopt
+                 : decltype(Problem::owner_id)(WONT_THROW(
+                       str2num<decltype(Problem::owner_id)::value_type>(res[OWNER_ID]).value()
+                   ))),
+            problem_type
+        );
         using PERMS = sim::problems::Permissions;
 
         // Id
@@ -326,11 +344,13 @@ void Sim::api_problems() {
         if (res.is_null(SFULL_STATUS)) {
             append(",null");
         } else {
-            append(",\"",
-                    css_color_class(EnumVal<Submission::Status>(WONT_THROW(
-                            str2num<Submission::Status::UnderlyingType>(res[SFULL_STATUS])
-                                    .value()))),
-                    "\"");
+            append(
+                ",\"",
+                css_color_class(EnumVal<Submission::Status>(WONT_THROW(
+                    str2num<Submission::Status::UnderlyingType>(res[SFULL_STATUS]).value()
+                ))),
+                "\""
+            );
         }
 
         // Append simfile and memory limit
@@ -338,8 +358,12 @@ void Sim::api_problems() {
             ConfigFile cf;
             cf.add_vars("memory_limit");
             cf.load_config_from_string(res[SIMFILE].to_string());
-            append(',', json_stringify(res[SIMFILE]), // simfile
-                    ',', json_stringify(cf.get_var("memory_limit").as_string()));
+            append(
+                ',',
+                json_stringify(res[SIMFILE]), // simfile
+                ',',
+                json_stringify(cf.get_var("memory_limit").as_string())
+            );
         }
 
         append(']');
@@ -352,7 +376,8 @@ void Sim::api_problem() {
     STACK_UNWINDING_MARK;
 
     auto overall_perms = sim::problems::get_overall_permissions(
-            session.has_value() ? std::optional{session->user_type} : std::nullopt);
+        session.has_value() ? std::optional{session->user_type} : std::nullopt
+    );
 
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg == "add") {
@@ -373,15 +398,18 @@ void Sim::api_problem() {
                               "FROM problems WHERE id=?");
     stmt.bind_and_execute(problems_pid);
     stmt.res_bind_all(
-            problems_file_id, problem_owner_id, problem_type, problem_label, problem_simfile);
+        problems_file_id, problem_owner_id, problem_type, problem_label, problem_simfile
+    );
     if (not stmt.next()) {
         return api_error404();
     }
 
     auto problem_perms = sim::problems::get_permissions(
-            (session.has_value() ? std::optional{session->user_id} : std::nullopt),
-            (session.has_value() ? std::optional{session->user_type} : std::nullopt),
-            problem_owner_id, problem_type);
+        (session.has_value() ? std::optional{session->user_id} : std::nullopt),
+        (session.has_value() ? std::optional{session->user_type} : std::nullopt),
+        problem_owner_id,
+        problem_type
+    );
 
     next_arg = url_args.extract_next_arg();
     if (next_arg == "statement") {
@@ -433,11 +461,14 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 
     form_validate(name, "name", "Problem's name", decltype(Problem::name)::max_len);
     form_validate(label, "label", "Problem's label", decltype(Problem::label)::max_len);
-    form_validate(memory_limit, "mem_limit", "Memory limit",
-            is_digit_not_greater_than<(std::numeric_limits<uint64_t>::max() >> 20)>);
+    form_validate(memory_limit, "mem_limit", "Memory limit", is_digit_not_greater_than<(std::numeric_limits<uint64_t>::max() >> 20)>);
     form_validate_file_path_not_blank(package_file, "package", "Zipped package");
-    form_validate(global_time_limit, "global_time_limit", "Global time limit",
-            is_real); // TODO: add length limit
+    form_validate(
+        global_time_limit,
+        "global_time_limit",
+        "Global time limit",
+        is_real
+    ); // TODO: add length limit
 
     using std::chrono::duration;
     using std::chrono::duration_cast;
@@ -446,11 +477,15 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     // Convert global_time_limit
     decltype(sim::jobs::AddProblemInfo::global_time_limit) gtl;
     if (not global_time_limit.empty()) {
-        gtl = duration_cast<nanoseconds>(
-                duration<double>(strtod(global_time_limit.c_str(), nullptr)));
+        gtl = duration_cast<nanoseconds>(duration<double>(strtod(global_time_limit.c_str(), nullptr)
+        ));
         if (gtl.value() < sim::MIN_TIME_LIMIT) {
-            add_notification("error", "Global time limit cannot be lower than ",
-                    to_string(sim::MIN_TIME_LIMIT), " s");
+            add_notification(
+                "error",
+                "Global time limit cannot be lower than ",
+                to_string(sim::MIN_TIME_LIMIT),
+                " s"
+            );
         }
     }
 
@@ -477,8 +512,16 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
         return api_error400(notifications);
     }
 
-    sim::jobs::AddProblemInfo ap_info{name.to_string(), label.to_string(), mem_limit, gtl,
-            reset_time_limits, ignore_simfile, seek_for_new_tests, reset_scoring, ptype};
+    sim::jobs::AddProblemInfo ap_info{
+        name.to_string(),
+        label.to_string(),
+        mem_limit,
+        gtl,
+        reset_time_limits,
+        ignore_simfile,
+        seek_for_new_tests,
+        reset_scoring,
+        ptype};
 
     auto transaction = mysql.start_transaction();
     mysql.update("INSERT INTO internal_files VALUES()");
@@ -491,13 +534,21 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     }
 
     decltype(Job::type) jtype =
-            (reuploading ? Job::Type::REUPLOAD_PROBLEM : Job::Type::ADD_PROBLEM);
-    mysql.prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
-                  " aux_id, info, data) "
-                  "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
-            .bind_and_execute(job_file_id, session->user_id, default_priority(jtype), jtype,
-                    EnumVal(Job::Status::PENDING), mysql_date(),
-                    (reuploading ? std::optional(problems_pid) : std::nullopt), ap_info.dump());
+        (reuploading ? Job::Type::REUPLOAD_PROBLEM : Job::Type::ADD_PROBLEM);
+    mysql
+        .prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
+                 " aux_id, info, data) "
+                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
+        .bind_and_execute(
+            job_file_id,
+            session->user_id,
+            default_priority(jtype),
+            jtype,
+            EnumVal(Job::Status::PENDING),
+            mysql_date(),
+            (reuploading ? std::optional(problems_pid) : std::nullopt),
+            ap_info.dump()
+        );
 
     auto job_id = mysql.insert_id(); // Has to be retrieved before commit
 
@@ -519,7 +570,8 @@ void Sim::api_problem_add(sim::problems::OverallPermissions overall_perms) {
 }
 
 void Sim::api_statement_impl(
-        uint64_t problem_file_id, StringView problem_label, StringView simfile) {
+    uint64_t problem_file_id, StringView problem_label, StringView simfile
+) {
     STACK_UNWINDING_MARK;
 
     ConfigFile cf;
@@ -536,17 +588,20 @@ void Sim::api_statement_impl(
         resp.headers["Content-type"] = "text/markdown; charset=utf-8";
     }
 
-    resp.headers["Content-Disposition"] = concat_tostr("inline; filename=",
-            ::http::quote(intentional_unsafe_string_view(concat(problem_label, ext))));
+    resp.headers["Content-Disposition"] = concat_tostr(
+        "inline; filename=",
+        ::http::quote(intentional_unsafe_string_view(concat(problem_label, ext)))
+    );
 
     // TODO: maybe add some cache system for the statements?
     ZipFile zip(sim::internal_files::path_of(problem_file_id), ZIP_RDONLY);
     resp.content =
-            zip.extract_to_str(zip.get_index(concat(sim::zip_package_main_dir(zip), statement)));
+        zip.extract_to_str(zip.get_index(concat(sim::zip_package_main_dir(zip), statement)));
 }
 
 void Sim::api_problem_statement(
-        StringView problem_label, StringView simfile, sim::problems::Permissions perms) {
+    StringView problem_label, StringView simfile, sim::problems::Permissions perms
+) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::problems::Permissions::VIEW_STATEMENT)) {
@@ -564,7 +619,7 @@ void Sim::api_problem_download(StringView problem_label, sim::problems::Permissi
     }
 
     resp.headers["Content-Disposition"] =
-            concat_tostr("attachment; filename=", problem_label, ".zip");
+        concat_tostr("attachment; filename=", problem_label, ".zip");
     resp.content_type = http::Response::FILE;
     resp.content = sim::internal_files::path_of(problems_file_id);
 }
@@ -576,14 +631,20 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
         return api_error403();
     }
 
-    mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
-                  " info, data) "
-                  "SELECT ?, ?, ?, ?, ?, id, ?, '' "
-                  "FROM submissions WHERE problem_id=? ORDER BY id")
-            .bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-                    default_priority(Job::Type::REJUDGE_SUBMISSION),
-                    EnumVal(Job::Type::REJUDGE_SUBMISSION), mysql_date(),
-                    sim::jobs::dump_string(problems_pid), problems_pid);
+    mysql
+        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+                 " info, data) "
+                 "SELECT ?, ?, ?, ?, ?, id, ?, '' "
+                 "FROM submissions WHERE problem_id=? ORDER BY id")
+        .bind_and_execute(
+            session->user_id,
+            EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::REJUDGE_SUBMISSION),
+            EnumVal(Job::Type::REJUDGE_SUBMISSION),
+            mysql_date(),
+            sim::jobs::dump_string(problems_pid),
+            problems_pid
+        );
 
     sim::jobs::notify_job_server();
 }
@@ -595,13 +656,18 @@ void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
         return api_error403();
     }
 
-    mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
-                  " info, data) "
-                  "VALUES(?, ?, ?, ?, ?, ?, '', '')")
-            .bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-                    default_priority(Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-                    EnumVal(Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-                    mysql_date(), problems_pid);
+    mysql
+        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+                 " info, data) "
+                 "VALUES(?, ?, ?, ?, ?, ?, '', '')")
+        .bind_and_execute(
+            session->user_id,
+            EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+            EnumVal(Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+            mysql_date(),
+            problems_pid
+        );
 
     sim::jobs::notify_job_server();
     append(mysql.insert_id());
@@ -619,12 +685,18 @@ void Sim::api_problem_delete(sim::problems::Permissions perms) {
     }
 
     // Queue deleting job
-    mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
-                  " info, data) "
-                  "VALUES(?, ?, ?, ?, ?, ?, '', '')")
-            .bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-                    default_priority(Job::Type::DELETE_PROBLEM), EnumVal(Job::Type::DELETE_PROBLEM),
-                    mysql_date(), problems_pid);
+    mysql
+        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+                 " info, data) "
+                 "VALUES(?, ?, ?, ?, ?, ?, '', '')")
+        .bind_and_execute(
+            session->user_id,
+            EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::DELETE_PROBLEM),
+            EnumVal(Job::Type::DELETE_PROBLEM),
+            mysql_date(),
+            problems_pid
+        );
 
     sim::jobs::notify_job_server();
     append(mysql.insert_id());
@@ -639,10 +711,8 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
 
     InplaceBuff<32> target_problem_id;
     bool rejudge_transferred_submissions =
-            request.form_fields.contains("rejudge_transferred_submissions");
-    form_validate_not_blank(target_problem_id, "target_problem", "Target problem ID",
-            is_digit_not_greater_than<std::numeric_limits<
-                    decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>::max()>);
+        request.form_fields.contains("rejudge_transferred_submissions");
+    form_validate_not_blank(target_problem_id, "target_problem", "Target problem ID", is_digit_not_greater_than<std::numeric_limits<decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>::max()>);
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -652,9 +722,12 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
         return api_error400("You cannot merge problem with itself");
     }
 
-    auto tp_perms_opt = sim::problems::get_permissions(mysql, target_problem_id,
-            (session.has_value() ? std::optional{session->user_id} : std::nullopt),
-            (session.has_value() ? std::optional{session->user_type} : std::nullopt));
+    auto tp_perms_opt = sim::problems::get_permissions(
+        mysql,
+        target_problem_id,
+        (session.has_value() ? std::optional{session->user_id} : std::nullopt),
+        (session.has_value() ? std::optional{session->user_type} : std::nullopt)
+    );
     if (not tp_perms_opt) {
         return api_error400("Target problem does not exist");
     }
@@ -669,19 +742,26 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
     }
 
     // Queue merging job
-    mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
-                  " info, data) "
-                  "VALUES(?, ?, ?, ?, ?, ?, ?, '')")
-            .bind_and_execute(session->user_id, EnumVal(Job::Status::PENDING),
-                    default_priority(Job::Type::MERGE_PROBLEMS), EnumVal(Job::Type::MERGE_PROBLEMS),
-                    mysql_date(), problems_pid,
-                    sim::jobs::MergeProblemsInfo(
-                            WONT_THROW(str2num<
-                                       decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>(
-                                    target_problem_id)
-                                               .value()),
-                            rejudge_transferred_submissions)
-                            .dump());
+    mysql
+        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+                 " info, data) "
+                 "VALUES(?, ?, ?, ?, ?, ?, ?, '')")
+        .bind_and_execute(
+            session->user_id,
+            EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::MERGE_PROBLEMS),
+            EnumVal(Job::Type::MERGE_PROBLEMS),
+            mysql_date(),
+            problems_pid,
+            sim::jobs::MergeProblemsInfo(
+                WONT_THROW(str2num<decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>(
+                               target_problem_id
+                )
+                               .value()),
+                rejudge_transferred_submissions
+            )
+                .dump()
+        );
 
     sim::jobs::notify_job_server();
     append(mysql.insert_id());
@@ -719,9 +799,11 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
             return api_error400(notifications);
         }
 
-        if (uint(~perms &
-                    (hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
-                            : sim::problems::Permissions::EDIT_TAGS)))
+        if (uint(
+                ~perms &
+                (hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
+                        : sim::problems::Permissions::EDIT_TAGS)
+            ))
         {
             return api_error403();
         }
@@ -742,14 +824,17 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
         StringView old_name;
         form_validate_not_blank(name, "name", "Tag name", decltype(ProblemTag::name)::max_len);
         form_validate_not_blank(
-                old_name, "old_name", "Old tag name", decltype(ProblemTag::name)::max_len);
+            old_name, "old_name", "Old tag name", decltype(ProblemTag::name)::max_len
+        );
         if (notifications.size) {
             return api_error400(notifications);
         }
 
-        if (uint(~perms &
-                    (is_hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
-                               : sim::problems::Permissions::EDIT_TAGS)))
+        if (uint(
+                ~perms &
+                (is_hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
+                           : sim::problems::Permissions::EDIT_TAGS)
+            ))
         {
             return api_error403();
         }
@@ -784,16 +869,19 @@ void Sim::api_problem_edit_tags(sim::problems::Permissions perms) {
             return api_error400(notifications);
         }
 
-        if (uint(~perms &
-                    (is_hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
-                               : sim::problems::Permissions::EDIT_TAGS)))
+        if (uint(
+                ~perms &
+                (is_hidden ? sim::problems::Permissions::EDIT_HIDDEN_TAGS
+                           : sim::problems::Permissions::EDIT_TAGS)
+            ))
         {
             return api_error403();
         }
 
-        mysql.prepare("DELETE FROM problem_tags "
-                      "WHERE problem_id=? AND name=? AND is_hidden=?")
-                .bind_and_execute(problems_pid, name, is_hidden);
+        mysql
+            .prepare("DELETE FROM problem_tags "
+                     "WHERE problem_id=? AND name=? AND is_hidden=?")
+            .bind_and_execute(problems_pid, name, is_hidden);
     };
 
     StringView next_arg = url_args.extract_next_arg();
@@ -822,9 +910,14 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
     form_validate_file_path_not_blank(statement_file, "statement", "New statement");
 
     if (get_file_size(statement_file) > Problem::new_statement_max_size) {
-        add_notification("error", "New statement file is too big (maximum allowed size: ",
-                Problem::new_statement_max_size,
-                " bytes = ", humanize_file_size(Problem::new_statement_max_size), ')');
+        add_notification(
+            "error",
+            "New statement file is too big (maximum allowed size: ",
+            Problem::new_statement_max_size,
+            " bytes = ",
+            humanize_file_size(Problem::new_statement_max_size),
+            ')'
+        );
     }
 
     if (notifications.size) {
@@ -843,13 +936,20 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
         THROW("move()", errmsg());
     }
 
-    mysql.prepare("INSERT jobs (file_id, creator, status, priority, type,"
-                  " added, aux_id, info, data) "
-                  "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
-            .bind_and_execute(job_file_id, session->user_id, EnumVal(Job::Status::PENDING),
-                    default_priority(Job::Type::CHANGE_PROBLEM_STATEMENT),
-                    EnumVal(Job::Type::CHANGE_PROBLEM_STATEMENT), mysql_date(), problems_pid,
-                    cps_info.dump());
+    mysql
+        .prepare("INSERT jobs (file_id, creator, status, priority, type,"
+                 " added, aux_id, info, data) "
+                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
+        .bind_and_execute(
+            job_file_id,
+            session->user_id,
+            EnumVal(Job::Status::PENDING),
+            default_priority(Job::Type::CHANGE_PROBLEM_STATEMENT),
+            EnumVal(Job::Type::CHANGE_PROBLEM_STATEMENT),
+            mysql_date(),
+            problems_pid,
+            cps_info.dump()
+        );
 
     auto job_id = mysql.insert_id(); // Has to be retrieved before commit
 
@@ -872,12 +972,14 @@ void Sim::api_problem_attaching_contest_problems(sim::problems::Permissions perm
     auto transaction = mysql.start_transaction();
 
     InplaceBuff<512> query;
-    query.append("SELECT c.id, c.name, r.id, r.name, p.id, p.name "
-                 "FROM contest_problems p "
-                 "STRAIGHT_JOIN contests c ON c.id=p.contest_id "
-                 "STRAIGHT_JOIN contest_rounds r ON r.id=p.contest_round_id "
-                 "WHERE p.problem_id=",
-            problems_pid);
+    query.append(
+        "SELECT c.id, c.name, r.id, r.name, p.id, p.name "
+        "FROM contest_problems p "
+        "STRAIGHT_JOIN contests c ON c.id=p.contest_id "
+        "STRAIGHT_JOIN contest_rounds r ON r.id=p.contest_round_id "
+        "WHERE p.problem_id=",
+        problems_pid
+    );
 
     enum ColumnIdx { CID, CNAME, CRID, CRNAME, CPID, CPNAME };
 
@@ -885,7 +987,8 @@ void Sim::api_problem_attaching_contest_problems(sim::problems::Permissions perm
     auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
     StringView next_arg = url_args.extract_next_arg();
     for (bool id_condition_occurred = false; !next_arg.empty();
-            next_arg = url_args.extract_next_arg()) {
+         next_arg = url_args.extract_next_arg())
+    {
         auto arg = decode_uri(next_arg);
         char cond = arg[0];
         StringView arg_id = StringView{arg}.substr(1);
@@ -926,8 +1029,21 @@ void Sim::api_problem_attaching_contest_problems(sim::problems::Permissions perm
     // clang-format on
 
     while (res.next()) {
-        append(",\n[", res[CID], ",", json_stringify(res[CNAME]), ",", res[CRID], ",",
-                json_stringify(res[CRNAME]), ",", res[CPID], ",", json_stringify(res[CPNAME]), "]");
+        append(
+            ",\n[",
+            res[CID],
+            ",",
+            json_stringify(res[CNAME]),
+            ",",
+            res[CRID],
+            ",",
+            json_stringify(res[CRNAME]),
+            ",",
+            res[CPID],
+            ",",
+            json_stringify(res[CPNAME]),
+            "]"
+        );
     }
 
     append("\n]");
