@@ -376,7 +376,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 				bounded_progress_elem.max = e.total;
 				progress_info_elem.innerText =
 					'Sent ' + humanize_file_size(e.loaded) + ' out of ' + humanize_file_size(e.total) +
-					' = ' + (100 * e.loaded / e.total).toFixed(2) + '%';
+					' = ' + (Math.floor(10000 * e.loaded / e.total) / 100).toFixed(2) + '%';
 			} else {
 				bounded_progress_elem.style.display = 'none';
 				unbounded_progress_elem.style.display = '';
