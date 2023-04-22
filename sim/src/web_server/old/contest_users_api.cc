@@ -211,9 +211,7 @@ void Sim::api_contest_users() {
                 } else if (arg_id == "C") {
                     qwhere.append(" AND cu.mode=", EnumVal(ContestUser::Mode::CONTESTANT).to_int());
                 } else {
-                    return api_error400(
-                        intentional_unsafe_string_view(concat("Invalid user mode: ", arg_id))
-                    );
+                    return api_error400(from_unsafe{concat("Invalid user mode: ", arg_id)});
                 }
 
                 // NOLINTNEXTLINE(bugprone-branch-clone)

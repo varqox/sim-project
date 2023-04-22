@@ -2,7 +2,6 @@
 #include <sim/jobs/job.hh>
 #include <sim/mysql/mysql.hh>
 #include <simlib/concat_tostr.hh>
-#include <simlib/debug.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/path.hh>
@@ -49,9 +48,9 @@ int main2(int argc, char** argv) {
     mysql_cnf_guard.reset(MYSQL_CNF);
     write_all_throw(
         fd,
-        intentional_unsafe_string_view(concat(
+        from_unsafe{concat(
             "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd, "\"\n"
-        ))
+        )}
     );
 
     auto run_command = [](vector<string> args) {

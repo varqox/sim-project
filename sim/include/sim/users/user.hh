@@ -6,7 +6,7 @@
 #include <sim/sql_fields/satisfying_predicate.hh>
 #include <sim/sql_fields/varbinary.hh>
 #include <simlib/enum_val.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
 
 namespace sim::users {
 

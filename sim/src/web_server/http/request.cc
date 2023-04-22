@@ -1,7 +1,7 @@
 #include "request.hh"
 
-#include <simlib/debug.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/macros/stack_unwinding.hh>
 
 using std::string;
 

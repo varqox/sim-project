@@ -1,5 +1,6 @@
 #pragma once
 
+#include <simlib/file_path.hh>
 #include <simlib/mysql/mysql.hh>
 
 namespace sim::mysql {

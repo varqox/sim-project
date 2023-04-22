@@ -2,6 +2,7 @@
 
 #include <sim/judging_config.hh>
 #include <simlib/enum_val.hh>
+#include <simlib/throw_assert.hh>
 
 using sim::submissions::Submission;
 

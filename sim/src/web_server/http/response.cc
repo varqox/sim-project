@@ -1,5 +1,6 @@
 #include "response.hh"
 
+#include <simlib/concat_tostr.hh>
 #include <simlib/time.hh>
 
 namespace web_server::http {

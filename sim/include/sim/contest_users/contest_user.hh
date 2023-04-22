@@ -5,7 +5,7 @@
 #include <sim/primary_key.hh>
 #include <sim/users/user.hh>
 #include <simlib/enum_val.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
 
 namespace sim::contest_users {
 

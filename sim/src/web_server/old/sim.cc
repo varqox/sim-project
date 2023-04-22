@@ -3,6 +3,7 @@
 #include "sim.hh"
 
 #include <memory>
+#include <simlib/macros/debug.hh>
 #include <simlib/mysql/mysql.hh>
 #include <simlib/path.hh>
 #include <simlib/random.hh>
@@ -167,9 +168,8 @@ void Sim::static_file() {
 
     string file_path = concat_tostr(
         "static",
-        path_absolute(intentional_unsafe_string_view(
-            decode_uri(substring(request.target, 1, request.target.find('?')))
-        ))
+        path_absolute(from_unsafe{
+            decode_uri(substring(request.target, 1, request.target.find('?')))})
     );
     // Extract path (ignore query)
     D(stdlog(file_path);)

@@ -148,7 +148,7 @@ void Sim::users_user() {
 
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg.empty()) {
-        page_template(intentional_unsafe_string_view(concat("User ", users_uid)));
+        page_template(from_unsafe{concat("User ", users_uid)});
         append("view_user(false, ", users_uid, ", window.location.hash);");
 
     } else {

@@ -26,35 +26,31 @@ void Sim::problems_problem() {
 
     StringView next_arg = url_args.extract_next_arg();
     if (next_arg.empty()) {
-        page_template(intentional_unsafe_string_view(concat("Problem ", problems_pid)));
+        page_template(from_unsafe{concat("Problem ", problems_pid)});
         append("view_problem(false, ", problems_pid, ", window.location.hash);");
 
     } else if (next_arg == "submit") {
-        page_template(
-            intentional_unsafe_string_view(concat("Submit solution to the problem ", problems_pid))
-        );
+        page_template(from_unsafe{concat("Submit solution to the problem ", problems_pid)});
         append("add_problem_submission(false, {id:", problems_pid, "})");
 
     } else if (next_arg == "edit") {
-        page_template(intentional_unsafe_string_view(concat("Edit problem ", problems_pid)));
+        page_template(from_unsafe{concat("Edit problem ", problems_pid)});
         append("edit_problem(false, ", problems_pid, ", window.location.hash);");
 
     } else if (next_arg == "reupload") {
-        page_template(intentional_unsafe_string_view(concat("Reupload problem ", problems_pid)));
+        page_template(from_unsafe{concat("Reupload problem ", problems_pid)});
         append("reupload_problem(false, ", problems_pid, ");");
 
     } else if (next_arg == "reset_time_limits") {
-        page_template(
-            intentional_unsafe_string_view(concat("Reset problem time limits ", problems_pid))
-        );
+        page_template(from_unsafe{concat("Reset problem time limits ", problems_pid)});
         append("reset_problem_time_limits(false, ", problems_pid, ");");
 
     } else if (next_arg == "delete") {
-        page_template(intentional_unsafe_string_view(concat("Delete problem ", problems_pid)));
+        page_template(from_unsafe{concat("Delete problem ", problems_pid)});
         append("delete_problem(false, ", problems_pid, ");");
 
     } else if (next_arg == "merge") {
-        page_template(intentional_unsafe_string_view(concat("Merge problem ", problems_pid)));
+        page_template(from_unsafe{concat("Merge problem ", problems_pid)});
         append("merge_problem(false, ", problems_pid, ");");
 
     } else {

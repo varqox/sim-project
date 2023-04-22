@@ -81,7 +81,7 @@ void Sim::submissions_handle() {
 
     StringView next_arg = url_args.extract_next_arg();
     if (is_digit(next_arg)) { // View submission
-        page_template(intentional_unsafe_string_view(concat("Submission ", next_arg)));
+        page_template(from_unsafe{concat("Submission ", next_arg)});
         append("view_submission(false, ", next_arg, ", window.location.hash);");
 
     } else if (next_arg.empty()) { // List submissions

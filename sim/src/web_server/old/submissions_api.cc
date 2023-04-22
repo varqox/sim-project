@@ -13,6 +13,7 @@
 #include <simlib/file_contents.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/humanize.hh>
 #include <simlib/process.hh>
 #include <simlib/string_view.hh>
@@ -241,9 +242,7 @@ void Sim::api_submissions() {
                         " AND s.type=", EnumVal(Submission::Type::PROBLEM_SOLUTION).to_int()
                     );
                 } else {
-                    return api_error400(
-                        intentional_unsafe_string_view(concat("Invalid submission type: ", arg_id))
-                    );
+                    return api_error400(from_unsafe{concat("Invalid submission type: ", arg_id)});
                 }
 
                 // NOLINTNEXTLINE(bugprone-branch-clone)
@@ -423,9 +422,7 @@ void Sim::api_submissions() {
     }
 
     // Execute query
-    auto res = mysql.query(intentional_unsafe_string_view(
-        concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT ", rows_limit)
-    ));
+    auto res = mysql.query(qfields, qwhere, " ORDER BY s.id DESC LIMIT ", rows_limit);
 
     append_column_names();
 
@@ -989,9 +986,8 @@ void Sim::api_submission_source() {
         return api_error403();
     }
 
-    append(cpp_syntax_highlighter(intentional_unsafe_cstring_view(
-        get_file_contents(sim::internal_files::path_of(submissions_file_id))
-    )));
+    append(cpp_syntax_highlighter(from_unsafe{
+        get_file_contents(sim::internal_files::path_of(submissions_file_id))}));
 }
 
 void Sim::api_submission_download() {

@@ -109,7 +109,7 @@ static void create_db_config(FilePath db_config_path) {
     FileDescriptor fd(db_config_path, O_CREAT | O_TRUNC | O_WRONLY, S_0600);
     write_all_throw(
         fd,
-        intentional_unsafe_string_view(concat(
+        from_unsafe{concat(
             "user: ",
             ConfigFile::escape_string(user),
             "\npassword: ",
@@ -119,7 +119,7 @@ static void create_db_config(FilePath db_config_path) {
             "\nhost: ",
             ConfigFile::escape_string(host),
             '\n'
-        ))
+        )}
     );
 }
 

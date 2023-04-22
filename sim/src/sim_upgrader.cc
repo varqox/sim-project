@@ -61,9 +61,9 @@ static void update_db_schema(Func&& prepare_database) {
     OpenedTemporaryFile mysql_cnf("/tmp/sim-upgrade-mysql-cnf.XXXXXX");
     write_all_throw(
         mysql_cnf,
-        intentional_unsafe_string_view(concat(
+        from_unsafe{concat(
             "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd, "\"\n"
-        ))
+        )}
     );
 
     static constexpr auto backup_table_suffix = "_bkp";
@@ -208,14 +208,14 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
         if (argv[i][0] == '-') {
             if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help")) { // Help
                 print_help(argv[0]); // argv[0] is valid (argc > 1)
-                exit(0);
+                _exit(0);
 
             } else if (0 == strcmp(argv[i], "-q") or 0 == strcmp(argv[i], "--quiet"))
             { // Quiet mode
                 stdlog.open("/dev/null");
 
             } else { // Unknown
-                eprintf("Unknown option: '%s'\n", argv[i]);
+                (void)fprintf(stderr, "Unknown option: '%s'\n", argv[i]);
             }
 
         } else {

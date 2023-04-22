@@ -7,7 +7,7 @@
 #include <sim/sql_fields/datetime.hh>
 #include <sim/sql_fields/varbinary.hh>
 #include <sim/users/user.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
 
 namespace sim::problems {
 

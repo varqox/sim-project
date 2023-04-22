@@ -200,9 +200,8 @@ public:
                 switch (jtype) {
                 case JT::JUDGE_SUBMISSION:
                 case JT::REJUDGE_SUBMISSION: {
-                    auto opt = str2num<uint64_t>(
-                        intentional_unsafe_string_view(sim::jobs::extract_dumped_string(info))
-                    );
+                    auto opt =
+                        str2num<uint64_t>(from_unsafe{sim::jobs::extract_dumped_string(info)});
                     if (not opt) {
                         THROW("Corrupted job's info field");
                     }
@@ -775,9 +774,7 @@ static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-va
             }
 
             sim::jobs::restart_job(
-                job_server::mysql,
-                intentional_unsafe_string_view(to_string(winfo.next_job.id)),
-                false
+                job_server::mysql, from_unsafe{to_string(winfo.next_job.id)}, false
             );
         }
 
@@ -795,9 +792,7 @@ static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-va
             }
 
             sim::jobs::restart_job(
-                job_server::mysql,
-                intentional_unsafe_string_view(to_string(winfo.next_job.id)),
-                false
+                job_server::mysql, from_unsafe{to_string(winfo.next_job.id)}, false
             );
         }
 
@@ -1124,11 +1119,7 @@ static void clean_up_db() {
         stmt.res_bind_all(job_id, job_type, job_info);
         while (stmt.next()) {
             sim::jobs::restart_job(
-                job_server::mysql,
-                intentional_unsafe_string_view(to_string(job_id)),
-                job_type,
-                job_info,
-                false
+                job_server::mysql, from_unsafe{to_string(job_id)}, job_type, job_info, false
             );
         }
 

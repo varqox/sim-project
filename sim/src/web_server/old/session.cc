@@ -4,7 +4,6 @@
 #include <optional>
 #include <sim/random.hh>
 #include <sim/sessions/session.hh>
-#include <simlib/debug.hh>
 #include <simlib/time.hh>
 
 using sim::sessions::Session;

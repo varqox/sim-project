@@ -14,7 +14,8 @@
 #include <sim/sql_fields/varbinary.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/enum_val.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
+#include <simlib/macros/stringify.hh>
 #include <simlib/random_bytes.hh>
 #include <simlib/ranges.hh>
 #include <simlib/result.hh>

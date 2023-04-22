@@ -3,6 +3,7 @@
 
 #include <sim/jobs/job.hh>
 #include <sim/users/user.hh>
+#include <simlib/time.hh>
 
 using sim::jobs::Job;
 using sim::users::User;

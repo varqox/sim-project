@@ -80,9 +80,7 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
                 s.contest_id = contests_.new_id(s.contest_id.value(), record_set.kind);
             }
 
-            record_set.add_record(
-                s, str_to_time_point(intentional_unsafe_cstring_view(s.submit_time.to_string()))
-            );
+            record_set.add_record(s, str_to_time_point(from_unsafe{s.submit_time.to_string()}));
         }
     }
 

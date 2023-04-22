@@ -9,10 +9,10 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <simlib/config_file.hh>
-#include <simlib/debug.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/process.hh>
 #include <simlib/time.hh>
+#include <simlib/time_format_conversions.hh>
 #include <simlib/working_directory.hh>
 #include <thread>
 

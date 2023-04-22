@@ -51,9 +51,7 @@ class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProble
 
             auto time =
                 (earliest_submit_time.has_value()
-                     ? str_to_time_point(
-                           intentional_unsafe_cstring_view(earliest_submit_time->to_string())
-                       )
+                     ? str_to_time_point(from_unsafe{earliest_submit_time->to_string()})
                      : curr_time);
             record_set.add_record(cp, time);
         }

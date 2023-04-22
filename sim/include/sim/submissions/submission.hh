@@ -11,7 +11,9 @@
 #include <sim/sql_fields/blob.hh>
 #include <sim/sql_fields/datetime.hh>
 #include <sim/users/user.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
+#include <simlib/meta/max.hh>
+#include <simlib/meta/min.hh>
 
 namespace sim::submissions {
 

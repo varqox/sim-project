@@ -68,8 +68,7 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
             }
 
             record_set.add_record(
-                prob,
-                str_to_time_point(intentional_unsafe_cstring_view(prob.created_at.to_string()))
+                prob, str_to_time_point(from_unsafe{prob.created_at.to_string()})
             );
         }
     }

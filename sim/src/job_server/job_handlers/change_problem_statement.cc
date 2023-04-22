@@ -1,8 +1,10 @@
 #include "../main.hh"
 #include "change_problem_statement.hh"
 
+#include <simlib/macros/wont_throw.hh>
 #include <simlib/path.hh>
 #include <simlib/sim/problem_package.hh>
+#include <simlib/time.hh>
 
 using sim::jobs::Job;
 
@@ -97,7 +99,7 @@ void ChangeProblemStatement::run() {
                  " WHERE id=?")
         .bind_and_execute(new_file_id, simfile_str, current_date, problem_id_);
 
-    job_done(intentional_unsafe_string_view(info_.dump()));
+    job_done(from_unsafe{info_.dump()});
 
     transaction.commit();
     new_pkg_remover.cancel();
