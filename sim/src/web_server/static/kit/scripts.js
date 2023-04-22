@@ -417,93 +417,69 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	xhr.send(init.body);
 }
 
-function Select(name, required) {
+function FormState(parent_state) {
 	if (this === window) {
-		throw new Error('Call as "new Select()", not "Select()"');
+		throw new Error('Call as "new FormState()", not "FormState()"');
 	}
 	const self = this;
-	const select_elem = document.createElement('select');
-	select_elem.name = name;
-	select_elem.required = required;
-	let selected_option_exists = false;
 
-	self.attach_to = (elem) => {
-		elem.appendChild(select_elem);
-	}
+	self.visible_input_files = 0;
+	self.parent = parent_state;
+	self.propagate_up = true;
 
-	self.add_option = (name, value, selected) => {
-		const option = select_elem.appendChild(elem_with_text('option', name));
-		option.value = value;
-		if (selected) {
-			option.selected = selected;
-			selected_option_exists = true;
-		} else if (!selected_option_exists) {
-			select_elem.value = '';
+	self.apply_delta_recursively = ({visible_input_files_delta}) => {
+		if (visible_input_files_delta === 0) {
+			return; // nothing to update
 		}
-		return option;
-	}
-
-	self.disable = () => {
-		select_elem.disabled = true;
+		let state = self;
+		while (state != null) {
+			state.visible_input_files += visible_input_files_delta;
+			if (!state.propagate_up) {
+				break;
+			}
+			state = state.parent;
+		}
 	}
 }
 
-/**
- * Default values in init: {
- *     css_classes: null, // no additional CSS classes
- *     response_type: 'json', // the same accepted values as in do_xhr_with_status()
- * }
- */
-function AjaxForm(title, destination_api_url, init) {
-	init ??= {};
-	init.css_classes ??= null;
-	init.response_type ??= 'json';
+function Form(title, destination_api_url, {
+	css_classes = null, // no additional CSS classes
+	response_type = 'json', // the same accepted values as in do_xhr_with_status()
+} = {}) {
 	if (this === window) {
-		throw new Error('Call as "new AjaxForm()", not "AjaxForm()"');
+		throw new Error('Call as "new Form()", not "Form()"');
 	}
 	const self = this;
-	const outer_div = elem_with_class('div', 'form-container' + (init.css_classes == null ? '' : ' ' + init.css_classes));
+	self.state = new FormState(null);
+
+	const outer_div = elem_with_class('div', 'form-container' + (css_classes == null ? '' : ' ' + css_classes));
 	outer_div.appendChild(elem_with_text('h1', title));
+	self.elem = outer_div.appendChild(document.createElement('form'));
 
-	const form_elem = outer_div.appendChild(document.createElement('form'));
+	set_common_form_fields_methods(self);
 
-	self.success_msg = 'Success';
-	self.success_handler = (response, ctx) => {
-		// Available functions:
-		// - ctx.show_status_success(msg)
-		// - ctx.keep_submit_button_disabled()
-		ctx.show_status_success(self.success_msg);
-	};
-
-	let show_upload_progress = false;
-	let leave_submit_button_disabled = false;
-	const password_inputs = [];
+	let leave_submit_button_disabled_after_submitting = false;
 	const submit_inputs = [];
 
-	form_elem.addEventListener('submit', (event) => {
+	self.elem.addEventListener('submit', (event) => {
 		event.preventDefault();
-		// Prepare form for sending
-		const form_data = new FormData(form_elem);
-		for (const elem of form_elem.querySelectorAll('[trim_before_send="true"]')) {
-			if (elem.name != null) {
-				form_data.set(elem.name, form_data.get(elem.name).trim());
-			}
-		}
+		// Prepare for sending
+		const form_data = new FormData(self.elem);
 		form_data.set('csrf_token', get_cookie('csrf_token')); // TODO: remove after backend refactor
 		// Send form
 		do_xhr_with_status('post', destination_api_url, {
 			body: form_data,
-			show_upload_progress: show_upload_progress,
-			response_type: init.response_type,
+			show_upload_progress: self.state.visible_input_files > 0,
+			response_type: response_type,
 			do_before_send: () => {
 				for (const input of submit_inputs) {
 					input.disabled = true;
 				}
 			},
 			onloadend: () => {
-				if (leave_submit_button_disabled) {
-					// Clear all password inputs
-					for (const input of password_inputs) {
+				if (leave_submit_button_disabled_after_submitting) {
+					// Clear all password inputs, even hidden in unselected options in a select elem
+					for (const input of self.elem.querySelectorAll('input[type="password"]')) {
 						input.value = '';
 					}
 				} else {
@@ -515,103 +491,239 @@ function AjaxForm(title, destination_api_url, init) {
 			extra_http_headers: {
 				'x-csrf-token': get_cookie('csrf_token'),
 			},
-		}, form_elem, (response, request_status) => {
-			self.success_handler.call(null, response, {
-				show_status_success: request_status.show_success.bind(request_status),
-				show_status_error: request_status.show_error.bind(request_status),
-				keep_submit_button_disabled: () => { leave_submit_button_disabled = true; },
-			});
+		}, self.elem, (response, request_status) => {
+			request_status.keep_submit_buttons_disabled = () => {
+				leave_submit_button_disabled_after_submitting = true;
+			}
+			self.success_handler.call(null, response, request_status);
 		});
 	});
 
-	self.attach_to = (elem) => {
-		elem.appendChild(outer_div);
+	self.success_msg = 'Success';
+	self.success_handler = (response, {
+		show_success/*(msg)*/,
+		show_error/*(msg)*/,
+		keep_submit_buttons_disabled/*()*/
+	}) => {
+		show_success(self.success_msg);
 	};
 
-	self.append = (...args) => {
-		form_elem.append(...args);
+	self.append_submit_button = (name, {css_classes = null} = {}) => {
+		const input = self.elem.appendChild(elem_with_class('input', 'btn' + (css_classes == null ? '' : ' ' + css_classes)));
+		input.type = 'submit';
+		input.value = name;
+		submit_inputs.push(input);
+		return input;
 	}
 
-	const append_field_group = (label) => {
-		const div = form_elem.appendChild(elem_with_class('div', 'field-group'));
+	self.attach_to = (elem) => {
+		elem.appendChild(outer_div);
+	}
+}
+
+function set_common_form_fields_methods(self) {
+	self.append = (...args) => {
+		self.elem.append(...args);
+	}
+
+	self.append_field_group = (label) => {
+		const div = self.elem.appendChild(elem_with_class('div', 'field-group'));
 		div.appendChild(elem_with_text('label', label));
 		return div;
 	}
 
-	self.append_input = (type, name, label, required) => {
-		const fg = append_field_group(label);
+	self.append_input = (type, name, label, {required = true, disabled = false} = {}) => {
+		const fg = self.append_field_group(label);
 		const input = fg.appendChild(document.createElement('input'));
 		input.type = type;
 		input.name = name;
 		input.required = required;
+		input.disabled = disabled;
 		return input;
-	};
+	}
 
-	self.append_input_text = (name, label, value, size, required, trim_before_send) => {
-		const input = self.append_input('text', name, label, required);
+	self.append_input_text = (name, label, value, size, {required = true, disabled = false, trim = false, placeholder = null} = {}) => {
+		const input = self.append_input('text', name, label, {required, disabled});
 		input.value = value;
 		input.size = size;
-		input.trim_before_send = trim_before_send;
+		if (trim) {
+			input.addEventListener('change', (event) => {
+				input.value = input.value.trim();
+			}, {passive: true});
+		}
+		if (placeholder != null) {
+			input.placeholder = placeholder;
+		}
 		return input;
-	};
+	}
 
-	self.append_input_email = (name, label, value, size, required, trim_before_send) => {
-		const input = self.append_input('email', name, label, required);
+	self.append_input_email = (name, label, value, size, {required = true, disabled = false, trim = false, placeholder = null} = {}) => {
+		const input = self.append_input('email', name, label, {required, disabled});
 		input.value = value;
 		input.size = size;
-		input.trim_before_send = trim_before_send;
+		if (trim) {
+			input.addEventListener('change', (event) => {
+				input.value = input.value.trim();
+			}, {passive: true});
+		}
+		if (placeholder != null) {
+			input.placeholder = placeholder;
+		}
 		return input;
-	};
+	}
 
-	self.append_input_password = (name, label, size, required) => {
-		const input = self.append_input('password', name, label, required);
+	self.append_input_password = (name, label, size, {required = true} = {}) => {
+		const input = self.append_input('password', name, label, {required});
 		input.size = size;
-		password_inputs.push(input);
 		return input;
-	};
+	}
 
-	self.append_input_file = (name, label, required) => {
-		show_upload_progress = true;
-		return self.append_input('file', name, label, required);
-	};
+	self.append_input_file = (name, label, {required = true, disabled = false} = {}) => {
+		self.state.apply_delta_recursively({visible_input_files_delta: 1});
+		return self.append_input('file', name, label, {required, disabled});
+	}
 
 	self.append_input_hidden = (name, value) => {
-		const input = form_elem.appendChild(document.createElement('input'));
+		const input = self.elem.appendChild(document.createElement('input'));
 		input.type = 'hidden';
 		input.name = name;
 		input.value = value;
 		return input;
-	};
+	}
 
-	self.append_select = (name, label, required) => {
-		const fg = append_field_group(label);
-		const select = new Select(name, required);
-		select.attach_to(fg);
-		return select;
-	};
+	self.append_select = (name, label, {required = true, disabled = false} = {}) => {
+		const fg = self.append_field_group(label);
+		return new Select(name, self.state, fg, {required, disabled});
+	}
 
-	self.append_checkbox = (name, label) => {
-		const fg = append_field_group(label);
-		const checkbox = fg.appendChild(document.createElement('input'));
-		checkbox.type = 'checkbox';
-		const hidden = fg.appendChild(document.createElement('input'));
-		hidden.type = 'hidden';
-		hidden.name = name;
-		hidden.value = false;
-		checkbox.addEventListener('change', () => {
-			hidden.value = checkbox.checked;
+	self.append_checkbox = (name, label, value) => {
+		const fg = self.append_field_group(label);
+		const input = fg.appendChild(document.createElement('input'));
+		input.type = 'checkbox';
+		input.checked = value;
+		const hidden = self.append_input_hidden(name, value);
+		input.addEventListener('change', () => {
+			hidden.value = input.checked;
 		}, {passive: true});
-		return checkbox;
-	};
-
-	self.append_submit_button = (name, css_classes) => {
-		const input = form_elem.appendChild(document.createElement('input'));
-		input.type = 'submit';
-		input.className = 'btn' + (css_classes == null ? '' : ' ' + css_classes);
-		input.value = name;
-		submit_inputs.push(input);
 		return input;
-	};
+	}
+}
+
+function Select(name, parent_state, field_group, {required = true, disabled = false} = {}) {
+	if (this === window) {
+		throw new Error('Call as "new Select()", not "Select()"');
+	}
+	const self = this;
+
+	const select_elem = field_group.appendChild(document.createElement('select'));
+	select_elem.name = name;
+	select_elem.required = required;
+	select_elem.disabled = disabled;
+
+	let selected_value = null;
+	let fieldset_options = new Map();
+	let activation_callbacks = new Map();
+
+	const selected_value_changed = (new_selected_value) => {
+		let visible_input_files_delta = 0;
+		if (fieldset_options.has(selected_value)) {
+			const old_fieldset = fieldset_options.get(selected_value);
+			old_fieldset.elem.disabled = true;
+			old_fieldset.elem.style.display = 'none';
+			visible_input_files_delta -= old_fieldset.state.visible_input_files;
+			old_fieldset.state.propagate_up = false;
+		}
+
+		selected_value = new_selected_value;
+		const activation_callback = activation_callbacks.get(new_selected_value);
+		if (activation_callback != null) {
+			activation_callback();
+		}
+
+		if (fieldset_options.has(new_selected_value)) {
+			const new_fieldset = fieldset_options.get(new_selected_value);
+			new_fieldset.elem.disabled = false;
+			new_fieldset.elem.style.display = '';
+			visible_input_files_delta += new_fieldset.state.visible_input_files;
+			new_fieldset.state.propagate_up = true;
+		}
+
+		parent_state.apply_delta_recursively({visible_input_files_delta});
+	}
+
+	select_elem.addEventListener('change', (event) => {
+		selected_value_changed(event.target.value);
+	}, {passive: true});
+
+	self.append_option = (value, label, {selected = false, on_activation = () => {}} = {}) => {
+		const option = select_elem.appendChild(elem_with_text('option', label));
+		option.value = value;
+		option.selected = selected;
+
+		if (activation_callbacks.has(value)) {
+			throw new Error(`Cannot add a duplicate option: ${value}`);
+		}
+		activation_callbacks.set(value, on_activation);
+
+		if (selected) {
+			if (selected_value != null) {
+				throw new Error('Cannot have two selected options at the same time!');
+			}
+			selected_value = value;
+		} else if (selected_value == null) {
+			// Need to reset it every time, because the browser selects the currently added option by default
+			select_elem.value = '';
+		}
+		return option;
+	}
+
+	self.append_fieldset_option = (value, label, {selected = false, on_activation = () => {}}, init_fieldset) => {
+		if (fieldset_options.has(value)) {
+			throw new Error(`Cannot add a duplicate option: ${value}`);
+		}
+		const option = self.append_option(value, label, {selected, on_activation});
+		const fieldset_elem = document.createElement('fieldset');
+		fieldset_elem.disabled = !selected;
+		fieldset_elem.style.display = selected ? '' : 'none';
+		field_group.parentNode.appendChild(fieldset_elem);
+
+		const fieldset = new Fieldset(fieldset_elem, parent_state);
+		fieldset.state.propagate_up = selected;
+		fieldset_options.set(value, fieldset);
+		init_fieldset(fieldset);
+
+		return option;
+	}
+
+	self.disable = () => {
+		select_elem.disabled = true;
+	}
+
+	self.disable_option = (value) => {
+		if (select_elem.value === value) {
+			select_elem.value = '';
+			selected_value_changed('');
+		}
+		const option = select_elem.querySelector(`:scope > option[value='${value}']`);
+		option.disabled = true;
+	}
+
+	self.enable_option = (value) => {
+		const option = select_elem.querySelector(`:scope > option[value='${value}']`);
+		option.disabled = false;
+	}
+}
+
+function Fieldset(fieldset_elem, parent_state) {
+	if (this === window) {
+		throw new Error('Call as "new Fieldset()", not "Fieldset()"');
+	}
+	const self = this;
+
+	self.state = new FormState(parent_state);
+	self.elem = fieldset_elem;
+
+	set_common_form_fields_methods(self);
 }
 
 function snake_case_to_user_string(snake_case_str) {
@@ -779,7 +891,7 @@ const History = (() => {
 		return id;
 	};
 
-	const get_view_elem = (view_id) => document.querySelector('*[view_id="' + view_id + '"');
+	const get_view_elem = (view_id) => document.querySelector(`[view_id="${view_id}"]`);
 	const get_current_view_elem = () => get_view_elem(history.state.view_id);
 
 	const hide_views_covering_elem = (view_elem) => {
@@ -1383,53 +1495,64 @@ function main_page() {
 
 async function add_user() {
 	const view = new View(url_users_add());
-	const form = new AjaxForm('Add user', url_api_users_add());
-	const select = form.append_select('type', 'Type', true);
+	const form = new Form('Add user', url_api_users_add());
+	const type = form.append_select('type', 'Type');
 	if (global_capabilities.users.add_admin) {
-		select.add_option('Admin', 'admin', false);
+		type.append_option('admin', 'Admin');
 	}
 	if (global_capabilities.users.add_teacher) {
-		select.add_option('Teacher', 'teacher', false);
+		type.append_option('teacher', 'Teacher');
 	}
 	if (global_capabilities.users.add_normal_user) {
-		select.add_option('Normal', 'normal', true);
+		type.append_option('normal', 'Normal', {selected: true});
 	}
 
-	form.append_input_text('username', 'Username', '', 24, true, true);
-	form.append_input_text('first_name', 'First name', '', 24, true, true);
-	form.append_input_text('last_name', 'Last name', '', 24, true, true);
-	form.append_input_email('email', 'Email', '', 24, true, true);
-	form.append_input_password('password', 'Password', 24, false);
-	form.append_input_password('password_repeated', 'Password (repeat)', 24, false);
-	form.append_submit_button('Add user', 'blue');
+	form.append_input_text('username', 'Username', '', 24, {trim: true});
+	form.append_input_text('first_name', 'First name', '', 24, {trim: true});
+	form.append_input_text('last_name', 'Last name', '', 24, {trim: true});
+	form.append_input_email('email', 'Email', '', 24, {trim: true});
+	form.append_input_password('password', 'Password', 24, {required: false});
+	form.append_input_password('password_repeated', 'Password (repeat)', 24, {required: false});
+	form.append_submit_button('Add user', {css_classes: 'blue'});
 	form.attach_to(view.content_elem);
-
 }
 
 async function edit_user(user_id) {
 	const view = new View(url_user_edit(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
-	const form = new AjaxForm('Edit user', url_api_user_edit(user.id));
+	const form = new Form('Edit user', url_api_user_edit(user.id));
 
-	const select = form.append_select('type', 'Type', true);
+	const type = form.append_select('type', 'Type');
 	if (!user.capabilities.change_type) {
-		select.disable();
+		type.disable();
 	}
 	if (user.capabilities.make_admin || user.type === 'admin') {
-		select.add_option('Admin', 'admin', user.type === 'admin');
+		type.append_option('admin', 'Admin', {selected: user.type === 'admin'});
 	}
 	if (user.capabilities.make_teacher || user.type === 'teacher') {
-		select.add_option('Teacher', 'teacher', user.type === 'teacher');
+		type.append_option('teacher', 'Teacher', {selected: user.type === 'teacher'});
 	}
 	if (user.capabilities.make_normal || user.type === 'normal') {
-		select.add_option('Normal', 'normal', user.type === 'normal');
+		type.append_option('normal', 'Normal', {selected: user.type === 'normal'});
 	}
 
-	form.append_input_text('username', 'Username', user.username, 24, true, true).disabled = !user.capabilities.edit_username;
-	form.append_input_text('first_name', 'First name', user.first_name, 24, true, true).disabled = !user.capabilities.edit_first_name;
-	form.append_input_text('last_name', 'Last name', user.last_name, 24, true, true).disabled = !user.capabilities.edit_last_name;
-	form.append_input_email('email', 'Email', user.email, 24, true, true).disabled = !user.capabilities.edit_email;
-	form.append_submit_button('Update', 'blue');
+	form.append_input_text('username', 'Username', user.username, 24, {
+		disabled: !user.capabilities.edit_username,
+		trim: true
+	});
+	form.append_input_text('first_name', 'First name', user.first_name, 24, {
+		disabled: !user.capabilities.edit_first_name,
+		trim: true
+	});
+	form.append_input_text('last_name', 'Last name', user.last_name, 24, {
+		disabled: !user.capabilities.edit_last_name,
+		trim: true
+	});
+	form.append_input_email('email', 'Email', user.email, 24, {
+		disabled: !user.capabilities.edit_email,
+		trim: true
+	});
+	form.append_submit_button('Update', {css_classes: 'blue'});
 	form.attach_to(view.content_elem);
 }
 
@@ -1439,13 +1562,13 @@ async function change_user_password(user_id) {
 	const is_me = (user.id === signed_user_id);
 	const title = is_me ? 'Change my password'
 	                    : 'Change password of ' + user.first_name + ' ' + user.last_name;
-	const form = new AjaxForm(title, url_api_user_change_password(user.id));
+	const form = new Form(title, url_api_user_change_password(user.id));
 	if (!user.capabilities.change_password_without_old_password) {
-		form.append_input_password('old_password', 'Old password', 24, false);
+		form.append_input_password('old_password', 'Old password', 24, {required: false});
 	}
-	form.append_input_password('new_password', 'New password', 24, false);
-	form.append_input_password('new_password_repeated', 'New password (repeat)', 24, false);
-	form.append_submit_button(title, 'blue');
+	form.append_input_password('new_password', 'New password', 24, {required: false});
+	form.append_input_password('new_password_repeated', 'New password (repeat)', 24, {required: false});
+	form.append_submit_button(title, {css_classes: 'blue'});
 	form.success_msg = 'Password changed';
 	form.attach_to(view.content_elem);
 }
@@ -1455,7 +1578,7 @@ async function delete_user(user_id) {
 	const user = await view.get_from_api(url_api_user(user_id));
 	const is_me = (user.id === signed_user_id);
 	const title = is_me ? 'Delete account' : 'Delete user ' + user.id;
-	const form = new AjaxForm(title, url_api_user_delete(user.id), {
+	const form = new Form(title, url_api_user_delete(user.id), {
 		css_classes: 'with-notice',
 	});
 	if (is_me) {
@@ -1466,23 +1589,22 @@ async function delete_user(user_id) {
 			a_view_button(url_user(user.id), user.username, undefined, view_user.bind(null, true, user.id)), // TODO: refactor a_view_button
 			'. As it cannot be undone, you have to confirm it with YOUR password.'));
 	}
-	form.append_input_password('password', 'Your password', 24, false);
-	const submit_btn = form.append_submit_button(title, 'red');
-	form.success_msg = 'Scheduled deletion';
-	if (!is_me) {
-		form.success_handler = (response, ctx) => {
-			ctx.keep_submit_button_disabled();
-			ctx.show_status_success(form.success_msg);
+	form.append_input_password('password', 'Your password', 24, {required: false});
+	form.append_submit_button(title, {css_classes: 'red'});
+	form.success_handler = (response, {show_success, keep_submit_buttons_disabled}) => {
+		keep_submit_buttons_disabled();
+		show_success('Scheduled deletion');
+		if (!is_me) {
 			view_job(true, response.job_id);
-		};
-	}
+		}
+	};
 	form.attach_to(view.content_elem);
 }
 
 async function merge_user(user_id) {
 	const view = new View(url_user_merge_into_another(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
-	const form = new AjaxForm('Merge into another user', url_api_user_merge_into_another(user.id), {
+	const form = new Form('Merge into another user', url_api_user_merge_into_another(user.id), {
 		css_classes: 'with-notice',
 	});
 	form.append(elem_of('p', 'The user ',
@@ -1490,12 +1612,12 @@ async function merge_user(user_id) {
 		' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
 		document.createElement('br'),
 		'As this cannot be undone, you have to confirm this with your password.'));
-	form.append_input_text('target_user_id', 'Target user ID', '', 6, true, true);
-	form.append_input_password('password', 'YOUR password', 24, false);
-	const submit_btn = form.append_submit_button('Merge user ' + user.id, 'red');
-	form.success_handler = (response, ctx) => {
-		ctx.keep_submit_button_disabled();
-		ctx.show_status_success('Merging has been scheduled');
+	form.append_input_text('target_user_id', 'Target user ID', '', 6, {trim: true});
+	form.append_input_password('password', 'YOUR password', 24, {required: false});
+	form.append_submit_button('Merge user ' + user.id, {css_classes: 'red'});
+	form.success_handler = (response, {show_success, keep_submit_buttons_disabled}) => {
+		keep_submit_buttons_disabled();
+		show_success('Merging has been scheduled');
 		view_job(true, response.job_id);
 	};
 	form.attach_to(view.content_elem);
@@ -1503,46 +1625,46 @@ async function merge_user(user_id) {
 
 async function sign_in() {
 	const view = new View(url_sign_in());
-	const form = new AjaxForm('Sign in', url_api_sign_in());
-	form.append_input_text('username', 'Username', '', 24, true, true);
-	form.append_input_password('password', 'Password', 24, false);
-	form.append_checkbox('remember_for_a_month', 'Remember for a month');
+	const form = new Form('Sign in', url_api_sign_in());
+	form.append_input_text('username', 'Username', '', 24, {trim: true});
+	form.append_input_password('password', 'Password', 24, {required: false});
+	form.append_checkbox('remember_for_a_month', 'Remember for a month', false);
 	const old_csrf_token = get_cookie('csrf_token');
-	form.success_handler = (response, ctx) => {
+	form.success_handler = (response, {show_success, show_error, keep_submit_buttons_disabled}) => {
 		const csrf_token = get_cookie('csrf_token');
 		if ((csrf_token === '' || csrf_token === old_csrf_token) && !location.href.startsWith('https://')) {
-			ctx.show_status_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
+			show_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
 		} else {
-			ctx.show_status_success('Signed in successfully');
-			ctx.keep_submit_button_disabled();
+			show_success('Signed in successfully');
+			keep_submit_buttons_disabled();
 			handle_session_change(response);
 		}
 	};
-	form.append_submit_button('Sign in', 'blue');
+	form.append_submit_button('Sign in', {css_classes: 'blue'});
 	form.attach_to(view.content_elem);
 }
 
 async function sign_up() {
 	const view = new View(url_sign_up());
-	const form = new AjaxForm('Sign up', url_api_sign_up());
-	form.append_input_text('username', 'Username', '', 24, true, true);
-	form.append_input_text('first_name', 'First name', '', 24, true, true);
-	form.append_input_text('last_name', 'Last name', '', 24, true, true);
-	form.append_input_email('email', 'Email', '', 24, true, true);
-	form.append_input_password('password', 'Password', 24, false);
-	form.append_input_password('password_repeated', 'Password (repeat)', 24, false);
+	const form = new Form('Sign up', url_api_sign_up());
+	form.append_input_text('username', 'Username', '', 24, {trim: true});
+	form.append_input_text('first_name', 'First name', '', 24, {trim: true});
+	form.append_input_text('last_name', 'Last name', '', 24, {trim: true});
+	form.append_input_email('email', 'Email', '', 24, {trim: true});
+	form.append_input_password('password', 'Password', 24, {required: false});
+	form.append_input_password('password_repeated', 'Password (repeat)', 24, {required: false});
 	const old_csrf_token = get_cookie('csrf_token');
-	form.success_handler = (response, ctx) => {
+	form.success_handler = (response, {show_success, show_error, keep_submit_buttons_disabled}) => {
 		const csrf_token = get_cookie('csrf_token');
 		if ((csrf_token === '' || csrf_token === old_csrf_token) && !location.href.startsWith('https://')) {
-			ctx.show_status_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
+			show_error('Cannot set session cookies due to non-HTTPS connection.\nServer administrator should have ensured that the site is available through HTTPS.');
 		} else {
-			ctx.show_status_success('Signed up successfully');
-			ctx.keep_submit_button_disabled();
+			show_success('Signed up successfully');
+			keep_submit_buttons_disabled();
 			handle_session_change(response);
 		}
 	};
-	form.append_submit_button('Sign up', 'blue');
+	form.append_submit_button('Sign up', {css_classes: 'blue'});
 	form.attach_to(view.content_elem);
 }
 
@@ -2194,9 +2316,9 @@ var get_unique_id = function() {
 	};
 }();
 
-/* ================================= Form ================================= */
-var Form = {}; // This became deprecated, use AjaxForm
-Form.field_group = function(label_text_or_html_content, input_context_or_html_elem) {
+/* ================================= OldForm ================================= */
+var OldForm = {}; // This became deprecated, use Form
+OldForm.field_group = function(label_text_or_html_content, input_context_or_html_elem) {
 	var input;
 	if (input_context_or_html_elem instanceof jQuery)
 		input = input_context_or_html_elem;
@@ -2225,8 +2347,8 @@ Form.field_group = function(label_text_or_html_content, input_context_or_html_el
 		]
 	});
 };
-// This became deprecated, use AjaxForm
-Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/, oldloader_parent)
+// This became deprecated, use Form
+OldForm.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/, oldloader_parent)
 {
 	if (success_msg_or_handler === undefined)
 		success_msg_or_handler = 'Success';
@@ -2264,7 +2386,7 @@ Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/,
 	});
 	return false;
 };
-// This became deprecated, use AjaxForm
+// This became deprecated, use Form
 function ajax_form(title, target, html, success_msg_or_handler, classes) {
 	return $('<div>', {
 		class: 'form-container' + (classes === undefined ? '' : ' ' + classes),
@@ -2273,7 +2395,7 @@ function ajax_form(title, target, html, success_msg_or_handler, classes) {
 			method: 'post',
 			html: html
 		}).submit(function() {
-			return Form.send_via_ajax(this, target, success_msg_or_handler);
+			return OldForm.send_via_ajax(this, target, success_msg_or_handler);
 		})
 	});
 }
@@ -2353,7 +2475,7 @@ function centerize_oldmodal(oldmodal, allow_lowering /*= true*/) {
 /// Sends ajax form and shows oldmodal with the result
 function oldmodal_request(title, form, target_url, success_msg) {
 	var elem = oldmodal($('<h2>', {text: title}));
-	Form.send_via_ajax(form, target_url, success_msg, elem.children());
+	OldForm.send_via_ajax(form, target_url, success_msg, elem.children());
 }
 function dialogue_oldmodal_request(title, info_html, go_text, go_classes, target_url, success_msg, cancel_text, remove_buttons_on_click) {
 	oldmodal($('<h2>', {text: title})
@@ -2371,7 +2493,7 @@ function dialogue_oldmodal_request(title, info_html, go_text, go_classes, target
 					if (remove_buttons_on_click)
 						$(this).parent().remove();
 
-					Form.send_via_ajax(form, target_url, success_msg,
+					OldForm.send_via_ajax(form, target_url, success_msg,
 						oldloader_parent);
 				}
 			}).add((cancel_text === undefined ? '' : $('<a>', {
@@ -2659,7 +2781,7 @@ function api_request_with_password_to_job(elem, title, api_url, message_html, co
 			style: 'margin: 0 0 20px; text-align: center; max-width: 420px',
 			html: message_html
 		}).add(form_elements)
-		.add(Form.field_group('Your password', {
+		.add(OldForm.field_group('Your password', {
 			type: 'password',
 			name: 'password',
 			size: 24,
@@ -3791,8 +3913,8 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 function add_submission_impl(as_oldmodal, url, api_url, problem_field_elem, maybe_ignored, ignore_by_default, no_oldmodal_elem) {
 	view_base(as_oldmodal, url, function() {
 		this.append(ajax_form('Submit a solution', api_url,
-			Form.field_group('Problem', problem_field_elem
-			).add(Form.field_group('Language',
+			OldForm.field_group('Problem', problem_field_elem
+			).add(OldForm.field_group('Language',
 				$('<select>', {
 					name: 'language',
 					required: true,
@@ -3814,17 +3936,17 @@ function add_submission_impl(as_oldmodal, url, api_url, problem_field_elem, mayb
 						text: 'PASCAL'
 					})
 				})
-			)).add(Form.field_group('Solution', {
+			)).add(OldForm.field_group('Solution', {
 				type: 'file',
 				name: 'solution',
-			})).add(Form.field_group('Code',
+			})).add(OldForm.field_group('Code',
 				$('<textarea>', {
 					class: 'monospace',
 					name: 'code',
 					rows: 8,
 					cols: 50
 				})
-			)).add(maybe_ignored ? Form.field_group('Ignored submission', {
+			)).add(maybe_ignored ? OldForm.field_group('Ignored submission', {
 				type: 'checkbox',
 				name: 'ignored',
 				checked: ignore_by_default
@@ -4290,19 +4412,19 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 function add_problem(as_oldmodal) {
 	view_base(as_oldmodal, '/p/add', function() {
 		this.append(ajax_form('Add problem', '/api/problem/add',
-			Form.field_group("Problem's name", {
+			OldForm.field_group("Problem's name", {
 				type: 'text',
 				name: 'name',
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'Take from Simfile',
-			}).add(Form.field_group("Problem's label", {
+			}).add(OldForm.field_group("Problem's label", {
 				type: 'text',
 				name: 'label',
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'Take from Simfile or make from name',
-			})).add(Form.field_group("Problem's type",
+			})).add(OldForm.field_group("Problem's type",
 				$('<select>', {
 					name: 'type',
 					required: true,
@@ -4318,35 +4440,35 @@ function add_problem(as_oldmodal) {
 						text: 'Contest only',
 					})
 				})
-			)).add(Form.field_group('Memory limit [MiB]', {
+			)).add(OldForm.field_group('Memory limit [MiB]', {
 				type: 'text',
 				name: 'mem_limit',
 				size: 25,
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				placeholder: 'Take from Simfile',
-			})).add(Form.field_group('Global time limit [s] (for each test)', {
+			})).add(OldForm.field_group('Global time limit [s] (for each test)', {
 				type: 'text',
 				name: 'global_time_limit',
 				size: 25,
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				placeholder: 'No global time limit',
-			})).add(Form.field_group('Reset time limits using model solution', {
+			})).add(OldForm.field_group('Reset time limits using model solution', {
 				type: 'checkbox',
 				name: 'reset_time_limits',
 				checked: true
-			})).add(Form.field_group('Seek for new tests', {
+			})).add(OldForm.field_group('Seek for new tests', {
 				type: 'checkbox',
 				name: 'seek_for_new_tests',
 				checked: true
-			})).add(Form.field_group('Reset scoring', {
+			})).add(OldForm.field_group('Reset scoring', {
 				type: 'checkbox',
 				name: 'reset_scoring'
-			})).add(Form.field_group('Ignore Simfile', {
+			})).add(OldForm.field_group('Ignore Simfile', {
 				type: 'checkbox',
 				name: 'ignore_simfile',
-			})).add(Form.field_group('Zipped package', {
+			})).add(OldForm.field_group('Zipped package', {
 				type: 'file',
 				name: 'package',
 				required: true
@@ -4370,21 +4492,21 @@ function add_problem(as_oldmodal) {
 }
 function append_reupload_problem(elem, as_oldmodal, problem) {
 	elem.append(ajax_form('Reupload problem', '/api/problem/' + problem.id + '/reupload',
-		Form.field_group("Problem's name", {
+		OldForm.field_group("Problem's name", {
 			type: 'text',
 			name: 'name',
 			value: problem.name,
 			size: 25,
 			// maxlength: 'TODO...',
 			placeholder: 'Take from Simfile',
-		}).add(Form.field_group("Problem's label", {
+		}).add(OldForm.field_group("Problem's label", {
 			type: 'text',
 			name: 'label',
 			value: problem.label,
 			size: 25,
 			// maxlength: 'TODO...',
 			placeholder: 'Take from Simfile or make from name',
-		})).add(Form.field_group("Problem's type",
+		})).add(OldForm.field_group("Problem's type",
 			$('<select>', {
 				name: 'type',
 				required: true,
@@ -4402,7 +4524,7 @@ function append_reupload_problem(elem, as_oldmodal, problem) {
 					selected: ('Contest only' == problem.type ? true : undefined)
 				})
 			})
-		)).add(Form.field_group('Memory limit [MiB]', {
+		)).add(OldForm.field_group('Memory limit [MiB]', {
 			type: 'text',
 			name: 'mem_limit',
 			value: problem.memory_limit,
@@ -4410,28 +4532,28 @@ function append_reupload_problem(elem, as_oldmodal, problem) {
 			// maxlength: 'TODO...',
 			trim_before_send: true,
 			placeholder: 'Take from Simfile',
-		})).add(Form.field_group('Global time limit [s] (for each test)', {
+		})).add(OldForm.field_group('Global time limit [s] (for each test)', {
 			type: 'text',
 			name: 'global_time_limit',
 			size: 25,
 			// maxlength: 'TODO...',
 			trim_before_send: true,
 			placeholder: 'No global time limit',
-		})).add(Form.field_group('Reset time limits using model solution', {
+		})).add(OldForm.field_group('Reset time limits using model solution', {
 			type: 'checkbox',
 			name: 'reset_time_limits',
 			checked: true
-		})).add(Form.field_group('Seek for new tests', {
+		})).add(OldForm.field_group('Seek for new tests', {
 			type: 'checkbox',
 			name: 'seek_for_new_tests',
 			checked: true
-		})).add(Form.field_group('Reset scoring', {
+		})).add(OldForm.field_group('Reset scoring', {
 			type: 'checkbox',
 			name: 'reset_scoring'
-		})).add(Form.field_group('Ignore Simfile', {
+		})).add(OldForm.field_group('Ignore Simfile', {
 			type: 'checkbox',
 			name: 'ignore_simfile',
-		})).add(Form.field_group('Zipped package', {
+		})).add(OldForm.field_group('Zipped package', {
 			type: 'file',
 			name: 'package',
 			required: true
@@ -4489,7 +4611,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 		});
 
 		var add_form = [
-			Form.field_group('Name', name_input),
+			OldForm.field_group('Name', name_input),
 			$('<input>', {
 				type: 'hidden',
 				name: 'hidden',
@@ -4543,7 +4665,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 			});
 
 			var edit_form = [
-				Form.field_group('Name', name_input),
+				OldForm.field_group('Name', name_input),
 				$('<input>', {
 					type: 'hidden',
 					name: 'old_name',
@@ -4651,13 +4773,13 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 function append_change_problem_statement_form(elem, as_oldmodal, problem_id) {
 	$(elem).append(ajax_form('Change statement',
 		'/api/problem/' + problem_id + '/change_statement',
-		Form.field_group("New statement's path", {
+		OldForm.field_group("New statement's path", {
 			type: 'text',
 			name: 'path',
 			size: 24,
 			placeholder: 'The same as the old statement path'
 			// maxlength: 'TODO...'
-		}).add(Form.field_group('File', {
+		}).add(OldForm.field_group('File', {
 			type: 'file',
 			name: 'statement',
 			required: true
@@ -4790,12 +4912,12 @@ function merge_problem(as_oldmodal, problem_id) {
 				'<br>',
 				'As this cannot be undone, you have to confirm this with your password.'
 			], 'Merge problem', 'Merging has been scheduled.',
-			Form.field_group('Target problem ID', {
+			OldForm.field_group('Target problem ID', {
 				type: 'text',
 				name: 'target_problem',
 				size: 6,
 				trim_before_send: true,
-			}).add(Form.field_group('Rejudge transferred submissions', {
+			}).add(OldForm.field_group('Rejudge transferred submissions', {
 				type: 'checkbox',
 				name: 'rejudge_transferred_submissions'
 			})));
@@ -5050,14 +5172,14 @@ function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/)
 /* ================================ Contests ================================ */
 function append_create_contest(elem, as_oldmodal) {
 	elem.append(ajax_form('Create contest', '/api/contest/create',
-		Form.field_group("Contest's name", {
+		OldForm.field_group("Contest's name", {
 			type: 'text',
 			name: 'name',
 			size: 24,
 			// maxlength: 'TODO...',
 			trim_before_send: true,
 			required: true
-		}).add(signed_user_is_admin() ? Form.field_group('Make public', {
+		}).add(signed_user_is_admin() ? OldForm.field_group('Make public', {
 			type: 'checkbox',
 			name: 'public'
 		}) : $()).add('<div>', {
@@ -5084,14 +5206,14 @@ function append_clone_contest(elem, as_oldmodal) {
 	});
 
 	elem.append(ajax_form('Clone contest', '/api/contest/clone',
-		Form.field_group("Contest's name", {
+		OldForm.field_group("Contest's name", {
 			type: 'text',
 			name: 'name',
 			size: 24,
 			// maxlength: 'TODO...',
 			trim_before_send: true,
 		}).add(source_contest_input
-		).add(Form.field_group("Contest to clone (ID or URL)",
+		).add(OldForm.field_group("Contest to clone (ID or URL)",
 			$('<input>', {
 				type: 'text',
 				required: true
@@ -5108,7 +5230,7 @@ function append_clone_contest(elem, as_oldmodal) {
 						source_contest_input.val(''); // unset on invalid value
 				}
 			})
-		)).add(signed_user_is_admin() ? Form.field_group('Make public', {
+		)).add(signed_user_is_admin() ? OldForm.field_group('Make public', {
 			type: 'checkbox',
 			name: 'public'
 		}) : $()).add('<div>', {
@@ -5143,20 +5265,20 @@ function add_contest(as_oldmodal, opt_hash /*= undefined*/) {
 }
 function append_create_contest_round(elem, as_oldmodal, contest_id) {
 	elem.append(ajax_form('Create contest round', '/api/contest/c' + contest_id + '/create_round',
-		Form.field_group("Round's name", {
+		OldForm.field_group("Round's name", {
 			type: 'text',
 			name: 'name',
 			size: 25,
 			// maxlength: 'TODO...',
 			trim_before_send: true,
 			required: true
-		}).add(Form.field_group('Begin time',
+		}).add(OldForm.field_group('Begin time',
 			dt_chooser_input('begins', true, true, true, undefined, 'The Big Bang', 'Never')
-		)).add(Form.field_group('End time',
+		)).add(OldForm.field_group('End time',
 			dt_chooser_input('ends', true, true, true, Infinity, 'The Big Bang', 'Never')
-		)).add(Form.field_group('Full results time',
+		)).add(OldForm.field_group('Full results time',
 			dt_chooser_input('full_results', true, true, true, -Infinity, 'Immediately', 'Never')
-		)).add(Form.field_group('Show ranking since',
+		)).add(OldForm.field_group('Show ranking since',
 			dt_chooser_input('ranking_expo', true, true, true, -Infinity, 'The Big Bang', "Don't show")
 		)).add('<div>', {
 			html: $('<input>', {
@@ -5182,7 +5304,7 @@ function append_clone_contest_round(elem, as_oldmodal, contest_id) {
 	});
 
 	elem.append(ajax_form('Clone contest round', '/api/contest/c' + contest_id + '/clone_round',
-		Form.field_group("Round's name", {
+		OldForm.field_group("Round's name", {
 			type: 'text',
 			name: 'name',
 			size: 25,
@@ -5190,7 +5312,7 @@ function append_clone_contest_round(elem, as_oldmodal, contest_id) {
 			trim_before_send: true,
 			placeholder: "The same as name of the cloned round"
 		}).add(source_contest_round_input
-		).add(Form.field_group("Contest round to clone (ID or URL)",
+		).add(OldForm.field_group("Contest round to clone (ID or URL)",
 			$('<input>', {
 				type: 'text',
 				required: true
@@ -5207,13 +5329,13 @@ function append_clone_contest_round(elem, as_oldmodal, contest_id) {
 						source_contest_round_input.val(''); // unset on invalid value
 				}
 			})
-		)).add(Form.field_group('Begin time',
+		)).add(OldForm.field_group('Begin time',
 			dt_chooser_input('begins', true, true, true, undefined, 'The Big Bang', 'Never')
-		)).add(Form.field_group('End time',
+		)).add(OldForm.field_group('End time',
 			dt_chooser_input('ends', true, true, true, Infinity, 'The Big Bang', 'Never')
-		)).add(Form.field_group('Full results time',
+		)).add(OldForm.field_group('Full results time',
 			dt_chooser_input('full_results', true, true, true, -Infinity, 'Immediately', 'Never')
-		)).add(Form.field_group('Show ranking since',
+		)).add(OldForm.field_group('Show ranking since',
 			dt_chooser_input('ranking_expo', true, true, true, -Infinity, 'The Big Bang', "Don't show")
 		)).add('<div>', {
 			html: $('<input>', {
@@ -5248,14 +5370,14 @@ function add_contest_round(as_oldmodal, contest_id, opt_hash /*= undefined*/) {
 function add_contest_problem(as_oldmodal, contest_round_id) {
 	view_base(as_oldmodal, '/c/r' + contest_round_id + '/attach_problem', function() {
 		this.append(ajax_form('Attach problem', '/api/contest/r' + contest_round_id + '/attach_problem',
-			Form.field_group("Problem's name", {
+			OldForm.field_group("Problem's name", {
 				type: 'text',
 				name: 'name',
 				size: 25,
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				placeholder: 'The same as in Problems',
-			}).add(Form.field_group('Problem ID', {
+			}).add(OldForm.field_group('Problem ID', {
 				type: 'text',
 				name: 'problem_id',
 				size: 6,
@@ -5263,7 +5385,7 @@ function add_contest_problem(as_oldmodal, contest_round_id) {
 				trim_before_send: true,
 				required: true
 			}).append(elem_link_to_view('Search problems', list_problems, url_problems))
-			).add(Form.field_group('Final submission to select',
+			).add(OldForm.field_group('Final submission to select',
 				$('<select>', {
 					name: 'method_of_choosing_final_submission',
 					required: true,
@@ -5276,7 +5398,7 @@ function add_contest_problem(as_oldmodal, contest_round_id) {
 						selected: true
 					})
 				})
-			)).add(Form.field_group('Score revealing',
+			)).add(OldForm.field_group('Score revealing',
 				$('<select>', {
 					name: 'score_revealing',
 					required: true,
@@ -5327,7 +5449,7 @@ function edit_contest(as_oldmodal, contest_id) {
 					statusText: 'Not Allowed'
 				});
 
-		var make_submitters_contestants = Form.field_group("Add users who submitted solutions as contestants", {
+		var make_submitters_contestants = OldForm.field_group("Add users who submitted solutions as contestants", {
 			type: 'checkbox',
 			name: 'make_submitters_contestants',
 			checked: true,
@@ -5337,7 +5459,7 @@ function edit_contest(as_oldmodal, contest_id) {
 			make_submitters_contestants.hide(0);
 
 		this.append(ajax_form('Edit contest', '/api/contest/c' + contest_id + '/edit',
-			Form.field_group("Contest's name", {
+			OldForm.field_group("Contest's name", {
 				type: 'text',
 				name: 'name',
 				value: data.name,
@@ -5345,7 +5467,7 @@ function edit_contest(as_oldmodal, contest_id) {
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				required: true
-			}).add(Form.field_group('Public', {
+			}).add(OldForm.field_group('Public', {
 				type: 'checkbox',
 				name: 'public',
 				checked: data.is_public,
@@ -5380,7 +5502,7 @@ function edit_contest_round(as_oldmodal, contest_round_id) {
 
 		var round = data.rounds[0];
 		this.append(ajax_form('Edit round', '/api/contest/r' + contest_round_id + '/edit',
-			Form.field_group("Round's name", {
+			OldForm.field_group("Round's name", {
 				type: 'text',
 				name: 'name',
 				value: round.name,
@@ -5388,13 +5510,13 @@ function edit_contest_round(as_oldmodal, contest_round_id) {
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				required: true
-			}).add(Form.field_group('Begin time',
+			}).add(OldForm.field_group('Begin time',
 				dt_chooser_input('begins', true, true, true, utcdt_or_tm_to_Date(round.begins), 'The Big Bang', 'Never')
-			)).add(Form.field_group('End time',
+			)).add(OldForm.field_group('End time',
 				dt_chooser_input('ends', true, true, true, utcdt_or_tm_to_Date(round.ends), 'The Big Bang', 'Never')
-			)).add(Form.field_group('Full results time',
+			)).add(OldForm.field_group('Full results time',
 				dt_chooser_input('full_results', true, true, true, utcdt_or_tm_to_Date(round.full_results), 'Immediately', 'Never')
-			)).add(Form.field_group('Show ranking since',
+			)).add(OldForm.field_group('Show ranking since',
 				dt_chooser_input('ranking_expo', true, true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'The Big Bang', "Don't show")
 			)).add('<div>', {
 				html: $('<input>', {
@@ -5416,7 +5538,7 @@ function edit_contest_problem(as_oldmodal, contest_problem_id) {
 
 		var problem = data.problems[0];
 		this.append(ajax_form('Edit problem', '/api/contest/p' + contest_problem_id + '/edit',
-			Form.field_group("Problem's name", {
+			OldForm.field_group("Problem's name", {
 				type: 'text',
 				name: 'name',
 				value: problem.name,
@@ -5424,7 +5546,7 @@ function edit_contest_problem(as_oldmodal, contest_problem_id) {
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				required: true
-			}).add(Form.field_group('Score revealing',
+			}).add(OldForm.field_group('Score revealing',
 				$('<select>', {
 					name: 'score_revealing',
 					required: true,
@@ -5442,7 +5564,7 @@ function edit_contest_problem(as_oldmodal, contest_problem_id) {
 						selected: (problem.score_revealing === 'score_and_full_status')
 					})
 				})
-			)).add(Form.field_group("Final submission to select",
+			)).add(OldForm.field_group("Final submission to select",
 				$('<select>', {
 					name: 'method_of_choosing_final_submission',
 					required: true,
@@ -6403,7 +6525,7 @@ function add_contest_user(as_oldmodal, contest_id) {
 				});
 
 		this.append(ajax_form('Add contest user', '/api/contest_user/c' + contest_id + '/add',
-			Form.field_group('User ID', {
+			OldForm.field_group('User ID', {
 				type: 'text',
 				name: 'user_id',
 				size: 6,
@@ -6411,7 +6533,7 @@ function add_contest_user(as_oldmodal, contest_id) {
 				trim_before_send: true,
 				required: true
 			}).append(elem_link_to_view('Search users', list_users, url_users))
-			.add(Form.field_group('Mode', $('<select>', {
+			.add(OldForm.field_group('Mode', $('<select>', {
 				name: 'mode',
 				html: function() {
 					var res = [];
@@ -6672,18 +6794,18 @@ function add_contest_file(as_oldmodal, contest_id) {
 				});
 
 		this.append(ajax_form('Add contest file',
-			'/api/contest_file/add/c' + contest_id, Form.field_group('File name', {
+			'/api/contest_file/add/c' + contest_id, OldForm.field_group('File name', {
 				type: 'text',
 				name: 'name',
 				size: 24,
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				placeholder: 'The same as name of the uploaded file',
-			}).add(Form.field_group('File', {
+			}).add(OldForm.field_group('File', {
 				type: 'file',
 				name: 'file',
 				required: true
-			})).add(Form.field_group('Description',
+			})).add(OldForm.field_group('Description',
 				$('<textarea>', {
 					name: 'description',
 					maxlength: 512
@@ -6715,7 +6837,7 @@ function edit_contest_file(as_oldmodal, contest_file_id) {
 				});
 
 		this.append(ajax_form('Edit contest file',
-			'/api/contest_file/' + contest_file_id + '/edit', Form.field_group('File name', {
+			'/api/contest_file/' + contest_file_id + '/edit', OldForm.field_group('File name', {
 				type: 'text',
 				name: 'name',
 				value: file.name,
@@ -6723,20 +6845,20 @@ function edit_contest_file(as_oldmodal, contest_file_id) {
 				// maxlength: 'TODO...',
 				trim_before_send: true,
 				placeholder: 'The same as name of uploaded file',
-			}).add(Form.field_group('File', {
+			}).add(OldForm.field_group('File', {
 				type: 'file',
 				name: 'file'
-			})).add(Form.field_group('Description',
+			})).add(OldForm.field_group('Description',
 				$('<textarea>', {
 					name: 'description',
 					maxlength: 512,
 					text: file.description
 				})
-			)).add(Form.field_group('File size', {
+			)).add(OldForm.field_group('File size', {
 				type: 'text',
 				value: humanize_file_size(file.file_size) + ' (' + file.file_size + ' B)',
 				disabled: true
-			})).add(Form.field_group('Modified', normalize_datetime($('<span>', {
+			})).add(OldForm.field_group('Modified', normalize_datetime($('<span>', {
 				datetime: file.modified,
 				text: file.modified
 			}), true))).add('<div>', {

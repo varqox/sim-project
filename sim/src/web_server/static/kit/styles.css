@@ -2090,11 +2090,7 @@ pre.logs .turquoise {
 }
 .form-container form {
 	display: block;
-	padding: 20px;
-	margin-top: -20px;
-}
-.form-container form > .field {
-	margin-bottom: 15px;
+	padding: 0 20px 20px;
 }
 form .field-group {
 	display: flex;
@@ -2116,6 +2112,14 @@ form .field-group > :first-child {
 }
 form .field-group > textarea {
 	min-width: 65%;
+}
+form fieldset {
+	padding: 0;
+	border: none;
+	margin: 0;
+}
+form p {
+	margin: 0 0 8px 140px;
 }
 .form-container form input[type="submit"].btn {
 	margin-left: 140px;
