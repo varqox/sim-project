@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
 #include <type_traits>
