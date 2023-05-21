@@ -248,7 +248,7 @@ tests = {
     'test/mysql/mysql.cc': {},
     'test/noexcept_concat.cc': {},
     'test/old_sandbox.cc': {'priority': 8, 'args': meson.current_source_dir() + '/test/old_sandbox_test_cases/'},
-    'test/opened_temporary_file.cc': {'dependencies': [gmock_dep]},
+    'test/opened_temporary_file.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
     'test/path.cc': {},
     'test/proc_stat_file_contents.cc': {},
     'test/proc_status_file.cc': {},
@@ -281,8 +281,8 @@ tests = {
     'test/string_transform.cc': {},
     'test/string_view.cc': {},
     'test/strongly_typed_function.cc': {},
-    'test/temporary_directory.cc': {'dependencies': [gmock_dep]},
-    'test/temporary_file.cc': {'dependencies': [gmock_dep]},
+    'test/temporary_directory.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
+    'test/temporary_file.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
     'test/throw_assert.cc': {},
     'test/time.cc': {},
     'test/time_format_conversions.cc': {},
@@ -293,7 +293,7 @@ tests = {
 }
 
 foreach test_src, args : tests
-    test_deps = [gtest_main_dep, args.get('dependencies', [])]
+    test_deps = args.get('dependencies', [gtest_main_dep])
     test_kwargs = {}
     foreach key, value : args
         if key != 'dependencies'
