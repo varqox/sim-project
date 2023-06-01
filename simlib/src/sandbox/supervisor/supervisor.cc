@@ -93,6 +93,17 @@ template <class... Args>
     sandbox::do_die_with_error(ERRORS_FD, "supervisor: ", std::forward<Args>(msg)...);
 }
 
+void close_all_stray_file_descriptors() noexcept {
+    static_assert(STDIN_FILENO == 0);
+    static_assert(STDOUT_FILENO == 1);
+    static_assert(STDERR_FILENO == 2);
+    static_assert(ERRORS_FD == 3);
+    static_assert(SOCK_FD == 4);
+    if (close_range(SOCK_FD + 1, ~0U, 0)) {
+        die_with_error("close_range()");
+    }
+}
+
 void replace_stdin_stdout_stderr_with_dev_null() noexcept {
     int fd = open("/dev/null", O_RDONLY); // NOLINT(android-cloexec-open)
     if (fd == -1) {
@@ -156,6 +167,7 @@ void main(int argc, char** argv) noexcept {
     auto args = parse_args(argc, argv);
     validate_sock_fd(args.sock_fd);
     initialize_sock_fd_and_error_fd(args.sock_fd);
+    close_all_stray_file_descriptors();
     replace_stdin_stdout_stderr_with_dev_null();
 
     for (;;) {

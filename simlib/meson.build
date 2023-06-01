@@ -277,6 +277,7 @@ tests = {
     'test/sandbox/external/poll_pidfd.cc': {},
     'test/sandbox/external/polling_signalfd_sigchld_and_waitpid_work.cc': {},
     'test/sandbox/external/sigpipe_send_recv.cc': {},
+    'test/sandbox/sandbox_closes_unnecessary_file_descriptors.cc': {'tester': 'test/sandbox/sandbox_closes_unnecessary_file_descriptors_tester.cc'},
     'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr.cc': {'tester': 'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr_tester.cc'},
     'test/sandbox/sandbox_reports_unexpected_supervisor_process_death.cc': {},
     'test/sandbox/sandbox_supervisor_validates_arguments.cc': {'dependencies': [gtest_dep], 'args': sandbox_supervisor},
