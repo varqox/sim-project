@@ -72,10 +72,8 @@ inline RandomDevice& get_random_generator() {
 
 // Get random from [a, b]
 template <class T>
-constexpr T get_random(T&& a, T&& b) {
-    return std::uniform_int_distribution<T>(std::forward<T>(a), std::forward<T>(b))(
-        get_random_generator()
-    );
+constexpr T get_random(const T& a, const T& b) {
+    return std::uniform_int_distribution<T>(a, b)(get_random_generator());
 }
 
 template <class Iter>
