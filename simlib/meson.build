@@ -220,6 +220,7 @@ endif
 
 tests = {
     'test/argv_parser.cc': {},
+    'test/array_vec.cc': {},
     'test/call_in_destructor.cc': {},
     'test/concat.cc': {},
     'test/concat_common.cc': {},
