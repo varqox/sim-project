@@ -1,12 +1,15 @@
 project('simlib',
     ['c', 'cpp'],
     license: 'MIT',
-    meson_version : '>=0.53',
-    default_options : meson.get_cross_property('project_configuration', [
-        'c_std=gnu17',
-        'cpp_std=gnu++17',
-        'warning_level=3',
-    ])
+    meson_version : '>=0.54',
+    default_options : meson.get_external_property(
+        'project_configuration',
+        [
+            'c_std=gnu17',
+            'cpp_std=gnu++17',
+            'warning_level=3',
+        ]
+    )
 )
 
 cc = meson.get_compiler('c')
