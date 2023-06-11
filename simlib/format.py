@@ -43,4 +43,6 @@ def simlib_sources(srcdir):
 if __name__ == '__main__':
     sources = simlib_sources(sys.argv[1])
     print('files to format:', len(sources))
+    # Fix includes of form "simlib/*" (thanks clangd...) to <simlib/*>
+    subprocess.run(["sed", r's@^#include "\(simlib/.*\)"$@#include <\1>@', "-i"] + [s for s in sources])
     format_sources(sources)
