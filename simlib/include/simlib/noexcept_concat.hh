@@ -73,7 +73,7 @@ template <class... Args, std::enable_if_t<(is_noexcept_string_argument<Args> and
     return [](auto&&... str) {
         StaticCStringBuff<(noexcept_string_max_length<decltype(str)> + ... + 0)> res;
         size_t pos = 0;
-        auto append = [&](auto&& s) {
+        [[maybe_unused]] auto append = [&](auto&& s) {
             auto slen = noexcept_string_length(s);
             auto sdata = noexcept_string_data(s);
             while (slen > 0) {
