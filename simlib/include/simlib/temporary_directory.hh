@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <simlib/debug.hh>
 #include <simlib/file_path.hh>
 
 class TemporaryDirectory {

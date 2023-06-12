@@ -1,8 +1,6 @@
 #include <cstring>
 #include <gtest/gtest.h>
 #include <limits>
-#include <simlib/ctype.hh>
-#include <simlib/random.hh>
 #include <simlib/ranges.hh>
 #include <simlib/string_compare.hh>
 

@@ -13,14 +13,11 @@
 #include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
 #include <simlib/inplace_buff.hh>
-#include <simlib/libzip.hh>
-#include <simlib/opened_temporary_file.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
 #include <simlib/sim/conver.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/string_compare.hh>
-#include <simlib/temporary_file.hh>
 #include <simlib/time.hh>
 #include <utility>
 

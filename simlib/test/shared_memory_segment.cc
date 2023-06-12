@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/shared_memory_segment.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_SharedMemorySegment, constructor_with_size) {

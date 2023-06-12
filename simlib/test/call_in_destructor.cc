@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/call_in_destructor.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_CallInDestructor, constructor) {

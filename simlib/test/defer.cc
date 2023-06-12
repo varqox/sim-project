@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/defer.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_Defer, constructor) {

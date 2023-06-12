@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/logger.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_Logger, constructor_from_file_path) {

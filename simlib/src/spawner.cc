@@ -3,6 +3,7 @@
 #include <csignal>
 #include <ctime>
 #include <simlib/call_in_destructor.hh>
+#include <simlib/concat.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/overloaded.hh>

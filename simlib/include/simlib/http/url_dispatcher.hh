@@ -6,7 +6,6 @@
 #include <map>
 #include <optional>
 #include <simlib/debug.hh>
-#include <simlib/logger.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>

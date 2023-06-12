@@ -4,7 +4,6 @@
 #include <simlib/sim/simfile.hh>
 #include <simlib/string_view.hh>
 #include <simlib/temporary_directory.hh>
-#include <simlib/utilities.hh>
 #include <vector>
 
 using std::array;

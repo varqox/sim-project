@@ -1,5 +1,6 @@
 #include <cmath>
 #include <map>
+#include <simlib/concat.hh>
 #include <simlib/file_info.hh>
 #include <simlib/path.hh>
 #include <simlib/sim/simfile.hh>

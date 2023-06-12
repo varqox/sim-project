@@ -1,3 +1,4 @@
+#include <simlib/concat.hh>
 #include <simlib/sim/compile.hh>
 #include <simlib/spawner.hh>
 #include <simlib/unlinked_temporary_file.hh>

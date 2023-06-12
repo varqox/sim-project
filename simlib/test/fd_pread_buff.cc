@@ -4,7 +4,6 @@
 #include <simlib/file_contents.hh>
 #include <simlib/opened_temporary_file.hh>
 #include <simlib/random.hh>
-#include <simlib/string_transform.hh>
 
 // NOLINTNEXTLINE
 TEST(fd_pread_buff, fd_pread_buff) {

@@ -2,9 +2,9 @@
 
 #include <climits>
 #include <fcntl.h>
-#include <simlib/debug.hh>
 #include <simlib/file_path.hh>
 #include <simlib/file_perms.hh>
+#include <simlib/inplace_buff.hh>
 #include <sys/stat.h>
 #include <unistd.h>
 

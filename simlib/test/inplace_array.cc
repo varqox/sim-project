@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/inplace_array.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_InplaceArray, default_constructor) {

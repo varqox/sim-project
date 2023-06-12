@@ -1,6 +1,5 @@
 #include <simlib/config_file.hh>
 #include <simlib/ctype.hh>
-#include <simlib/debug.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/simple_parser.hh>
 #include <simlib/utilities.hh>

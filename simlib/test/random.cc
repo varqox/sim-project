@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/random.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_random, fill_randomly) {

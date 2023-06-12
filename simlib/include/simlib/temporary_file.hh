@@ -2,9 +2,7 @@
 
 #include <fcntl.h>
 #include <optional>
-#include <simlib/debug.hh>
 #include <simlib/file_descriptor.hh>
-#include <simlib/string_traits.hh>
 #include <unistd.h>
 
 class TemporaryFile {

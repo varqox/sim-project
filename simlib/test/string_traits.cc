@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <simlib/string_transform.hh>
+#include <simlib/string_traits.hh>
 
 // NOLINTNEXTLINE
 TEST(string_traits, has_prefix) {

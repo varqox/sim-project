@@ -5,10 +5,12 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <future>
+#include <simlib/concat.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/file_info.hh>
 #include <simlib/libzip.hh>
 #include <simlib/sim/checker.hh>
+#include <simlib/sim/compile.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/problem_package.hh>
 #include <simlib/simple_parser.hh>
@@ -18,7 +20,6 @@
 
 using std::promise;
 using std::string;
-using std::thread;
 using std::vector;
 
 namespace sim {

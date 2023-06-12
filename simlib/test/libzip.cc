@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/libzip.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_ZipError, default_constructor) {

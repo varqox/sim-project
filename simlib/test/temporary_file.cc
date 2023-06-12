@@ -1,5 +1,6 @@
 #include "get_file_permissions.hh"
 
+#include <cstdio>
 #include <fcntl.h>
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>

@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/mysql/mysql.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_mysql, is_enum_val) {

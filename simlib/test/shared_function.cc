@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/shared_function.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_shared_function, constructor) {

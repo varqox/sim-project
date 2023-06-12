@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <optional>
 #include <simlib/always_false.hh>
+#include <simlib/ctype.hh>
 #include <simlib/inplace_buff.hh>
-#include <simlib/string_traits.hh>
 
 inline std::string to_lower(std::string str) {
     for (auto& c : str) {

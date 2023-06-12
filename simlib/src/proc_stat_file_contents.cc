@@ -1,4 +1,5 @@
 #include <functional>
+#include <simlib/concat.hh>
 #include <simlib/ctype.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/proc_stat_file_contents.hh>

@@ -4,7 +4,6 @@
 
 #include <optional>
 #include <simlib/always_false.hh>
-#include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 

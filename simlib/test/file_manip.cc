@@ -1,6 +1,7 @@
 #include "get_file_permissions.hh"
 
 #include <gtest/gtest.h>
+#include <simlib/concat.hh>
 #include <simlib/debug.hh>
 #include <simlib/defer.hh>
 #include <simlib/directory.hh>

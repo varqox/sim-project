@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <simlib/concat.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/repeating.hh>

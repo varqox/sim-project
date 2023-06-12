@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/proc_stat_file_contents.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_ProcStatFileContents, copy_constructor) {

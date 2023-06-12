@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/sim/problem_package.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_sim_PackageContents, default_constructor) {

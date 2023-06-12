@@ -1,7 +1,6 @@
 #include <simlib/debug.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
-#include <simlib/logger.hh>
 #include <simlib/random.hh>
 #include <sys/random.h>
 

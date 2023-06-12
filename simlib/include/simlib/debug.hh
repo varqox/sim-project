@@ -4,9 +4,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-#include <simlib/concat.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/inplace_array.hh>
+#include <simlib/inplace_buff.hh>
 #include <simlib/logger.hh>
 #include <simlib/string_view.hh>
 

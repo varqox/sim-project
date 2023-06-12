@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <simlib/simple_parser.hh>
 
 // NOLINTNEXTLINE
 TEST(DISABLED_SimpleParser, constructor_from_StringView) {
