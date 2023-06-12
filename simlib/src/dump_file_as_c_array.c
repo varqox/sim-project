@@ -7,7 +7,7 @@
 
 int main(int argc, char** argv) {
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s <file> <c_array_name>\n", argv[0]);
+        (void)fprintf(stderr, "Usage: %s <file> <c_array_name>\n", argv[0]);
         return 1;
     }
 
@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
     }
 
     unsigned char* data = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
-    if (data == MAP_FAILED) {
+    if (data == MAP_FAILED) { // NOLINT(performance-no-int-to-ptr)
         perror("Error: mmap()");
         return 1;
     }

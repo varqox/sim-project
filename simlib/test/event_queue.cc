@@ -759,7 +759,7 @@ TEST(EventQueue, file_unready_read_and_close_event) {
                 return eq.remove_handler(hid);
             }
 
-            int rc = read(rfd, buff.data(), buff.size());
+            auto rc = read(rfd, buff.data(), buff.size());
             ASSERT_EQ(rc, sizeof("Test"));
             buff.resize(rc - 1);
             ASSERT_EQ(buff, "Test");

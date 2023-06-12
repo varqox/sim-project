@@ -16,7 +16,7 @@ void PackageContents::load_from_directory(StringView pkg_path, bool retain_pkg_p
             if (retain_pkg_path_prefix) {
                 this->add_entry(path); // this-> is needed for buggy GCC
             } else { // Adds entry without the pkg_path prefix
-                this->add_entry(StringView(path).substr(pkg_path.size() + 1));
+                this->add_entry(StringView{path}.substr(pkg_path.size() + 1));
             }
         };
 
