@@ -1,104 +1,12 @@
 #pragma once
 
 #include <algorithm>
-#include <array>
-#include <cassert>
 #include <charconv>
+#include <cstdio>
 #include <limits>
+#include <simlib/static_cstring_buff.hh>
 #include <string>
-
-template <size_t N>
-class StaticCStringBuff {
-private:
-    std::array<char, N + 1> str_{'\0'};
-
-public:
-    size_t len_ = 0;
-
-    StaticCStringBuff() = default;
-
-    constexpr StaticCStringBuff(const std::array<char, N + 1>& str, size_t len)
-    : str_(str)
-    , len_(len) {}
-
-    explicit constexpr StaticCStringBuff(const std::array<char, N + 1>& str)
-    : StaticCStringBuff(str, std::char_traits<char>::length(str.data())) {}
-
-private:
-    template <size_t M>
-    struct Number {};
-
-public:
-    template <size_t M, std::enable_if_t<M <= N + 1, int> = 0>
-    explicit constexpr StaticCStringBuff(const char (&str)[M]) {
-        while (len_ < M - 1) {
-            str_[len_] = str[len_];
-            ++len_;
-        }
-        str_[len_] = '\0';
-    }
-
-    StaticCStringBuff(const StaticCStringBuff&) noexcept = default;
-    StaticCStringBuff(StaticCStringBuff&&) noexcept = default;
-
-    template <size_t M, std::enable_if_t<M <= N, int> = 0>
-    // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr StaticCStringBuff(const StaticCStringBuff<M>& other) noexcept : len_(other.len_) {
-        assert(*other.end() == '\0');
-        for (size_t i = 0; i < len_; ++i) {
-            str_[i] = other[i];
-        }
-        str_[len_] = '\0';
-    }
-
-    StaticCStringBuff& operator=(const StaticCStringBuff&) noexcept = default;
-
-    StaticCStringBuff& operator=(StaticCStringBuff&&) noexcept = default;
-
-    ~StaticCStringBuff() = default;
-
-    [[nodiscard]] constexpr bool is_empty() const noexcept { return len_ == 0; }
-
-    [[nodiscard]] constexpr size_t size() const noexcept { return len_; }
-
-    [[nodiscard]] static constexpr size_t max_size() noexcept { return N; }
-
-    constexpr char* data() noexcept { return str_.data(); }
-
-    [[nodiscard]] constexpr const char* data() const noexcept { return str_.data(); }
-
-    [[nodiscard]] constexpr const char* c_str() const noexcept { return data(); }
-
-    constexpr auto begin() noexcept { return str_.begin(); }
-
-    [[nodiscard]] constexpr auto begin() const noexcept { return str_.begin(); }
-
-    constexpr auto end() noexcept { return begin() + len_; }
-
-    [[nodiscard]] constexpr auto end() const noexcept { return begin() + len_; }
-
-    constexpr char& operator[](size_t n) noexcept { return str_[n]; }
-
-    constexpr const char& operator[](size_t n) const noexcept { return str_[n]; }
-
-    template <size_t M>
-    constexpr bool operator==(const char (&other)[M]) noexcept {
-        if (len_ != M - 1) {
-            return false;
-        }
-        return std::char_traits<char>::compare(data(), other, M) == 0;
-    }
-};
-
-template <size_t N>
-StaticCStringBuff(const char (&str)[N]) -> StaticCStringBuff<N>;
-template <size_t N>
-StaticCStringBuff(char (&str)[N]) -> StaticCStringBuff<N>;
-
-template <size_t N>
-std::string& operator+=(std::string& str, const StaticCStringBuff<N>& c_buff) {
-    return str.append(c_buff.data(), c_buff.size());
-}
+#include <type_traits>
 
 template <
     class T,
@@ -204,7 +112,7 @@ std::string to_string(T x, int precision = 6) {
     for (;;) {
         res.resize(len);
         auto [ptr, ec] =
-            std::to_chars(res.data(), res.data() + len, x, std::chars_format::fixed);
+            std::to_chars(res.data(), res.data() + len, x, std::chars_format::fixed, precision);
         if (ec == std::errc()) {
             res.resize(ptr - res.data());
             return res;

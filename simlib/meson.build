@@ -238,6 +238,7 @@ tests = {
     'test/simfile.cc': {},
     'test/simple_parser.cc': {},
     'test/spawner.cc': {},
+    'test/static_cstring_buff.cc': {},
     'test/string_compare.cc': {},
     'test/string_traits.cc': {},
     'test/string_transform.cc': {},
