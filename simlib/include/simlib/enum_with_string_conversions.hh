@@ -2,7 +2,7 @@
 
 #include <cstdlib>
 #include <optional>
-#include <simlib/macros.hh>
+#include <simlib/macros/macros.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
-#include <simlib/macros.hh>
+#include <simlib/macros/macros.hh>
+#include <simlib/macros/stringify.hh>
 #include <simlib/string_view.hh>
 
 #define ABC a b c
@@ -10,28 +11,13 @@
 #define YYY(...) y y y __VA_ARGS__
 
 // NOLINTNEXTLINE
-TEST(EnumVal, PRIMITIVE_STRINGIFY) {
-    static_assert(StringView{PRIMITIVE_STRINGIFY(XXX())} == "XXX()");
-    static_assert(StringView{PRIMITIVE_STRINGIFY(XXX(), XXX(), XXX())} == "XXX(), XXX(), XXX()");
-    static_assert(StringView{PRIMITIVE_STRINGIFY()}.empty());
-}
-
-// NOLINTNEXTLINE
-TEST(EnumVal, STRINGIFY) {
-    static_assert(StringView{STRINGIFY(XXX())} == "x x x");
-    static_assert(StringView{STRINGIFY(DEFER1(XXX)())} == "XXX ()");
-    static_assert(StringView{STRINGIFY(XXX(), XXX(), XXX())} == "x x x, x x x, x x x");
-    static_assert(StringView{STRINGIFY()}.empty());
-}
-
-// NOLINTNEXTLINE
-TEST(EnumVal, EAT) {
+TEST(macros, EAT) {
     static_assert(StringView{STRINGIFY(EAT(CAT((), ())))}.empty());
     static_assert(StringView{STRINGIFY(EAT(abc, d, ef))}.empty());
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, PRIMITIVE_CAT) {
+TEST(macros, PRIMITIVE_CAT) {
     static_assert(StringView{STRINGIFY(PRIMITIVE_CAT(ABC, XYZ))} == "ABCXYZ");
     static_assert(
         StringView{STRINGIFY(PRIMITIVE_CAT(ABC, XYZ, ABC, XYZ))} == "ABCXYZ, a b c, x y z"
@@ -43,7 +29,7 @@ TEST(EnumVal, PRIMITIVE_CAT) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, CAT) {
+TEST(macros, CAT) {
     static_assert(StringView{STRINGIFY(CAT(ABC, XYZ))} == "a b cx y z");
     static_assert(StringView{STRINGIFY(CAT(kk, XYZ))} == "kkx y z");
     static_assert(StringView{STRINGIFY(CAT(ABC, XYZ, ABC, XYZ))} == "a b cx y z, a b c, x y z");
@@ -55,7 +41,7 @@ TEST(EnumVal, CAT) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, PRIMITIVE_REV_CAT) {
+TEST(macros, PRIMITIVE_REV_CAT) {
     static_assert(StringView{STRINGIFY(PRIMITIVE_REV_CAT(ABC, XYZ))} == "XYZABC");
     static_assert(
         StringView{STRINGIFY(PRIMITIVE_REV_CAT(ABC, XYZ, ABC, XYZ))} == "x y z, a b c, XYZABC"
@@ -67,7 +53,7 @@ TEST(EnumVal, PRIMITIVE_REV_CAT) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, REV_CAT) {
+TEST(macros, REV_CAT) {
     static_assert(StringView{STRINGIFY(REV_CAT(ABC, XYZ))} == "x y za b c");
     static_assert(StringView{STRINGIFY(REV_CAT(kk, XYZ))} == "x y zkk");
     static_assert(StringView{STRINGIFY(REV_CAT(ABC, XYZ, ABC, XYZ))} == "x y z, a b c, x y za b c");
@@ -79,7 +65,7 @@ TEST(EnumVal, REV_CAT) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, PRIMITIVE_DOUBLE_CAT) {
+TEST(macros, PRIMITIVE_DOUBLE_CAT) {
     static_assert(StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(ABC, XYZ, KLM))} == "ABCXYZKLM");
     static_assert(
         StringView{STRINGIFY(PRIMITIVE_DOUBLE_CAT(ABC, XYZ, KLM, ABC, XYZ, KLM))} ==
@@ -95,13 +81,13 @@ TEST(EnumVal, PRIMITIVE_DOUBLE_CAT) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, EMPTY) {
+TEST(macros, EMPTY) {
     static_assert(StringView{STRINGIFY(EMPTY)} == "EMPTY");
     static_assert(StringView{STRINGIFY(EMPTY())}.empty());
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, EXPAND) {
+TEST(macros, EXPAND) {
     static_assert(StringView{STRINGIFY(EXPAND())}.empty());
     static_assert(StringView{STRINGIFY(EXPAND(XXX()))} == "x x x");
     static_assert(StringView{STRINGIFY(EXPAND(XXX EMPTY()()))} == "x x x");
@@ -115,28 +101,28 @@ TEST(EnumVal, EXPAND) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, DEFER1) {
+TEST(macros, DEFER1) {
     static_assert(StringView{STRINGIFY(DEFER1())}.empty());
     static_assert(StringView{STRINGIFY(DEFER1(YYY)(a, b))} == "YYY (a, b)");
     static_assert(StringView{STRINGIFY(EXPAND(DEFER1(YYY)(a, b)))} == "y y y a, b");
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, DEFER2) {
+TEST(macros, DEFER2) {
     static_assert(StringView{STRINGIFY(EXPAND(DEFER2()))}.empty());
     static_assert(StringView{STRINGIFY(EXPAND(DEFER2(YYY)(a, b)))} == "YYY (a, b)");
     static_assert(StringView{STRINGIFY(EXPAND(EXPAND(DEFER2(YYY)(a, b))))} == "y y y a, b");
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, DEFER3) {
+TEST(macros, DEFER3) {
     static_assert(StringView{STRINGIFY(EXPAND(EXPAND(DEFER3())))}.empty());
     static_assert(StringView{STRINGIFY(EXPAND(EXPAND(DEFER3(YYY)(a, b))))} == "YYY (a, b)");
     static_assert(StringView{STRINGIFY(EXPAND(EXPAND(EXPAND(DEFER3(YYY)(a, b)))))} == "y y y a, b");
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, LPAREN_RPAREN) {
+TEST(macros, LPAREN_RPAREN) {
     static_assert(StringView{STRINGIFY(LPAREN)} == "LPAREN");
     static_assert(StringView{STRINGIFY(RPAREN)} == "RPAREN");
     static_assert(StringView{STRINGIFY(LPAREN() RPAREN())} == "( )");
@@ -145,7 +131,7 @@ TEST(EnumVal, LPAREN_RPAREN) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, COMMA) {
+TEST(macros, COMMA) {
     static_assert(StringView{STRINGIFY(COMMA)} == "COMMA");
     static_assert(StringView{STRINGIFY(COMMA())} == ",");
     static_assert(StringView{STRINGIFY(CAT(a COMMA() b, c))} == "ab, c");
@@ -153,7 +139,7 @@ TEST(EnumVal, COMMA) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, FOLDR) {
+TEST(macros, FOLDR) {
     static_assert(
         StringView{STRINGIFY(FOLDR(XX, (1)(2)(3, 4)(5)()(6), 42))} ==
         "XX((1), XX((2), XX((3, 4), XX((5), XX((), XX((6), 42))))))"
@@ -183,7 +169,7 @@ TEST(EnumVal, FOLDR) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, MAP) {
+TEST(macros, MAP) {
     static_assert(StringView{STRINGIFY(MAP(XX, (1)(2, 3)(4)))} == "XX (1) XX (2, 3) XX (4)");
     static_assert(
         StringView{STRINGIFY(MAP(XX, (1)(2)(3, 4)(5)()(6)))} ==
@@ -199,7 +185,7 @@ TEST(EnumVal, MAP) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, MAP_DELIM) {
+TEST(macros, MAP_DELIM) {
     static_assert(
         StringView{STRINGIFY(MAP_DELIM(XX, delim, (1)(2, 3)(4)))} ==
         "XX (1) delim XX (2, 3) delim XX (4)"
@@ -228,7 +214,7 @@ TEST(EnumVal, MAP_DELIM) {
 }
 
 // NOLINTNEXTLINE
-TEST(EnumVal, MAP_DELIM_FUNC) {
+TEST(macros, MAP_DELIM_FUNC) {
     static_assert(
         StringView{STRINGIFY(MAP_DELIM_FUNC(XX, delim, (1)(2, 3)(4)))} ==
         "XX (1) delim() XX (2, 3) delim() XX (4)"

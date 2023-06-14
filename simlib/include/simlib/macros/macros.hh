@@ -1,8 +1,5 @@
 #pragma once
 
-#define STRINGIFY(...) PRIMITIVE_STRINGIFY(__VA_ARGS__)
-#define PRIMITIVE_STRINGIFY(...) #__VA_ARGS__
-
 #define EAT(...)
 
 #define CAT(...) PRIMITIVE_CAT(__VA_ARGS__)
