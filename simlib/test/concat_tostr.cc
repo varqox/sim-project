@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <simlib/concat_tostr.hh>
-#include <simlib/meta.hh>
+#include <simlib/meta/span.hh>
 #include <simlib/string_view.hh>
 #include <utility>
 

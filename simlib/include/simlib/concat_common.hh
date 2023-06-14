@@ -1,6 +1,7 @@
 #pragma once
 
-#include <simlib/meta.hh>
+#include <simlib/meta/has_method_data.hh>
+#include <simlib/meta/has_method_size.hh>
 #include <simlib/to_string.hh>
 #include <type_traits>
 

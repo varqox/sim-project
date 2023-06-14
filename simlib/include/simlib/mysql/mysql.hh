@@ -10,7 +10,7 @@
 #include <simlib/debug.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/inplace_buff.hh>
-#include <simlib/meta.hh>
+#include <simlib/meta/is_one_of.hh>
 #include <simlib/sql.hh>
 #include <simlib/string_view.hh>
 #include <tuple>

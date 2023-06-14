@@ -5,6 +5,7 @@
 #include <simlib/debug.hh>
 #include <simlib/file_info.hh>
 #include <simlib/libzip.hh>
+#include <simlib/meta/max.hh>
 #include <simlib/sim/conver.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/problem_package.hh>

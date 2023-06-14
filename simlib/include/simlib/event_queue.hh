@@ -9,6 +9,7 @@
 #include <set>
 #include <simlib/debug.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/meta/enum_operator_macros.hh>
 #include <simlib/repeating.hh>
 #include <type_traits>
 #include <variant>
@@ -94,10 +95,10 @@ private:
 
     static decltype(pollfd::events) file_events_to_poll_events(FileEvent events) noexcept {
         decltype(pollfd::events) res = 0;
-        if (uint(events & FileEvent::READABLE)) {
+        if (static_cast<unsigned>(events & FileEvent::READABLE)) {
             res |= POLLIN;
         }
-        if (uint(events & FileEvent::WRITEABLE)) {
+        if (static_cast<unsigned>(events & FileEvent::WRITEABLE)) {
             res |= POLLOUT;
         }
         return res;
