@@ -1,4 +1,3 @@
-#include <simlib/debug.hh>
 #include <simlib/logger.hh>
 #include <simlib/time.hh>
 

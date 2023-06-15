@@ -7,7 +7,6 @@
 #include <exception>
 #include <fcntl.h>
 #include <poll.h>
-#include <simlib/debug.hh>
 #include <simlib/defer.hh>
 #include <simlib/file_descriptor.hh>
 #include <sys/eventfd.h>

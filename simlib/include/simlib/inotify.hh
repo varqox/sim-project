@@ -7,7 +7,7 @@
 #include <memory>
 #include <optional>
 #include <set>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/event_queue.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/logger.hh>

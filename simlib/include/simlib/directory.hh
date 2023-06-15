@@ -1,8 +1,9 @@
 #pragma once
 
 #include <dirent.h>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_path.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/meta/is_one_of.hh>
 #include <simlib/repeating.hh>
 #include <type_traits>

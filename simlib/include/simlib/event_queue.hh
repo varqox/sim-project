@@ -7,8 +7,8 @@
 #include <memory>
 #include <poll.h>
 #include <set>
-#include <simlib/debug.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/meta/enum_operator_macros.hh>
 #include <simlib/repeating.hh>
 #include <type_traits>

@@ -2,7 +2,6 @@
 
 #include <gtest/gtest.h>
 #include <simlib/concat.hh>
-#include <simlib/debug.hh>
 #include <simlib/defer.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_contents.hh>
@@ -12,6 +11,8 @@
 #include <simlib/opened_temporary_file.hh>
 #include <simlib/random_bytes.hh>
 #include <simlib/temporary_directory.hh>
+#include <simlib/throw_assert.hh>
+#include <simlib/utilities.hh>
 
 using std::max;
 using std::string;

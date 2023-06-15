@@ -1,8 +1,8 @@
 #include <functional>
 #include <simlib/concat.hh>
-#include <simlib/debug.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_contents.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/path.hh>
 #include <simlib/proc_stat_file_contents.hh>
 #include <simlib/process.hh>

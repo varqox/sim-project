@@ -1,9 +1,10 @@
 #pragma once
 
 #include <simlib/concat.hh>
-#include <simlib/debug.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/file_path.hh>
+#include <simlib/logger.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/sandbox.hh>
 #include <simlib/sim/simfile.hh>
 #include <simlib/temporary_directory.hh>

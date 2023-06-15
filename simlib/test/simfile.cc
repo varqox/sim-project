@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/sim/simfile.hh>
 #include <simlib/string_view.hh>
 #include <simlib/temporary_directory.hh>

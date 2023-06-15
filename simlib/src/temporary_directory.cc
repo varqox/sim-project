@@ -1,4 +1,7 @@
+#include <simlib/errmsg.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/logger.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/path.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/temporary_directory.hh>

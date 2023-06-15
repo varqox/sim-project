@@ -1,10 +1,10 @@
 #pragma once
 
-#include <simlib/debug.hh>
 #include <simlib/defer.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/path.hh>
+#include <simlib/throw_assert.hh>
 
 #if __has_include(<archive.h>) and __has_include(<archive_entry.h>)
 

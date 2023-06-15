@@ -4,6 +4,7 @@
 #include <simlib/call_in_destructor.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
 #include <sys/stat.h>

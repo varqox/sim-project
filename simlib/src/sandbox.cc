@@ -4,9 +4,11 @@
 #include <simlib/concat.hh>
 #include <simlib/defer.hh>
 #include <simlib/humanize.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/sandbox.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/syscalls.hh>
+#include <simlib/throw_assert.hh>
 #include <simlib/time.hh>
 #include <stdexcept>
 #include <sys/ptrace.h>

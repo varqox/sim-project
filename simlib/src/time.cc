@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <ctime>
-#include <simlib/debug.hh>
+#include <simlib/macros/throw.hh>
+#include <simlib/string_view.hh>
 #include <string>
 #include <sys/time.h>
 #include <utility>

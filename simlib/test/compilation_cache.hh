@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <simlib/concat_tostr.hh>
-#include <simlib/debug.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/file_path.hh>

@@ -1,5 +1,7 @@
 #include <simlib/ctype.hh>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
+#include <simlib/macros/throw.hh>
+#include <string>
 #include <unistd.h>
 
 using std::string;

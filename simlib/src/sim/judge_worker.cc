@@ -14,6 +14,7 @@
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/problem_package.hh>
 #include <simlib/simple_parser.hh>
+#include <simlib/throw_assert.hh>
 #include <simlib/unlinked_temporary_file.hh>
 #include <thread>
 #include <unistd.h>

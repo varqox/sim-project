@@ -1,8 +1,10 @@
 #pragma once
 
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/string_traits.hh>
+#include <simlib/throw_assert.hh>
 #include <unistd.h>
 
 class OpenedTemporaryFile {

@@ -1,4 +1,3 @@
-#include <simlib/debug.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/random.hh>

@@ -3,7 +3,9 @@
 #include <simlib/libarchive_zip.hh>
 #include <simlib/spawner.hh>
 #include <simlib/temporary_directory.hh>
+#include <simlib/throw_assert.hh>
 #include <simlib/unlinked_temporary_file.hh>
+#include <simlib/utilities.hh>
 #include <simlib/working_directory.hh>
 
 #if __has_include(<archive.h>) and __has_include(<archive_entry.h>)

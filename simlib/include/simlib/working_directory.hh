@@ -1,8 +1,10 @@
 #pragma once
 
 #include <climits>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/inplace_buff.hh>
+#include <simlib/macros/throw.hh>
 #include <unistd.h>
 
 class DirectoryChanger {

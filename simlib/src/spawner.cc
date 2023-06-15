@@ -6,6 +6,8 @@
 #include <simlib/concat.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/macros/stack_unwinding.hh>
+#include <simlib/meta/is_one_of.hh>
 #include <simlib/overloaded.hh>
 #include <simlib/spawner.hh>
 #include <simlib/string_transform.hh>

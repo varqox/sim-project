@@ -2,8 +2,9 @@
 #include <cerrno>
 #include <cstddef>
 #include <fcntl.h>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/random.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/temporary_file.hh>

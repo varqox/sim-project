@@ -10,6 +10,7 @@
 #include <simlib/file_manip.hh>
 #include <simlib/file_path.hh>
 #include <simlib/inplace_buff.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/proc_stat_file_contents.hh>
 #include <simlib/repeating.hh>
 #include <simlib/string_transform.hh>

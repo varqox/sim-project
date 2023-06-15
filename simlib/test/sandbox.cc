@@ -10,6 +10,7 @@
 #include <simlib/process.hh>
 #include <simlib/sandbox.hh>
 #include <simlib/temporary_file.hh>
+#include <simlib/throw_assert.hh>
 #include <sys/syscall.h>
 #include <thread>
 #include <unistd.h>

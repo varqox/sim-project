@@ -1,7 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/string_view.hh>
 #include <simlib/to_string.hh>
 #include <sys/time.h>

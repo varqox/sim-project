@@ -7,7 +7,6 @@
 #include <mutex>
 #include <optional>
 #include <simlib/always_false.hh>
-#include <simlib/debug.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/inplace_buff.hh>
 #include <simlib/meta/is_one_of.hh>

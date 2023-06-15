@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <simlib/debug.hh>
 #include <simlib/file_path.hh>
 #include <simlib/time.hh>
 #include <sys/stat.h>

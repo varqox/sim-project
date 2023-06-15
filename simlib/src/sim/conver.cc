@@ -2,7 +2,6 @@
 #include <map>
 #include <set>
 #include <simlib/concat.hh>
-#include <simlib/debug.hh>
 #include <simlib/file_info.hh>
 #include <simlib/libzip.hh>
 #include <simlib/meta/max.hh>
@@ -11,6 +10,7 @@
 #include <simlib/sim/problem_package.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
+#include <simlib/throw_assert.hh>
 #include <simlib/utilities.hh>
 #include <utility>
 

@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cerrno>
 #include <semaphore.h>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
+#include <simlib/macros/throw.hh>
 
 namespace concurrent {
 

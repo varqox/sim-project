@@ -1,4 +1,7 @@
+#include <simlib/errmsg.hh>
 #include <simlib/inotify.hh>
+#include <simlib/macros/throw.hh>
+#include <simlib/macros/wont_throw.hh>
 #include <simlib/string_traits.hh>
 #include <sys/inotify.h>
 

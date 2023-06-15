@@ -1,5 +1,6 @@
 #include <chrono>
 #include <simlib/event_queue.hh>
+#include <simlib/macros/wont_throw.hh>
 #include <simlib/overloaded.hh>
 #include <simlib/shared_function.hh>
 #include <simlib/time.hh>

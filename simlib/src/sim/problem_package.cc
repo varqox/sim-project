@@ -1,6 +1,7 @@
 #include <simlib/directory.hh>
 #include <simlib/libzip.hh>
 #include <simlib/sim/problem_package.hh>
+#include <simlib/throw_assert.hh>
 
 using std::string;
 

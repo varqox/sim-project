@@ -8,11 +8,11 @@
 #include <simlib/concat_tostr.hh>
 #include <simlib/concurrent/job_processor.hh>
 #include <simlib/config_file.hh>
-#include <simlib/debug.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
 #include <simlib/inplace_buff.hh>
+#include <simlib/logger.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
 #include <simlib/sim/conver.hh>
