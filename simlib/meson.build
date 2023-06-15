@@ -252,6 +252,7 @@ tests = {
     'test/temporary_file.cc': {'dependencies': [gmock_dep]},
     'test/throw_assert.cc': {},
     'test/time.cc': {},
+    'test/time_format_conversions.cc': {},
     'test/to_string.cc': {},
     'test/unlinked_temporary_file.cc': {},
     'test/utilities.cc': {},

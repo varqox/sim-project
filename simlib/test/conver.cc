@@ -18,7 +18,7 @@
 #include <simlib/sim/conver.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/string_compare.hh>
-#include <simlib/time.hh>
+#include <simlib/time_format_conversions.hh>
 #include <utility>
 
 using sim::Conver;

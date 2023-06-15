@@ -8,7 +8,7 @@
 #include <simlib/sandbox.hh>
 #include <simlib/sim/simfile.hh>
 #include <simlib/temporary_directory.hh>
-#include <simlib/time.hh>
+#include <simlib/time_format_conversions.hh>
 #include <simlib/to_string.hh>
 #include <utility>
 

@@ -12,7 +12,8 @@
 #include <simlib/spawner.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/syscalls.hh>
-#include <simlib/time.hh>
+#include <simlib/time_format_conversions.hh>
+#include <simlib/timespec_arithmetic.hh>
 #include <unistd.h>
 #include <utility>
 #include <variant>

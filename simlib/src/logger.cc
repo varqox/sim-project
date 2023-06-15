@@ -1,4 +1,6 @@
+#include <simlib/errmsg.hh>
 #include <simlib/logger.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/time.hh>
 
 using std::string;
