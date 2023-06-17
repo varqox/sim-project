@@ -13,10 +13,13 @@
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/macros/throw.hh>
+#include <simlib/noexcept_concat.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/sandbox/si.hh>
 #include <simlib/socket_send_fds.hh>
 #include <simlib/socket_stream_ext.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/to_string.hh>
 #include <simlib/utilities.hh>
@@ -70,7 +73,10 @@ namespace sandbox {
         }
     }
 
-    int supervisor_exe_fd = memfd_create("supervisor executable", MFD_CLOEXEC);
+    // Write the supervisor executable to a memfd without CLOEXEC - it must survive the exec()
+    // as systemd-run has to execute it
+    // NOLINTNEXTLINE(android-cloexec-memfd-create)
+    int supervisor_exe_fd = memfd_create("supervisor executable", 0);
     if (supervisor_exe_fd == -1) {
         do_die_with_error(error_fd, "memfd_create()");
     }
@@ -81,11 +87,34 @@ namespace sandbox {
     }
 
     // Execute the supervisor
+    char str_systemd_run[] = "/sbin/systemd-run";
+    char str_arg_user[] = "--user";
+    char str_arg_scope[] = "--scope"; // preserve the execution environment
+    char str_arg_property_delegate[] = "--property=Delegate=yes";
+    char str_arg_collect[] = "--collect"; // prevent unit from prevailing after failure
+    char str_arg_quiet[] = "--quiet";
+    // systemd-run will inherit the file descriptor, so we can use "self" instead of getpid()
+    auto executable_path = noexcept_concat("/proc/self/fd/", supervisor_exe_fd);
     auto sock_as_str = to_string(sock_fd);
-    char argv0[] = "sandbox_supervisor";
-    char* const argv[] = {argv0, sock_as_str.data(), nullptr};
-    char* const env[] = {nullptr};
-    syscalls::execveat(supervisor_exe_fd, "", argv, env, AT_EMPTY_PATH);
+    char* const argv[] = {
+        str_systemd_run,
+        str_arg_user,
+        str_arg_scope,
+        str_arg_property_delegate,
+        str_arg_collect,
+        str_arg_quiet,
+        executable_path.data(),
+        sock_as_str.data(),
+        nullptr};
+    char* xdg_runtime_dir = nullptr;
+    for (auto env = environ; *env; ++env) {
+        if (has_prefix(*env, "XDG_RUNTIME_DIR=")) {
+            xdg_runtime_dir = *env;
+            break;
+        }
+    }
+    char* const env[] = {xdg_runtime_dir, nullptr};
+    syscalls::execveat(AT_FDCWD, str_systemd_run, argv, env, 0);
     do_die_with_error(error_fd, "execveat()");
 }
 
