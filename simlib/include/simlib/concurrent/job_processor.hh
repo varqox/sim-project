@@ -1,6 +1,7 @@
 #pragma once
 
 #include <simlib/concurrent/bounded_queue.hh>
+#include <simlib/meta/max.hh>
 #include <thread>
 #include <vector>
 
@@ -41,7 +42,7 @@ protected:
 
 public:
     void run() {
-        const int workers_no = std::max(
+        const int workers_no = meta::max(
             static_cast<int>(std::thread::hardware_concurrency()) - 1,
             1
         ); // One has to remain to prevent deadlock if queue gets full
