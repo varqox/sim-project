@@ -3,7 +3,7 @@
 #include <csignal>
 #include <ctime>
 #include <simlib/call_in_destructor.hh>
-#include <simlib/concat.hh>
+#include <simlib/concat_tostr.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/macros/stack_unwinding.hh>
@@ -463,15 +463,11 @@ void Spawner::run_child(
 
     // execvp() failed
     if (exec.size() <= PATH_MAX) {
-        send_error_and_exit(
-            errnum, intentional_unsafe_cstring_view(concat<PATH_MAX + 20>("execvp('", exec, "')"))
-        );
+        send_error_and_exit(errnum, from_unsafe{concat_tostr("execvp('", exec, "')")});
     } else {
         send_error_and_exit(
             errnum,
-            intentional_unsafe_cstring_view(
-                concat<PATH_MAX + 20>("execvp('", exec.to_cstr().substring(0, PATH_MAX), "...')")
-            )
+            from_unsafe{concat_tostr("execvp('", exec.to_cstr().substring(0, PATH_MAX), "...')")}
         );
     }
 }

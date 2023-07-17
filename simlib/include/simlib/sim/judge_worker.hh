@@ -92,12 +92,7 @@ public:
                     res,
                     "  ",
                     padded_string(test.name, 11, LEFT),
-                    padded_string(
-                        intentional_unsafe_string_view(
-                            ::to_string(floor_to_10ms(test.runtime), false)
-                        ),
-                        4
-                    ),
+                    padded_string(from_unsafe{::to_string(floor_to_10ms(test.runtime), false)}, 4),
                     " / ",
                     ::to_string(floor_to_10ms(test.time_limit), false),
                     " s  ",
@@ -242,23 +237,19 @@ class VerboseJudgeLogger : public JudgeLogger {
             last_gid = gid;
         }
 
-        auto tmplog =
-            log("  ",
-                padded_string(test_name, 12, LEFT),
-                ' ',
-                padded_string(
-                    intentional_unsafe_string_view(
-                        ::to_string(floor_to_10ms(test_report.runtime), false)
-                    ),
-                    4
-                ),
-                " / ",
-                ::to_string(floor_to_10ms(test_report.time_limit), false),
-                " s  ",
-                test_report.memory_consumed >> 10,
-                " / ",
-                test_report.memory_limit >> 10,
-                " KiB  Status: ");
+        auto tmplog = log(
+            "  ",
+            padded_string(test_name, 12, LEFT),
+            ' ',
+            padded_string(from_unsafe{::to_string(floor_to_10ms(test_report.runtime), false)}, 4),
+            " / ",
+            ::to_string(floor_to_10ms(test_report.time_limit), false),
+            " s  ",
+            test_report.memory_consumed >> 10,
+            " / ",
+            test_report.memory_limit >> 10,
+            " KiB  Status: "
+        );
         // Status
         switch (test_report.status) {
         case JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;

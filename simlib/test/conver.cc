@@ -413,12 +413,12 @@ private:
     void overwrite_test_output_files() const {
         put_file_contents(
             concat_tostr(test_case_dir_, test_filenames::pre_judge_simfile),
-            intentional_unsafe_string_view(pre_judge_simfile_.dump())
+            from_unsafe{pre_judge_simfile_.dump()}
         );
 
         put_file_contents(
             concat_tostr(test_case_dir_, test_filenames::post_judge_simfile),
-            intentional_unsafe_string_view(post_judge_simfile_.dump())
+            from_unsafe{post_judge_simfile_.dump()}
         );
 
         put_file_contents(
@@ -427,7 +427,7 @@ private:
 
         put_file_contents(
             concat_tostr(test_case_dir_, test_filenames::judge_log),
-            intentional_unsafe_string_view(serialized_judge_log())
+            from_unsafe{serialized_judge_log()}
         );
     }
 };

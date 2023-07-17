@@ -64,13 +64,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
     StringView main_dir = pc.main_dir(); // Find main directory if exists
 
     auto exists_in_pkg = [&](StringView file) {
-        return (
-            not file.empty() and pc.exists(intentional_unsafe_string_view(concat(main_dir, file)))
-        );
+        return (not file.empty() and pc.exists(from_unsafe{concat(main_dir, file)}));
     };
 
     // "utils/" directory is ignored by Conver
-    pc.remove_with_prefix(intentional_unsafe_string_view(concat(main_dir, "utils/")));
+    pc.remove_with_prefix(from_unsafe{concat(main_dir, "utils/")});
 
     // Load the Simfile from the package
     Simfile sf;
@@ -181,8 +179,8 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
     }
 
     // Exclude check/ and checker/ directories from future searches
-    pc.remove_with_prefix(intentional_unsafe_string_view(concat(main_dir, "check/")));
-    pc.remove_with_prefix(intentional_unsafe_string_view(concat(main_dir, "checker/")));
+    pc.remove_with_prefix(from_unsafe{concat(main_dir, "check/")});
+    pc.remove_with_prefix(from_unsafe{concat(main_dir, "checker/")});
 
     // Statement
     try {

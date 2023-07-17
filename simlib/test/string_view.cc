@@ -586,21 +586,6 @@ TEST(DISABLED_string_view, string_operator_add_StringView) {
 }
 
 // NOLINTNEXTLINE
-TEST(DISABLED_string_view, intentional_unsafe_string_view_from_const_char_ptr) {
-    // TODO: implement it
-}
-
-// NOLINTNEXTLINE
-TEST(DISABLED_string_view, intentional_unsafe_string_view_from_StringView) {
-    // TODO: implement it
-}
-
-// NOLINTNEXTLINE
-TEST(DISABLED_string_view, intentional_unsafe_string_view_from_const_string_ref) {
-    // TODO: implement it
-}
-
-// NOLINTNEXTLINE
 TEST(DISABLED_string_view, operator_equal) {
     // TODO: implement it
 }

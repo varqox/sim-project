@@ -258,16 +258,6 @@ TEST(DISABLED_inplace_buff, string_operator_add_inplace_buff) {
 }
 
 // NOLINTNEXTLINE
-TEST(DISABLED_inplace_buff, intentional_unsafe_string_view) {
-    // TODO: implement it
-}
-
-// NOLINTNEXTLINE
-TEST(DISABLED_inplace_buff, intentional_unsafe_cstring_view) {
-    // TODO: implement it
-}
-
-// NOLINTNEXTLINE
 TEST(DISABLED_inplace_buff, string_length_of_inplace_buff) {
     // TODO: implement it
 }

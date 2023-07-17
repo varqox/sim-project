@@ -5,6 +5,7 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <simlib/from_unsafe.hh>
 #include <simlib/to_string.hh>
 #include <stdexcept>
 #include <type_traits>
@@ -79,6 +80,10 @@ public:
             int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     StringBase(T&&) = delete; // Protect from assigning unsafe data
+
+    template <class T>
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr StringBase(from_unsafe<T>&& u) noexcept : StringBase(u.template get_ref<0>()) {}
 
     constexpr StringBase& operator=(const StringBase&) noexcept = default;
     constexpr StringBase& operator=(StringBase&&) noexcept = default;
@@ -465,6 +470,10 @@ public:
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     StringView(T&&) = delete; // Protect from assigning unsafe data
 
+    template <class T>
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr StringView(from_unsafe<T>&& u) noexcept : StringView(u.template get_ref<0>()) {}
+
     StringView& operator=(const StringView&) noexcept = default;
     StringView& operator=(StringView&&) noexcept = default;
 
@@ -621,16 +630,6 @@ inline std::string& operator+=(std::string& str, StringView s) {
     return str.append(s.data(), s.size());
 }
 
-// This function allows @p str to be converted to StringView, but
-// keep in mind that if any StringView or alike value generated from the result
-// of this function cannot be saved to a variable! -- it would (and probably
-// will) cause use-after-free error, because @p str will be already deleted when
-// the initialization is done
-template <class T, std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
-constexpr StringView intentional_unsafe_string_view(T&& str) noexcept {
-    return StringView(static_cast<const T&>(str));
-}
-
 // comparison operators
 constexpr bool operator==(StringView a, StringView b) noexcept {
     return (
@@ -720,6 +719,10 @@ public:
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     CStringView(T&&) = delete; // Protect from assigning unsafe data
 
+    template <class T>
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr CStringView(from_unsafe<T>&& u) noexcept : CStringView(u.template get_ref<0>()) {}
+
     ~CStringView() = default;
 
     template <
@@ -746,16 +749,6 @@ public:
 
     [[nodiscard]] constexpr const_pointer c_str() const noexcept { return data(); }
 };
-
-// This function allows @p str to be converted to CStringView, but
-// keep in mind that if any StringView or alike value generated from the result
-// of this function cannot be saved to a variable! -- it would (and probably
-// will) cause use-after-free error, because @p str will be already deleted when
-// the initialization is done
-template <class T, std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
-constexpr CStringView intentional_unsafe_cstring_view(T&& str) noexcept {
-    return CStringView(static_cast<const T&>(str));
-}
 
 constexpr StringView substring(
     const StringView& str, StringView::size_type beg, StringView::size_type end = StringView::npos

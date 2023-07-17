@@ -1,4 +1,5 @@
 #include <simlib/concat.hh>
+#include <simlib/concat_tostr.hh>
 #include <simlib/sim/compile.hh>
 #include <simlib/spawner.hh>
 #include <simlib/unlinked_temporary_file.hh>
@@ -64,7 +65,7 @@ int compile(
          time_limit,
          1 << 30 /* 1 GiB */,
          {},
-         (proot_path.empty() ? intentional_unsafe_cstring_view(concat(dir_to_chdir)) : ".")}
+         (proot_path.empty() ? CStringView{from_unsafe{concat_tostr(dir_to_chdir)}} : ".")}
     );
 
     // Check for errors

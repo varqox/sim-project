@@ -26,9 +26,7 @@ static void append_scoring_value(string& res, const sim::Simfile& simfile) {
             back_insert(
                 res,
                 '\t',
-                ConfigFile::escape_string(
-                    intentional_unsafe_string_view(concat(p.gid, ' ', group.score))
-                ),
+                ConfigFile::escape_string(from_unsafe{concat(p.gid, ' ', group.score)}),
                 '\n'
             );
         }

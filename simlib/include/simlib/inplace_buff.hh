@@ -294,28 +294,8 @@ std::string& operator+=(std::string& str, const InplaceBuff<N>& ibs) {
     return str.append(ibs.data(), ibs.size);
 }
 
-// This function allows @p str to be converted to StringView, but
-// keep in mind that if any StringView or alike value generated from the result
-// of this function cannot be saved to a variable! -- it would (and probably
-// will) cause use-after-free error, because @p str will be already deleted when
-// the initialization is done
 template <size_t N>
-constexpr StringView intentional_unsafe_string_view(const InplaceBuff<N>&& str) noexcept {
-    return StringView(static_cast<const InplaceBuff<N>&>(str));
-}
-
-// This function allows @p str to be converted to CStringView, but
-// keep in mind that if any StringView or alike value generated from the result
-// of this function cannot be saved to a variable! -- it would (and probably
-// will) cause use-after-free error, because @p str will be already deleted when
-// the initialization is done
-template <size_t N>
-constexpr CStringView intentional_unsafe_cstring_view(InplaceBuff<N>&& str) noexcept {
-    return static_cast<InplaceBuff<N>&>(str).to_cstr();
-}
-
-template <size_t T>
-constexpr auto string_length(const InplaceBuff<T>& buff) -> decltype(buff.size) {
+constexpr auto string_length(const InplaceBuff<N>& buff) -> decltype(buff.size) {
     return buff.size;
 }
 
