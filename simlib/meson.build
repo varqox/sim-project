@@ -1,7 +1,7 @@
 project('simlib',
     ['c', 'cpp'],
     license: 'MIT',
-    meson_version : '>=0.54',
+    meson_version : '>=0.58',
     default_options : meson.get_external_property(
         'project_configuration',
         [
