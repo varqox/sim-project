@@ -114,7 +114,11 @@ namespace sandbox::pid1 {
         });
     }
 
-    // TODO: close all file descriptors
+    // Close all file descriptors
+    if (close_range(4, ~0U, 0)) {
+        die_with_error("close_range()");
+    }
+
     // TODO: install seccomp filters
 
     timespec waitid_time;
