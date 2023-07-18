@@ -93,6 +93,26 @@ simlib_dependencies = [
     ),
 ]
 
+sandbox_supervisor = executable('sandbox_supervisor',
+    implicit_include_directories : false,
+    include_directories : simlib_incdir,
+    sources : [
+        'src/sandbox/supervisor/supervisor.cc',
+    ],
+    install : false,
+)
+
+sandbox_supervisor_dump_c = custom_target('sandbox_supervisor_dump',
+    command : [
+        dump_file_as_c_array,
+        '@INPUT@',
+        'sandbox_supervisor_dump',
+    ],
+    input : sandbox_supervisor,
+    output : 'sandbox_supervisor_dump.c',
+    capture : true,
+)
+
 simlib = library('simlib',
     implicit_include_directories : false,
     include_directories : simlib_incdir,
@@ -113,6 +133,7 @@ simlib = library('simlib',
         'src/proc_status_file.cc',
         'src/process.cc',
         'src/random.cc',
+        'src/sandbox/sandbox.cc',
         'src/sandbox/si.cc',
         'src/sha.cc',
         'src/sim/checker.cc',
@@ -128,6 +149,7 @@ simlib = library('simlib',
         'src/time.cc',
         'src/unlinked_temporary_file.cc',
         'src/working_directory.cc',
+        sandbox_supervisor_dump_c,
         dump_file_as_c_array_gen.process(
             'src/sim/default_checker.c',
             extra_args : 'default_checker_c'
@@ -235,12 +257,14 @@ tests = {
     'test/ranges.cc': {},
     'test/request_uri_parser.cc': {},
     'test/result.cc': {},
+    'test/sandbox/destructor.cc': {},
     'test/sandbox/external/detect_parent_process_death_using_pidfd.cc': {},
     'test/sandbox/external/poll_hup_on_sock_seqpacket.cc': {},
     'test/sandbox/external/poll_hup_on_sock_stream.cc': {},
     'test/sandbox/external/poll_pidfd.cc': {},
     'test/sandbox/external/polling_signalfd_sigchld_and_waitpid_work.cc': {},
     'test/sandbox/external/sigpipe_send_recv.cc': {},
+    'test/sandbox/sandbox_reports_unexpected_supervisor_process_death.cc': {},
     'test/sandbox/si.cc': {},
     'test/sha.cc': {},
     'test/shared_function.cc': {},
