@@ -22,7 +22,7 @@ public:
 
     ~SimpleParser() = default;
 
-    [[nodiscard]] bool is_next(const StringView& s, char delimiter = '/') const noexcept {
+    [[nodiscard]] bool is_next(const StringView& s, char delimiter) const noexcept {
         DEBUG_PARSER(
             stdlog(
                 '\'', *this, "' -> compared with: '", s, "' -> ", compare_to(*this, 0, delimiter, s)
@@ -52,7 +52,7 @@ public:
         return res;
     }
 
-    StringView extract_next(char delimiter = '/') noexcept {
+    StringView extract_next(char delimiter) noexcept {
         return extract_next([delimiter](char c) { return (c == delimiter); });
     }
 
@@ -77,7 +77,7 @@ public:
      *
      * @return Extracted data (empty if there is no more data)
      */
-    StringView extract_next_non_empty(char delimiter = '/') noexcept {
+    StringView extract_next_non_empty(char delimiter) noexcept {
         return extract_next_non_empty([delimiter](char c) { return (c == delimiter); });
     }
 };
