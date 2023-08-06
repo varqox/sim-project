@@ -13,6 +13,7 @@
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/ubsan.hh>
+#include <sys/prctl.h>
 #include <unistd.h>
 
 namespace sandbox::pid1 {
@@ -27,6 +28,11 @@ namespace sandbox::pid1 {
     };
     auto die_with_error = [&] [[noreturn]] (auto&&... msg) noexcept {
         die_with_msg(std::forward<decltype(msg)>(msg)..., errmsg());
+    };
+    auto set_process_name = [&]() noexcept {
+        if (prctl(PR_SET_NAME, "pid1", 0, 0, 0)) {
+            die_with_error("prctl(SET_NAME)");
+        }
     };
     auto setup_session_and_process_group = [&]() noexcept {
         // Exclude pid1 process from the parent's process group and session
@@ -65,6 +71,7 @@ namespace sandbox::pid1 {
         return ts;
     };
 
+    set_process_name();
     setup_session_and_process_group();
     setup_user_namespace(args.linux_namespaces.user);
 

@@ -25,6 +25,7 @@
 #include <simlib/timespec_arithmetic.hh>
 #include <string_view>
 #include <sys/mman.h>
+#include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -120,6 +121,12 @@ template <class... Args>
 template <class... Args>
 [[noreturn]] void die_with_error(Args&&... msg) noexcept {
     sandbox::do_die_with_error(ERRORS_FD, "supervisor: ", std::forward<Args>(msg)...);
+}
+
+void set_process_name() noexcept {
+    if (prctl(PR_SET_NAME, "supervisor", 0, 0, 0)) {
+        die_with_error("prctl(SET_NAME)");
+    }
 }
 
 void close_all_stray_file_descriptors() noexcept {
@@ -497,6 +504,7 @@ void main(int argc, char** argv) noexcept {
     auto args = parse_args(argc, argv);
     validate_sock_fd(args.sock_fd);
     initialize_sock_fd_and_error_fd(args.sock_fd);
+    set_process_name();
     close_all_stray_file_descriptors();
     replace_stdin_stdout_stderr_with_dev_null();
 
