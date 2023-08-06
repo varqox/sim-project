@@ -22,11 +22,6 @@ public:
     explicit constexpr StaticCStringBuff(const std::array<char, N + 1>& str)
     : StaticCStringBuff(str, std::char_traits<char>::length(str.data())) {}
 
-private:
-    template <size_t M>
-    struct Number {};
-
-public:
     template <size_t M, std::enable_if_t<M <= N + 1, int> = 0>
     explicit constexpr StaticCStringBuff(const char (&str)[M]) {
         while (len_ < M - 1) {
