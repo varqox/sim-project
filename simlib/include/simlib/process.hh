@@ -53,21 +53,3 @@ void kill_processes_by_exec(
     bool kill_after_waiting = false,
     int terminate_signal = SIGTERM
 );
-
-enum class ArchKind : int8_t {
-    i386 = 0,
-    x86_64 = 1,
-};
-
-/**
- * @brief Detects architecture of running process @p tid
- * @details Currently it only detects i386 and x86_64 (see ArchKind above)
- *
- * @param tid thread ID of process to detect architecture
- *
- * @return detected architecture
- *
- * @errors If architecture is different from allowed or any error occurs
- *   an exception of type std::runtime_error is thrown
- */
-ArchKind detect_architecture(pid_t tid);

@@ -232,26 +232,3 @@ void kill_processes_by_exec(
         }
     }
 }
-
-ArchKind detect_architecture(pid_t tid) {
-    auto filename = concat("/proc/", tid, "/exe");
-    FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
-    if (fd == -1) {
-        THROW("open('", filename, "')", errmsg());
-    }
-
-    // Read fourth byte and detect whether 32 or 64 bit
-    unsigned char c = 0;
-    if (pread(fd, &c, 1, 4) != 1) {
-        THROW("pread()", errmsg());
-    }
-
-    if (c == 1) {
-        return ArchKind::i386;
-    }
-    if (c == 2) {
-        return ArchKind::x86_64;
-    }
-
-    THROW("Unsupported architecture");
-}
