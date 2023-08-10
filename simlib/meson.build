@@ -234,6 +234,7 @@ tests = {
     'test/config_file.cc': {'priority': 10},
     'test/constructor_traits.cc': {},
     'test/conver.cc': {'priority': 10, 'args': meson.current_source_dir() + '/test/conver_test_cases/'},
+    'test/converts_safely_to.cc': {'dependencies' : []},
     'test/ctype.cc': {},
     'test/defer.cc': {},
     'test/deserializer.cc': {},
