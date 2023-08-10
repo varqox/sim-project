@@ -305,6 +305,7 @@ tests = {
     'test/sandbox/tracee_is_killed_upon_supervisor_process_death.cc': {},
     'test/sandbox/tracee_memory_usage.cc': {'tester': 'test/sandbox/tracee_memory_usage_tester.cc'},
     'test/sandbox/tracee_times.cc': {'tester': 'test/sandbox/tracee_times_tester.cc'},
+    'test/serialize.cc': {},
     'test/sha.cc': {},
     'test/shared_function.cc': {},
     'test/shared_memory_segment.cc': {},
