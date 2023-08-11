@@ -241,7 +241,6 @@ tests = {
     'test/ctype.cc': {},
     'test/defer.cc': {},
     'test/deserialize.cc': {},
-    'test/deserializer.cc': {},
     'test/directory.cc': {},
     'test/enum_val.cc': {},
     'test/err_defer.cc': {},
