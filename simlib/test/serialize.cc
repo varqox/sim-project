@@ -1,3 +1,5 @@
+#include "get_byte_of.hh"
+
 #include <cstdint>
 #include <cstring>
 #include <gmock/gmock.h>
@@ -73,14 +75,6 @@ TEST(serialize, writer_count_len) {
         {true, 1024},
     }, as<uint16_t>);
     ASSERT_EQ(count_writer.written_bytes_num(), 22);
-}
-
-template <size_t N, class T>
-byte get_byte_of(const T& val) noexcept {
-    static_assert(N < sizeof(T)); // NOLINT(bugprone-sizeof-expression)
-    byte res;
-    std::memcpy(&res, reinterpret_cast<const byte*>(&val) + N, 1);
-    return res;
 }
 
 // NOLINTNEXTLINE

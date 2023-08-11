@@ -237,6 +237,7 @@ tests = {
     'test/converts_safely_to.cc': {'dependencies' : []},
     'test/ctype.cc': {},
     'test/defer.cc': {},
+    'test/deserialize.cc': {},
     'test/deserializer.cc': {},
     'test/directory.cc': {},
     'test/enum_val.cc': {},
