@@ -21,6 +21,7 @@
 #include <string_view>
 #include <sys/mman.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
@@ -230,6 +231,13 @@ struct Request {
     unique_ptr<char[]> argv_env_buff;
     vector<char*> argv; // with a trailing nullptr element
     vector<char*> env; // with a trailing nullptr element
+
+    struct LinuxNamespaces {
+        struct User {
+            optional<uid_t> inside_uid;
+            optional<gid_t> inside_gid;
+        } user;
+    } linux_namespaces;
 };
 
 Request recv_request() noexcept {
@@ -238,13 +246,30 @@ Request recv_request() noexcept {
     request::mask_t mask;
     request::serialized_argv_len_t serialized_argv_len;
     request::serialized_env_len_t serialized_env_len;
-    std::byte header_buff[sizeof(mask) + sizeof(serialized_argv_len) + sizeof(serialized_env_len)];
-    auto fds = recv_request_header_with_fds(header_buff, sizeof(header_buff));
-    Deserializer{header_buff, sizeof(header_buff)}
-        .deserialize_bytes_as(mask)
-        .deserialize_bytes_as(serialized_argv_len)
-        .deserialize_bytes_as(serialized_env_len);
 
+    struct LinuxNamespaces {
+        struct User {
+            request::linux_namespaces::user::mask_t mask;
+            request::linux_namespaces::user::serialized_inside_uid_t inside_uid;
+            request::linux_namespaces::user::serialized_inside_gid_t inside_gid;
+        } user;
+    } linux_ns;
+
+    auto recv_and_deserialize = [&](auto&... values) noexcept {
+        std::byte buff[(... + sizeof(values))];
+        auto fds = recv_request_header_with_fds(buff, sizeof(buff));
+        Deserializer deser{buff, sizeof(buff)};
+        (deser.deserialize_bytes_as(values), ...);
+        return fds;
+    };
+    auto fds = recv_and_deserialize(
+        mask,
+        serialized_argv_len,
+        serialized_env_len,
+        linux_ns.user.mask,
+        linux_ns.user.inside_uid,
+        linux_ns.user.inside_gid
+    );
     if (fds.size() < 1) {
         die_with_msg(
             "recv_request(): missing executable file descriptor alongside the request header"
@@ -272,6 +297,22 @@ Request recv_request() noexcept {
     }
     if (fds_taken != fds.size()) {
         die_with_msg("recv_request(): too many file descriptors sent alongside the request header");
+    }
+
+    {
+        namespace mask = request::linux_namespaces::user::mask;
+        request::deserialize_from(
+            req.linux_namespaces.user.inside_uid,
+            linux_ns.user.mask,
+            linux_ns.user.inside_uid,
+            mask::inside_uid
+        );
+        request::deserialize_from(
+            req.linux_namespaces.user.inside_gid,
+            linux_ns.user.mask,
+            linux_ns.user.inside_gid,
+            mask::inside_gid
+        );
     }
 
     auto buff_len = serialized_argv_len + serialized_env_len;
@@ -384,6 +425,14 @@ void send_error(Error resp) noexcept {
     return ts;
 }
 
+void reset_shared_mem_state(
+    volatile communication::supervisor_tracee::SharedMemState* shared_mem_state
+) noexcept {
+    namespace sms = communication::supervisor_tracee;
+    sms::write(shared_mem_state->tracee_exec_start_time, std::nullopt);
+    sms::write_no_error(shared_mem_state);
+}
+
 void read_shared_mem_state_and_send_response(
     volatile communication::supervisor_tracee::SharedMemState* shared_mem_state,
     Si tracee_si,
@@ -434,12 +483,15 @@ void main(int argc, char** argv) noexcept {
     }
     auto shared_mem_state = sms::initialize(shared_mem_state_raw);
 
+    auto euid = geteuid();
+    auto egid = getegid();
+
     for (;; sms::reset(shared_mem_state)) {
         auto request = recv_request();
 
         int tracee_pidfd = 0;
         clone_args cl_args = {};
-        cl_args.flags = CLONE_PIDFD;
+        cl_args.flags = CLONE_PIDFD | CLONE_NEWUSER;
         cl_args.pidfd = reinterpret_cast<uint64_t>(&tracee_pidfd);
         cl_args.exit_signal = 0; // we don't need SIGCHLD
         auto pid = syscalls::clone3(&cl_args);
@@ -455,6 +507,18 @@ void main(int argc, char** argv) noexcept {
                 .stderr_fd = request.stderr_fd,
                 .argv = std::move(request.argv),
                 .env = std::move(request.env),
+                .linux_namespaces =
+                    {
+                        .user =
+                            {
+                                .outside_uid = euid,
+                                .inside_uid =
+                                    request.linux_namespaces.user.inside_uid.value_or(euid),
+                                .outside_gid = egid,
+                                .inside_gid =
+                                    request.linux_namespaces.user.inside_gid.value_or(egid),
+                            },
+                    },
             });
         }
         close_request_fds(request);

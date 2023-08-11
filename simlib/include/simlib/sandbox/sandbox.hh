@@ -7,6 +7,7 @@
 #include <simlib/slice.hh>
 #include <string>
 #include <string_view>
+#include <sys/types.h>
 #include <variant>
 
 namespace sandbox {
@@ -16,6 +17,15 @@ struct RequestOptions {
     std::optional<int> stdout_fd = std::nullopt;
     std::optional<int> stderr_fd = std::nullopt;
     Slice<std::string_view> env = {};
+
+    struct LinuxNamespaces {
+        struct User {
+            std::optional<uid_t> inside_uid = std::nullopt; // nullopt will leave it the same as the
+                                                            // outside effective user ID (euid)
+            std::optional<gid_t> inside_gid = std::nullopt; // nullopt will leave it the same as the
+                                                            // outside effective group ID (egid)
+        } user = {};
+    } linux_namespaces = {};
 };
 
 namespace result {

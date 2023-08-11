@@ -175,7 +175,36 @@ void SupervisorConnection::send_request(
         serialized_env_len += str.size() + 1;
     }
 
-    auto header_buff = array_buff_from(mask, serialized_argv_len, serialized_env_len);
+    struct LinuxNamespaces {
+        struct User {
+            request::linux_namespaces::user::mask_t mask;
+            request::linux_namespaces::user::serialized_inside_uid_t inside_uid;
+            request::linux_namespaces::user::serialized_inside_gid_t inside_gid;
+        } user;
+    } linux_ns{
+        .user =
+            [&]() noexcept {
+                LinuxNamespaces::User u{
+                    .mask = 0,
+                    .inside_uid = 0,
+                    .inside_gid = 0,
+                };
+                namespace mask = request::linux_namespaces::user::mask;
+                auto& ops = options.linux_namespaces.user;
+                request::serialize_into(ops.inside_uid, u.mask, u.inside_uid, mask::inside_uid);
+                request::serialize_into(ops.inside_gid, u.mask, u.inside_gid, mask::inside_gid);
+                return u;
+            }(),
+    };
+
+    auto header_buff = array_buff_from(
+        mask,
+        serialized_argv_len,
+        serialized_env_len,
+        linux_ns.user.mask,
+        linux_ns.user.inside_uid,
+        linux_ns.user.inside_gid
+    );
     auto rc = send_fds<fds.max_size()>(
         sock_fd, header_buff.data(), header_buff.size(), MSG_NOSIGNAL, fds.data(), fds.size()
     );
