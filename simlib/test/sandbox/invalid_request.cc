@@ -51,7 +51,7 @@ TEST(sandbox, negative_executable_file_descriptor) {
 TEST(sandbox, invalid_executable_file_descriptor) {
     auto sc = sandbox::spawn_supervisor();
     sc.send_request({{"."}});
-    ASSERT_RESULT_ERROR(sc.await_result(), "execveat() - Permission denied (os error 13)");
+    ASSERT_RESULT_ERROR(sc.await_result(), "tracee: execveat() - Permission denied (os error 13)");
 }
 
 // NOLINTNEXTLINE

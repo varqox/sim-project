@@ -288,9 +288,7 @@ Result SupervisorConnection::await_result() {
         {
             handle_recv_error();
         }
-        if (tracee_runtime_sec < 0) {
-            THROW("BUG: invalid tracee_runtime_sec: ", tracee_runtime_sec);
-        }
+        static_assert(std::is_unsigned_v<decltype(tracee_runtime_sec)>, "need it to be >= 0");
         static_assert(std::is_unsigned_v<decltype(tracee_runtime_nsec)>, "need it to be >= 0");
         if (tracee_runtime_nsec >= 1'000'000'000) {
             THROW("BUG: invalid tracee_runtime_nsec: ", tracee_runtime_nsec);

@@ -1,7 +1,7 @@
 #include "../communication/client_supervisor.hh"
-#include "../communication/supervisor_tracee.hh"
+#include "../communication/supervisor_pid1_tracee.hh"
 #include "../do_die_with_error.hh"
-#include "../tracee/tracee.hh"
+#include "../pid1/pid1.hh"
 
 #include <algorithm>
 #include <cerrno>
@@ -11,7 +11,12 @@
 #include <memory>
 #include <optional>
 #include <simlib/array_vec.hh>
+#include <simlib/concat_tostr.hh>
 #include <simlib/deserializer.hh>
+#include <simlib/from_unsafe.hh>
+#include <simlib/macros/wont_throw.hh>
+#include <simlib/noexcept_concat.hh>
+#include <simlib/overloaded.hh>
 #include <simlib/sandbox/si.hh>
 #include <simlib/socket_stream_ext.hh>
 #include <simlib/string_transform.hh>
@@ -24,6 +29,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <variant>
 #include <vector>
 
 using std::optional;
@@ -417,48 +423,74 @@ void send_error(Error resp) noexcept {
 
 } // namespace response
 
-[[nodiscard]] timespec get_current_time() noexcept {
-    timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts)) {
-        die_with_error("clock_gettime()");
-    }
-    return ts;
-}
-
-void reset_shared_mem_state(
-    volatile communication::supervisor_tracee::SharedMemState* shared_mem_state
-) noexcept {
-    namespace sms = communication::supervisor_tracee;
-    sms::write(shared_mem_state->tracee_exec_start_time, std::nullopt);
-    sms::write_no_error(shared_mem_state);
-}
-
 void read_shared_mem_state_and_send_response(
-    volatile communication::supervisor_tracee::SharedMemState* shared_mem_state,
-    Si tracee_si,
-    timespec tracee_waited_time
+    volatile communication::supervisor_pid1_tracee::SharedMemState* shared_mem_state, Si pid1_si
 ) noexcept {
-    namespace sms = communication::supervisor_tracee;
-    auto error = sms::read_error(shared_mem_state);
-    auto error_sv = error ? optional{std::string_view{error->data(), error->size()}} : std::nullopt;
-
-    auto tracee_exec_start_time = sms::read(shared_mem_state->tracee_exec_start_time);
-    if (!tracee_exec_start_time) {
-        return response::send_error({
-            .description = error_sv ? *error_sv : "unexpected death before execve()",
-        });
-    }
-
-    if (error_sv) {
-        return response::send_error({
-            .description = *error_sv,
-        });
-    }
-
-    response::send_ok({
-        .tracee_si = tracee_si,
-        .tracee_runtime = tracee_waited_time - *tracee_exec_start_time,
-    });
+    namespace sms = communication::supervisor_pid1_tracee;
+    auto res = sms::read_result(shared_mem_state);
+    std::visit(
+        overloaded{
+            [&](const sms::result::Ok& res_ok) noexcept {
+                auto tracee_exec_start_time_opt =
+                    sms::read(shared_mem_state->tracee_exec_start_time);
+                if (!tracee_exec_start_time_opt) {
+                    try {
+                        return response::send_error({
+                            .description = concat_tostr(
+                                "tracee process died unexpectedly before execveat() without an "
+                                "error message: ",
+                                res_ok.si.description()
+                            ),
+                        });
+                    } catch (...) {
+                        return response::send_error({
+                            .description = noexcept_concat(
+                                "tracee process died unexpectedly before execveat() without an "
+                                "error message: si_code = ",
+                                res_ok.si.code,
+                                ", si_status = ",
+                                res_ok.si.status
+                            ),
+                        });
+                    }
+                }
+                auto tracee_exec_start_time = *tracee_exec_start_time_opt;
+                auto tracee_waitid_time =
+                    WONT_THROW(sms::read(shared_mem_state->tracee_waitid_time).value());
+                return response::send_ok({
+                    .tracee_si = res_ok.si,
+                    .tracee_runtime = tracee_waitid_time - tracee_exec_start_time,
+                });
+            },
+            [&](const sms::result::Error& res_err) noexcept {
+                return response::send_error({
+                    .description = {res_err.description.data(), res_err.description.size()},
+                });
+            },
+            [&](const sms::result::None& /*res_none*/) noexcept {
+                try {
+                    return response::send_error({
+                        .description = concat_tostr(
+                            "pid1 process ",
+                            pid1_si.description(),
+                            " without result or error message"
+                        ),
+                    });
+                } catch (...) {
+                    return response::send_error({
+                        .description = noexcept_concat(
+                            "pid1 process died (si_code = ",
+                            pid1_si.code,
+                            ", si_status = ",
+                            pid1_si.status,
+                            ") without result or error message"
+                        ),
+                    });
+                }
+            },
+        },
+        res
+    );
 }
 
 void main(int argc, char** argv) noexcept {
@@ -468,7 +500,7 @@ void main(int argc, char** argv) noexcept {
     close_all_stray_file_descriptors();
     replace_stdin_stdout_stderr_with_dev_null();
 
-    namespace sms = communication::supervisor_tracee;
+    namespace sms = communication::supervisor_pid1_tracee;
     auto shared_mem_state_raw = mmap(
         nullptr,
         sizeof(sms::SharedMemState),
@@ -489,18 +521,19 @@ void main(int argc, char** argv) noexcept {
     for (;; sms::reset(shared_mem_state)) {
         auto request = recv_request();
 
-        int tracee_pidfd = 0;
+        int pid1_pidfd = 0;
         clone_args cl_args = {};
-        cl_args.flags = CLONE_PIDFD | CLONE_NEWUSER;
-        cl_args.pidfd = reinterpret_cast<uint64_t>(&tracee_pidfd);
+        cl_args.flags = CLONE_PIDFD | CLONE_NEWUSER | CLONE_NEWPID;
+        cl_args.pidfd = reinterpret_cast<uint64_t>(&pid1_pidfd);
         cl_args.exit_signal = 0; // we don't need SIGCHLD
+
         auto pid = syscalls::clone3(&cl_args);
         if (pid == -1) {
             die_with_error("clone3()");
         }
         if (pid == 0) {
-            tracee::main({
-                .supervisor_shared_mem_state = shared_mem_state,
+            pid1::main({
+                .shared_mem_state = shared_mem_state,
                 .executable_fd = request.executable_fd,
                 .stdin_fd = request.stdin_fd,
                 .stdout_fd = request.stdout_fd,
@@ -523,15 +556,13 @@ void main(int argc, char** argv) noexcept {
         }
         close_request_fds(request);
         siginfo_t si;
-        syscalls::waitid(P_PIDFD, tracee_pidfd, &si, __WALL | WEXITED, nullptr);
-        timespec tracee_waited_time = get_current_time();
+        syscalls::waitid(P_PIDFD, pid1_pidfd, &si, __WALL | WEXITED, nullptr);
         read_shared_mem_state_and_send_response(
             shared_mem_state,
             Si{
                 .code = si.si_code,
                 .status = si.si_status,
-            },
-            tracee_waited_time
+            }
         );
     }
 }

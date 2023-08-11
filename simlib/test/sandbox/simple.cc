@@ -22,7 +22,7 @@ TEST(sandbox, three_request_of_which_second_is_invalid) {
     ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
 
     sc.send_request({{"."}});
-    ASSERT_RESULT_ERROR(sc.await_result(), "execveat() - Permission denied (os error 13)");
+    ASSERT_RESULT_ERROR(sc.await_result(), "tracee: execveat() - Permission denied (os error 13)");
 
     sc.send_request({{"/bin/false"}});
     ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 1);

@@ -74,7 +74,7 @@ namespace response {
 using error_len_t = uint32_t;
 
 namespace time {
-using sec_t = int64_t;
+using sec_t = uint64_t;
 using nsec_t = uint32_t;
 } // namespace time
 
