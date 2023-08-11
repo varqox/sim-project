@@ -300,6 +300,7 @@ tests = {
     'test/sandbox/si.cc': {},
     'test/sandbox/simple.cc': {},
     'test/sandbox/tracee_cgroup_limits.cc': {'tester': 'test/sandbox/tracee_cgroup_limits_tester.cc'},
+    'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers.cc': {'tester': 'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers_tester.cc'},
     'test/sandbox/tracee_is_killed_upon_supervisor_process_death.cc': {},
     'test/sandbox/tracee_times.cc': {},
     'test/sha.cc': {},
