@@ -39,6 +39,10 @@ namespace result {
 struct Ok {
     Si si;
     std::chrono::nanoseconds runtime; // from CLOCK_MONOTONIC_RAW
+
+    struct Cgroup {
+        uint64_t peak_memory_in_bytes;
+    } cgroup;
 };
 
 struct Error {

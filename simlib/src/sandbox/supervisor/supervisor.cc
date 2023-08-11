@@ -433,6 +433,10 @@ namespace response {
 struct Ok {
     Si tracee_si;
     timespec tracee_runtime;
+
+    struct TraceeCgroup {
+        uint64_t peak_memory_in_bytes;
+    } tracee_cgroup;
 };
 
 struct Error {
@@ -448,7 +452,10 @@ void send_ok(Ok resp) noexcept {
             static_cast<response::si::code_t>(resp.tracee_si.code),
             static_cast<response::si::status_t>(resp.tracee_si.status),
             static_cast<response::time::sec_t>(resp.tracee_runtime.tv_sec),
-            static_cast<response::time::nsec_t>(resp.tracee_runtime.tv_nsec)
+            static_cast<response::time::nsec_t>(resp.tracee_runtime.tv_nsec),
+            static_cast<response::cgroup::peak_memory_in_bytes_t>(
+                resp.tracee_cgroup.peak_memory_in_bytes
+            )
         ))
     {
         die_with_error("send()");
@@ -471,7 +478,9 @@ void send_error(Error resp) noexcept {
 } // namespace response
 
 void read_shared_mem_state_and_send_response(
-    volatile communication::supervisor_pid1_tracee::SharedMemState* shared_mem_state, Si pid1_si
+    volatile communication::supervisor_pid1_tracee::SharedMemState* shared_mem_state,
+    Si pid1_si,
+    const response::Ok::TraceeCgroup& tracee_cgroup
 ) noexcept {
     namespace sms = communication::supervisor_pid1_tracee;
     auto res = sms::read_result(shared_mem_state);
@@ -507,6 +516,7 @@ void read_shared_mem_state_and_send_response(
                 return response::send_ok({
                     .tracee_si = res_ok.si,
                     .tracee_runtime = tracee_waitid_time - tracee_exec_start_time,
+                    .tracee_cgroup = tracee_cgroup,
                 });
             },
             [&](const sms::result::Error& res_err) noexcept {
@@ -654,6 +664,7 @@ struct Cgroups {
     void write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_in_bytes) noexcept;
 
     [[nodiscard]] uint64_t read_tracee_cgroup_current_memory_usage() const noexcept;
+    [[nodiscard]] uint64_t read_tracee_cgroup_peak_memory_usage() const noexcept;
 
     void set_tracee_limits(const Request::Cgroup& cg) noexcept;
 };
@@ -836,6 +847,10 @@ uint64_t Cgroups::read_tracee_cgroup_current_memory_usage() const noexcept {
     return read_file_at_into_number<uint64_t>(tracee_cgroup_fd, "memory.current");
 }
 
+uint64_t Cgroups::read_tracee_cgroup_peak_memory_usage() const noexcept {
+    return read_file_at_into_number<uint64_t>(tracee_cgroup_fd, "memory.peak");
+}
+
 void Cgroups::set_tracee_limits(const Request::Cgroup& cg) noexcept {
     write_tracee_cgroup_process_num_limit(cg.process_num_limit);
     assert(read_tracee_cgroup_current_memory_usage() == 0 && "Needed to not offset limit by this");
@@ -977,6 +992,9 @@ void main(int argc, char** argv) noexcept {
             Si{
                 .code = si.si_code,
                 .status = si.si_status,
+            },
+            response::Ok::TraceeCgroup{
+                .peak_memory_in_bytes = cgroups.read_tracee_cgroup_peak_memory_usage(),
             }
         );
     }
