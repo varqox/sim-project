@@ -57,28 +57,23 @@ class SipJudgeLogger : public sim::JudgeLogger {
     void log_test(
         StringView test_name,
         const sim::JudgeReport::Test& test_report,
-        OldSandbox::ExitStat es,
+        Sandbox::ExitStat es,
         Func&& func
     ) {
         assert(test_name.size() <= test_name_max_len_);
         ++status_count_[test_report.status];
-        auto tmplog = log(
-            ' ',
-            padded_string(test_name, test_name_max_len_, LEFT),
-            "  ",
-            padded_string(
-                intentional_unsafe_string_view(to_string(floor_to_10ms(test_report.runtime), false)
-                ),
-                4
-            ),
-            " / ",
-            to_string(floor_to_10ms(test_report.time_limit), false),
-            "\033[2ms\033[m ",
-            mem_to_str(test_report.memory_consumed),
-            " / ",
-            mem_to_str(test_report.memory_limit, false),
-            ' '
-        );
+        auto tmplog =
+            log(' ',
+                padded_string(test_name, test_name_max_len_, LEFT),
+                "  ",
+                padded_string(from_unsafe{to_string(floor_to_10ms(test_report.runtime), false)}, 4),
+                " / ",
+                to_string(floor_to_10ms(test_report.time_limit), false),
+                "\033[2ms\033[m ",
+                mem_to_str(test_report.memory_consumed),
+                " / ",
+                mem_to_str(test_report.memory_limit, false),
+                ' ');
         // Status
         switch (test_report.status) {
         case sim::JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;
@@ -111,16 +106,16 @@ public:
 
     void begin(bool final) override { final_ = final; }
 
-    void test(StringView test_name, sim::JudgeReport::Test test_report, OldSandbox::ExitStat es)
-        override {
+    void
+    test(StringView test_name, sim::JudgeReport::Test test_report, Sandbox::ExitStat es) override {
         log_test(test_name, test_report, es, [](auto& /*unused*/) {});
     }
 
     void test(
         StringView test_name,
         sim::JudgeReport::Test test_report,
-        OldSandbox::ExitStat es,
-        OldSandbox::ExitStat checker_es,
+        Sandbox::ExitStat es,
+        Sandbox::ExitStat checker_es,
         std::optional<uint64_t> checker_mem_limit,
         StringView checker_error_str
     ) override {
@@ -172,7 +167,7 @@ public:
             using S = sim::JudgeReport::Test::Status;
 
             for (const auto& [status, count] : status_count_) {
-                auto num = padded_string(intentional_unsafe_string_view(to_string(count)), 4);
+                auto num = padded_string(from_unsafe{to_string(count)}, 4);
                 switch (status) {
                 case S::OK: log("\033[1;32mOK\033[m            ", num); break;
                 case S::WA: log("\033[1;31mWA\033[m            ", num); break;

@@ -2,9 +2,11 @@
 #include "templates.hh"
 
 #include <cstdlib>
-#include <simlib/debug.hh>
+#include <simlib/concat.hh>
+#include <simlib/concat_tostr.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
 #include <sys/types.h>
@@ -48,7 +50,7 @@ static string get_template(
 ) {
     static auto templates_dir = user_templates_dir();
     FileDescriptor fd(
-        intentional_unsafe_cstring_view(concat(templates_dir, template_name)), O_RDONLY
+        CStringView{from_unsafe{concat_tostr(templates_dir, template_name)}}, O_RDONLY
     );
     if (fd.is_open()) {
         return get_file_contents(fd);

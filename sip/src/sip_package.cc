@@ -21,6 +21,7 @@
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/inotify.hh>
 #include <simlib/libzip.hh>
 #include <simlib/path.hh>
@@ -152,7 +153,7 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
             throw SipError("blast()", errmsg());
         }
         if (c != '\n') {
-            fputc('\n', stderr);
+            (void)fputc('\n', stderr);
         }
     };
     auto es = Spawner::run(
@@ -324,11 +325,11 @@ void SipPackage::generate_test_input_files() {
         auto it = tests_files->tests.find(test.name);
         if (it == tests_files->tests.end() or not it->second.in.has_value()) {
             generate_test_input_file(
-                test, intentional_unsafe_cstring_view(concat(in_dir, test.name, ".in"))
+                test, CStringView{from_unsafe{concat_tostr(in_dir, test.name, ".in")}}
             );
         } else {
             generate_test_input_file(
-                test, intentional_unsafe_cstring_view(concat(it->second.in.value()))
+                test, CStringView{from_unsafe{concat_tostr(it->second.in.value())}}
             );
         }
     }
@@ -368,9 +369,7 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
         new_limits.emplace_back(entry);
     }
 
-    replace_variable_in_simfile(
-        "limits", intentional_unsafe_string_view(simfile.dump_limits_value()), false
-    );
+    replace_variable_in_simfile("limits", from_unsafe{simfile.dump_limits_value()}, false);
 }
 
 void SipPackage::generate_test_output_files() {
@@ -715,9 +714,7 @@ void SipPackage::save_scoring() {
     STACK_UNWINDING_MARK;
     stdlog("Saving scoring...").flush_no_nl();
 
-    replace_variable_in_simfile(
-        "scoring", intentional_unsafe_string_view(full_simfile.dump_scoring_value()), false
-    );
+    replace_variable_in_simfile("scoring", from_unsafe{full_simfile.dump_scoring_value()}, false);
 
     stdlog(" done.");
 }
@@ -726,9 +723,7 @@ void SipPackage::save_limits() {
     STACK_UNWINDING_MARK;
     stdlog("Saving limits...").flush_no_nl();
 
-    replace_variable_in_simfile(
-        "limits", intentional_unsafe_string_view(full_simfile.dump_limits_value()), false
-    );
+    replace_variable_in_simfile("limits", from_unsafe{full_simfile.dump_limits_value()}, false);
 
     stdlog(" done.");
 }
@@ -1115,7 +1110,7 @@ void SipPackage::create_default_simfile(std::optional<CStringView> problem_name)
     stdlog("Creating Simfile...").flush_no_nl();
 
     auto package_dir_filename =
-        path_filename(intentional_unsafe_string_view(get_cwd()).without_suffix(1)).to_string();
+        path_filename(StringView{from_unsafe{get_cwd()}}.without_suffix(1)).to_string();
     if (access("Simfile", F_OK) == 0) {
         simfile_contents = get_file_contents("Simfile");
         reload_simfile_from_str(simfile_contents);
@@ -1148,32 +1143,32 @@ void SipPackage::create_default_simfile(std::optional<CStringView> problem_name)
         constexpr char mem_limit_var_name[] = "memory_limit";
         if (not simfile.config_file().get_var(mem_limit_var_name).is_set()) {
             replace_variable_in_simfile(
-                mem_limit_var_name, intentional_unsafe_string_view(to_string(DEFAULT_MEMORY_LIMIT))
+                mem_limit_var_name, from_unsafe{to_string(DEFAULT_MEMORY_LIMIT)}
             );
         }
 
     } else if (problem_name.has_value()) {
         put_file_contents(
             "Simfile",
-            intentional_unsafe_string_view(concat(
+            from_unsafe{concat(
                 "name: ",
                 ConfigFile::escape_string(problem_name.value()),
                 "\nmemory_limit: ",
                 DEFAULT_MEMORY_LIMIT,
                 '\n'
-            ))
+            )}
         );
 
     } else if (not package_dir_filename.empty()) {
         put_file_contents(
             "Simfile",
-            intentional_unsafe_string_view(concat(
+            from_unsafe{concat(
                 "name: ",
                 ConfigFile::escape_string(package_dir_filename),
                 "\nmemory_limit: ",
                 DEFAULT_MEMORY_LIMIT,
                 '\n'
-            ))
+            )}
         );
 
     } else { // iff absolute path of dir is /

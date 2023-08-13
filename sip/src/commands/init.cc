@@ -2,7 +2,7 @@
 #include "../sip_package.hh"
 #include "commands.hh"
 
-#include <simlib/debug.hh>
+#include <simlib/macros/stack_unwinding.hh>
 
 namespace commands {
 

@@ -1,6 +1,6 @@
 #include "../sip_package.hh"
 
-#include <simlib/debug.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/random.hh>
 
 namespace commands {
@@ -23,9 +23,7 @@ void reseed() {
             break;
         }
     }
-    sp.replace_variable_in_sipfile(
-        "base_seed", intentional_unsafe_string_view(to_string(sp.sipfile.base_seed))
-    );
+    sp.replace_variable_in_sipfile("base_seed", from_unsafe{to_string(sp.sipfile.base_seed)});
 }
 
 } // namespace commands

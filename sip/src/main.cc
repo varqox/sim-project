@@ -26,17 +26,17 @@ static void parse_options(int& argc, char** argv) {
             if (0 == strcmp(argv[i], "-C") and i + 1 < argc) {
                 // Working directory
                 if (chdir(argv[++i]) == -1) {
-                    eprintf("Error: chdir() - %s\n", strerror(errno));
-                    exit(1);
+                    (void)fprintf(stderr, "Error: chdir()%s\n", errmsg(errno).c_str());
+                    _exit(1);
                 }
 
             } else if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help")) {
                 commands::help(argv[0]); // argv[0] is valid (argc > 1)
-                exit(0);
+                _exit(0);
 
             } else if (0 == strcmp(argv[i], "-V") or 0 == strcmp(argv[i], "--version")) {
                 commands::version();
-                exit(0);
+                _exit(0);
 
             } else if (0 == strcmp(argv[i], "-v") or 0 == strcmp(argv[i], "--sip_verbose")) {
                 sip_verbose = true;
@@ -45,7 +45,7 @@ static void parse_options(int& argc, char** argv) {
                 stdlog.open("/dev/null");
 
             } else { // Unknown
-                eprintf("Unknown option: '%s'\n", argv[i]);
+                (void)fprintf(stderr, "Unknown option: '%s'\n", argv[i]);
             }
 
         } else {
@@ -230,7 +230,9 @@ void delete_zip_file_that_is_being_created() {
 void cleanup_before_getting_killed(int signum) {
     // print message: "Sip was just killed by signal %i - %s\n"
     try {
-        errlog("\nSip was just killed by signal ", signum, " (", strsignal(signum), ')');
+        errlog(
+            "\nSip was just killed by signal ", sigabbrev_np(signum), " - ", sigdescr_np(signum)
+        );
     } catch (...) {
     }
 

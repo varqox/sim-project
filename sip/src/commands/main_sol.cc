@@ -1,8 +1,8 @@
 #include "../sip_error.hh"
 #include "../sip_package.hh"
 
-#include <simlib/debug.hh>
 #include <simlib/file_info.hh>
+#include <simlib/macros/stack_unwinding.hh>
 
 namespace commands {
 

@@ -170,7 +170,7 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 
     for (auto gid = begin_gid; gid <= end_gid; ++gid) {
         for (InplaceBuff<8> tid(begin_tid); tid <= end_tid; inc_tid(tid)) {
-            callback(intentional_unsafe_string_view(concat(prefix, gid, tid)));
+            callback(StringView{from_unsafe{concat(prefix, gid, tid)}});
         }
     }
 }
