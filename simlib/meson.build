@@ -233,7 +233,7 @@ tests = {
     'test/ranges.cc': {},
     'test/request_uri_parser.cc': {},
     'test/result.cc': {},
-    'test/sandbox.cc': {'priority': 8},
+    'test/sandbox.cc': {'priority': 8, 'args': meson.current_source_dir() + '/test/sandbox_test_cases/'},
     'test/sha.cc': {},
     'test/shared_function.cc': {},
     'test/shared_memory_segment.cc': {},

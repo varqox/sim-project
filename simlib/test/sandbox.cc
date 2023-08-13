@@ -1,5 +1,6 @@
 #include "compilation_cache.hh"
 
+#include <cassert>
 #include <chrono>
 #include <gtest/gtest.h>
 #include <iomanip>
@@ -7,7 +8,6 @@
 #include <simlib/concurrent/job_processor.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/path.hh>
-#include <simlib/process.hh>
 #include <simlib/sandbox.hh>
 #include <simlib/temporary_file.hh>
 #include <simlib/throw_assert.hh>
@@ -568,17 +568,18 @@ protected:
     }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static CStringView test_cases_dir;
+
+int main(int argc, char** argv) {
+    testing::InitGoogleTest(&argc, argv);
+    assert(argc == 2);
+    test_cases_dir = CStringView{argv[1]};
+    return RUN_ALL_TESTS();
+}
+
 // NOLINTNEXTLINE
 TEST(Sandbox, run) {
     stdlog.label(false);
-
-    for (const auto& path : {string{"."}, executable_path(getpid())}) {
-        auto tests_dir_opt = deepest_ancestor_dir_with_subpath(path, "test/sandbox_test_cases/");
-        if (tests_dir_opt) {
-            SandboxTestRunner(*tests_dir_opt).run();
-            return;
-        }
-    }
-
-    FAIL() << "could not find tests directory";
+    SandboxTestRunner(test_cases_dir.to_string()).run();
 }
