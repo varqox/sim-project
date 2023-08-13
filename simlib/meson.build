@@ -190,7 +190,7 @@ tests = {
     'test/concat_tostr.cc': {},
     'test/config_file.cc': {'priority': 10},
     'test/constructor_traits.cc': {},
-    'test/conver.cc': {'priority': 10},
+    'test/conver.cc': {'priority': 10, 'args': meson.current_source_dir() + '/test/conver_test_cases/'},
     'test/ctype.cc': {},
     'test/defer.cc': {},
     'test/directory.cc': {},

@@ -1,5 +1,6 @@
 #include "compilation_cache.hh"
 
+#include <cassert>
 #include <chrono>
 #include <gtest/gtest.h>
 #include <linux/limits.h>
@@ -14,7 +15,6 @@
 #include <simlib/inplace_buff.hh>
 #include <simlib/logger.hh>
 #include <simlib/path.hh>
-#include <simlib/process.hh>
 #include <simlib/sim/conver.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/string_compare.hh>
@@ -462,18 +462,18 @@ protected:
     }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static CStringView test_cases_dir;
+
+int main(int argc, char** argv) {
+    testing::InitGoogleTest(&argc, argv);
+    assert(argc == 2);
+    test_cases_dir = CStringView{argv[1]};
+    return RUN_ALL_TESTS();
+}
+
 // NOLINTNEXTLINE
-TEST(Conver, construct_simfile) {
+TEST(Conver, run) {
     stdlog.label(false);
-    stdlog.use(stdout);
-
-    for (const auto& path : {string{"."}, executable_path(getpid())}) {
-        auto tests_dir_opt = deepest_ancestor_dir_with_subpath(path, "test/conver_test_cases/");
-        if (tests_dir_opt) {
-            ConverTestsRunner(*tests_dir_opt).run();
-            return;
-        }
-    }
-
-    FAIL() << "could not find tests directory";
+    ConverTestsRunner(test_cases_dir.to_string()).run();
 }
