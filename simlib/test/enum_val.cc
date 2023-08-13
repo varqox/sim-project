@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <optional>
 #include <simlib/enum_val.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
 
 enum class Int32Enum : int32_t {
     A = 1,

@@ -4,7 +4,7 @@
 #include <optional>
 #include <simlib/concat_tostr.hh>
 #include <simlib/enum_val.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
 #include <simlib/mysql/mysql.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>

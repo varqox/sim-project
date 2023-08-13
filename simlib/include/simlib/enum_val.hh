@@ -1,9 +1,8 @@
 #pragma once
 
-#include "enum_with_string_conversions.hh"
-
 #include <optional>
 #include <simlib/always_false.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 
