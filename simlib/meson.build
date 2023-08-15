@@ -323,6 +323,7 @@ tests = {
     'test/throw_assert.cc': {},
     'test/time.cc': {},
     'test/time_format_conversions.cc': {},
+    'test/to_arg_seq.cc': {},
     'test/to_string.cc': {},
     'test/unlinked_temporary_file.cc': {},
     'test/utilities.cc': {},
