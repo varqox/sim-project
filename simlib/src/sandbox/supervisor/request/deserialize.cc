@@ -176,13 +176,20 @@ void deserialize(Reader& reader, Request::Cgroup& cg) {
 void deserialize(Reader& reader, Request::Prlimit& pr) {
     namespace prlimit = communication::client_supervisor::request::prlimit;
     bool has_max_address_space_size_in_bytes;
+    bool has_max_core_file_size_in_bytes;
     reader.read_flags({
         {has_max_address_space_size_in_bytes, prlimit::mask::max_address_space_size_in_bytes},
+        {has_max_core_file_size_in_bytes, prlimit::mask::max_core_file_size_in_bytes},
     }, from<prlimit::mask_t>);
     reader.read_optional_if(
         pr.max_address_space_size_in_bytes,
         from<prlimit::max_address_space_size_in_bytes_t>,
         has_max_address_space_size_in_bytes
+    );
+    reader.read_optional_if(
+        pr.max_core_file_size_in_bytes,
+        from<prlimit::max_core_file_size_in_bytes_t>,
+        has_max_core_file_size_in_bytes
     );
 }
 

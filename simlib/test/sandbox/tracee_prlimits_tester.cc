@@ -26,9 +26,12 @@ rlimit64 get_prlimit(T resource) {
 
 int main(int argc, char** argv) {
     bool memory_limit = false;
+    bool core_file_size_limit = false;
     for (auto arg : to_arg_seq(argc, argv)) {
         if (arg == "memory") {
             memory_limit = true;
+        } else if (arg == "core_file_size") {
+            core_file_size_limit = true;
         } else {
             THROW("Unrecognized argument: ", arg);
         }
@@ -39,5 +42,10 @@ int main(int argc, char** argv) {
         auto rlim = get_prlimit(RLIMIT_AS);
         throw_assert(rlim.rlim_cur == 1 << 30);
         throw_assert(rlim.rlim_max == 1 << 30);
+    }
+    if (core_file_size_limit) {
+        auto rlim = get_prlimit(RLIMIT_CORE);
+        throw_assert(rlim.rlim_cur == 0);
+        throw_assert(rlim.rlim_max == 0);
     }
 }

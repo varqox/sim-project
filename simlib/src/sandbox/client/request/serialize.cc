@@ -196,10 +196,14 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
     namespace prlimit = communication::client_supervisor::request::prlimit;
     writer.write_flags({
             {pr.max_address_space_size_in_bytes.has_value(), prlimit::mask::max_address_space_size_in_bytes},
+            {pr.max_core_file_size_in_bytes.has_value(), prlimit::mask::max_core_file_size_in_bytes},
         }, as<prlimit::mask_t>);
     if (pr.max_address_space_size_in_bytes) {
         writer
             .write(*pr.max_address_space_size_in_bytes, as<prlimit::max_address_space_size_in_bytes_t>);
+    }
+    if (pr.max_core_file_size_in_bytes) {
+        writer.write(*pr.max_core_file_size_in_bytes, as<prlimit::max_core_file_size_in_bytes_t>);
     }
 }
 

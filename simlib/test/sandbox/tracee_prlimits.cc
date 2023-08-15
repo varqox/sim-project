@@ -26,3 +26,19 @@ TEST(sandbox, prlimit_max_address_space_size_in_bytes) {
     );
     ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
 }
+
+// NOLINTNEXTLINE
+TEST(sandbox, max_core_file_size_in_bytes) {
+    auto sc = sandbox::spawn_supervisor();
+    sc.send_request(
+        {{tester_executable_path, "core_file_size"}},
+        {
+            .stderr_fd = STDERR_FILENO,
+            .prlimit =
+                {
+                    .max_core_file_size_in_bytes = 0,
+                },
+        }
+    );
+    ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
+}

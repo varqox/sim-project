@@ -79,6 +79,7 @@ struct RequestOptions {
 
     struct Prlimit {
         std::optional<uint64_t> max_address_space_size_in_bytes = std::nullopt; // RLIMIT_AS
+        std::optional<uint64_t> max_core_file_size_in_bytes = std::nullopt; // RLIMIT_CORE
     } prlimit = {};
 };
 
