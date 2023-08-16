@@ -788,6 +788,12 @@ void set_and_lock_all_securebits_for_this_and_all_descendant_processes() noexcep
     }
 }
 
+void set_no_new_privs_for_this_and_all_descendant_processes() noexcept {
+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0, 0)) {
+        die_with_error("prctl(PR_SET_NO_NEW_PRIVS");
+    }
+}
+
 } // namespace capabilities
 
 // Waits for pid1 death or read and write shutdown of the other end of the SOCK_FD (we can't wait
@@ -870,6 +876,7 @@ void main(int argc, char** argv) noexcept {
     auto cgroups = cgroups::setup(mount_ns);
 
     capabilities::set_and_lock_all_securebits_for_this_and_all_descendant_processes();
+    capabilities::set_no_new_privs_for_this_and_all_descendant_processes();
 
     for (;; [&] {
              sms::reset(shared_mem_state);

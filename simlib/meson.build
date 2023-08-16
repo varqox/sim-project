@@ -308,6 +308,7 @@ tests = {
     'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers.cc': {'tester': 'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers_tester.cc'},
     'test/sandbox/tracee_is_killed_upon_supervisor_process_death.cc': {},
     'test/sandbox/tracee_memory_usage.cc': {'tester': 'test/sandbox/tracee_memory_usage_tester.cc'},
+    'test/sandbox/tracee_no_new_privs.cc': {'tester': 'test/sandbox/tracee_no_new_privs_tester.cc'},
     'test/sandbox/tracee_prlimits.cc': {'tester': 'test/sandbox/tracee_prlimits_tester.cc', 'priority': 20 },
     'test/sandbox/tracee_times.cc': {'tester': 'test/sandbox/tracee_times_tester.cc'},
     'test/serialize.cc': {},
