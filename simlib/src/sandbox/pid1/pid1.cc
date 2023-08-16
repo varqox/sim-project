@@ -17,6 +17,7 @@
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/ubsan.hh>
+#include <sys/capability.h>
 #include <sys/mount.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
@@ -245,6 +246,18 @@ namespace sandbox::pid1 {
             }
         }
     };
+    auto drop_all_capabilities_and_prevent_gaining_any_of_them = [&]() noexcept {
+        cap_t caps = cap_init(); // all capabilities are cleared
+        if (caps == nullptr) {
+            die_with_error("caps_init()");
+        }
+        if (cap_set_proc(caps)) {
+            die_with_error("cap_set_proc()");
+        }
+        if (cap_free(caps)) {
+            die_with_error("cap_free()");
+        }
+    };
     auto harden_against_potential_compromise = [&]() noexcept {
         // Cut access to cgroups other than ours
         unshare(CLONE_NEWCGROUP);
@@ -265,6 +278,7 @@ namespace sandbox::pid1 {
     setup_user_namespace(args.linux_namespaces.user.pid1);
     int proc_dirfd = open("/proc", O_RDONLY | O_CLOEXEC);
     setup_mount_namespace(args.linux_namespaces.mount);
+    drop_all_capabilities_and_prevent_gaining_any_of_them();
 
     if (UNDEFINED_SANITIZER) {
         auto ignore_signal = [&](int sig) noexcept {

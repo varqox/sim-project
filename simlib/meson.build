@@ -70,6 +70,7 @@ dump_file_as_c_array_gen = generator(dump_file_as_c_array,
 )
 
 dl_dep = cpp.find_library('dl', kwargs : static_kwargs)
+libcap_dep = dependency('libcap', kwargs : static_kwargs)
 libseccomp_dep = dependency('libseccomp', kwargs : static_kwargs)
 libzip_dep = dependency('libzip', version : '>=1.3.0', kwargs : static_kwargs)
 rt_dep = cpp.find_library('rt', kwargs : static_kwargs)
@@ -106,6 +107,7 @@ sandbox_supervisor = executable('sandbox_supervisor',
         'src/sandbox/tracee/tracee.cc',
         'src/socket_stream_ext.cc',
     ],
+    dependencies : libcap_dep,
     install : false,
 )
 
@@ -283,6 +285,7 @@ tests = {
     'test/request_uri_parser.cc': {},
     'test/result.cc': {},
     'test/sandbox/destructor.cc': {},
+    'test/sandbox/external/capabilities_and_user_namespaces.cc': {'dependencies': [gtest_main_dep, libcap_dep]},
     'test/sandbox/external/detect_parent_process_death_using_pidfd.cc': {},
     'test/sandbox/external/poll_hup_on_sock_seqpacket.cc': {},
     'test/sandbox/external/poll_hup_on_sock_stream.cc': {},
