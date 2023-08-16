@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
     bool cpu_time_limit = false;
     bool file_size_limit = false;
     bool file_descriptors_num = false;
+    bool max_stack_size = false;
     for (auto arg : to_arg_seq(argc, argv)) {
         if (arg == "memory") {
             memory_limit = true;
@@ -47,6 +48,8 @@ int main(int argc, char** argv) {
             file_size_limit = true;
         } else if (arg == "file_descriptors_num") {
             file_descriptors_num = true;
+        } else if (arg == "max_stack_size") {
+            max_stack_size = true;
         } else {
             THROW("Unrecognized argument: ", arg);
         }
@@ -102,5 +105,10 @@ int main(int argc, char** argv) {
         throw_assert(rlim.rlim_max == 4);
         throw_assert(fcntl(STDIN_FILENO, F_DUPFD_CLOEXEC, 0) >= 0);
         throw_assert(fcntl(STDIN_FILENO, F_DUPFD_CLOEXEC, 0) == -1 && errno == EMFILE);
+    }
+    if (max_stack_size) {
+        auto rlim = get_prlimit(RLIMIT_STACK);
+        throw_assert(rlim.rlim_cur == 4123 << 10);
+        throw_assert(rlim.rlim_max == 4123 << 10);
     }
 }

@@ -180,12 +180,14 @@ void deserialize(Reader& reader, Request::Prlimit& pr) {
     bool has_cpu_time_limit_in_seconds;
     bool has_max_file_size_in_bytes;
     bool has_file_descriptors_num_limit;
+    bool has_max_stack_size_in_bytes;
     reader.read_flags({
         {has_max_address_space_size_in_bytes, prlimit::mask::max_address_space_size_in_bytes},
         {has_max_core_file_size_in_bytes, prlimit::mask::max_core_file_size_in_bytes},
         {has_cpu_time_limit_in_seconds, prlimit::mask::cpu_time_limit_in_seconds},
         {has_max_file_size_in_bytes, prlimit::mask::max_file_size_in_bytes},
         {has_file_descriptors_num_limit, prlimit::mask::file_descriptors_num_limit},
+        {has_max_stack_size_in_bytes, prlimit::mask::max_stack_size_in_bytes},
     }, from<prlimit::mask_t>);
     reader.read_optional_if(
         pr.max_address_space_size_in_bytes,
@@ -211,6 +213,11 @@ void deserialize(Reader& reader, Request::Prlimit& pr) {
         pr.file_descriptors_num_limit,
         from<prlimit::file_descriptors_num_limit_t>,
         has_file_descriptors_num_limit
+    );
+    reader.read_optional_if(
+        pr.max_stack_size_in_bytes,
+        from<prlimit::max_stack_size_in_bytes_t>,
+        has_max_stack_size_in_bytes
     );
 }
 

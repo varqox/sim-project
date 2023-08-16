@@ -83,6 +83,7 @@ struct RequestOptions {
         std::optional<uint64_t> cpu_time_limit_in_seconds = std::nullopt; // RLIMIT_CPU
         std::optional<uint64_t> max_file_size_in_bytes = std::nullopt; // RLIMIT_FSIZE
         std::optional<uint64_t> file_descriptors_num_limit = std::nullopt; // RLIMIT_NOFILE
+        std::optional<uint64_t> max_stack_size_in_bytes = std::nullopt; // RLIMIT_STACK
     } prlimit = {};
 };
 

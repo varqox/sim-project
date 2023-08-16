@@ -80,6 +80,7 @@ struct Request {
         std::optional<uint64_t> cpu_time_limit_in_seconds;
         std::optional<uint64_t> max_file_size_in_bytes;
         std::optional<uint64_t> file_descriptors_num_limit;
+        std::optional<uint64_t> max_stack_size_in_bytes;
     } prlimit;
 };
 

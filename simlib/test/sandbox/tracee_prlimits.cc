@@ -123,3 +123,30 @@ TEST(sandbox, file_descriptors_num_limit) {
     );
     ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
 }
+
+// NOLINTNEXTLINE
+TEST(sandbox, max_stack_size_in_bytes) {
+    auto sc = sandbox::spawn_supervisor();
+    sc.send_request(
+        {{tester_executable_path}},
+        {
+            .stderr_fd = STDERR_FILENO,
+            .prlimit =
+                {
+                    .max_stack_size_in_bytes = 0,
+                },
+        }
+    );
+    ASSERT_RESULT_OK(sc.await_result(), CLD_KILLED, SIGSEGV);
+    sc.send_request(
+        {{tester_executable_path, "max_stack_size"}},
+        {
+            .stderr_fd = STDERR_FILENO,
+            .prlimit =
+                {
+                    .max_stack_size_in_bytes = 4123 << 10,
+                },
+        }
+    );
+    ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
+}
