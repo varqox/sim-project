@@ -96,3 +96,30 @@ TEST(sandbox, max_file_size_in_bytes) {
     );
     ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
 }
+
+// NOLINTNEXTLINE
+TEST(sandbox, file_descriptors_num_limit) {
+    auto sc = sandbox::spawn_supervisor();
+    sc.send_request(
+        {{tester_executable_path}},
+        {
+            .stderr_fd = STDERR_FILENO,
+            .prlimit =
+                {
+                    .file_descriptors_num_limit = 3, // dynamic linker will fail
+                },
+        }
+    );
+    ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 127);
+    sc.send_request(
+        {{tester_executable_path, "file_descriptors_num"}},
+        {
+            .stderr_fd = STDERR_FILENO,
+            .prlimit =
+                {
+                    .file_descriptors_num_limit = 4,
+                },
+        }
+    );
+    ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
+}

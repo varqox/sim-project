@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
     bool core_file_size_limit = false;
     bool cpu_time_limit = false;
     bool file_size_limit = false;
+    bool file_descriptors_num = false;
     for (auto arg : to_arg_seq(argc, argv)) {
         if (arg == "memory") {
             memory_limit = true;
@@ -44,6 +45,8 @@ int main(int argc, char** argv) {
             cpu_time_limit = true;
         } else if (arg == "file_size") {
             file_size_limit = true;
+        } else if (arg == "file_descriptors_num") {
+            file_descriptors_num = true;
         } else {
             THROW("Unrecognized argument: ", arg);
         }
@@ -92,5 +95,12 @@ int main(int argc, char** argv) {
         throw_assert(write_all(fd, from_unsafe{random_bytes(42)}) == 42);
         throw_assert(write_all(fd, "x", 1) == 0 && errno == EFBIG);
         throw_assert(close(fd) == 0);
+    }
+    if (file_descriptors_num) {
+        auto rlim = get_prlimit(RLIMIT_NOFILE);
+        throw_assert(rlim.rlim_cur == 4);
+        throw_assert(rlim.rlim_max == 4);
+        throw_assert(fcntl(STDIN_FILENO, F_DUPFD_CLOEXEC, 0) >= 0);
+        throw_assert(fcntl(STDIN_FILENO, F_DUPFD_CLOEXEC, 0) == -1 && errno == EMFILE);
     }
 }

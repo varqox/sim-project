@@ -199,6 +199,7 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
             {pr.max_core_file_size_in_bytes.has_value(), prlimit::mask::max_core_file_size_in_bytes},
             {pr.cpu_time_limit_in_seconds.has_value(), prlimit::mask::cpu_time_limit_in_seconds},
             {pr.max_file_size_in_bytes.has_value(), prlimit::mask::max_file_size_in_bytes},
+            {pr.file_descriptors_num_limit.has_value(), prlimit::mask::file_descriptors_num_limit},
         }, as<prlimit::mask_t>);
     if (pr.max_address_space_size_in_bytes) {
         writer
@@ -212,6 +213,9 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
     }
     if (pr.max_file_size_in_bytes) {
         writer.write(*pr.max_file_size_in_bytes, as<prlimit::max_file_size_in_bytes_t>);
+    }
+    if (pr.file_descriptors_num_limit) {
+        writer.write(*pr.file_descriptors_num_limit, as<prlimit::file_descriptors_num_limit_t>);
     }
 }
 
