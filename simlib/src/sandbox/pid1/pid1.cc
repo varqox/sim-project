@@ -316,6 +316,7 @@ namespace sandbox::pid1 {
                             .inside_gid = args.linux_namespaces.user.tracee.inside_gid,
                         },
                 },
+            .prlimit = args.prlimit,
         });
     }
 

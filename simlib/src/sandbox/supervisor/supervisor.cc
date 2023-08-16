@@ -912,6 +912,7 @@ void main(int argc, char** argv) noexcept {
                                     request.linux_namespaces.mount.new_root_mount_path,
                             },
                     },
+                .prlimit = request.prlimit,
             });
         }
         close_request_fds(request);

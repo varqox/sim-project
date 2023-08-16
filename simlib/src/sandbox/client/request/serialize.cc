@@ -191,6 +191,18 @@ void serialize(Writer<phase>& writer, const RequestOptions::Cgroup& cg) {
     }
 }
 
+template <Phase phase>
+void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
+    namespace prlimit = communication::client_supervisor::request::prlimit;
+    writer.write_flags({
+            {pr.max_address_space_size_in_bytes.has_value(), prlimit::mask::max_address_space_size_in_bytes},
+        }, as<prlimit::mask_t>);
+    if (pr.max_address_space_size_in_bytes) {
+        writer
+            .write(*pr.max_address_space_size_in_bytes, as<prlimit::max_address_space_size_in_bytes_t>);
+    }
+}
+
 SerializedReuest
 serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions& options) {
     namespace request = communication::client_supervisor::request;
@@ -225,6 +237,7 @@ serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions&
 
         serialize(writer, options.linux_namespaces);
         serialize(writer, options.cgroup);
+        serialize(writer, options.prlimit);
     };
 
     // Header

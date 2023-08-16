@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../communication/supervisor_pid1_tracee.hh"
+#include "../supervisor/request/request.hh"
 
 #include <optional>
 #include <vector>
@@ -27,6 +28,9 @@ struct Args {
             gid_t inside_gid;
         } user;
     } linux_namespaces;
+
+    using Prlimit = supervisor::request::Request::Prlimit;
+    Prlimit prlimit;
 };
 
 [[noreturn]] void main(Args args) noexcept;

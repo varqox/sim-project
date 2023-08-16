@@ -73,6 +73,10 @@ struct Request {
         std::optional<uint32_t> process_num_limit;
         std::optional<uint64_t> memory_limit_in_bytes;
     } cgroup;
+
+    struct Prlimit {
+        std::optional<uint64_t> max_address_space_size_in_bytes;
+    } prlimit;
 };
 
 } // namespace sandbox::supervisor::request

@@ -173,6 +173,19 @@ void deserialize(Reader& reader, Request::Cgroup& cg) {
     );
 }
 
+void deserialize(Reader& reader, Request::Prlimit& pr) {
+    namespace prlimit = communication::client_supervisor::request::prlimit;
+    bool has_max_address_space_size_in_bytes;
+    reader.read_flags({
+        {has_max_address_space_size_in_bytes, prlimit::mask::max_address_space_size_in_bytes},
+    }, from<prlimit::mask_t>);
+    reader.read_optional_if(
+        pr.max_address_space_size_in_bytes,
+        from<prlimit::max_address_space_size_in_bytes_t>,
+        has_max_address_space_size_in_bytes
+    );
+}
+
 void deserialize(Reader& reader, ArrayVec<int, 253>& fds, Request& req) {
     namespace request = communication::client_supervisor::request;
     size_t fds_taken = 0;
@@ -215,6 +228,7 @@ void deserialize(Reader& reader, ArrayVec<int, 253>& fds, Request& req) {
 
     deserialize(reader, req.linux_namespaces);
     deserialize(reader, req.cgroup);
+    deserialize(reader, req.prlimit);
 }
 
 } // namespace sandbox::supervisor::request

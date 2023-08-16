@@ -43,6 +43,9 @@ struct Args {
         using Mount = supervisor::request::Request::LinuxNamespaces::Mount;
         Mount mount;
     } linux_namespaces;
+
+    using Prlimit = supervisor::request::Request::Prlimit;
+    Prlimit prlimit;
 };
 
 [[noreturn]] void main(Args args) noexcept;

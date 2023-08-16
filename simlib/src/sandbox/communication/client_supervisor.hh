@@ -113,6 +113,18 @@ using memory_limit_in_bytes_t = uint64_t;
 
 } // namespace cgroup
 
+namespace prlimit {
+
+using mask_t = uint8_t;
+
+namespace mask {
+static constexpr mask_t max_address_space_size_in_bytes = 1 << 0;
+} // namespace mask
+
+using max_address_space_size_in_bytes_t = uint64_t;
+
+} // namespace prlimit
+
 } // namespace request
 
 namespace response {

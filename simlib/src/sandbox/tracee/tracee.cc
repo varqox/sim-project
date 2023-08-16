@@ -11,6 +11,7 @@
 #include <simlib/noexcept_concat.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
+#include <sys/resource.h>
 #include <unistd.h>
 #include <utility>
 
@@ -69,6 +70,17 @@ namespace sandbox::tracee {
             die_with_error("dup3()");
         }
     };
+    auto setup_prlimit = [&](const Args::Prlimit& pr) noexcept {
+        auto setup_limit = [&](auto resource, auto opt) noexcept {
+            if (opt) {
+                rlimit64 rlim = {.rlim_cur = *opt, .rlim_max = *opt};
+                if (prlimit64(0, resource, &rlim, nullptr)) {
+                    die_with_error("prlimit()");
+                }
+            }
+        };
+        setup_limit(RLIMIT_AS, pr.max_address_space_size_in_bytes);
+    };
     auto get_current_time = [&]() noexcept {
         timespec ts;
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts)) {
@@ -98,6 +110,7 @@ namespace sandbox::tracee {
     exclude_pid1_from_tracee_session_and_process_group();
     setup_user_namespace(args.linux_namespaces.user, args.proc_dirfd);
     setup_std_fds();
+    setup_prlimit(args.prlimit);
 
     if (args.argv.empty() || args.argv.back() != nullptr) {
         die_with_msg("BUG: argv array does not contain nullptr as the last element");

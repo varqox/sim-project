@@ -76,6 +76,10 @@ struct RequestOptions {
         std::optional<uint32_t> process_num_limit = std::nullopt;
         std::optional<uint64_t> memory_limit_in_bytes = std::nullopt;
     } cgroup = {};
+
+    struct Prlimit {
+        std::optional<uint64_t> max_address_space_size_in_bytes = std::nullopt; // RLIMIT_AS
+    } prlimit = {};
 };
 
 namespace result {
