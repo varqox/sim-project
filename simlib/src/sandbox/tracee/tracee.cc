@@ -1,6 +1,7 @@
 #include "../communication/supervisor_tracee.hh"
 #include "tracee.hh"
 
+#include <ctime>
 #include <fcntl.h>
 #include <simlib/errmsg.hh>
 #include <simlib/syscalls.hh>
@@ -9,10 +10,9 @@
 namespace sandbox::tracee {
 
 [[noreturn]] void main(Args args) noexcept {
+    namespace sms = communication::supervisor_tracee;
     auto die_with_msg = [&] [[noreturn]] (auto&&... msg) noexcept {
-        communication::supervisor_tracee::write_error(
-            args.supervisor_shared_mem_state, std::forward<decltype(msg)>(msg)...
-        );
+        sms::write_error(args.supervisor_shared_mem_state, std::forward<decltype(msg)>(msg)...);
         _exit(1);
     };
     auto die_with_error = [&] [[noreturn]] (auto&&... msg) noexcept {
@@ -29,6 +29,13 @@ namespace sandbox::tracee {
             die_with_error("dup3()");
         }
     };
+    auto get_current_time = [&]() noexcept {
+        timespec ts;
+        if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts)) {
+            die_with_error("clock_gettime()");
+        }
+        return ts;
+    };
 
     setup_std_fds();
 
@@ -39,6 +46,8 @@ namespace sandbox::tracee {
         die_with_msg("BUG: env array does not contain nullptr as the last element");
     }
 
+    auto ts = get_current_time();
+    sms::write(args.supervisor_shared_mem_state->tracee_exec_start_time, ts);
     syscalls::execveat(args.executable_fd, "", args.argv.data(), args.env.data(), AT_EMPTY_PATH);
     die_with_error("execveat()");
 }

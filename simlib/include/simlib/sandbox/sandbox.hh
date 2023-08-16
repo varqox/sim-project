@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <exception>
 #include <optional>
 #include <simlib/sandbox/si.hh>
@@ -20,6 +21,7 @@ struct RequestOptions {
 namespace result {
 struct Ok {
     Si si;
+    std::chrono::nanoseconds runtime; // from CLOCK_MONOTONIC_RAW
 };
 
 struct Error {

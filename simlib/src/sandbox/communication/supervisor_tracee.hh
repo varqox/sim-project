@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <new>
 #include <optional>
 #include <simlib/array_vec.hh>
@@ -16,8 +17,16 @@ namespace sandbox::communication::supervisor_tracee {
 static constexpr auto shared_mem_state_sizeof = 4096;
 
 struct SharedMemState {
+    struct Time {
+        int64_t seconds;
+        uint32_t nanoseconds;
+    };
+
+    Time tracee_exec_start_time;
     uint16_t error_len; // 0 indicates no error
-    UninitializedAlignedStorage<std::byte, shared_mem_state_sizeof - sizeof(error_len)>
+    UninitializedAlignedStorage<
+        std::byte,
+        shared_mem_state_sizeof - sizeof(Time) - sizeof(error_len)>
         error_description;
 };
 
@@ -32,9 +41,26 @@ inline volatile SharedMemState* initialize(void* shared_mem_state_raw) noexcept 
         std::is_trivially_destructible_v<SharedMemState>, "This value won't be destructed"
     );
     return new (shared_mem_state_raw) SharedMemState{
+        .tracee_exec_start_time = {.seconds = -1, .nanoseconds = 0},
         .error_len = 0,
         .error_description = {},
     };
+}
+
+inline void write(volatile SharedMemState::Time& time, std::optional<timespec> ts) noexcept {
+    time.seconds = ts ? ts->tv_sec : -1;
+    time.nanoseconds = ts ? ts->tv_nsec : 0;
+}
+
+inline std::optional<timespec> read(volatile const SharedMemState::Time& time) noexcept {
+    auto ts = timespec{
+        .tv_sec = time.seconds,
+        .tv_nsec = time.nanoseconds,
+    };
+    if (ts.tv_sec < 0) {
+        return std::nullopt;
+    }
+    return ts;
 }
 
 inline void write_no_error(volatile SharedMemState* shared_mem_state) noexcept {
@@ -78,6 +104,7 @@ inline void reset(volatile SharedMemState* shared_mem_state) noexcept {
     // First, erase all the remnants of the previous state (for security)
     std::memset(const_cast<SharedMemState*>(shared_mem_state), 0, sizeof(*shared_mem_state));
     // Reinitialize state
+    write(shared_mem_state->tracee_exec_start_time, std::nullopt);
     write_no_error(shared_mem_state);
 }
 

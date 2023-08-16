@@ -23,6 +23,11 @@ namespace response {
 
 using error_len_t = uint32_t;
 
+namespace time {
+using sec_t = int64_t;
+using nsec_t = uint32_t;
+} // namespace time
+
 namespace si {
 using code_t = int32_t;
 using status_t = int32_t;

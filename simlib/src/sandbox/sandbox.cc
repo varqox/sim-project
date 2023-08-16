@@ -2,6 +2,7 @@
 #include "do_die_with_error.hh"
 
 #include <cerrno>
+#include <chrono>
 #include <cstdint>
 #include <exception>
 #include <fcntl.h>
@@ -245,8 +246,25 @@ Result SupervisorConnection::await_result() {
     if (error_len == 0) {
         response::si::code_t tracee_si_code;
         response::si::status_t tracee_si_status;
-        if (recv_bytes_as(sock_fd, 0, tracee_si_code, tracee_si_status)) {
+        response::time::sec_t tracee_runtime_sec;
+        response::time::nsec_t tracee_runtime_nsec;
+        if (recv_bytes_as(
+                sock_fd,
+                0,
+                tracee_si_code,
+                tracee_si_status,
+                tracee_runtime_sec,
+                tracee_runtime_nsec
+            ))
+        {
             handle_recv_error();
+        }
+        if (tracee_runtime_sec < 0) {
+            THROW("BUG: invalid tracee_runtime_sec: ", tracee_runtime_sec);
+        }
+        static_assert(std::is_unsigned_v<decltype(tracee_runtime_nsec)>, "need it to be >= 0");
+        if (tracee_runtime_nsec >= 1'000'000'000) {
+            THROW("BUG: invalid tracee_runtime_nsec: ", tracee_runtime_nsec);
         }
         return result::Ok{
             .si =
@@ -254,6 +272,8 @@ Result SupervisorConnection::await_result() {
                     .code = tracee_si_code,
                     .status = tracee_si_status,
                 },
+            .runtime = std::chrono::seconds{tracee_runtime_sec} +
+                std::chrono::nanoseconds{tracee_runtime_nsec},
         };
     }
 

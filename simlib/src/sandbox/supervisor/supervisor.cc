@@ -17,6 +17,7 @@
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
+#include <simlib/timespec_arithmetic.hh>
 #include <string_view>
 #include <sys/mman.h>
 #include <sys/socket.h>
@@ -337,6 +338,7 @@ namespace response {
 
 struct Ok {
     Si tracee_si;
+    timespec tracee_runtime;
 };
 
 struct Error {
@@ -350,7 +352,9 @@ void send_ok(Ok resp) noexcept {
             MSG_NOSIGNAL,
             static_cast<response::error_len_t>(0),
             static_cast<response::si::code_t>(resp.tracee_si.code),
-            static_cast<response::si::status_t>(resp.tracee_si.status)
+            static_cast<response::si::status_t>(resp.tracee_si.status),
+            static_cast<response::time::sec_t>(resp.tracee_runtime.tv_sec),
+            static_cast<response::time::nsec_t>(resp.tracee_runtime.tv_nsec)
         ))
     {
         die_with_error("send()");
@@ -372,12 +376,30 @@ void send_error(Error resp) noexcept {
 
 } // namespace response
 
+[[nodiscard]] timespec get_current_time() noexcept {
+    timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts)) {
+        die_with_error("clock_gettime()");
+    }
+    return ts;
+}
+
 void read_shared_mem_state_and_send_response(
-    volatile communication::supervisor_tracee::SharedMemState* shared_mem_state, Si tracee_si
+    volatile communication::supervisor_tracee::SharedMemState* shared_mem_state,
+    Si tracee_si,
+    timespec tracee_waited_time
 ) noexcept {
     namespace sms = communication::supervisor_tracee;
     auto error = sms::read_error(shared_mem_state);
     auto error_sv = error ? optional{std::string_view{error->data(), error->size()}} : std::nullopt;
+
+    auto tracee_exec_start_time = sms::read(shared_mem_state->tracee_exec_start_time);
+    if (!tracee_exec_start_time) {
+        return response::send_error({
+            .description = error_sv ? *error_sv : "unexpected death before execve()",
+        });
+    }
+
     if (error_sv) {
         return response::send_error({
             .description = *error_sv,
@@ -386,6 +408,7 @@ void read_shared_mem_state_and_send_response(
 
     response::send_ok({
         .tracee_si = tracee_si,
+        .tracee_runtime = tracee_waited_time - *tracee_exec_start_time,
     });
 }
 
@@ -437,12 +460,14 @@ void main(int argc, char** argv) noexcept {
         close_request_fds(request);
         siginfo_t si;
         syscalls::waitid(P_PIDFD, tracee_pidfd, &si, __WALL | WEXITED, nullptr);
+        timespec tracee_waited_time = get_current_time();
         read_shared_mem_state_and_send_response(
             shared_mem_state,
             Si{
                 .code = si.si_code,
                 .status = si.si_status,
-            }
+            },
+            tracee_waited_time
         );
     }
 }

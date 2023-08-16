@@ -289,6 +289,7 @@ tests = {
     'test/sandbox/sandbox_supervisor_validates_arguments.cc': {'dependencies': [gtest_dep], 'args': sandbox_supervisor},
     'test/sandbox/si.cc': {},
     'test/sandbox/simple.cc': {},
+    'test/sandbox/tracee_times.cc': {},
     'test/sha.cc': {},
     'test/shared_function.cc': {},
     'test/shared_memory_segment.cc': {},
