@@ -82,6 +82,7 @@ namespace sandbox::tracee {
         setup_limit(RLIMIT_AS, pr.max_address_space_size_in_bytes);
         setup_limit(RLIMIT_CORE, pr.max_core_file_size_in_bytes);
         setup_limit(RLIMIT_CPU, pr.cpu_time_limit_in_seconds);
+        setup_limit(RLIMIT_FSIZE, pr.max_file_size_in_bytes);
     };
     auto get_current_time = [&]() noexcept {
         timespec ts;

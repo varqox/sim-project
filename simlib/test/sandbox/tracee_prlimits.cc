@@ -2,6 +2,7 @@
 #include "assert_result.hh"
 
 #include <chrono>
+#include <optional>
 #include <simlib/sandbox/sandbox.hh>
 #include <unistd.h>
 
@@ -64,4 +65,34 @@ TEST(sandbox, cpu_time_limit_in_seconds) {
     ASSERT_GE(
         std::get<Ok>(res).cgroup.cpu_time.total(), std::chrono::milliseconds{800}
     ); // Cgroups count CPU time slightly differently
+}
+
+// NOLINTNEXTLINE
+TEST(sandbox, max_file_size_in_bytes) {
+    auto sc = sandbox::spawn_supervisor();
+    sc.send_request(
+        {{tester_executable_path, "file_size"}},
+        {
+            .stderr_fd = STDERR_FILENO,
+            .linux_namespaces =
+                {
+                    .mount =
+                        {
+                            .operations = {{
+                                sandbox::RequestOptions::LinuxNamespaces::Mount::MountTmpfs{
+                                    .path = "/tmp",
+                                    .max_total_size_of_files_in_bytes = std::nullopt,
+                                    .inode_limit = 2,
+                                    .read_only = false,
+                                },
+                            }},
+                        },
+                },
+            .prlimit =
+                {
+                    .max_file_size_in_bytes = 42,
+                },
+        }
+    );
+    ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
 }

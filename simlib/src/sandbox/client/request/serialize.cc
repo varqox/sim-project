@@ -198,6 +198,7 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
             {pr.max_address_space_size_in_bytes.has_value(), prlimit::mask::max_address_space_size_in_bytes},
             {pr.max_core_file_size_in_bytes.has_value(), prlimit::mask::max_core_file_size_in_bytes},
             {pr.cpu_time_limit_in_seconds.has_value(), prlimit::mask::cpu_time_limit_in_seconds},
+            {pr.max_file_size_in_bytes.has_value(), prlimit::mask::max_file_size_in_bytes},
         }, as<prlimit::mask_t>);
     if (pr.max_address_space_size_in_bytes) {
         writer
@@ -208,6 +209,9 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
     }
     if (pr.cpu_time_limit_in_seconds) {
         writer.write(*pr.cpu_time_limit_in_seconds, as<prlimit::cpu_time_limit_in_seconds_t>);
+    }
+    if (pr.max_file_size_in_bytes) {
+        writer.write(*pr.max_file_size_in_bytes, as<prlimit::max_file_size_in_bytes_t>);
     }
 }
 
