@@ -77,6 +77,7 @@ struct Request {
     struct Prlimit {
         std::optional<uint64_t> max_address_space_size_in_bytes;
         std::optional<uint64_t> max_core_file_size_in_bytes;
+        std::optional<uint64_t> cpu_time_limit_in_seconds;
     } prlimit;
 };
 

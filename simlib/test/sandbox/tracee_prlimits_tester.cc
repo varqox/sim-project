@@ -4,6 +4,7 @@
 #include <simlib/to_arg_seq.hh>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <thread>
 
 template <class T>
 rlimit64 get_prlimit(T resource) {
@@ -27,11 +28,14 @@ rlimit64 get_prlimit(T resource) {
 int main(int argc, char** argv) {
     bool memory_limit = false;
     bool core_file_size_limit = false;
+    bool cpu_time_limit = false;
     for (auto arg : to_arg_seq(argc, argv)) {
         if (arg == "memory") {
             memory_limit = true;
         } else if (arg == "core_file_size") {
             core_file_size_limit = true;
+        } else if (arg == "cpu_time") {
+            cpu_time_limit = true;
         } else {
             THROW("Unrecognized argument: ", arg);
         }
@@ -47,5 +51,19 @@ int main(int argc, char** argv) {
         auto rlim = get_prlimit(RLIMIT_CORE);
         throw_assert(rlim.rlim_cur == 0);
         throw_assert(rlim.rlim_max == 0);
+    }
+    if (cpu_time_limit) {
+        auto rlim = get_prlimit(RLIMIT_CPU);
+        throw_assert(rlim.rlim_cur == 1);
+        throw_assert(rlim.rlim_max == 1);
+        // Spawn threads to faster consume the cpu time limit
+        for (size_t i = 1; i < std::thread::hardware_concurrency(); ++i) {
+            std::thread{[] {
+                for (;;) {
+                }
+            }}.detach();
+        }
+        for (;;) {
+        }
     }
 }

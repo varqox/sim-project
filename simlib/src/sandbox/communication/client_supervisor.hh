@@ -120,10 +120,12 @@ using mask_t = uint8_t;
 namespace mask {
 static constexpr mask_t max_address_space_size_in_bytes = 1 << 0;
 static constexpr mask_t max_core_file_size_in_bytes = 1 << 1;
+static constexpr mask_t cpu_time_limit_in_seconds = 1 << 2;
 } // namespace mask
 
 using max_address_space_size_in_bytes_t = uint64_t;
 using max_core_file_size_in_bytes_t = uint64_t;
+using cpu_time_limit_in_seconds_t = uint64_t;
 
 } // namespace prlimit
 
