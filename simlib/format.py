@@ -31,7 +31,7 @@ class Source:
 
 def simlib_sources(src_dir):
     # Fix includes of form "simlib/*" and "gmock/*" (thanks clangd...) to <...>
-    return [Source(path, [__file__], [["sed", r's@^#include "\(\(simlib/\|gmock/\).*\)"$@#include <\1>@', "-i", path]]) for path in filter_subdirs(src_dir, [
+    return [Source(path, [__file__], [["sed", r's@^#include "\(\(simlib/\|gtest\|gmock/\).*\)"$@#include <\1>@', "-i", path]]) for path in filter_subdirs(src_dir, [
         'include/',
         'src/',
         'test/',
