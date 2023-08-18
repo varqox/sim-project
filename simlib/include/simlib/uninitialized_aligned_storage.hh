@@ -26,7 +26,11 @@ struct UninitializedAlignedStorage {
 
     [[nodiscard]] std::byte* data() noexcept { return raw_data; }
 
+    [[nodiscard]] volatile std::byte* data() volatile noexcept { return raw_data; }
+
     [[nodiscard]] const std::byte* data() const noexcept { return raw_data; }
+
+    [[nodiscard]] volatile const std::byte* data() volatile const noexcept { return raw_data; }
 };
 
 template <class AlignAsT>
@@ -47,5 +51,9 @@ struct UninitializedAlignedStorage<AlignAsT, 0> {
 
     [[nodiscard]] std::byte* data() noexcept { return nullptr; }
 
+    [[nodiscard]] volatile std::byte* data() volatile noexcept { return nullptr; }
+
     [[nodiscard]] const std::byte* data() const noexcept { return nullptr; }
+
+    [[nodiscard]] volatile const std::byte* data() volatile const noexcept { return nullptr; }
 };

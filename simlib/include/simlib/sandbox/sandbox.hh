@@ -1,22 +1,33 @@
 #pragma once
 
 #include <exception>
+#include <optional>
 #include <simlib/sandbox/si.hh>
+#include <simlib/slice.hh>
 #include <string>
 #include <string_view>
 #include <variant>
 
 namespace sandbox {
 
-struct ResultOk {
-    int system_result;
+struct RequestOptions {
+    std::optional<int> stdin_fd = std::nullopt;
+    std::optional<int> stdout_fd = std::nullopt;
+    std::optional<int> stderr_fd = std::nullopt;
+    Slice<std::string_view> env = {};
 };
 
-struct ResultError {
+namespace result {
+struct Ok {
+    Si si;
+};
+
+struct Error {
     std::string description;
 };
+} // namespace result
 
-using Result = std::variant<ResultOk, ResultError>;
+using Result = std::variant<result::Ok, result::Error>;
 
 class SupervisorConnection {
     int sock_fd; // may be closed later than pidfd and error fd because of the unread responses to
@@ -45,7 +56,13 @@ public:
     /// Multiple requests can be send before awaiting completion with
     /// await_result() - in the same order.
     /// Throws if there is any error with the supervisor.
-    void send_request(std::string_view shell_command);
+    void send_request(int executable_fd, Slice<std::string_view> argv, const RequestOptions&);
+
+    /// Sends the request and returns immediately without waiting for the request to complete.
+    /// Multiple requests can be send before awaiting completion with
+    /// await_result() - in the same order.
+    /// Throws if there is any error with the supervisor.
+    void send_request(Slice<std::string_view> argv, const RequestOptions& options = {});
 
     /// Throws if there is any error with the supervisor.
     Result await_result();

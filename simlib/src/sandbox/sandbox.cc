@@ -2,14 +2,19 @@
 #include "do_die_with_error.hh"
 
 #include <cerrno>
+#include <cstdint>
 #include <exception>
 #include <fcntl.h>
 #include <optional>
+#include <simlib/array_buff.hh>
+#include <simlib/array_vec.hh>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
+#include <simlib/file_descriptor.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/sandbox/si.hh>
+#include <simlib/socket_send_fds.hh>
 #include <simlib/socket_stream_ext.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/to_string.hh>
@@ -19,6 +24,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <vector>
 
 extern "C" {
 extern const unsigned char sandbox_supervisor_dump[];
@@ -129,25 +135,86 @@ SupervisorConnection spawn_supervisor() {
     return SupervisorConnection{sock_fd, supervisor_pidfd, supervisor_error_fd};
 }
 
-void SupervisorConnection::send_request(std::string_view shell_command) {
+void SupervisorConnection::send_request(
+    int executable_fd, Slice<std::string_view> argv, const RequestOptions& options
+) {
     if (supervisor_is_dead_and_waited()) {
         THROW("sandbox supervisor is already dead");
     }
 
-    auto handle_send_error = [this] {
-        int send_errnum = errno;
+    auto handle_send_error = [this](const char* msg) {
+        int errnum = errno;
         kill_and_wait_supervisor_and_receive_errors(); // throws if there is an error
-        THROW("send()", errmsg(send_errnum));
+        THROW(msg, errmsg(errnum));
     };
 
     namespace request = communication::client_supervisor::request;
-    request::shell_command_len_t len = shell_command.size();
-    if (send_exact(sock_fd, &len, sizeof(len), MSG_NOSIGNAL)) {
-        handle_send_error();
+
+    ArrayVec<int, 4> fds{executable_fd};
+    request::mask_t mask = 0;
+    if (options.stdin_fd) {
+        fds.push(*options.stdin_fd);
+        mask |= request::mask::sending_stdin_fd;
     }
-    if (send_exact(sock_fd, shell_command.data(), shell_command.size(), MSG_NOSIGNAL)) {
-        handle_send_error();
+    if (options.stdout_fd) {
+        fds.push(*options.stdout_fd);
+        mask |= request::mask::sending_stdout_fd;
     }
+    if (options.stderr_fd) {
+        fds.push(*options.stderr_fd);
+        mask |= request::mask::sending_stderr_fd;
+    }
+
+    request::serialized_argv_len_t serialized_argv_len = 0;
+    for (const auto& arg : argv) {
+        serialized_argv_len += arg.size() + 1;
+    }
+    request::serialized_env_len_t serialized_env_len = 0;
+    for (const auto& str : options.env) {
+        serialized_env_len += str.size() + 1;
+    }
+
+    auto header_buff = array_buff_from(mask, serialized_argv_len, serialized_env_len);
+    auto rc = send_fds<fds.max_size()>(
+        sock_fd, header_buff.data(), header_buff.size(), MSG_NOSIGNAL, fds.data(), fds.size()
+    );
+    if (rc < 0) {
+        handle_send_error("sendmsg()");
+    }
+    // Send the remaining bytes if some were not sent
+    if (send_exact(sock_fd, header_buff.data() + rc, header_buff.size() - rc, MSG_NOSIGNAL)) {
+        handle_send_error("send()");
+    }
+
+    std::vector<uint8_t> buff;
+    buff.reserve(serialized_argv_len + serialized_env_len);
+    for (const auto& arg : argv) {
+        buff.insert(buff.end(), arg.begin(), arg.end());
+        buff.emplace_back('\0');
+    }
+    assert(buff.size() == serialized_argv_len);
+    for (const auto& str : options.env) {
+        buff.insert(buff.end(), str.begin(), str.end());
+        buff.emplace_back('\0');
+    }
+    assert(buff.size() == serialized_argv_len + serialized_env_len);
+
+    if (send_exact(sock_fd, buff.data(), buff.size(), MSG_NOSIGNAL)) {
+        handle_send_error("send()");
+    }
+}
+
+void SupervisorConnection::send_request(
+    Slice<std::string_view> argv, const RequestOptions& options
+) {
+    if (argv.is_empty()) {
+        THROW("argv cannot be empty");
+    }
+    FileDescriptor exe_fd{open(std::string(argv[0]).c_str(), O_RDONLY | O_CLOEXEC)};
+    if (!exe_fd.is_open()) {
+        THROW("open(\"", argv[0], "\")", errmsg());
+    }
+    return send_request(exe_fd, argv, options);
 }
 
 Result SupervisorConnection::await_result() {
@@ -175,14 +242,18 @@ Result SupervisorConnection::await_result() {
     if (recv_bytes_as(sock_fd, 0, error_len)) {
         handle_recv_error();
     }
-
     if (error_len == 0) {
-        response::Ok res;
-        if (recv_bytes_as(sock_fd, 0, res.system_result)) {
+        response::si::code_t tracee_si_code;
+        response::si::status_t tracee_si_status;
+        if (recv_bytes_as(sock_fd, 0, tracee_si_code, tracee_si_status)) {
             handle_recv_error();
         }
-        return ResultOk{
-            .system_result = res.system_result,
+        return result::Ok{
+            .si =
+                {
+                    .code = tracee_si_code,
+                    .status = tracee_si_status,
+                },
         };
     }
 
@@ -190,7 +261,9 @@ Result SupervisorConnection::await_result() {
     if (recv_exact(sock_fd, error.data(), error_len, 0)) {
         handle_recv_error();
     }
-    return ResultError{.description = std::move(error)};
+    return result::Error{
+        .description = std::move(error),
+    };
 }
 
 void SupervisorConnection::kill_and_wait_supervisor() noexcept {
