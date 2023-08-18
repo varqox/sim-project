@@ -25,7 +25,13 @@ struct SharedMemState {
         uint32_t nanoseconds;
     };
 
+    struct UsecTime {
+        uint64_t usec;
+    };
+
     Time tracee_exec_start_time;
+    UsecTime tracee_exec_start_cpu_time_user;
+    UsecTime tracee_exec_start_cpu_time_system;
     Time tracee_waitid_time;
     int16_t error_len; // < 0 indicates result::None
 
@@ -33,7 +39,7 @@ struct SharedMemState {
         // error_len > 0
         UninitializedAlignedStorage<
             std::byte,
-            shared_mem_state_sizeof - sizeof(Time) * 2 - alignof(Si)>
+            shared_mem_state_sizeof - sizeof(Time) * 2 - sizeof(UsecTime) * 2 - alignof(Si)>
             error_description;
         // error_len == 0
         Si si;
@@ -52,6 +58,8 @@ inline volatile SharedMemState* initialize(void* shared_mem_state_raw) noexcept 
     );
     return new (shared_mem_state_raw) SharedMemState{
         .tracee_exec_start_time = {.seconds = -1, .nanoseconds = 0},
+        .tracee_exec_start_cpu_time_user = {.usec = 0},
+        .tracee_exec_start_cpu_time_system = {.usec = 0},
         .tracee_waitid_time = {.seconds = -1, .nanoseconds = 0},
         .error_len = -1,
         .u =
@@ -75,6 +83,19 @@ inline std::optional<timespec> read(volatile const SharedMemState::Time& time) n
         return std::nullopt;
     }
     return ts;
+}
+
+inline void
+write(volatile SharedMemState::UsecTime& usec_time, std::optional<uint64_t> usec) noexcept {
+    usec_time.usec = usec ? *usec + 1 : 0;
+}
+
+inline std::optional<uint64_t> read(volatile const SharedMemState::UsecTime& usec_time) noexcept {
+    auto usec = usec_time.usec;
+    if (usec == 0) {
+        return std::nullopt;
+    }
+    return usec - 1;
 }
 
 namespace result {
@@ -167,6 +188,8 @@ inline void reset(volatile SharedMemState* shared_mem_state) noexcept {
 #endif
     // Reinitialize state
     write(shared_mem_state->tracee_exec_start_time, std::nullopt);
+    write(shared_mem_state->tracee_exec_start_cpu_time_user, std::nullopt);
+    write(shared_mem_state->tracee_exec_start_cpu_time_system, std::nullopt);
     write(shared_mem_state->tracee_waitid_time, std::nullopt);
     write_result_none(shared_mem_state);
 }

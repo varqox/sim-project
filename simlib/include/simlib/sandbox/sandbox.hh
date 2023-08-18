@@ -41,6 +41,13 @@ struct Ok {
     std::chrono::nanoseconds runtime; // from CLOCK_MONOTONIC_RAW
 
     struct Cgroup {
+        struct CpuTime {
+            std::chrono::microseconds user;
+            std::chrono::microseconds system;
+
+            [[nodiscard]] std::chrono::microseconds total() const noexcept { return user + system; }
+        } cpu_time;
+
         uint64_t peak_memory_in_bytes;
     } cgroup;
 };

@@ -1,8 +1,10 @@
 #include "../communication/supervisor_pid1_tracee.hh"
+#include "../supervisor/cgroups/read_cpu_times.hh"
 #include "tracee.hh"
 
 #include <ctime>
 #include <fcntl.h>
+#include <sched.h>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
@@ -10,6 +12,7 @@
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <unistd.h>
+#include <utility>
 
 namespace sandbox::tracee {
 
@@ -47,6 +50,24 @@ namespace sandbox::tracee {
         }
         return ts;
     };
+    auto get_current_cpu_times = [&]() noexcept {
+        sched_yield(); // Needed for cgroup/cpu.stat to be updated and report more accurate values
+        return supervisor::cgroups::read_cpu_times(
+            args.tracee_cgroup_cpu_stat_fd,
+            [&] [[noreturn]] (auto&&... msg) {
+                die_with_msg("read_cpu_times(): ", std::forward<decltype(msg)>(msg)...);
+            }
+        );
+    };
+    auto save_exec_start_times = [&]() noexcept {
+        // Real time needs to go before cpu time to ensure invariant for tracee's real time >= cpu
+        // time
+        auto ts = get_current_time();
+        auto cpu_times = get_current_cpu_times();
+        sms::write(args.shared_mem_state->tracee_exec_start_time, ts);
+        sms::write(args.shared_mem_state->tracee_exec_start_cpu_time_user, cpu_times.user_usec);
+        sms::write(args.shared_mem_state->tracee_exec_start_cpu_time_system, cpu_times.system_usec);
+    };
 
     exclude_pid1_from_tracee_session_and_process_group();
     setup_std_fds();
@@ -58,8 +79,7 @@ namespace sandbox::tracee {
         die_with_msg("BUG: env array does not contain nullptr as the last element");
     }
 
-    auto ts = get_current_time();
-    sms::write(args.shared_mem_state->tracee_exec_start_time, ts);
+    save_exec_start_times();
     syscalls::execveat(args.executable_fd, "", args.argv.data(), args.env.data(), AT_EMPTY_PATH);
     die_with_error("execveat()");
 }

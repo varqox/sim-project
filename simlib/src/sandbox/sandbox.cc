@@ -333,6 +333,8 @@ Result SupervisorConnection::await_result() {
         response::si::status_t tracee_si_status;
         response::time::sec_t tracee_runtime_sec;
         response::time::nsec_t tracee_runtime_nsec;
+        response::cgroup::usec_t tracee_cgroup_cpu_user_time;
+        response::cgroup::usec_t tracee_cgroup_cpu_system_time;
         response::cgroup::peak_memory_in_bytes_t tracee_cgroup_peak_memory_in_bytes;
         if (recv_bytes_as(
                 sock_fd,
@@ -341,6 +343,8 @@ Result SupervisorConnection::await_result() {
                 tracee_si_status,
                 tracee_runtime_sec,
                 tracee_runtime_nsec,
+                tracee_cgroup_cpu_user_time,
+                tracee_cgroup_cpu_system_time,
                 tracee_cgroup_peak_memory_in_bytes
             ))
         {
@@ -361,6 +365,11 @@ Result SupervisorConnection::await_result() {
                 std::chrono::nanoseconds{tracee_runtime_nsec},
             .cgroup =
                 {
+                    .cpu_time =
+                        {
+                            .user = std::chrono::microseconds{tracee_cgroup_cpu_user_time},
+                            .system = std::chrono::microseconds{tracee_cgroup_cpu_system_time},
+                        },
                     .peak_memory_in_bytes = tracee_cgroup_peak_memory_in_bytes,
                 },
         };

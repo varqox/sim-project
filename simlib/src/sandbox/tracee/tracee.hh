@@ -15,6 +15,8 @@ struct Args {
     std::optional<int> stderr_fd;
     std::vector<char*> argv; // with a trailing nullptr element
     std::vector<char*> env; // with a trailing nullptr element
+
+    int tracee_cgroup_cpu_stat_fd;
 };
 
 [[noreturn]] void main(Args args) noexcept;

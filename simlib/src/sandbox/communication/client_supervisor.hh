@@ -98,6 +98,7 @@ using status_t = int32_t;
 } // namespace si
 
 namespace cgroup {
+using usec_t = uint64_t;
 using peak_memory_in_bytes_t = uint64_t;
 } // namespace cgroup
 

@@ -2,6 +2,7 @@
 #include "../communication/supervisor_pid1_tracee.hh"
 #include "../do_die_with_error.hh"
 #include "../pid1/pid1.hh"
+#include "cgroups/read_cpu_times.hh"
 
 #include <algorithm>
 #include <array>
@@ -26,6 +27,7 @@
 #include <simlib/sandbox/si.hh>
 #include <simlib/socket_stream_ext.hh>
 #include <simlib/static_cstring_buff.hh>
+#include <simlib/string_traits.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
@@ -435,6 +437,11 @@ struct Ok {
     timespec tracee_runtime;
 
     struct TraceeCgroup {
+        struct CpuTime {
+            uint64_t user_usec;
+            uint64_t system_usec;
+        } cpu_time;
+
         uint64_t peak_memory_in_bytes;
     } tracee_cgroup;
 };
@@ -453,6 +460,8 @@ void send_ok(Ok resp) noexcept {
             static_cast<response::si::status_t>(resp.tracee_si.status),
             static_cast<response::time::sec_t>(resp.tracee_runtime.tv_sec),
             static_cast<response::time::nsec_t>(resp.tracee_runtime.tv_nsec),
+            static_cast<response::cgroup::usec_t>(resp.tracee_cgroup.cpu_time.user_usec),
+            static_cast<response::cgroup::usec_t>(resp.tracee_cgroup.cpu_time.system_usec),
             static_cast<response::cgroup::peak_memory_in_bytes_t>(
                 resp.tracee_cgroup.peak_memory_in_bytes
             )
@@ -480,7 +489,8 @@ void send_error(Error resp) noexcept {
 void read_shared_mem_state_and_send_response(
     volatile communication::supervisor_pid1_tracee::SharedMemState* shared_mem_state,
     Si pid1_si,
-    const response::Ok::TraceeCgroup& tracee_cgroup
+    const cgroups::CpuTimes& tracee_cpu_times,
+    uint64_t tracee_cgroup_peak_memory_in_bytes
 ) noexcept {
     namespace sms = communication::supervisor_pid1_tracee;
     auto res = sms::read_result(shared_mem_state);
@@ -489,7 +499,13 @@ void read_shared_mem_state_and_send_response(
             [&](const sms::result::Ok& res_ok) noexcept {
                 auto tracee_exec_start_time_opt =
                     sms::read(shared_mem_state->tracee_exec_start_time);
-                if (!tracee_exec_start_time_opt) {
+                auto tracee_exec_start_cpu_time_user_usec_opt =
+                    sms::read(shared_mem_state->tracee_exec_start_cpu_time_user);
+                auto tracee_exec_start_cpu_time_system_usec_opt =
+                    sms::read(shared_mem_state->tracee_exec_start_cpu_time_system);
+                if (!tracee_exec_start_time_opt || !tracee_exec_start_cpu_time_user_usec_opt ||
+                    !tracee_exec_start_cpu_time_system_usec_opt)
+                {
                     try {
                         return response::send_error({
                             .description = concat_tostr(
@@ -511,12 +527,26 @@ void read_shared_mem_state_and_send_response(
                     }
                 }
                 auto tracee_exec_start_time = *tracee_exec_start_time_opt;
+                auto tracee_exec_start_cpu_time_user_usec =
+                    *tracee_exec_start_cpu_time_user_usec_opt;
+                auto tracee_exec_start_cpu_time_system_usec =
+                    *tracee_exec_start_cpu_time_system_usec_opt;
                 auto tracee_waitid_time =
                     WONT_THROW(sms::read(shared_mem_state->tracee_waitid_time).value());
                 return response::send_ok({
                     .tracee_si = res_ok.si,
                     .tracee_runtime = tracee_waitid_time - tracee_exec_start_time,
-                    .tracee_cgroup = tracee_cgroup,
+                    .tracee_cgroup =
+                        {
+                            .cpu_time =
+                                {
+                                    .user_usec = tracee_cpu_times.user_usec -
+                                        tracee_exec_start_cpu_time_user_usec,
+                                    .system_usec = tracee_cpu_times.system_usec -
+                                        tracee_exec_start_cpu_time_system_usec,
+                                },
+                            .peak_memory_in_bytes = tracee_cgroup_peak_memory_in_bytes,
+                        },
                 });
             },
             [&](const sms::result::Error& res_err) noexcept {
@@ -651,6 +681,7 @@ struct Cgroups {
 
     const int pid1_cgroup_fd;
     int tracee_cgroup_fd;
+    int tracee_cgroup_cpu_stat_fd;
 
     void assert_nsdelegate_is_active() noexcept;
     void assert_process_cannot_cross_ns_root_dir_boundary() noexcept;
@@ -663,6 +694,7 @@ struct Cgroups {
     void write_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept;
     void write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_in_bytes) noexcept;
 
+    [[nodiscard]] cgroups::CpuTimes read_tracee_cgroup_cpu_times() const noexcept;
     [[nodiscard]] uint64_t read_tracee_cgroup_current_memory_usage() const noexcept;
     [[nodiscard]] uint64_t read_tracee_cgroup_peak_memory_usage() const noexcept;
 
@@ -716,6 +748,7 @@ Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) no
         .cgroupfs_fd = cgroupfs_fd,
         .pid1_cgroup_fd = pid1_cgroup_fd,
         .tracee_cgroup_fd = -1,
+        .tracee_cgroup_cpu_stat_fd = -1,
     };
 
     cgs.create_and_set_up_tracee_cgroup();
@@ -807,6 +840,10 @@ void Cgroups::create_and_set_up_tracee_cgroup() noexcept {
     if (tracee_cgroup_fd < 0) {
         die_with_error("openat()");
     }
+    tracee_cgroup_cpu_stat_fd = openat(tracee_cgroup_fd, "cpu.stat", O_RDONLY | O_CLOEXEC);
+    if (tracee_cgroup_cpu_stat_fd < 0) {
+        die_with_error("openat()");
+    }
 }
 
 void Cgroups::destroy_tracee_cgroup() noexcept {
@@ -814,6 +851,10 @@ void Cgroups::destroy_tracee_cgroup() noexcept {
         die_with_error("close()");
     }
     tracee_cgroup_fd = -1;
+    if (close(tracee_cgroup_cpu_stat_fd)) {
+        die_with_error("close()");
+    }
+    tracee_cgroup_cpu_stat_fd = -1;
 
     if (unlinkat(cgroupfs_fd, tracee_cgroup_path.c_str(), AT_REMOVEDIR)) {
         die_with_error("unlinkat()");
@@ -841,6 +882,12 @@ void Cgroups::write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_i
         "memory.max",
         memory_limit_in_bytes ? StringView{from_unsafe{to_string(*memory_limit_in_bytes)}} : "max"
     );
+}
+
+cgroups::CpuTimes Cgroups::read_tracee_cgroup_cpu_times() const noexcept {
+    return read_cpu_times(tracee_cgroup_cpu_stat_fd, [] [[noreturn]] (auto&&... msg) {
+        die_with_msg("read_cpu_times(): ", std::forward<decltype(msg)>(msg)...);
+    });
 }
 
 uint64_t Cgroups::read_tracee_cgroup_current_memory_usage() const noexcept {
@@ -969,6 +1016,7 @@ void main(int argc, char** argv) noexcept {
                 .env = std::move(request.env),
                 .supervisor_pidfd = supervisor_pidfd,
                 .tracee_cgroup_fd = cgroups.tracee_cgroup_fd,
+                .tracee_cgroup_cpu_stat_fd = cgroups.tracee_cgroup_cpu_stat_fd,
                 .linux_namespaces =
                     {
                         .user =
@@ -993,9 +1041,8 @@ void main(int argc, char** argv) noexcept {
                 .code = si.si_code,
                 .status = si.si_status,
             },
-            response::Ok::TraceeCgroup{
-                .peak_memory_in_bytes = cgroups.read_tracee_cgroup_peak_memory_usage(),
-            }
+            cgroups.read_tracee_cgroup_cpu_times(),
+            cgroups.read_tracee_cgroup_peak_memory_usage()
         );
     }
 }

@@ -144,6 +144,7 @@ namespace sandbox::pid1 {
             .stderr_fd = args.stderr_fd,
             .argv = std::move(args.argv),
             .env = std::move(args.env),
+            .tracee_cgroup_cpu_stat_fd = args.tracee_cgroup_cpu_stat_fd,
         });
     }
 
