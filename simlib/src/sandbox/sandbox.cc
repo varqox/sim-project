@@ -229,15 +229,23 @@ void SupervisorConnection::send_request(
     struct Cgroup {
         request::cgroup::mask_t mask;
         request::cgroup::serialized_process_num_limit_t process_num_limit;
+        request::cgroup::serialized_memory_limit_in_bytes_t memory_limit_in_bytes;
     } cgroup = [&]() noexcept {
         Cgroup cg = {
             .mask = 0,
             .process_num_limit = 0,
+            .memory_limit_in_bytes = 0,
         };
         namespace mask = request::cgroup::mask;
         auto& ops = options.cgroup;
         request::serialize_into(
             ops.process_num_limit, cg.mask, cg.process_num_limit, mask::process_num_limit
+        );
+        request::serialize_into(
+            ops.memory_limit_in_bytes,
+            cg.mask,
+            cg.memory_limit_in_bytes,
+            mask::memory_limit_in_bytes
         );
         return cg;
     }();
@@ -250,7 +258,8 @@ void SupervisorConnection::send_request(
         linux_ns.user.inside_uid,
         linux_ns.user.inside_gid,
         cgroup.mask,
-        cgroup.process_num_limit
+        cgroup.process_num_limit,
+        cgroup.memory_limit_in_bytes
     );
     auto rc = send_fds<fds.max_size()>(
         sock_fd, header_buff.data(), header_buff.size(), MSG_NOSIGNAL, fds.data(), fds.size()

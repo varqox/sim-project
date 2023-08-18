@@ -48,9 +48,11 @@ using mask_t = uint8_t;
 
 namespace mask {
 static constexpr mask_t process_num_limit = 1;
+static constexpr mask_t memory_limit_in_bytes = 2;
 } // namespace mask
 
 using serialized_process_num_limit_t = uint32_t;
+using serialized_memory_limit_in_bytes_t = uint64_t;
 
 } // namespace cgroup
 

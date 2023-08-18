@@ -264,6 +264,7 @@ struct Request {
 
     struct Cgroup {
         optional<uint32_t> process_num_limit;
+        optional<uint64_t> memory_limit_in_bytes;
     } cgroup;
 };
 
@@ -285,6 +286,7 @@ Request recv_request() noexcept {
     struct Cgroup {
         request::cgroup::mask_t mask;
         request::cgroup::serialized_process_num_limit_t process_num_limit;
+        request::cgroup::serialized_memory_limit_in_bytes_t memory_limit_in_bytes;
     } cgroup;
 
     auto recv_and_deserialize = [&](auto&... values) noexcept {
@@ -302,7 +304,8 @@ Request recv_request() noexcept {
         linux_ns.user.inside_uid,
         linux_ns.user.inside_gid,
         cgroup.mask,
-        cgroup.process_num_limit
+        cgroup.process_num_limit,
+        cgroup.memory_limit_in_bytes
     );
     if (fds.size() < 1) {
         die_with_msg(
@@ -356,6 +359,12 @@ Request recv_request() noexcept {
             cgroup.mask,
             cgroup.process_num_limit,
             mask::process_num_limit
+        );
+        request::deserialize_from(
+            req.cgroup.memory_limit_in_bytes,
+            cgroup.mask,
+            cgroup.memory_limit_in_bytes,
+            mask::memory_limit_in_bytes
         );
     }
 
@@ -560,6 +569,35 @@ write_file_at_but_expect_write_error(int dirfd, FilePath file_path, StringView d
     return res;
 }
 
+template <class T>
+static size_t read_file_at_into_number(int dirfd, FilePath file_path) noexcept {
+    auto fd = openat(dirfd, file_path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        die_with_error("openat()");
+    }
+    std::array<char, 24> buff;
+    ssize_t len;
+    do {
+        len = read(fd, buff.data(), buff.size());
+    } while (len < 0 && errno == EINTR);
+    if (len < 0) {
+        die_with_error("read()");
+    }
+    if (close(fd)) {
+        die_with_error("close()");
+    }
+    auto data = StringView{buff.data(), static_cast<size_t>(len)};
+    if (data.empty() || data.back() != '\n') {
+        die_with_msg(file_path, ": expected to read newline as the last character");
+    }
+    data.remove_trailing('\n');
+    auto res = str2num<T>(data);
+    if (!res) {
+        die_with_msg(file_path, ": ", data, " does not convert to number");
+    }
+    return *res;
+}
+
 namespace user_namespace {
 
 struct SetupArgs {
@@ -612,7 +650,12 @@ struct Cgroups {
     void create_and_set_up_tracee_cgroup() noexcept;
     void reset_tracee_cgroup() noexcept;
 
-    void set_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept;
+    void write_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept;
+    void write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_in_bytes) noexcept;
+
+    [[nodiscard]] uint64_t read_tracee_cgroup_current_memory_usage() const noexcept;
+
+    void set_tracee_limits(const Request::Cgroup& cg) noexcept;
 };
 
 Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) noexcept {
@@ -651,7 +694,7 @@ Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) no
     );
 
     // Enable resource controllers
-    write_file_at(cgroupfs_fd, "cgroup.subtree_control", "+pids");
+    write_file_at(cgroupfs_fd, "cgroup.subtree_control", "+pids +memory");
 
     int pid1_cgroup_fd = openat(cgroupfs_fd, Cgroups::pid1_cgroup_path.c_str(), O_PATH | O_CLOEXEC);
     if (pid1_cgroup_fd < 0) {
@@ -740,6 +783,9 @@ void Cgroups::assert_controller_interface_files_in_ns_root_dir_are_unwritable() 
     if (write_file_at_but_expect_write_error(cgroupfs_fd, "pids.max", "max") != EPERM) {
         die_with_error("nsdelegate cgroup2 option is not in action");
     }
+    if (write_file_at_but_expect_write_error(cgroupfs_fd, "memory.max", "max") != EPERM) {
+        die_with_error("nsdelegate cgroup2 option is not in action");
+    }
 }
 
 void Cgroups::create_and_set_up_tracee_cgroup() noexcept {
@@ -769,12 +815,31 @@ void Cgroups::reset_tracee_cgroup() noexcept {
 }
 
 // NOLINTNEXTLINE(readability-make-member-function-const)
-void Cgroups::set_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept {
+void Cgroups::write_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept {
     write_file_at(
         tracee_cgroup_fd,
         "pids.max",
         process_num_limit ? StringView{from_unsafe{to_string(*process_num_limit)}} : "max"
     );
+}
+
+// NOLINTNEXTLINE(readability-make-member-function-const)
+void Cgroups::write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_in_bytes) noexcept {
+    write_file_at(
+        tracee_cgroup_fd,
+        "memory.max",
+        memory_limit_in_bytes ? StringView{from_unsafe{to_string(*memory_limit_in_bytes)}} : "max"
+    );
+}
+
+uint64_t Cgroups::read_tracee_cgroup_current_memory_usage() const noexcept {
+    return read_file_at_into_number<uint64_t>(tracee_cgroup_fd, "memory.current");
+}
+
+void Cgroups::set_tracee_limits(const Request::Cgroup& cg) noexcept {
+    write_tracee_cgroup_process_num_limit(cg.process_num_limit);
+    assert(read_tracee_cgroup_current_memory_usage() == 0 && "Needed to not offset limit by this");
+    write_tracee_cgroup_memory_limit(cg.memory_limit_in_bytes);
 }
 
 } // namespace cgroups
@@ -865,7 +930,7 @@ void main(int argc, char** argv) noexcept {
     {
         auto request = recv_request();
 
-        cgroups.set_tracee_cgroup_process_num_limit(request.cgroup.process_num_limit);
+        cgroups.set_tracee_limits(request.cgroup);
 
         int pid1_pidfd = 0;
         clone_args cl_args = {};

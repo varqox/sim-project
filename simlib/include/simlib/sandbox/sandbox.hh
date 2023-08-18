@@ -31,6 +31,7 @@ struct RequestOptions {
     struct Cgroup {
         // Every process or thread counts as 1
         std::optional<uint32_t> process_num_limit = std::nullopt;
+        std::optional<uint64_t> memory_limit_in_bytes = std::nullopt;
     } cgroup = {};
 };
 
