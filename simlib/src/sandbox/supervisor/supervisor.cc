@@ -4,12 +4,14 @@
 #include "../pid1/pid1.hh"
 
 #include <algorithm>
+#include <array>
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
 #include <memory>
 #include <optional>
+#include <poll.h>
 #include <simlib/array_vec.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/deserializer.hh>
@@ -500,6 +502,43 @@ void read_shared_mem_state_and_send_response(
     );
 }
 
+// Waits for pid1 death or read and write shutdown of the other end of the SOCK_FD (we can't wait
+// only for the read-close)
+void wait_for_pid1_death_or_sock_fd_shutdown(int pid1_pidfd) noexcept {
+    std::array<pollfd, 2> pfds;
+    auto& sock_fd_pfd = pfds[0];
+    auto& pidfd_pfd = pfds[1];
+    sock_fd_pfd = {
+        .fd = SOCK_FD,
+        .events = 0, // wait for POLLHUP i.e. both read and write shutdown of the other end
+        .revents = 0,
+    };
+    pidfd_pfd = {
+        .fd = pid1_pidfd,
+        .events = POLLIN,
+        .revents = 0,
+    };
+    for (;;) {
+        sock_fd_pfd.revents = 0;
+        pidfd_pfd.revents = 0;
+        int rc = poll(pfds.data(), pfds.size(), -1);
+        if (rc == 0 || (rc == -1 && errno == EINTR)) {
+            continue;
+        }
+        if (rc == -1) {
+            die_with_error("poll()");
+        }
+        if (sock_fd_pfd.revents & POLLHUP) {
+            // Probably the client process died and we are still alive, but we cannot
+            // communicate with the client anymore, so die early to save resources.
+            die_with_msg("the other end of the socket was closed");
+        }
+        if (pidfd_pfd.revents & POLLIN) {
+            return; // pid1 process is waitable
+        }
+    }
+}
+
 void main(int argc, char** argv) noexcept {
     auto args = parse_args(argc, argv);
     validate_sock_fd(args.sock_fd);
@@ -565,6 +604,7 @@ void main(int argc, char** argv) noexcept {
             });
         }
         close_request_fds(request);
+        wait_for_pid1_death_or_sock_fd_shutdown(pid1_pidfd);
         siginfo_t si;
         syscalls::waitid(P_PIDFD, pid1_pidfd, &si, __WALL | WEXITED, nullptr);
         read_shared_mem_state_and_send_response(

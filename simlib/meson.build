@@ -292,6 +292,7 @@ tests = {
     'test/sandbox/sandbox_places_tracee_in_a_separate_session_and_process_group.cc': {'tester': 'test/sandbox/sandbox_places_tracee_in_a_separate_session_and_process_group_tester.cc'},
     'test/sandbox/sandbox_reports_unexpected_supervisor_process_death.cc': {},
     'test/sandbox/sandbox_supervisor_validates_arguments.cc': {'dependencies': [gtest_dep], 'args': sandbox_supervisor},
+    'test/sandbox/sandbox_terminates_early_upon_client_process_death.cc': {},
     'test/sandbox/sandbox_uses_pid_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_pid_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_user_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_user_namespace_tester.cc'},
     'test/sandbox/si.cc': {},
