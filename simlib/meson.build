@@ -193,6 +193,17 @@ if not gtest_main_dep.found()
         ),
     )
 endif
+gtest_dep = dependency('gtest', main : false, method : 'pkg-config', required : false)
+if not gtest_dep.found()
+    gtest_dep = subproject('gtest').get_variable('gtest_dep')
+    gtest_dep = declare_dependency(
+        dependencies : gtest_dep.partial_dependency(includes : true),
+        link_with : shared_library('gtest',
+            implicit_include_directories : false,
+            dependencies : gtest_dep,
+        ),
+    )
+endif
 gmock_dep = dependency('gmock', main : false, method : 'pkg-config', required : false)
 if not gmock_dep.found()
     gmock_dep = subproject('gtest').get_variable('gmock_dep')
@@ -265,6 +276,7 @@ tests = {
     'test/sandbox/external/polling_signalfd_sigchld_and_waitpid_work.cc': {},
     'test/sandbox/external/sigpipe_send_recv.cc': {},
     'test/sandbox/sandbox_reports_unexpected_supervisor_process_death.cc': {},
+    'test/sandbox/sandbox_supervisor_validates_arguments.cc': {'dependencies': [gtest_dep], 'args': sandbox_supervisor},
     'test/sandbox/si.cc': {},
     'test/sha.cc': {},
     'test/shared_function.cc': {},
