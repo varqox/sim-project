@@ -16,6 +16,7 @@ struct Args {
     std::vector<char*> argv; // with a trailing nullptr element
     std::vector<char*> env; // with a trailing nullptr element
     int supervisor_pidfd;
+    int tracee_cgroup_fd;
 
     struct LinuxNamespaces {
         struct User {

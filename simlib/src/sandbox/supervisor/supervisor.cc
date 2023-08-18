@@ -12,23 +12,31 @@
 #include <memory>
 #include <optional>
 #include <poll.h>
+#include <sched.h>
 #include <simlib/array_vec.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/deserializer.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_path.hh>
+#include <simlib/file_perms.hh>
 #include <simlib/from_unsafe.hh>
 #include <simlib/macros/wont_throw.hh>
 #include <simlib/noexcept_concat.hh>
 #include <simlib/overloaded.hh>
 #include <simlib/sandbox/si.hh>
 #include <simlib/socket_stream_ext.hh>
+#include <simlib/static_cstring_buff.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/timespec_arithmetic.hh>
+#include <simlib/utilities.hh>
 #include <string_view>
 #include <sys/mman.h>
+#include <sys/mount.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -502,6 +510,216 @@ void read_shared_mem_state_and_send_response(
     );
 }
 
+static void write_file_at(int dirfd, FilePath file_path, StringView data) noexcept {
+    auto fd = openat(dirfd, file_path, O_WRONLY | O_TRUNC | O_CLOEXEC);
+    if (fd == -1) {
+        die_with_error("openat(", file_path, ")");
+    }
+    if (write_all(fd, data) != data.size()) {
+        die_with_error("write(", file_path, ")");
+    }
+    if (close(fd)) {
+        die_with_error("close()");
+    }
+}
+
+namespace user_namespace {
+
+struct SetupArgs {
+    uid_t outside_uid;
+    uid_t inside_uid;
+    gid_t outside_gid;
+    gid_t inside_gid;
+};
+
+void setup(SetupArgs args) noexcept {
+    write_file_at(
+        -1,
+        "/proc/self/uid_map",
+        from_unsafe{noexcept_concat(args.inside_uid, ' ', args.outside_uid, " 1")}
+    );
+    write_file_at(-1, "/proc/self/setgroups", "deny");
+    write_file_at(
+        -1,
+        "/proc/self/gid_map",
+        from_unsafe{noexcept_concat(args.inside_gid, ' ', args.outside_gid, " 1")}
+    );
+}
+
+} // namespace user_namespace
+
+namespace mount_namespace {
+
+struct MountNamespace {};
+
+MountNamespace setup() noexcept { return {}; }
+
+} // namespace mount_namespace
+
+namespace cgroups {
+
+struct Cgroups {
+    const int cgroupfs_fd;
+    static constexpr auto supervisor_cgroup_path = StaticCStringBuff{"supervisor"};
+    static constexpr auto pid1_cgroup_path = StaticCStringBuff{"pid1"};
+    static constexpr auto tracee_cgroup_path = StaticCStringBuff{"tracee"};
+
+    const int pid1_cgroup_fd;
+    int tracee_cgroup_fd;
+
+    void assert_nsdelegate_is_active() noexcept;
+    void assert_process_cannot_cross_ns_root_dir_boundary() noexcept;
+
+    void destroy_tracee_cgroup() noexcept;
+    void create_and_set_up_tracee_cgroup() noexcept;
+    void reset_tracee_cgroup() noexcept;
+};
+
+Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) noexcept {
+    // Mount cgroups v2.
+    // Mounting cgroups on our own, we are independent of the system cgroup mountpoint. This way is
+    // way simpler and we don't have to to deal with mount point shadowing other mount point in
+    // /proc/self/mountinfo.
+
+    int cgroupfs_config_fd = fsopen("cgroup2", FSOPEN_CLOEXEC);
+    if (cgroupfs_config_fd < 0) {
+        die_with_error("fsopen(cgroup2)");
+    }
+    if (fsconfig(cgroupfs_config_fd, FSCONFIG_SET_FLAG, "nsdelegate", nullptr, 0)) {
+        die_with_error("fsconfig(cgroup2, SET_FLAG: nsdelegate)");
+    }
+    if (fsconfig(cgroupfs_config_fd, FSCONFIG_CMD_CREATE, nullptr, nullptr, 0)) {
+        die_with_error("fsconfig(cgroup2, CMD_CREATE)");
+    }
+    int cgroupfs_fd = fsmount(cgroupfs_config_fd, FSMOUNT_CLOEXEC, 0);
+    if (cgroupfs_fd < 0) {
+        die_with_error("fsmount(cgroup2)");
+    }
+    if (close(cgroupfs_config_fd)) {
+        die_with_error("close()");
+    }
+    // Create cgroups
+    if (mkdirat(cgroupfs_fd, Cgroups::supervisor_cgroup_path.c_str(), S_0755) ||
+        mkdirat(cgroupfs_fd, Cgroups::pid1_cgroup_path.c_str(), S_0755))
+    {
+        die_with_error("mkdirat()");
+    }
+
+    // Move the current process to the supervisor cgroup
+    write_file_at(
+        cgroupfs_fd, noexcept_concat(Cgroups::supervisor_cgroup_path, "/cgroup.procs"), "0"
+    );
+
+    int pid1_cgroup_fd = openat(cgroupfs_fd, Cgroups::pid1_cgroup_path.c_str(), O_PATH | O_CLOEXEC);
+    if (pid1_cgroup_fd < 0) {
+        die_with_error("openat()");
+    }
+
+    Cgroups cgs = {
+        .cgroupfs_fd = cgroupfs_fd,
+        .pid1_cgroup_fd = pid1_cgroup_fd,
+        .tracee_cgroup_fd = -1,
+    };
+
+    cgs.create_and_set_up_tracee_cgroup();
+    cgs.assert_nsdelegate_is_active();
+    return cgs;
+}
+
+void Cgroups::assert_nsdelegate_is_active() noexcept {
+    assert_process_cannot_cross_ns_root_dir_boundary();
+}
+
+// NOLINTNEXTLINE(readability-make-member-function-const)
+void Cgroups::assert_process_cannot_cross_ns_root_dir_boundary() noexcept {
+    static constexpr auto test_cgroup_path = "test_nsdelegate";
+    if (mkdirat(cgroupfs_fd, test_cgroup_path, S_0755)) {
+        die_with_error("mkdirat()");
+    }
+    int test_cgroup_fd = openat(cgroupfs_fd, test_cgroup_path, O_PATH | O_CLOEXEC);
+    if (test_cgroup_fd < 0) {
+        die_with_error("openat()");
+    }
+
+    auto supervisor_pid = getpid();
+
+    int child_pidfd = 0;
+    clone_args cl_args = {};
+    cl_args.flags = CLONE_PIDFD | CLONE_NEWUSER | CLONE_NEWCGROUP | CLONE_INTO_CGROUP;
+    cl_args.pidfd = reinterpret_cast<uint64_t>(&child_pidfd);
+    cl_args.exit_signal = 0; // we don't need SIGCHLD
+    cl_args.cgroup = static_cast<uint64_t>(test_cgroup_fd);
+
+    auto pid = syscalls::clone3(&cl_args);
+    if (pid == -1) {
+        die_with_error("clone3()");
+    }
+    if (pid == 0) {
+        // We have to open this file in the child process, otherwise write will succeed.
+        int fd = openat(cgroupfs_fd, "cgroup.procs", O_WRONLY | O_TRUNC | O_CLOEXEC);
+        // The above open is racy, the parent process could have already died, become waited, and a
+        // new process could take its PID, it might even have the file we try to open. Writing to it
+        // is unsafe, so we first check if the parent process is still alive.
+        if (getppid() != supervisor_pid) {
+            // Supervisor process is dead, we might have opened the wrong file (of a totally
+            // different process), so we don't want to write to.
+            _exit(3);
+        }
+        if (fd < 0) {
+            _exit(2); // We can't use die_with_error() in the child process
+        }
+        if (write(fd, "0", std::strlen("0")) != -1 || errno != ENOENT) {
+            _exit(1);
+        }
+        _exit(0);
+    }
+    siginfo_t si;
+    if (syscalls::waitid(P_PIDFD, child_pidfd, &si, __WALL | WEXITED, nullptr)) {
+        die_with_error("waitid()");
+    }
+    if (si.si_code != CLD_EXITED || !is_one_of(si.si_status, 0, 1)) {
+        die_with_msg("nsdelegate check: the child process died of unexpected reason");
+    }
+    if (si.si_status != 0) {
+        die_with_msg("nsdelegate cgroup2 option is not in action");
+    }
+
+    if (close(child_pidfd) || close(test_cgroup_fd)) {
+        die_with_error("close()");
+    }
+    if (unlinkat(cgroupfs_fd, test_cgroup_path, AT_REMOVEDIR)) {
+        die_with_error("unlinkat()");
+    }
+}
+
+void Cgroups::create_and_set_up_tracee_cgroup() noexcept {
+    if (mkdirat(cgroupfs_fd, tracee_cgroup_path.c_str(), S_0755)) {
+        die_with_error("mkdirat()");
+    }
+    tracee_cgroup_fd = openat(cgroupfs_fd, tracee_cgroup_path.c_str(), O_PATH | O_CLOEXEC);
+    if (tracee_cgroup_fd < 0) {
+        die_with_error("openat()");
+    }
+}
+
+void Cgroups::destroy_tracee_cgroup() noexcept {
+    if (close(tracee_cgroup_fd)) {
+        die_with_error("close()");
+    }
+    tracee_cgroup_fd = -1;
+
+    if (unlinkat(cgroupfs_fd, tracee_cgroup_path.c_str(), AT_REMOVEDIR)) {
+        die_with_error("unlinkat()");
+    }
+}
+
+void Cgroups::reset_tracee_cgroup() noexcept {
+    destroy_tracee_cgroup();
+    create_and_set_up_tracee_cgroup();
+}
+
+} // namespace cgroups
+
 // Waits for pid1 death or read and write shutdown of the other end of the SOCK_FD (we can't wait
 // only for the read-close)
 void wait_for_pid1_death_or_sock_fd_shutdown(int pid1_pidfd) noexcept {
@@ -563,17 +781,37 @@ void main(int argc, char** argv) noexcept {
     auto shared_mem_state = sms::initialize(shared_mem_state_raw);
     auto supervisor_pidfd = syscalls::pidfd_open(getpid(), 0);
 
-    auto euid = geteuid();
-    auto egid = getegid();
+    auto supervisor_outside_euid = geteuid();
+    auto supervisor_outside_egid = getegid();
 
-    for (;; sms::reset(shared_mem_state)) {
+    if (unshare(CLONE_NEWUSER | CLONE_NEWCGROUP | CLONE_NEWNS)) {
+        die_with_error("unshare()");
+    }
+
+    constexpr uid_t SUPERVISOR_USER_NS_INSIDE_UID = 1;
+    constexpr uid_t SUPERVISOR_USER_NS_INSIDE_GID = 1;
+    user_namespace::setup({
+        .outside_uid = supervisor_outside_euid,
+        .inside_uid = SUPERVISOR_USER_NS_INSIDE_UID,
+        .outside_gid = supervisor_outside_egid,
+        .inside_gid = SUPERVISOR_USER_NS_INSIDE_GID,
+    });
+    auto mount_ns = mount_namespace::setup();
+    auto cgroups = cgroups::setup(mount_ns);
+
+    for (;; [&] {
+             sms::reset(shared_mem_state);
+             cgroups.reset_tracee_cgroup();
+         }())
+    {
         auto request = recv_request();
 
         int pid1_pidfd = 0;
         clone_args cl_args = {};
-        cl_args.flags = CLONE_PIDFD | CLONE_NEWUSER | CLONE_NEWPID;
+        cl_args.flags = CLONE_PIDFD | CLONE_INTO_CGROUP | CLONE_NEWUSER | CLONE_NEWPID;
         cl_args.pidfd = reinterpret_cast<uint64_t>(&pid1_pidfd);
         cl_args.exit_signal = 0; // we don't need SIGCHLD
+        cl_args.cgroup = static_cast<uint64_t>(cgroups.pid1_cgroup_fd);
 
         auto pid = syscalls::clone3(&cl_args);
         if (pid == -1) {
@@ -589,16 +827,17 @@ void main(int argc, char** argv) noexcept {
                 .argv = std::move(request.argv),
                 .env = std::move(request.env),
                 .supervisor_pidfd = supervisor_pidfd,
+                .tracee_cgroup_fd = cgroups.tracee_cgroup_fd,
                 .linux_namespaces =
                     {
                         .user =
                             {
-                                .outside_uid = euid,
+                                .outside_uid = SUPERVISOR_USER_NS_INSIDE_UID,
                                 .inside_uid =
-                                    request.linux_namespaces.user.inside_uid.value_or(euid),
-                                .outside_gid = egid,
+                                    request.linux_namespaces.user.inside_uid.value_or(1000),
+                                .outside_gid = SUPERVISOR_USER_NS_INSIDE_GID,
                                 .inside_gid =
-                                    request.linux_namespaces.user.inside_gid.value_or(egid),
+                                    request.linux_namespaces.user.inside_gid.value_or(1000),
                             },
                     },
             });

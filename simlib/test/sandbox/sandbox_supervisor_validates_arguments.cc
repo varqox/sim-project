@@ -144,6 +144,6 @@ TEST(sandbox, sandbox_supervisor_fd_is_correct) {
     auto res = run_supervisor(
         {"supervisor", concat_tostr(static_cast<int>(socket.supervisor_end))}, &socket
     );
-    ASSERT_TRUE(res.exited0);
-    ASSERT_EQ(res.output, "");
+    ASSERT_FALSE(res.exited0);
+    ASSERT_EQ(res.output, "supervisor: mkdirat() - Permission denied (os error 13)");
 }

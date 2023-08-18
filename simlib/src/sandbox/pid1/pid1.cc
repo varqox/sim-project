@@ -4,9 +4,11 @@
 
 #include <cerrno>
 #include <csignal>
+#include <cstdint>
 #include <ctime>
 #include <fcntl.h>
 #include <poll.h>
+#include <sched.h>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
@@ -86,6 +88,12 @@ namespace sandbox::pid1 {
             from_unsafe{noexcept_concat(user_ns.inside_gid, ' ', user_ns.outside_gid, " 1")}
         );
     };
+    auto harden_against_potential_compromise = [&]() noexcept {
+        // Cut access to cgroups other than ours
+        unshare(CLONE_NEWCGROUP);
+
+        // TODO: install seccomp filters
+    };
     auto get_current_time = [&]() noexcept {
         timespec ts;
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts)) {
@@ -119,8 +127,9 @@ namespace sandbox::pid1 {
     }
 
     clone_args cl_args = {};
-    cl_args.flags = 0;
+    cl_args.flags = CLONE_NEWCGROUP | CLONE_INTO_CGROUP;
     cl_args.exit_signal = SIGCHLD;
+    cl_args.cgroup = static_cast<uint64_t>(args.tracee_cgroup_fd);
 
     auto tracee_pid = syscalls::clone3(&cl_args);
     if (tracee_pid == -1) {
@@ -143,7 +152,7 @@ namespace sandbox::pid1 {
         die_with_error("close_range()");
     }
 
-    // TODO: install seccomp filters
+    harden_against_potential_compromise();
 
     timespec waitid_time;
     siginfo_t si;
