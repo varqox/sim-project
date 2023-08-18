@@ -296,6 +296,7 @@ tests = {
     'test/sandbox/sandbox_uses_user_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_user_namespace_tester.cc'},
     'test/sandbox/si.cc': {},
     'test/sandbox/simple.cc': {},
+    'test/sandbox/tracee_is_killed_upon_supervisor_process_death.cc': {},
     'test/sandbox/tracee_times.cc': {},
     'test/sha.cc': {},
     'test/shared_function.cc': {},

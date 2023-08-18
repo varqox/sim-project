@@ -6,6 +6,7 @@
 #include <csignal>
 #include <ctime>
 #include <fcntl.h>
+#include <poll.h>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
@@ -32,6 +33,28 @@ namespace sandbox::pid1 {
     auto set_process_name = [&]() noexcept {
         if (prctl(PR_SET_NAME, "pid1", 0, 0, 0)) {
             die_with_error("prctl(SET_NAME)");
+        }
+    };
+    auto setup_kill_on_supervisor_death = [&](int supervisor_pidfd) noexcept {
+        // Make kernel send us SIGKILL when the parent process (= supervisor process) dies
+        if (prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0)) {
+            die_with_error("prctl(PR_SET_PDEATHSIG)");
+        }
+        // Check if the supervisor is not already dead - it might happened just before prctl(). We
+        // cannot use getppid() because it returns 0 as we are in a new PID namespace, so we use
+        // poll() on supervisor's pidfd
+        pollfd pfd = {
+            .fd = supervisor_pidfd,
+            .events = POLLIN,
+            .revents = 0,
+        };
+        if (poll(&pfd, 1, 0) == 1) {
+            die_with_msg("supervisor died");
+        }
+        // Close supervisor_pidfd to limit attack surface as it may be used to send signals to the
+        // supervisor
+        if (close(supervisor_pidfd)) {
+            die_with_error("close()");
         }
     };
     auto setup_session_and_process_group = [&]() noexcept {
@@ -72,6 +95,7 @@ namespace sandbox::pid1 {
     };
 
     set_process_name();
+    setup_kill_on_supervisor_death(args.supervisor_pidfd);
     setup_session_and_process_group();
     setup_user_namespace(args.linux_namespaces.user);
 

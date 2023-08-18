@@ -1,28 +1,19 @@
 #include "assert_result.hh"
+#include "get_pid_of_the_only_child_process.hh"
 
-#include <cctype>
 #include <csignal>
 #include <exception>
 #include <fcntl.h>
 #include <gtest/gtest.h>
 #include <simlib/concat_tostr.hh>
-#include <simlib/file_contents.hh>
 #include <simlib/pipe.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/string_traits.hh>
-#include <simlib/string_transform.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/throw_assert.hh>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-pid_t get_pid_of_the_only_child_process() {
-    auto children_pids = get_file_contents(concat_tostr("/proc/self/task/", gettid(), "/children"));
-    auto child_pid = str2num<pid_t>(StringView{children_pids}.without_trailing(&isspace));
-    throw_assert(child_pid.has_value());
-    return *child_pid;
-}
 
 // NOLINTNEXTLINE
 TEST(sandbox, sandbox_reports_unexpected_supervisor_process_death_in_destructor) {

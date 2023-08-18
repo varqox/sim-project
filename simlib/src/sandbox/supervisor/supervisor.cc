@@ -522,6 +522,7 @@ void main(int argc, char** argv) noexcept {
         die_with_error("mmap()");
     }
     auto shared_mem_state = sms::initialize(shared_mem_state_raw);
+    auto supervisor_pidfd = syscalls::pidfd_open(getpid(), 0);
 
     auto euid = geteuid();
     auto egid = getegid();
@@ -548,6 +549,7 @@ void main(int argc, char** argv) noexcept {
                 .stderr_fd = request.stderr_fd,
                 .argv = std::move(request.argv),
                 .env = std::move(request.env),
+                .supervisor_pidfd = supervisor_pidfd,
                 .linux_namespaces =
                     {
                         .user =

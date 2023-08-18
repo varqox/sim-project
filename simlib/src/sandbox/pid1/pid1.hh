@@ -15,6 +15,7 @@ struct Args {
     std::optional<int> stderr_fd;
     std::vector<char*> argv; // with a trailing nullptr element
     std::vector<char*> env; // with a trailing nullptr element
+    int supervisor_pidfd;
 
     struct LinuxNamespaces {
         struct User {
