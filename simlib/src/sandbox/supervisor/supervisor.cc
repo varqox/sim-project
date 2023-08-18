@@ -261,6 +261,10 @@ struct Request {
             optional<gid_t> inside_gid;
         } user;
     } linux_namespaces;
+
+    struct Cgroup {
+        optional<uint32_t> process_num_limit;
+    } cgroup;
 };
 
 Request recv_request() noexcept {
@@ -278,6 +282,11 @@ Request recv_request() noexcept {
         } user;
     } linux_ns;
 
+    struct Cgroup {
+        request::cgroup::mask_t mask;
+        request::cgroup::serialized_process_num_limit_t process_num_limit;
+    } cgroup;
+
     auto recv_and_deserialize = [&](auto&... values) noexcept {
         std::byte buff[(... + sizeof(values))];
         auto fds = recv_request_header_with_fds(buff, sizeof(buff));
@@ -291,7 +300,9 @@ Request recv_request() noexcept {
         serialized_env_len,
         linux_ns.user.mask,
         linux_ns.user.inside_uid,
-        linux_ns.user.inside_gid
+        linux_ns.user.inside_gid,
+        cgroup.mask,
+        cgroup.process_num_limit
     );
     if (fds.size() < 1) {
         die_with_msg(
@@ -335,6 +346,16 @@ Request recv_request() noexcept {
             linux_ns.user.mask,
             linux_ns.user.inside_gid,
             mask::inside_gid
+        );
+    }
+
+    {
+        namespace mask = request::cgroup::mask;
+        request::deserialize_from(
+            req.cgroup.process_num_limit,
+            cgroup.mask,
+            cgroup.process_num_limit,
+            mask::process_num_limit
         );
     }
 
@@ -523,6 +544,22 @@ static void write_file_at(int dirfd, FilePath file_path, StringView data) noexce
     }
 }
 
+static optional<int>
+write_file_at_but_expect_write_error(int dirfd, FilePath file_path, StringView data) noexcept {
+    auto fd = openat(dirfd, file_path, O_WRONLY | O_TRUNC | O_CLOEXEC);
+    if (fd == -1) {
+        die_with_error("openat(", file_path, ")");
+    }
+    optional<int> res = std::nullopt;
+    if (write_all(fd, data) != data.size()) {
+        res = errno;
+    }
+    if (close(fd)) {
+        die_with_error("close()");
+    }
+    return res;
+}
+
 namespace user_namespace {
 
 struct SetupArgs {
@@ -569,10 +606,13 @@ struct Cgroups {
 
     void assert_nsdelegate_is_active() noexcept;
     void assert_process_cannot_cross_ns_root_dir_boundary() noexcept;
+    void assert_controller_interface_files_in_ns_root_dir_are_unwritable() const noexcept;
 
     void destroy_tracee_cgroup() noexcept;
     void create_and_set_up_tracee_cgroup() noexcept;
     void reset_tracee_cgroup() noexcept;
+
+    void set_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept;
 };
 
 Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) noexcept {
@@ -610,6 +650,9 @@ Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) no
         cgroupfs_fd, noexcept_concat(Cgroups::supervisor_cgroup_path, "/cgroup.procs"), "0"
     );
 
+    // Enable resource controllers
+    write_file_at(cgroupfs_fd, "cgroup.subtree_control", "+pids");
+
     int pid1_cgroup_fd = openat(cgroupfs_fd, Cgroups::pid1_cgroup_path.c_str(), O_PATH | O_CLOEXEC);
     if (pid1_cgroup_fd < 0) {
         die_with_error("openat()");
@@ -628,6 +671,7 @@ Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) no
 
 void Cgroups::assert_nsdelegate_is_active() noexcept {
     assert_process_cannot_cross_ns_root_dir_boundary();
+    assert_controller_interface_files_in_ns_root_dir_are_unwritable();
 }
 
 // NOLINTNEXTLINE(readability-make-member-function-const)
@@ -692,6 +736,12 @@ void Cgroups::assert_process_cannot_cross_ns_root_dir_boundary() noexcept {
     }
 }
 
+void Cgroups::assert_controller_interface_files_in_ns_root_dir_are_unwritable() const noexcept {
+    if (write_file_at_but_expect_write_error(cgroupfs_fd, "pids.max", "max") != EPERM) {
+        die_with_error("nsdelegate cgroup2 option is not in action");
+    }
+}
+
 void Cgroups::create_and_set_up_tracee_cgroup() noexcept {
     if (mkdirat(cgroupfs_fd, tracee_cgroup_path.c_str(), S_0755)) {
         die_with_error("mkdirat()");
@@ -716,6 +766,15 @@ void Cgroups::destroy_tracee_cgroup() noexcept {
 void Cgroups::reset_tracee_cgroup() noexcept {
     destroy_tracee_cgroup();
     create_and_set_up_tracee_cgroup();
+}
+
+// NOLINTNEXTLINE(readability-make-member-function-const)
+void Cgroups::set_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept {
+    write_file_at(
+        tracee_cgroup_fd,
+        "pids.max",
+        process_num_limit ? StringView{from_unsafe{to_string(*process_num_limit)}} : "max"
+    );
 }
 
 } // namespace cgroups
@@ -805,6 +864,8 @@ void main(int argc, char** argv) noexcept {
          }())
     {
         auto request = recv_request();
+
+        cgroups.set_tracee_cgroup_process_num_limit(request.cgroup.process_num_limit);
 
         int pid1_pidfd = 0;
         clone_args cl_args = {};

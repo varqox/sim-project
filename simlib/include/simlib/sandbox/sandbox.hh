@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <exception>
 #include <optional>
 #include <simlib/sandbox/si.hh>
@@ -26,6 +27,11 @@ struct RequestOptions {
                                                             // outside effective group ID (egid)
         } user = {};
     } linux_namespaces = {};
+
+    struct Cgroup {
+        // Every process or thread counts as 1
+        std::optional<uint32_t> process_num_limit = std::nullopt;
+    } cgroup = {};
 };
 
 namespace result {

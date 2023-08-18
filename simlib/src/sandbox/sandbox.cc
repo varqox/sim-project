@@ -226,13 +226,31 @@ void SupervisorConnection::send_request(
             }(),
     };
 
+    struct Cgroup {
+        request::cgroup::mask_t mask;
+        request::cgroup::serialized_process_num_limit_t process_num_limit;
+    } cgroup = [&]() noexcept {
+        Cgroup cg = {
+            .mask = 0,
+            .process_num_limit = 0,
+        };
+        namespace mask = request::cgroup::mask;
+        auto& ops = options.cgroup;
+        request::serialize_into(
+            ops.process_num_limit, cg.mask, cg.process_num_limit, mask::process_num_limit
+        );
+        return cg;
+    }();
+
     auto header_buff = array_buff_from(
         mask,
         serialized_argv_len,
         serialized_env_len,
         linux_ns.user.mask,
         linux_ns.user.inside_uid,
-        linux_ns.user.inside_gid
+        linux_ns.user.inside_gid,
+        cgroup.mask,
+        cgroup.process_num_limit
     );
     auto rc = send_fds<fds.max_size()>(
         sock_fd, header_buff.data(), header_buff.size(), MSG_NOSIGNAL, fds.data(), fds.size()

@@ -42,6 +42,18 @@ static_assert( // NOLINTNEXTLINE(misc-redundant-expression)
 );
 } // namespace linux_namespaces::user
 
+namespace cgroup {
+
+using mask_t = uint8_t;
+
+namespace mask {
+static constexpr mask_t process_num_limit = 1;
+} // namespace mask
+
+using serialized_process_num_limit_t = uint32_t;
+
+} // namespace cgroup
+
 template <class T, class MaskT, class SerializedT>
 void serialize_into(
     const std::optional<T>& val, MaskT& mask, SerializedT& serialized_val, MaskT flag
