@@ -4,6 +4,7 @@
 #include "../supervisor/request/request.hh"
 
 #include <cstdint>
+#include <ctime>
 #include <optional>
 #include <sys/types.h>
 #include <variant>
@@ -21,6 +22,7 @@ struct Args {
     std::vector<char*> env; // with a trailing nullptr element
     int supervisor_pidfd;
     int tracee_cgroup_fd;
+    int tracee_cgroup_kill_fd;
     int tracee_cgroup_cpu_stat_fd;
 
     struct LinuxNamespaces {
@@ -46,6 +48,8 @@ struct Args {
 
     using Prlimit = supervisor::request::Request::Prlimit;
     Prlimit prlimit;
+
+    std::optional<timespec> time_limit;
 };
 
 [[noreturn]] void main(Args args) noexcept;

@@ -1,6 +1,7 @@
 #include "../../communication/client_supervisor.hh"
 #include "request.hh"
 
+#include <ctime>
 #include <optional>
 #include <simlib/array_vec.hh>
 #include <simlib/deserialize.hh>
@@ -264,6 +265,20 @@ void deserialize(Reader& reader, ArrayVec<int, 253>& fds, Request& req) {
     deserialize(reader, req.linux_namespaces);
     deserialize(reader, req.cgroup);
     deserialize(reader, req.prlimit);
+
+    {
+        timespec time_limit;
+        reader.read(time_limit.tv_sec, from<request::time_limit_sec_t>);
+        if (time_limit.tv_sec < 0) {
+            req.time_limit = std::nullopt;
+        } else {
+            reader.read(time_limit.tv_nsec, from<request::time_limit_nsec_t>);
+            if (time_limit.tv_nsec < 0 || time_limit.tv_nsec >= 1'000'000'000) {
+                THROW("invalid time_limit.nsec: ", time_limit.tv_nsec);
+            }
+            req.time_limit = time_limit;
+        }
+    }
 }
 
 } // namespace sandbox::supervisor::request

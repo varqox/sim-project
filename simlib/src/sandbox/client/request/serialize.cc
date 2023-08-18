@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <cstring>
 #include <memory>
@@ -258,6 +259,18 @@ serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions&
         serialize(writer, options.linux_namespaces);
         serialize(writer, options.cgroup);
         serialize(writer, options.prlimit);
+
+        if (options.time_limit) {
+            if (*options.time_limit < std::chrono::nanoseconds{0}) {
+                THROW("invalid time limit - it has to be non-negative");
+            }
+            auto sec = std::chrono::duration_cast<std::chrono::seconds>(*options.time_limit);
+            auto nsec = *options.time_limit - sec;
+            writer.write(sec.count(), casted_as<request::time_limit_sec_t>);
+            writer.write(nsec.count(), casted_as<request::time_limit_nsec_t>);
+        } else {
+            writer.write(-1, as<request::time_limit_sec_t>);
+        }
     };
 
     // Header

@@ -545,6 +545,7 @@ struct Cgroups {
 
     const int pid1_cgroup_fd;
     int tracee_cgroup_fd;
+    int tracee_cgroup_kill_fd;
     int tracee_cgroup_cpu_stat_fd;
 
     void assert_nsdelegate_is_active() noexcept;
@@ -612,6 +613,7 @@ Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) no
         .cgroupfs_fd = cgroupfs_fd,
         .pid1_cgroup_fd = pid1_cgroup_fd,
         .tracee_cgroup_fd = -1,
+        .tracee_cgroup_kill_fd = -1,
         .tracee_cgroup_cpu_stat_fd = -1,
     };
 
@@ -704,6 +706,10 @@ void Cgroups::create_and_set_up_tracee_cgroup() noexcept {
     if (tracee_cgroup_fd < 0) {
         die_with_error("openat()");
     }
+    tracee_cgroup_kill_fd = openat(tracee_cgroup_fd, "cgroup.kill", O_WRONLY | O_CLOEXEC);
+    if (tracee_cgroup_kill_fd < 0) {
+        die_with_error("openat()");
+    }
     tracee_cgroup_cpu_stat_fd = openat(tracee_cgroup_fd, "cpu.stat", O_RDONLY | O_CLOEXEC);
     if (tracee_cgroup_cpu_stat_fd < 0) {
         die_with_error("openat()");
@@ -715,6 +721,10 @@ void Cgroups::destroy_tracee_cgroup() noexcept {
         die_with_error("close()");
     }
     tracee_cgroup_fd = -1;
+    if (close(tracee_cgroup_kill_fd)) {
+        die_with_error("close()");
+    }
+    tracee_cgroup_kill_fd = -1;
     if (close(tracee_cgroup_cpu_stat_fd)) {
         die_with_error("close()");
     }
@@ -912,6 +922,7 @@ void main(int argc, char** argv) noexcept {
                 .env = std::move(request.env),
                 .supervisor_pidfd = supervisor_pidfd,
                 .tracee_cgroup_fd = cgroups.tracee_cgroup_fd,
+                .tracee_cgroup_kill_fd = cgroups.tracee_cgroup_kill_fd,
                 .tracee_cgroup_cpu_stat_fd = cgroups.tracee_cgroup_cpu_stat_fd,
                 .linux_namespaces =
                     {
@@ -944,6 +955,7 @@ void main(int argc, char** argv) noexcept {
                             },
                     },
                 .prlimit = request.prlimit,
+                .time_limit = request.time_limit,
             });
         }
         close_request_fds(request);

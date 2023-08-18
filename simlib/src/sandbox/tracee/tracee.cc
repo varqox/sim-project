@@ -111,6 +111,11 @@ namespace sandbox::tracee {
         sms::write(args.shared_mem_state->tracee_exec_start_cpu_time_user, cpu_times.user_usec);
         sms::write(args.shared_mem_state->tracee_exec_start_cpu_time_system, cpu_times.system_usec);
     };
+    auto signal_pid1_that_exec_start_times_are_saved = [&]() noexcept {
+        if (kill(1, SIGUSR2)) {
+            die_with_error("kill()");
+        }
+    };
 
     exclude_pid1_from_tracee_session_and_process_group();
     setup_user_namespace(args.linux_namespaces.user, args.proc_dirfd);
@@ -125,6 +130,7 @@ namespace sandbox::tracee {
     }
 
     save_exec_start_times();
+    signal_pid1_that_exec_start_times_are_saved();
     syscalls::execveat(args.executable_fd, "", args.argv.data(), args.env.data(), AT_EMPTY_PATH);
     die_with_error("execveat()");
 }

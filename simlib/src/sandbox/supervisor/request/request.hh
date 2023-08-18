@@ -82,6 +82,8 @@ struct Request {
         std::optional<uint64_t> file_descriptors_num_limit;
         std::optional<uint64_t> max_stack_size_in_bytes;
     } prlimit;
+
+    std::optional<timespec> time_limit;
 };
 
 } // namespace sandbox::supervisor::request

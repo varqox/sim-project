@@ -85,6 +85,8 @@ struct RequestOptions {
         std::optional<uint64_t> file_descriptors_num_limit = std::nullopt; // RLIMIT_NOFILE
         std::optional<uint64_t> max_stack_size_in_bytes = std::nullopt; // RLIMIT_STACK
     } prlimit = {};
+
+    std::optional<std::chrono::nanoseconds> time_limit = std::nullopt;
 };
 
 namespace result {
