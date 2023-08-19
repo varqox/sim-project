@@ -13,11 +13,15 @@
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
 #include <simlib/noexcept_concat.hh>
+#include <simlib/overloaded.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/ubsan.hh>
+#include <sys/mount.h>
 #include <sys/prctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
+#include <variant>
 
 namespace sandbox::pid1 {
 
@@ -77,7 +81,7 @@ namespace sandbox::pid1 {
             die_with_error("close()");
         }
     };
-    auto setup_user_namespace = [&](const Args::LinuxNamespaces::User& user_ns) noexcept {
+    auto setup_user_namespace = [&](const Args::LinuxNamespaces::User::Pid1& user_ns) noexcept {
         write_file(
             "/proc/self/uid_map",
             from_unsafe{noexcept_concat(user_ns.inside_uid, ' ', user_ns.outside_uid, " 1")}
@@ -87,6 +91,159 @@ namespace sandbox::pid1 {
             "/proc/self/gid_map",
             from_unsafe{noexcept_concat(user_ns.inside_gid, ' ', user_ns.outside_gid, " 1")}
         );
+    };
+    auto setup_mount_namespace = [&](const Args::LinuxNamespaces::Mount& mount_ns) noexcept {
+        if (chdir("/")) {
+            die_with_error("chdir(\"/\")");
+        }
+        for (const auto& oper : mount_ns.operations) {
+            using Mount = Args::LinuxNamespaces::Mount;
+            std::visit(
+                overloaded{
+                    [&](const Mount::MountTmpfs& mount_tmpfs) {
+                        auto flags = MS_NOSUID | MS_SILENT;
+                        if (mount_tmpfs.read_only) {
+                            flags |= MS_RDONLY;
+                        }
+                        if (mount_tmpfs.no_exec) {
+                            flags |= MS_NOEXEC;
+                        }
+                        auto options_str = [&]() noexcept {
+                            auto size = [&]() noexcept {
+                                using T = decltype(mount_tmpfs.max_total_size_of_files_in_bytes
+                                )::value_type;
+                                if (!mount_tmpfs.max_total_size_of_files_in_bytes) {
+                                    return T{0}; // no limit
+                                }
+                                auto x = *mount_tmpfs.max_total_size_of_files_in_bytes;
+                                return x > 0 ? x : T{1}; // 1 == lowest possible limit
+                            }();
+                            auto nr_inodes = [&]() noexcept {
+                                using T = decltype(mount_tmpfs.max_total_size_of_files_in_bytes
+                                )::value_type;
+                                if (!mount_tmpfs.inode_limit) {
+                                    return T{0}; // no limit
+                                }
+                                // Adjust limit because root dir counts as an inode
+                                return *mount_tmpfs.inode_limit +
+                                    1; // overflow is fine, as 0 == no limit
+                            }();
+                            uint8_t mode_user = (mount_tmpfs.root_dir_mode >> 6) & 7;
+                            uint8_t mode_group = (mount_tmpfs.root_dir_mode >> 3) & 7;
+                            uint8_t mode_other = mount_tmpfs.root_dir_mode & 7;
+                            return noexcept_concat(
+                                "size=",
+                                size,
+                                ",nr_inodes=",
+                                nr_inodes,
+                                ",mode=0",
+                                mode_user,
+                                mode_group,
+                                mode_other
+                            );
+                        }();
+                        if (mount(
+                                nullptr,
+                                mount_tmpfs.path.c_str(),
+                                "tmpfs",
+                                flags,
+                                options_str.c_str()
+                            )) {
+                            die_with_error("mount(tmpfs at \"", mount_tmpfs.path, "\")");
+                        }
+                    },
+                    [&](const Mount::MountProc& mount_proc) {
+                        auto flags = MS_NOSUID | MS_SILENT;
+                        if (mount_proc.read_only) {
+                            flags |= MS_RDONLY;
+                        }
+                        if (mount_proc.no_exec) {
+                            flags |= MS_NOEXEC;
+                        }
+                        if (mount(nullptr, mount_proc.path.c_str(), "proc", flags, nullptr)) {
+                            die_with_error("mount(proc at \"", mount_proc.path, "\")");
+                        }
+                    },
+                    [&](const Mount::BindMount& bind_mount) {
+                        int mount_fd = open_tree(
+                            AT_FDCWD,
+                            bind_mount.source.c_str(),
+                            OPEN_TREE_CLOEXEC | OPEN_TREE_CLONE |
+                                (bind_mount.recursive ? AT_RECURSIVE : 0)
+                        );
+                        if (mount_fd < 0) {
+                            die_with_error("open_tree(\"", bind_mount.source, "\")");
+                        }
+
+                        mount_attr mattr = {};
+                        mattr.attr_set = MOUNT_ATTR_NOSUID;
+                        if (bind_mount.read_only) {
+                            mattr.attr_set |= MOUNT_ATTR_RDONLY;
+                        }
+                        if (bind_mount.no_exec) {
+                            mattr.attr_set |= MOUNT_ATTR_NOEXEC;
+                        }
+                        if (mount_setattr(
+                                mount_fd,
+                                "",
+                                AT_EMPTY_PATH | (bind_mount.recursive ? AT_RECURSIVE : 0),
+                                &mattr,
+                                sizeof(mattr)
+                            ))
+                        {
+                            die_with_error("mount_setattr()");
+                        }
+                        if (move_mount(
+                                mount_fd,
+                                "",
+                                AT_FDCWD,
+                                bind_mount.dest.c_str(),
+                                MOVE_MOUNT_F_EMPTY_PATH
+                            ))
+                        {
+                            die_with_error("move_mount(dest: \"", bind_mount.dest, "\")");
+                        }
+                        if (close(mount_fd)) {
+                            die_with_error("close()");
+                        }
+                    },
+                    [&](const Mount::CreateDir& create_dir) {
+                        if (mkdir(create_dir.path.c_str(), create_dir.mode)) {
+                            die_with_error("mkdir(\"", create_dir.path, "\")");
+                        }
+                    },
+                    [&](const Mount::CreateFile& create_file) {
+                        int fd = open(
+                            create_file.path.c_str(), O_CREAT | O_EXCL | O_CLOEXEC, create_file.mode
+                        );
+                        if (fd < 0) {
+                            die_with_error("open(\"", create_file.path, "\", O_CREAT | O_EXCL)");
+                        }
+                        if (close(fd)) {
+                            die_with_error("close()");
+                        }
+                    },
+                },
+                oper
+            );
+        }
+
+        if (mount_ns.new_root_mount_path) {
+            if (chdir(mount_ns.new_root_mount_path->c_str())) {
+                die_with_error("chdir(new_root_mount_path)");
+            }
+            // This has to be done within the same user namespace that performed the mount. After
+            // the following clone3 with CLONE_NEWUSER | CLONE_NEWNS the whole mount tree becomes
+            // locked in tracee and we really want it for security i.e. the user will not be able to
+            // disintegrate part of the mount tree (but they may umount the entire mount tree).
+            if (syscalls::pivot_root(".", ".")) {
+                die_with_error(R"(pivot_root(".", "."))");
+            }
+            // Unmount the old root (also, it is needed for clone3 with CLONE_NEWUSER to succeed)
+            if (umount2(".", MNT_DETACH)) {
+                die_with_error(R"(umount2("."))");
+            }
+        }
     };
     auto harden_against_potential_compromise = [&]() noexcept {
         // Cut access to cgroups other than ours
@@ -105,7 +262,9 @@ namespace sandbox::pid1 {
     set_process_name();
     setup_kill_on_supervisor_death(args.supervisor_pidfd);
     setup_session_and_process_group();
-    setup_user_namespace(args.linux_namespaces.user);
+    setup_user_namespace(args.linux_namespaces.user.pid1);
+    int proc_dirfd = open("/proc", O_RDONLY | O_CLOEXEC);
+    setup_mount_namespace(args.linux_namespaces.mount);
 
     if (UNDEFINED_SANITIZER) {
         auto ignore_signal = [&](int sig) noexcept {
@@ -127,7 +286,8 @@ namespace sandbox::pid1 {
     }
 
     clone_args cl_args = {};
-    cl_args.flags = CLONE_NEWCGROUP | CLONE_INTO_CGROUP;
+    // CLONE_NEWUSER | CLONE_NEWNS are needed to lock the mount tree
+    cl_args.flags = CLONE_NEWCGROUP | CLONE_INTO_CGROUP | CLONE_NEWUSER | CLONE_NEWNS;
     cl_args.exit_signal = SIGCHLD;
     cl_args.cgroup = static_cast<uint64_t>(args.tracee_cgroup_fd);
 
@@ -144,7 +304,18 @@ namespace sandbox::pid1 {
             .stderr_fd = args.stderr_fd,
             .argv = std::move(args.argv),
             .env = std::move(args.env),
+            .proc_dirfd = proc_dirfd,
             .tracee_cgroup_cpu_stat_fd = args.tracee_cgroup_cpu_stat_fd,
+            .linux_namespaces =
+                {
+                    .user =
+                        {
+                            .outside_uid = args.linux_namespaces.user.tracee.outside_uid,
+                            .inside_uid = args.linux_namespaces.user.tracee.inside_uid,
+                            .outside_gid = args.linux_namespaces.user.tracee.outside_gid,
+                            .inside_gid = args.linux_namespaces.user.tracee.inside_gid,
+                        },
+                },
         });
     }
 

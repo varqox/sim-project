@@ -292,6 +292,7 @@ tests = {
     'test/sandbox/invalid_request.cc': {},
     'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee.cc': {'tester': 'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee_tester.cc'},
     'test/sandbox/sandbox_closes_unnecessary_file_descriptors.cc': {'tester': 'test/sandbox/sandbox_closes_unnecessary_file_descriptors_tester.cc'},
+    'test/sandbox/sandbox_mount_namespace.cc': {'tester': 'test/sandbox/sandbox_mount_namespace_tester.cc', 'priority': 10},
     'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr.cc': {'tester': 'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr_tester.cc'},
     'test/sandbox/sandbox_places_tracee_in_a_separate_session_and_process_group.cc': {'tester': 'test/sandbox/sandbox_places_tracee_in_a_separate_session_and_process_group_tester.cc'},
     'test/sandbox/sandbox_reports_unexpected_supervisor_process_death.cc': {},

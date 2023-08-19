@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <simlib/string_view.hh>
 #include <sys/types.h>
+#include <variant>
 #include <vector>
 
 namespace sandbox::supervisor::request {
@@ -21,6 +24,49 @@ struct Request {
             std::optional<uid_t> inside_uid;
             std::optional<gid_t> inside_gid;
         } user;
+
+        struct Mount {
+            struct MountTmpfs {
+                CStringView path;
+                std::optional<uint64_t>
+                    max_total_size_of_files_in_bytes; // will be rounded up to page size multiple; 0
+                                                      // rounds up to page size due to technical
+                                                      // limitations of tmpfs.
+                std::optional<uint64_t> inode_limit;
+                mode_t root_dir_mode;
+                bool read_only;
+                bool no_exec;
+            };
+
+            struct MountProc {
+                CStringView path;
+                bool read_only;
+                bool no_exec;
+            };
+
+            struct BindMount {
+                CStringView source;
+                CStringView dest;
+                bool recursive;
+                bool read_only;
+                bool no_exec;
+            };
+
+            struct CreateDir {
+                CStringView path;
+                mode_t mode;
+            };
+
+            struct CreateFile {
+                CStringView path;
+                mode_t mode;
+            };
+
+            using Operation = std::variant<MountTmpfs, MountProc, BindMount, CreateDir, CreateFile>;
+
+            std::vector<Operation> operations;
+            std::optional<CStringView> new_root_mount_path;
+        } mount;
     } linux_namespaces;
 
     struct Cgroup {

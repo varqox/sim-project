@@ -1,8 +1,12 @@
 #pragma once
 
 #include "../communication/supervisor_pid1_tracee.hh"
+#include "../supervisor/request/request.hh"
 
+#include <cstdint>
 #include <optional>
+#include <sys/types.h>
+#include <variant>
 #include <vector>
 
 namespace sandbox::pid1 {
@@ -21,11 +25,23 @@ struct Args {
 
     struct LinuxNamespaces {
         struct User {
-            uid_t outside_uid;
-            uid_t inside_uid;
-            gid_t outside_gid;
-            gid_t inside_gid;
+            struct Pid1 {
+                uid_t outside_uid;
+                uid_t inside_uid;
+                gid_t outside_gid;
+                gid_t inside_gid;
+            } pid1;
+
+            struct Tracee {
+                uid_t outside_uid;
+                uid_t inside_uid;
+                gid_t outside_gid;
+                gid_t inside_gid;
+            } tracee;
         } user;
+
+        using Mount = supervisor::request::Request::LinuxNamespaces::Mount;
+        Mount mount;
     } linux_namespaces;
 };
 

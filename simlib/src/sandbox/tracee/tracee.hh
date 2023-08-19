@@ -16,7 +16,17 @@ struct Args {
     std::vector<char*> argv; // with a trailing nullptr element
     std::vector<char*> env; // with a trailing nullptr element
 
+    int proc_dirfd;
     int tracee_cgroup_cpu_stat_fd;
+
+    struct LinuxNamespaces {
+        struct User {
+            uid_t outside_uid;
+            uid_t inside_uid;
+            gid_t outside_gid;
+            gid_t inside_gid;
+        } user;
+    } linux_namespaces;
 };
 
 [[noreturn]] void main(Args args) noexcept;

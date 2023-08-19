@@ -9,10 +9,14 @@
 #include <simlib/array_vec.hh>
 #include <simlib/contains.hh>
 #include <simlib/macros/throw.hh>
+#include <simlib/overloaded.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/serialize.hh>
 #include <simlib/slice.hh>
+#include <sys/stat.h>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 using serialize::as;
 using serialize::casted_as;
@@ -46,8 +50,130 @@ void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Use
 }
 
 template <Phase phase>
+void serialize(
+    Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::MountTmpfs& mt
+) {
+    namespace mount_tmpfs =
+        communication::client_supervisor::request::linux_namespaces::mount::mount_tmpfs;
+    serialize_as_null_terminated(writer, mt.path);
+    writer.write_flags(
+        {
+            {mt.max_total_size_of_files_in_bytes.has_value(), mount_tmpfs::flags::max_total_size_of_files_in_bytes},
+            {mt.inode_limit.has_value(), mount_tmpfs::flags::inode_limit},
+            {mt.read_only, mount_tmpfs::flags::read_only},
+            {mt.no_exec, mount_tmpfs::flags::no_exec},
+        },
+        as<mount_tmpfs::flags_t>
+    );
+    if (mt.max_total_size_of_files_in_bytes) {
+        writer
+            .write(*mt.max_total_size_of_files_in_bytes, as<mount_tmpfs::max_total_size_of_files_in_bytes_t>);
+    }
+    if (mt.inode_limit) {
+        writer.write(*mt.inode_limit, as<mount_tmpfs::inode_limit_t>);
+    }
+
+    if ((mt.root_dir_mode & ACCESSPERMS) != mt.root_dir_mode) {
+        THROW("MountTmpfs: invalid root_dir_mode: ", mt.root_dir_mode);
+    }
+    writer
+        .write(mt.root_dir_mode, casted_as<communication::client_supervisor::request::linux_namespaces::mount::mode_t>);
+}
+
+template <Phase phase>
+void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::MountProc& mp) {
+    namespace mount_proc =
+        communication::client_supervisor::request::linux_namespaces::mount::mount_proc;
+    serialize_as_null_terminated(writer, mp.path);
+    writer.write_flags(
+        {
+            {mp.read_only, mount_proc::flags::read_only},
+            {mp.no_exec, mount_proc::flags::no_exec},
+        },
+        as<mount_proc::flags_t>
+    );
+}
+
+template <Phase phase>
+void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::BindMount& bm) {
+    namespace bind_mount =
+        communication::client_supervisor::request::linux_namespaces::mount::bind_mount;
+    serialize_as_null_terminated(writer, bm.source);
+    serialize_as_null_terminated(writer, bm.dest);
+    writer.write_flags(
+        {
+            {bm.recursive, bind_mount::flags::recursive},
+            {bm.read_only, bind_mount::flags::read_only},
+            {bm.no_exec, bind_mount::flags::no_exec},
+        },
+        as<bind_mount::flags_t>
+    );
+}
+
+template <Phase phase>
+void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::CreateDir& cd) {
+    serialize_as_null_terminated(writer, cd.path);
+
+    if ((cd.mode & ACCESSPERMS) != cd.mode) {
+        THROW("CreateDir: invalid mode: ", cd.mode);
+    }
+    writer
+        .write(cd.mode, casted_as<communication::client_supervisor::request::linux_namespaces::mount::mode_t>);
+}
+
+template <Phase phase>
+void serialize(
+    Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::CreateFile& cf
+) {
+    serialize_as_null_terminated(writer, cf.path);
+
+    if ((cf.mode & ACCESSPERMS) != cf.mode) {
+        THROW("CreateFile: invalid mode: ", cf.mode);
+    }
+    writer
+        .write(cf.mode, casted_as<communication::client_supervisor::request::linux_namespaces::mount::mode_t>);
+}
+
+template <Phase phase>
+void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::Operation& op) {
+    using communication::client_supervisor::request::linux_namespaces::mount::OperationKind;
+    using Mount = RequestOptions::LinuxNamespaces::Mount;
+    auto operation_kind = std::visit(
+        overloaded{
+            [](const Mount::MountTmpfs& /**/) noexcept { return OperationKind::MOUNT_TMPFS; },
+            [](const Mount::MountProc& /**/) noexcept { return OperationKind::MOUNT_PROC; },
+            [](const Mount::BindMount& /**/) noexcept { return OperationKind::BIND_MOUNT; },
+            [](const Mount::CreateDir& /**/) noexcept { return OperationKind::CREATE_DIR; },
+            [](const Mount::CreateFile& /**/) noexcept { return OperationKind::CREATE_FILE; },
+        },
+        op
+    );
+    writer.write_as_bytes(
+        static_cast<std::underlying_type_t<decltype(operation_kind)>>(operation_kind)
+    );
+    std::visit([&writer](const auto& inner_op) { serialize(writer, inner_op); }, op);
+}
+
+template <Phase phase>
+void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount& m) {
+    namespace mount = communication::client_supervisor::request::linux_namespaces::mount;
+    writer.write(m.operations.size(), casted_as<mount::operations_len_t>);
+    for (const auto& op : m.operations) {
+        serialize(writer, op);
+    }
+    if (m.new_root_mount_path) {
+        writer
+            .write(m.new_root_mount_path->size() + 1, casted_as<mount::new_root_mount_path_len_t>);
+        serialize_as_null_terminated(writer, *m.new_root_mount_path);
+    } else {
+        writer.write(0, casted_as<mount::new_root_mount_path_len_t>);
+    }
+}
+
+template <Phase phase>
 void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces& linux_namespaces) {
     serialize(writer, linux_namespaces.user);
+    serialize(writer, linux_namespaces.mount);
 }
 
 template <Phase phase>

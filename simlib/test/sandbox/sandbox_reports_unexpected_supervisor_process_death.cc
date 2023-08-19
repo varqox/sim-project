@@ -4,6 +4,7 @@
 #include <csignal>
 #include <exception>
 #include <fcntl.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <simlib/concat_tostr.hh>
 #include <simlib/pipe.hh>

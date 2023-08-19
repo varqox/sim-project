@@ -32,6 +32,32 @@ namespace sandbox::tracee {
             die_with_error("setsid()");
         }
     };
+    auto write_file_at = [&](int dirfd, FilePath file_path, StringView data) noexcept {
+        auto fd = openat(dirfd, file_path, O_WRONLY | O_TRUNC | O_CLOEXEC);
+        if (fd == -1) {
+            die_with_error("openat(", file_path, ")");
+        }
+        if (write_all(fd, data) != data.size()) {
+            die_with_error("write(", file_path, ")");
+        }
+        if (close(fd)) {
+            die_with_error("close()");
+        }
+    };
+    auto setup_user_namespace = [&](const Args::LinuxNamespaces::User& user_ns,
+                                    int proc_dirfd) noexcept {
+        write_file_at(
+            proc_dirfd,
+            "self/uid_map",
+            from_unsafe{noexcept_concat(user_ns.inside_uid, ' ', user_ns.outside_uid, " 1")}
+        );
+        write_file_at(proc_dirfd, "self/setgroups", "deny");
+        write_file_at(
+            proc_dirfd,
+            "self/gid_map",
+            from_unsafe{noexcept_concat(user_ns.inside_gid, ' ', user_ns.outside_gid, " 1")}
+        );
+    };
     auto setup_std_fds = [&]() noexcept {
         if (args.stdin_fd && dup3(*args.stdin_fd, STDIN_FILENO, 0) < 0) {
             die_with_error("dup3()");
@@ -70,6 +96,7 @@ namespace sandbox::tracee {
     };
 
     exclude_pid1_from_tracee_session_and_process_group();
+    setup_user_namespace(args.linux_namespaces.user, args.proc_dirfd);
     setup_std_fds();
 
     if (args.argv.empty() || args.argv.back() != nullptr) {

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <exception>
 #include <optional>
+#include <simlib/file_perms.hh>
 #include <simlib/sandbox/si.hh>
 #include <simlib/slice.hh>
 #include <string>
@@ -26,6 +27,48 @@ struct RequestOptions {
             std::optional<gid_t> inside_gid = std::nullopt; // nullopt will leave it the same as the
                                                             // outside effective group ID (egid)
         } user = {};
+
+        struct Mount {
+            struct MountTmpfs {
+                std::string_view path;
+                // Will be rounded up to page size multiple; 0 rounds up to page size due to
+                // technical limitations.
+                std::optional<uint64_t> max_total_size_of_files_in_bytes = 0;
+                std::optional<uint64_t> inode_limit = 0;
+                mode_t root_dir_mode = S_0755;
+                bool read_only = true; // make the mount read-only
+                bool no_exec = true; // do not allow programs to be executed on this mount
+            };
+
+            struct MountProc {
+                std::string_view path;
+                bool read_only = true; // make the mount read-only
+                bool no_exec = true; // do not allow programs to be executed on this mount
+            };
+
+            struct BindMount {
+                std::string_view source; // path to file or directory to bind mount
+                std::string_view dest; // path at which to bind mount
+                bool recursive = true; // create a recursive bind mount
+                bool read_only = true; // make the mount read-only
+                bool no_exec = true; // do not allow programs to be executed from this mount
+            };
+
+            struct CreateDir {
+                std::string_view path;
+                mode_t mode = S_0755;
+            };
+
+            struct CreateFile {
+                std::string_view path;
+                mode_t mode = S_0644;
+            };
+
+            using Operation = std::variant<MountTmpfs, MountProc, BindMount, CreateDir, CreateFile>;
+
+            Slice<Operation> operations = {};
+            std::optional<std::string_view> new_root_mount_path = std::nullopt;
+        } mount = {};
     } linux_namespaces = {};
 
     struct Cgroup {

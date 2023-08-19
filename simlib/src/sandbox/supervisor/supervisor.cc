@@ -858,7 +858,8 @@ void main(int argc, char** argv) noexcept {
 
         int pid1_pidfd = 0;
         clone_args cl_args = {};
-        cl_args.flags = CLONE_PIDFD | CLONE_INTO_CGROUP | CLONE_NEWUSER | CLONE_NEWPID;
+        cl_args.flags =
+            CLONE_PIDFD | CLONE_INTO_CGROUP | CLONE_NEWPID | CLONE_NEWUSER | CLONE_NEWNS;
         cl_args.pidfd = reinterpret_cast<uint64_t>(&pid1_pidfd);
         cl_args.exit_signal = 0; // we don't need SIGCHLD
         cl_args.cgroup = static_cast<uint64_t>(cgroups.pid1_cgroup_fd);
@@ -868,6 +869,8 @@ void main(int argc, char** argv) noexcept {
             die_with_error("clone3()");
         }
         if (pid == 0) {
+            constexpr uid_t PID1_USER_NS_INSIDE_UID = 1;
+            constexpr uid_t PID1_USER_NS_INSIDE_GID = 1;
             pid1::main({
                 .shared_mem_state = shared_mem_state,
                 .executable_fd = request.executable_fd,
@@ -883,12 +886,30 @@ void main(int argc, char** argv) noexcept {
                     {
                         .user =
                             {
-                                .outside_uid = SUPERVISOR_USER_NS_INSIDE_UID,
-                                .inside_uid =
-                                    request.linux_namespaces.user.inside_uid.value_or(1000),
-                                .outside_gid = SUPERVISOR_USER_NS_INSIDE_GID,
-                                .inside_gid =
-                                    request.linux_namespaces.user.inside_gid.value_or(1000),
+                                .pid1 =
+                                    {
+                                        .outside_uid = SUPERVISOR_USER_NS_INSIDE_UID,
+                                        .inside_uid = PID1_USER_NS_INSIDE_UID,
+                                        .outside_gid = SUPERVISOR_USER_NS_INSIDE_GID,
+                                        .inside_gid = PID1_USER_NS_INSIDE_GID,
+                                    },
+
+                                .tracee =
+                                    {
+                                        .outside_uid = PID1_USER_NS_INSIDE_UID,
+                                        .inside_uid =
+                                            request.linux_namespaces.user.inside_uid.value_or(1000),
+                                        .outside_gid = PID1_USER_NS_INSIDE_GID,
+                                        .inside_gid =
+                                            request.linux_namespaces.user.inside_gid.value_or(1000),
+                                    },
+
+                            },
+                        .mount =
+                            {
+                                .operations = request.linux_namespaces.mount.operations,
+                                .new_root_mount_path =
+                                    request.linux_namespaces.mount.new_root_mount_path,
                             },
                     },
             });
