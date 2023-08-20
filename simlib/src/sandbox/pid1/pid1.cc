@@ -321,7 +321,7 @@ struct SignalHandlersState {
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 volatile SignalHandlersState* signal_handlers_state_ptr = nullptr;
 
-void sigusr1_handler_to_kill_the_tracee(int /*sig*/, siginfo_t* si, void* /*ucontext*/) noexcept {
+void signal_handler_to_kill_the_tracee(int /*sig*/, siginfo_t* si, void* /*ucontext*/) noexcept {
     if (si->si_code == SI_TIMER) {
         int saved_errno = errno;
         // Kill the tracee
@@ -496,7 +496,7 @@ void install_signal_handlers_for_time_limits(InstallSignalHandlersForTimeLimitsA
 
         // Install signal handler for SIGUSR1
         struct sigaction sa = {};
-        sa.sa_sigaction = &sigusr1_handler_to_kill_the_tracee;
+        sa.sa_sigaction = &signal_handler_to_kill_the_tracee;
         sa.sa_flags = SA_SIGINFO | SA_RESTART;
         if (sigaction(SIGUSR1, &sa, nullptr)) {
             die_with_error("sigaction()");
@@ -544,6 +544,72 @@ void install_signal_handlers_for_time_limits(InstallSignalHandlersForTimeLimitsA
     sa.sa_flags = SA_SIGINFO | SA_RESTART;
     if (sigaction(SIGUSR2, &sa, nullptr)) {
         die_with_error("sigaction()");
+    }
+}
+
+struct Pipe {
+    int read_fd;
+    int write_fd;
+};
+
+Pipe create_pipe_to_signal_to_setup_tracee_cpu_timer() noexcept {
+    int pfd[2];
+    if (pipe2(pfd, O_CLOEXEC)) {
+        die_with_error("pipe2()");
+    }
+    return Pipe{
+        .read_fd = pfd[0],
+        .write_fd = pfd[1],
+    };
+}
+
+void wait_for_signal_to_setup_tracee_cpu_timer_and_setup_the_timer(
+    const Pipe& pipe, pid_t tracee_pid, int tracee_cgroup_kill_fd, timespec cpu_time_limit
+) noexcept {
+    if (close(pipe.write_fd)) {
+        die_with_error("close()");
+    }
+    char buff;
+    if (read(pipe.read_fd, &buff, sizeof(buff)) < 0) {
+        die_with_error("read()");
+    }
+    clockid_t tracee_cpu_clock_id;
+    // This function cannot be run inside signal handler
+    if (clock_getcpuclockid(tracee_pid, &tracee_cpu_clock_id)) {
+        if (errno == ESRCH) { // tracee died
+            return;
+        }
+        die_with_error("clock_getcpuclockid()");
+    }
+    // Create the timer
+    sigevent sev = {};
+    sev.sigev_notify = SIGEV_SIGNAL;
+    sev.sigev_signo = SIGXCPU;
+    sev.sigev_value.sival_int = tracee_cgroup_kill_fd;
+    timer_t timer_id;
+    // This function cannot be run inside signal handler
+    if (timer_create(tracee_cpu_clock_id, &sev, &timer_id)) {
+        die_with_error("timer_create()");
+    }
+    // Install signal handler for SIGXCPU
+    struct sigaction sa = {};
+    sa.sa_sigaction = &signal_handler_to_kill_the_tracee;
+    sa.sa_flags = SA_SIGINFO | SA_RESTART;
+    if (sigaction(SIGXCPU, &sa, nullptr)) {
+        die_with_error("sigaction()");
+    }
+    // Start the timer
+    itimerspec its = {
+        .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+        .it_value = cpu_time_limit,
+    };
+    if (its.it_value == timespec{.tv_sec = 0, .tv_nsec = 0}) {
+        // it_value == 0 disables the timer and it is not what we want, so we use the lowest viable
+        // value
+        its.it_value = {.tv_sec = 0, .tv_nsec = 1};
+    }
+    if (timer_settime(timer_id, 0, &its, nullptr)) {
+        die_with_error("timer_settime()");
     }
 }
 
@@ -597,9 +663,14 @@ namespace sandbox::pid1 {
         .tracee_cgroup_kill_fd = args.tracee_cgroup_kill_fd,
         .tracee_cgroup_cpu_stat_fd = args.tracee_cgroup_cpu_stat_fd,
         .real_time_limit = args.time_limit,
-        .cpu_time_limit = args.cpu_time_limit,
+        .cpu_time_limit =
+            args.tracee_is_restricted_to_single_thread ? std::nullopt : args.cpu_time_limit,
         .max_tracee_parallelism = args.max_tracee_parallelism,
     });
+    auto pipe_to_signal_to_setup_tracee_cpu_timer =
+        args.tracee_is_restricted_to_single_thread && args.cpu_time_limit
+        ? optional{create_pipe_to_signal_to_setup_tracee_cpu_timer()}
+        : std::nullopt;
 
     if (UNDEFINED_SANITIZER) {
         auto ignore_signal = [&](int sig) noexcept {
@@ -641,6 +712,9 @@ namespace sandbox::pid1 {
             .env = std::move(args.env),
             .proc_dirfd = proc_dirfd,
             .tracee_cgroup_cpu_stat_fd = args.tracee_cgroup_cpu_stat_fd,
+            .signal_pid1_to_setup_tracee_cpu_timer_fd = pipe_to_signal_to_setup_tracee_cpu_timer
+                ? optional{pipe_to_signal_to_setup_tracee_cpu_timer->write_fd}
+                : std::nullopt,
             .linux_namespaces =
                 {
                     .user =
@@ -653,6 +727,18 @@ namespace sandbox::pid1 {
                 },
             .prlimit = args.prlimit,
         });
+    }
+
+    if (pipe_to_signal_to_setup_tracee_cpu_timer) {
+        if (!args.cpu_time_limit) {
+            die_with_msg("BUG: args.cpu_time_limit == false");
+        }
+        wait_for_signal_to_setup_tracee_cpu_timer_and_setup_the_timer(
+            *pipe_to_signal_to_setup_tracee_cpu_timer,
+            static_cast<pid_t>(tracee_pid),
+            args.tracee_cgroup_kill_fd,
+            *args.cpu_time_limit
+        );
     }
 
     close_all_non_std_file_descriptors_except(

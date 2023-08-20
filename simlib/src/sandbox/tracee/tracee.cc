@@ -115,6 +115,11 @@ namespace sandbox::tracee {
         if (kill(1, SIGUSR2)) {
             die_with_error("kill()");
         }
+        if (args.signal_pid1_to_setup_tracee_cpu_timer_fd &&
+            write(*args.signal_pid1_to_setup_tracee_cpu_timer_fd, "", 1) < 0)
+        {
+            die_with_error("write()");
+        }
     };
 
     exclude_pid1_from_tracee_session_and_process_group();

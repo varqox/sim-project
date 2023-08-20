@@ -966,6 +966,7 @@ void main(int argc, char** argv) noexcept {
                           )
                         : std::thread::hardware_concurrency()
                 ),
+                .tracee_is_restricted_to_single_thread = request.cgroup.process_num_limit == 1,
             });
         }
         close_request_fds(request);

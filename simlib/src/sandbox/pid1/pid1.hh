@@ -52,6 +52,7 @@ struct Args {
     std::optional<timespec> time_limit;
     std::optional<timespec> cpu_time_limit;
     double max_tracee_parallelism; // in threads (1.5 = 1.5 parallel threads)
+    bool tracee_is_restricted_to_single_thread;
 };
 
 [[noreturn]] void main(Args args) noexcept;
