@@ -279,6 +279,19 @@ void deserialize(Reader& reader, ArrayVec<int, 253>& fds, Request& req) {
             req.time_limit = time_limit;
         }
     }
+    {
+        timespec cpu_time_limit;
+        reader.read(cpu_time_limit.tv_sec, from<request::cpu_time_limit_sec_t>);
+        if (cpu_time_limit.tv_sec < 0) {
+            req.cpu_time_limit = std::nullopt;
+        } else {
+            reader.read(cpu_time_limit.tv_nsec, from<request::cpu_time_limit_nsec_t>);
+            if (cpu_time_limit.tv_nsec < 0 || cpu_time_limit.tv_nsec >= 1'000'000'000) {
+                THROW("invalid cpu_time_limit.nsec: ", cpu_time_limit.tv_nsec);
+            }
+            req.cpu_time_limit = cpu_time_limit;
+        }
+    }
 }
 
 } // namespace sandbox::supervisor::request

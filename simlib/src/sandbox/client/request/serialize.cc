@@ -271,6 +271,18 @@ serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions&
         } else {
             writer.write(-1, as<request::time_limit_sec_t>);
         }
+
+        if (options.cpu_time_limit) {
+            if (*options.cpu_time_limit < std::chrono::nanoseconds{0}) {
+                THROW("invalid cpu time limit - it has to be non-negative");
+            }
+            auto sec = std::chrono::duration_cast<std::chrono::seconds>(*options.cpu_time_limit);
+            auto nsec = *options.cpu_time_limit - sec;
+            writer.write(sec.count(), casted_as<request::cpu_time_limit_sec_t>);
+            writer.write(nsec.count(), casted_as<request::cpu_time_limit_nsec_t>);
+        } else {
+            writer.write(-1, as<request::cpu_time_limit_sec_t>);
+        }
     };
 
     // Header

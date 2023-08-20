@@ -26,6 +26,7 @@
 #include <simlib/file_perms.hh>
 #include <simlib/from_unsafe.hh>
 #include <simlib/macros/wont_throw.hh>
+#include <simlib/meta/min.hh>
 #include <simlib/noexcept_concat.hh>
 #include <simlib/overloaded.hh>
 #include <simlib/sandbox/si.hh>
@@ -44,6 +45,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <thread>
 #include <unistd.h>
 #include <variant>
 #include <vector>
@@ -956,6 +958,14 @@ void main(int argc, char** argv) noexcept {
                     },
                 .prlimit = request.prlimit,
                 .time_limit = request.time_limit,
+                .cpu_time_limit = request.cpu_time_limit,
+                .max_tracee_parallelism = static_cast<decltype(pid1::Args::max_tracee_parallelism)>(
+                    request.cgroup.process_num_limit
+                        ? meta::min(
+                              *request.cgroup.process_num_limit, std::thread::hardware_concurrency()
+                          )
+                        : std::thread::hardware_concurrency()
+                ),
             });
         }
         close_request_fds(request);

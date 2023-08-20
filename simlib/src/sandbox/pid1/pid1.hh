@@ -50,6 +50,8 @@ struct Args {
     Prlimit prlimit;
 
     std::optional<timespec> time_limit;
+    std::optional<timespec> cpu_time_limit;
+    double max_tracee_parallelism; // in threads (1.5 = 1.5 parallel threads)
 };
 
 [[noreturn]] void main(Args args) noexcept;

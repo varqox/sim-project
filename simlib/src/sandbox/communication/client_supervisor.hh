@@ -138,6 +138,9 @@ using max_stack_size_in_bytes_t = uint64_t;
 using time_limit_sec_t = int64_t;
 using time_limit_nsec_t = uint32_t;
 
+using cpu_time_limit_sec_t = int64_t;
+using cpu_time_limit_nsec_t = uint32_t;
+
 } // namespace request
 
 namespace response {

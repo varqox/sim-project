@@ -84,6 +84,7 @@ struct Request {
     } prlimit;
 
     std::optional<timespec> time_limit;
+    std::optional<timespec> cpu_time_limit;
 };
 
 } // namespace sandbox::supervisor::request

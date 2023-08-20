@@ -1,8 +1,10 @@
 #include "../communication/supervisor_pid1_tracee.hh"
+#include "../supervisor/cgroups/read_cpu_times.hh"
 #include "../tracee/tracee.hh"
 #include "pid1.hh"
 
 #include <cerrno>
+#include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <ctime>
@@ -25,6 +27,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <variant>
+
+using std::optional;
 
 namespace sms = sandbox::communication::supervisor_pid1_tracee;
 
@@ -265,13 +269,57 @@ void drop_all_capabilities_and_prevent_gaining_any_of_them() noexcept {
     }
 }
 
+[[nodiscard]] auto current_tracee_cpu_time_usec(int tracee_cgroup_cpu_stat_fd) noexcept {
+    auto tracee_cpu_times = sandbox::supervisor::cgroups::read_cpu_times(
+        tracee_cgroup_cpu_stat_fd,
+        [] [[noreturn]] (auto&&... msg) noexcept {
+            die_with_msg("read_cpu_times(): ", std::forward<decltype(msg)>(msg)...);
+        }
+    );
+    return tracee_cpu_times.system_usec + tracee_cpu_times.user_usec;
+}
+
+[[nodiscard]] timespec next_cpu_timer_duration(
+    uint64_t current_cpu_time_usec,
+    uint64_t end_cpu_time_usec,
+    double inv_max_parallelism,
+    timespec min_timer_duration
+) noexcept {
+    auto remaining_cpu_time = end_cpu_time_usec - current_cpu_time_usec;
+    auto timer_duration_usec = static_cast<long double>(remaining_cpu_time) * inv_max_parallelism;
+    long double timer_duration_sec;
+    long double timer_duration_nsec =
+        modfl(timer_duration_usec / 1'000'000, &timer_duration_sec) * 1e9;
+    timespec timer_duration = {
+        .tv_sec = static_cast<decltype(timespec::tv_sec)>(timer_duration_sec),
+        .tv_nsec = static_cast<decltype(timespec::tv_nsec)>(timer_duration_nsec),
+    };
+    if (timer_duration < min_timer_duration) {
+        return min_timer_duration;
+    }
+    return timer_duration;
+}
+
 struct SignalHandlersState {
-    timer_t real_time_timer_id;
-    timespec real_time_limit;
+    struct RealTime {
+        bool is;
+        timer_t timer_id;
+        timespec limit;
+    } real_time;
+
+    struct CpuTime {
+        bool is;
+        timer_t timer_id;
+        timespec limit;
+        double inv_max_tracee_parallelism;
+        int tracee_cgroup_cpu_stat_fd;
+        uint64_t timer_start_cpu_time_usec;
+        uint64_t end_cpu_time_usec;
+    } cpu_time;
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-volatile const SignalHandlersState* signal_handlers_state_ptr = nullptr;
+volatile SignalHandlersState* signal_handlers_state_ptr = nullptr;
 
 void sigusr1_handler_to_kill_the_tracee(int /*sig*/, siginfo_t* si, void* /*ucontext*/) noexcept {
     if (si->si_code == SI_TIMER) {
@@ -286,26 +334,118 @@ void sigusr1_handler_to_kill_the_tracee(int /*sig*/, siginfo_t* si, void* /*ucon
     }
 }
 
+void set_up_real_time_timer() noexcept {
+    if (!signal_handlers_state_ptr->real_time.is) {
+        return;
+    }
+    // Start the timer
+    itimerspec its = {
+        .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+        .it_value =
+            {
+                .tv_sec = signal_handlers_state_ptr->real_time.limit.tv_sec,
+                .tv_nsec = signal_handlers_state_ptr->real_time.limit.tv_nsec,
+            },
+    };
+    if (its.it_value == timespec{.tv_sec = 0, .tv_nsec = 0}) {
+        // it_value == 0 disables the timer, but the meaning of time limit == 0 is to
+        // provide no time for tracee, so we use the minimal viable time limit value
+        its.it_value = {.tv_sec = 0, .tv_nsec = 1};
+    }
+    if (timer_settime(signal_handlers_state_ptr->real_time.timer_id, 0, &its, nullptr)) {
+        die_with_error("timer_settime()");
+    }
+}
+
+void sigxcpu_handler_to_kill_tracee_upon_cpu_time_limit(
+    int /*sig*/, siginfo_t* si, void* /*ucontext*/
+) noexcept {
+    if (si->si_code == SI_TIMER) {
+        int saved_errno = errno;
+
+        auto curr_cpu_time_usec = current_tracee_cpu_time_usec(
+            signal_handlers_state_ptr->cpu_time.tracee_cgroup_cpu_stat_fd
+        );
+        auto end_cpu_time_usec = signal_handlers_state_ptr->cpu_time.end_cpu_time_usec;
+        if (curr_cpu_time_usec >= end_cpu_time_usec) {
+            // Kill the tracee
+            int tracee_cgroup_kill_fd = si->si_int;
+            if (write(tracee_cgroup_kill_fd, "1", 1) < 0) {
+                die_with_error("write()");
+            }
+        } else {
+            // Restart the timer
+            itimerspec its = {
+                .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+                .it_value = next_cpu_timer_duration(
+                    curr_cpu_time_usec,
+                    end_cpu_time_usec,
+                    signal_handlers_state_ptr->cpu_time.inv_max_tracee_parallelism,
+                    timespec{.tv_sec = 0, .tv_nsec = 1'000'000} // = max 1000 timer expirations per
+                                                                // second
+                ),
+            };
+            if (timer_settime(signal_handlers_state_ptr->cpu_time.timer_id, 0, &its, nullptr)) {
+                die_with_error("timer_settime()");
+            }
+        }
+
+        // Restore errno
+        errno = saved_errno;
+    }
+}
+
+void set_up_cpu_time_timer() noexcept {
+    if (!signal_handlers_state_ptr->cpu_time.is) {
+        return;
+    }
+    // Cast to volatile, as we are in the signal handler
+    volatile auto volatile_sms = shared_mem_state;
+    auto start_cpu_time_usec = volatile_sms->tracee_exec_start_cpu_time_user.usec +
+        volatile_sms->tracee_exec_start_cpu_time_system.usec;
+    signal_handlers_state_ptr->cpu_time.timer_start_cpu_time_usec = start_cpu_time_usec;
+
+    decltype(signal_handlers_state_ptr->cpu_time.end_cpu_time_usec) end_cpu_time_usec;
+    if (__builtin_mul_overflow(
+            signal_handlers_state_ptr->cpu_time.limit.tv_sec, 1'000'000, &end_cpu_time_usec
+        ))
+    {
+        die_with_msg("cpu time limit is too big");
+    }
+    if (__builtin_add_overflow(
+            end_cpu_time_usec,
+            (signal_handlers_state_ptr->cpu_time.limit.tv_nsec + 999) /
+                1000, // round up nanoseconds to microseconds
+            &end_cpu_time_usec
+        ))
+    {
+        die_with_msg("cpu time limit is too big");
+    }
+    if (__builtin_add_overflow(end_cpu_time_usec, start_cpu_time_usec, &end_cpu_time_usec)) {
+        die_with_msg("cpu time limit is too big");
+    }
+    signal_handlers_state_ptr->cpu_time.end_cpu_time_usec = end_cpu_time_usec;
+    // Start the timer
+    itimerspec its = {
+        .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+        .it_value = next_cpu_timer_duration(
+            start_cpu_time_usec,
+            end_cpu_time_usec,
+            signal_handlers_state_ptr->cpu_time.inv_max_tracee_parallelism,
+            // duration == 0 disables the timer and it is not what we want
+            {.tv_sec = 0, .tv_nsec = 1}
+        ),
+    };
+    if (timer_settime(signal_handlers_state_ptr->cpu_time.timer_id, 0, &its, nullptr)) {
+        die_with_error("timer_settime()");
+    }
+}
+
 void sigusr2_handler_to_start_timer(int /*sig*/, siginfo_t* si, void* /*ucontext*/) noexcept {
     if (si->si_code == SI_USER && si->si_pid > 0) { // signal came from the tracee process
         int saved_errno = errno;
-        // Start the timer
-        itimerspec its = {
-            .it_interval = {.tv_sec = 0, .tv_nsec = 0},
-            .it_value =
-                {
-                    .tv_sec = signal_handlers_state_ptr->real_time_limit.tv_sec,
-                    .tv_nsec = signal_handlers_state_ptr->real_time_limit.tv_nsec,
-                },
-        };
-        if (its.it_value == timespec{.tv_sec = 0, .tv_nsec = 0}) {
-            // it_value == 0 disables the timer, but the meaning of time limit == 0 is to provide
-            // no time for tracee, so we use the minimal viable time limit value
-            its.it_value = {.tv_sec = 0, .tv_nsec = 1};
-        }
-        if (timer_settime(signal_handlers_state_ptr->real_time_timer_id, 0, &its, nullptr)) {
-            die_with_error("timer_settime()");
-        }
+        set_up_real_time_timer();
+        set_up_cpu_time_timer();
         // Disable this signal handler
         struct sigaction sa = {};
         sa.sa_handler = SIG_IGN;
@@ -321,39 +461,85 @@ void sigusr2_handler_to_start_timer(int /*sig*/, siginfo_t* si, void* /*ucontext
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 SignalHandlersState signal_handlers_state;
 
-void install_signal_handlers_for_time_limit(
-    int tracee_cgroup_kill_fd, std::optional<timespec> real_time_limit
+struct InstallSignalHandlersForTimeLimitsArgs {
+    int tracee_cgroup_kill_fd;
+    int tracee_cgroup_cpu_stat_fd;
+    optional<timespec> real_time_limit;
+    optional<timespec> cpu_time_limit;
+    double max_tracee_parallelism;
+};
+
+void install_signal_handlers_for_time_limits(InstallSignalHandlersForTimeLimitsArgs&& args
 ) noexcept {
-    if (!real_time_limit) {
+    if (!args.real_time_limit && !args.cpu_time_limit) {
         // SIGUSR2 from tracee will be ignored because this is the process with PID = 1 in the
         // current pid namespace
         return;
     }
-    // Create the timer
-    sigevent sev = {};
-    sev.sigev_notify = SIGEV_SIGNAL;
-    sev.sigev_signo = SIGUSR1;
-    sev.sigev_value.sival_int = tracee_cgroup_kill_fd;
-    timer_t timer_id;
-    if (timer_create(CLOCK_MONOTONIC, &sev, &timer_id)) {
-        die_with_error("timer_create()");
+
+    if (args.real_time_limit) {
+        // Create the timer
+        sigevent sev = {};
+        sev.sigev_notify = SIGEV_SIGNAL;
+        sev.sigev_signo = SIGUSR1;
+        sev.sigev_value.sival_int = args.tracee_cgroup_kill_fd;
+        timer_t timer_id;
+        if (timer_create(CLOCK_MONOTONIC, &sev, &timer_id)) {
+            die_with_error("timer_create()");
+        }
+
+        signal_handlers_state.real_time = {
+            .is = true,
+            .timer_id = timer_id,
+            .limit = *args.real_time_limit,
+        };
+
+        // Install signal handler for SIGUSR1
+        struct sigaction sa = {};
+        sa.sa_sigaction = &sigusr1_handler_to_kill_the_tracee;
+        sa.sa_flags = SA_SIGINFO | SA_RESTART;
+        if (sigaction(SIGUSR1, &sa, nullptr)) {
+            die_with_error("sigaction()");
+        }
+    } else {
+        signal_handlers_state.real_time.is = false;
     }
 
-    signal_handlers_state = {
-        .real_time_timer_id = timer_id,
-        .real_time_limit = *real_time_limit,
-    };
+    if (args.cpu_time_limit) {
+        // Create the timer
+        sigevent sev = {};
+        sev.sigev_notify = SIGEV_SIGNAL;
+        sev.sigev_signo = SIGXCPU;
+        sev.sigev_value.sival_int = args.tracee_cgroup_kill_fd;
+        timer_t timer_id;
+        if (timer_create(CLOCK_MONOTONIC, &sev, &timer_id)) {
+            die_with_error("timer_create()");
+        }
+
+        signal_handlers_state.cpu_time = {
+            .is = true,
+            .timer_id = timer_id,
+            .limit = *args.cpu_time_limit,
+            .inv_max_tracee_parallelism = 1 / args.max_tracee_parallelism,
+            .tracee_cgroup_cpu_stat_fd = args.tracee_cgroup_cpu_stat_fd,
+            .timer_start_cpu_time_usec = 0,
+            .end_cpu_time_usec = 0,
+        };
+
+        // Install signal handler for SIGXCPU
+        struct sigaction sa = {};
+        sa.sa_sigaction = &sigxcpu_handler_to_kill_tracee_upon_cpu_time_limit;
+        sa.sa_flags = SA_SIGINFO | SA_RESTART;
+        if (sigaction(SIGXCPU, &sa, nullptr)) {
+            die_with_error("sigaction()");
+        }
+    } else {
+        signal_handlers_state.cpu_time.is = false;
+    }
+
     signal_handlers_state_ptr = &signal_handlers_state;
-
-    // Install signal handler for SIGUSR1
-    struct sigaction sa = {};
-    sa.sa_sigaction = &sigusr1_handler_to_kill_the_tracee;
-    sa.sa_flags = SA_SIGINFO | SA_RESTART;
-    if (sigaction(SIGUSR1, &sa, nullptr)) {
-        die_with_error("sigaction()");
-    }
     // Install signal handler for SIGUSR2
-    sa = {};
+    struct sigaction sa = {};
     sa.sa_sigaction = &sigusr2_handler_to_start_timer;
     sa.sa_flags = SA_SIGINFO | SA_RESTART;
     if (sigaction(SIGUSR2, &sa, nullptr)) {
@@ -407,7 +593,13 @@ namespace sandbox::pid1 {
     int proc_dirfd = open("/proc", O_RDONLY | O_CLOEXEC);
     setup_mount_namespace(args.linux_namespaces.mount);
     drop_all_capabilities_and_prevent_gaining_any_of_them();
-    install_signal_handlers_for_time_limit(args.tracee_cgroup_kill_fd, args.time_limit);
+    install_signal_handlers_for_time_limits({
+        .tracee_cgroup_kill_fd = args.tracee_cgroup_kill_fd,
+        .tracee_cgroup_cpu_stat_fd = args.tracee_cgroup_cpu_stat_fd,
+        .real_time_limit = args.time_limit,
+        .cpu_time_limit = args.cpu_time_limit,
+        .max_tracee_parallelism = args.max_tracee_parallelism,
+    });
 
     if (UNDEFINED_SANITIZER) {
         auto ignore_signal = [&](int sig) noexcept {
@@ -463,7 +655,9 @@ namespace sandbox::pid1 {
         });
     }
 
-    close_all_non_std_file_descriptors_except({args.tracee_cgroup_kill_fd});
+    close_all_non_std_file_descriptors_except(
+        {args.tracee_cgroup_kill_fd, args.tracee_cgroup_cpu_stat_fd}
+    );
     harden_against_potential_compromise();
 
     timespec waitid_time;

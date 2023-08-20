@@ -87,6 +87,7 @@ struct RequestOptions {
     } prlimit = {};
 
     std::optional<std::chrono::nanoseconds> time_limit = std::nullopt;
+    std::optional<std::chrono::nanoseconds> cpu_time_limit = std::nullopt;
 };
 
 namespace result {
