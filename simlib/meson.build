@@ -285,6 +285,7 @@ tests = {
     'test/request_uri_parser.cc': {},
     'test/result.cc': {},
     'test/sandbox/destructor.cc': {},
+    'test/sandbox/external/broken_pipe.cc': {},
     'test/sandbox/external/capabilities_and_user_namespaces.cc': {'dependencies': [gtest_main_dep, libcap_dep]},
     'test/sandbox/external/detect_parent_process_death_using_pidfd.cc': {},
     'test/sandbox/external/poll_hup_on_sock_seqpacket.cc': {},
