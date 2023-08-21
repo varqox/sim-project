@@ -1,15 +1,13 @@
+#include "run_supervisor.hh"
+
 #include <gtest/gtest.h>
 #include <netinet/in.h>
 #include <simlib/concat_tostr.hh>
-#include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/string_view.hh>
 #include <simlib/throw_assert.hh>
 #include <string>
-#include <sys/mman.h>
 #include <sys/socket.h>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <vector>
 
 using std::string;
@@ -25,11 +23,6 @@ int main(int argc, char** argv) {
     return RUN_ALL_TESTS();
 }
 
-struct Socket {
-    FileDescriptor our_end;
-    FileDescriptor supervisor_end;
-};
-
 Socket open_socket(int domain, int type, int protocol = 0) {
     int sock_fds[2];
     throw_assert(socketpair(domain, type, protocol, sock_fds) == 0);
@@ -39,42 +32,8 @@ Socket open_socket(int domain, int type, int protocol = 0) {
     };
 }
 
-struct RunResult {
-    string output;
-    bool exited0;
-};
-
-RunResult run_supervisor(vector<string> args, Socket* sock_fd) {
-    // NOLINTNEXTLINE(android-cloexec-memfd-create)
-    FileDescriptor output_fd{memfd_create("sandbox supervisor output", MFD_CLOEXEC)};
-    throw_assert(output_fd.is_open());
-    pid_t pid = fork();
-    throw_assert(pid != -1);
-    if (pid == 0) {
-        if (sock_fd) {
-            throw_assert(sock_fd->our_end.close() == 0);
-        }
-        vector<char*> argv;
-        argv.reserve(args.size() + 1);
-        for (auto& arg : args) {
-            argv.emplace_back(arg.data());
-        }
-        argv.emplace_back(nullptr);
-        throw_assert(dup3(output_fd, STDERR_FILENO, 0) == STDERR_FILENO);
-        execve(supervisor_executable_path.c_str(), argv.data(), environ);
-        _exit(1);
-    }
-    if (sock_fd) {
-        throw_assert(sock_fd->supervisor_end.close() == 0);
-        // Make supervisor exit immediately because of no awaiting requests
-        throw_assert(sock_fd->our_end.close() == 0);
-    }
-    int status = 0;
-    throw_assert(waitpid(pid, &status, 0) == pid);
-    return {
-        .output = get_file_contents(output_fd, 0, -1),
-        .exited0 = WIFEXITED(status) && WEXITSTATUS(status) == 0,
-    };
+RunResult run_supervisor(std::vector<std::string> args, Socket* sock_fd) {
+    return run_supervisor(supervisor_executable_path, std::move(args), sock_fd);
 }
 
 // NOLINTNEXTLINE

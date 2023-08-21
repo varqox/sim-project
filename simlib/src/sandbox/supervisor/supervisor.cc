@@ -44,6 +44,7 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -53,6 +54,21 @@
 using std::optional;
 
 namespace sandbox::supervisor {
+
+void check_that_we_do_not_run_as_root() noexcept {
+    struct stat st;
+    if (stat("/dev/null", &st)) {
+        do_die_with_error(STDERR_FILENO, "stat()");
+    }
+    bool dev_null_is_dev_null = S_ISCHR(st.st_mode) && st.st_rdev == makedev(1, 3);
+    auto root_real_uid = st.st_uid;
+    auto root_real_gid = st.st_gid;
+    if (!dev_null_is_dev_null || is_one_of(geteuid(), 0U, root_real_uid) ||
+        is_one_of(getegid(), 0U, root_real_gid))
+    {
+        do_die_with_msg(STDERR_FILENO, "supervisor is not safe to be run by root");
+    }
+}
 
 struct CmdArgs {
     int sock_fd;
@@ -846,6 +862,7 @@ void wait_for_pid1_death_or_sock_fd_shutdown(int pid1_pidfd) noexcept {
 }
 
 void main(int argc, char** argv) noexcept {
+    check_that_we_do_not_run_as_root();
     auto args = parse_args(argc, argv);
     validate_sock_fd(args.sock_fd);
     initialize_sock_fd_and_error_fd(args.sock_fd);
