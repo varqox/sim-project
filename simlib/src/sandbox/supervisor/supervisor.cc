@@ -614,6 +614,12 @@ Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) no
         die_with_error("mkdirat()");
     }
 
+    // Disable PSI accounting to reduce the sandboxing overhead
+    write_file_at(
+        cgroupfs_fd, noexcept_concat(Cgroups::supervisor_cgroup_path, "/cgroup.pressure"), "0"
+    );
+    write_file_at(cgroupfs_fd, noexcept_concat(Cgroups::pid1_cgroup_path, "/cgroup.pressure"), "0");
+
     // Move the current process to the supervisor cgroup
     write_file_at(
         cgroupfs_fd, noexcept_concat(Cgroups::supervisor_cgroup_path, "/cgroup.procs"), "0"
@@ -732,6 +738,8 @@ void Cgroups::create_and_set_up_tracee_cgroup() noexcept {
     if (tracee_cgroup_cpu_stat_fd < 0) {
         die_with_error("openat()");
     }
+    // Disable PSI accounting to reduce the sandboxing overhead
+    write_file_at(tracee_cgroup_fd, "cgroup.pressure", "0");
 }
 
 void Cgroups::destroy_tracee_cgroup() noexcept {
