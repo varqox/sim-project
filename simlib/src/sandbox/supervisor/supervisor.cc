@@ -576,6 +576,9 @@ struct Cgroups {
 
     void write_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept;
     void write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_in_bytes) noexcept;
+    void write_tracee_cgroup_cpu_max(
+        optional<request::Request::Cgroup::CpuMaxBandwidth> cpu_max_bandwidth
+    ) noexcept;
 
     [[nodiscard]] cgroups::CpuTimes read_tracee_cgroup_cpu_times() const noexcept;
     [[nodiscard]] uint64_t read_tracee_cgroup_current_memory_usage() const noexcept;
@@ -626,7 +629,7 @@ Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) no
     );
 
     // Enable resource controllers
-    write_file_at(cgroupfs_fd, "cgroup.subtree_control", "+pids +memory");
+    write_file_at(cgroupfs_fd, "cgroup.subtree_control", "+pids +memory +cpu");
 
     int pid1_cgroup_fd = openat(cgroupfs_fd, Cgroups::pid1_cgroup_path.c_str(), O_PATH | O_CLOEXEC);
     if (pid1_cgroup_fd < 0) {
@@ -720,6 +723,9 @@ void Cgroups::assert_controller_interface_files_in_ns_root_dir_are_unwritable() 
     if (write_file_at_but_expect_write_error(cgroupfs_fd, "memory.max", "max") != EPERM) {
         die_with_error("nsdelegate cgroup2 option is not in action");
     }
+    if (write_file_at_but_expect_write_error(cgroupfs_fd, "cpu.max", "max") != EPERM) {
+        die_with_error("nsdelegate cgroup2 option is not in action");
+    }
 }
 
 void Cgroups::create_and_set_up_tracee_cgroup() noexcept {
@@ -784,6 +790,20 @@ void Cgroups::write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_i
     );
 }
 
+// NOLINTNEXTLINE(readability-make-member-function-const)
+void Cgroups::write_tracee_cgroup_cpu_max(
+    optional<request::Request::Cgroup::CpuMaxBandwidth> cpu_max_bandwidth
+) noexcept {
+    write_file_at(
+        tracee_cgroup_fd,
+        "cpu.max",
+        cpu_max_bandwidth ? StringView{from_unsafe{noexcept_concat(
+                                cpu_max_bandwidth->max_usec, ' ', cpu_max_bandwidth->period_usec
+                            )}}
+                          : "max"
+    );
+}
+
 cgroups::CpuTimes Cgroups::read_tracee_cgroup_cpu_times() const noexcept {
     return read_cpu_times(tracee_cgroup_cpu_stat_fd, [] [[noreturn]] (auto&&... msg) {
         die_with_msg("read_cpu_times(): ", std::forward<decltype(msg)>(msg)...);
@@ -802,6 +822,7 @@ void Cgroups::set_tracee_limits(const request::Request::Cgroup& cg) noexcept {
     write_tracee_cgroup_process_num_limit(cg.process_num_limit);
     assert(read_tracee_cgroup_current_memory_usage() == 0 && "Needed to not offset limit by this");
     write_tracee_cgroup_memory_limit(cg.memory_limit_in_bytes);
+    write_tracee_cgroup_cpu_max(cg.cpu_max_bandwidth);
 }
 
 } // namespace cgroups

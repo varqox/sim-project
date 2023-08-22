@@ -106,10 +106,16 @@ using mask_t = uint8_t;
 namespace mask {
 static constexpr mask_t process_num_limit = 1 << 0;
 static constexpr mask_t memory_limit_in_bytes = 1 << 1;
+static constexpr mask_t cpu_max_bandwidth = 1 << 2;
 } // namespace mask
 
 using process_num_limit_t = uint32_t;
 using memory_limit_in_bytes_t = uint64_t;
+
+namespace cpu_max_bandwidth {
+using max_usec_t = uint32_t;
+using period_usec_t = uint32_t;
+} // namespace cpu_max_bandwidth
 
 } // namespace cgroup
 

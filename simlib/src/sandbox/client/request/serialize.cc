@@ -178,17 +178,29 @@ void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces& lin
 }
 
 template <Phase phase>
+void serialize(Writer<phase>& writer, const RequestOptions::Cgroup::CpuMaxBandwidth& cmb) {
+    namespace cpu_max_bandwidth =
+        communication::client_supervisor::request::cgroup::cpu_max_bandwidth;
+    writer.write(cmb.max_usec, as<cpu_max_bandwidth::max_usec_t>);
+    writer.write(cmb.period_usec, as<cpu_max_bandwidth::period_usec_t>);
+}
+
+template <Phase phase>
 void serialize(Writer<phase>& writer, const RequestOptions::Cgroup& cg) {
     namespace cgroup = communication::client_supervisor::request::cgroup;
     writer.write_flags({
             {cg.process_num_limit.has_value(), cgroup::mask::process_num_limit},
             {cg.memory_limit_in_bytes.has_value(), cgroup::mask::memory_limit_in_bytes},
+            {cg.cpu_max_bandwidth.has_value(), cgroup::mask::cpu_max_bandwidth},
         }, as<cgroup::mask_t>);
     if (cg.process_num_limit) {
         writer.write(*cg.process_num_limit, as<cgroup::process_num_limit_t>);
     }
     if (cg.memory_limit_in_bytes) {
         writer.write(*cg.memory_limit_in_bytes, as<cgroup::memory_limit_in_bytes_t>);
+    }
+    if (cg.cpu_max_bandwidth) {
+        serialize(writer, *cg.cpu_max_bandwidth);
     }
 }
 

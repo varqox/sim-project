@@ -158,13 +158,22 @@ void deserialize(Reader& reader, Request::LinuxNamespaces& linux_namespaces) {
     deserialize(reader, linux_namespaces.mount);
 }
 
+void deserialize(Reader& reader, Request::Cgroup::CpuMaxBandwidth& cmb) {
+    namespace cpu_max_bandwidth =
+        communication::client_supervisor::request::cgroup::cpu_max_bandwidth;
+    reader.read(cmb.max_usec, from<cpu_max_bandwidth::max_usec_t>);
+    reader.read(cmb.period_usec, from<cpu_max_bandwidth::period_usec_t>);
+}
+
 void deserialize(Reader& reader, Request::Cgroup& cg) {
     namespace cgroup = communication::client_supervisor::request::cgroup;
     bool has_process_num_limit;
     bool has_memory_limit_in_bytes;
+    bool has_cpu_max_bandwidth;
     reader.read_flags({
         {has_process_num_limit, cgroup::mask::process_num_limit},
         {has_memory_limit_in_bytes, cgroup::mask::memory_limit_in_bytes},
+        {has_cpu_max_bandwidth, cgroup::mask::cpu_max_bandwidth},
     }, from<cgroup::mask_t>);
     reader.read_optional_if(
         cg.process_num_limit, from<cgroup::process_num_limit_t>, has_process_num_limit
@@ -172,6 +181,10 @@ void deserialize(Reader& reader, Request::Cgroup& cg) {
     reader.read_optional_if(
         cg.memory_limit_in_bytes, from<cgroup::memory_limit_in_bytes_t>, has_memory_limit_in_bytes
     );
+    if (has_cpu_max_bandwidth) {
+        cg.cpu_max_bandwidth.emplace();
+        deserialize(reader, *cg.cpu_max_bandwidth);
+    }
 }
 
 void deserialize(Reader& reader, Request::Prlimit& pr) {

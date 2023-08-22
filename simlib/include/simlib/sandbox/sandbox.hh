@@ -75,6 +75,14 @@ struct RequestOptions {
         // Every process or thread counts as 1
         std::optional<uint32_t> process_num_limit = std::nullopt;
         std::optional<uint64_t> memory_limit_in_bytes = std::nullopt;
+
+        struct CpuMaxBandwidth {
+            uint32_t max_usec;
+            uint32_t period_usec;
+        };
+
+        // Writes "$max_usec $period_usec" to cpu.max cgroup file
+        std::optional<CpuMaxBandwidth> cpu_max_bandwidth = std::nullopt;
     } cgroup = {};
 
     struct Prlimit {

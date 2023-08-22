@@ -72,6 +72,13 @@ struct Request {
     struct Cgroup {
         std::optional<uint32_t> process_num_limit;
         std::optional<uint64_t> memory_limit_in_bytes;
+
+        struct CpuMaxBandwidth {
+            uint32_t max_usec;
+            uint32_t period_usec;
+        };
+
+        std::optional<CpuMaxBandwidth> cpu_max_bandwidth;
     } cgroup;
 
     struct Prlimit {
