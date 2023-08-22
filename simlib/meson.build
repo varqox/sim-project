@@ -330,6 +330,7 @@ tests = {
     'test/sandbox/sandbox_terminates_early_upon_client_process_death.cc': {},
     'test/sandbox/sandbox_uses_cgroup_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_cgroup_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_cgroups.cc': {'tester': 'test/sandbox/sandbox_uses_cgroups_tester.cc'},
+    'test/sandbox/sandbox_uses_net_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_net_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_pid_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_pid_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_user_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_user_namespace_tester.cc'},
     'test/sandbox/si.cc': {},
