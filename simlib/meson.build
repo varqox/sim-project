@@ -187,6 +187,16 @@ examples = [
         ],
         install : false,
     ),
+    executable('sandbox_bench',
+        implicit_include_directories : false,
+        sources : [
+            'examples/sandbox/bench.cc',
+        ],
+        dependencies : [
+            simlib_dep,
+        ],
+        install : false,
+    ),
 ]
 
 alias_target('base', simlib)
