@@ -929,7 +929,7 @@ void main(int argc, char** argv) noexcept {
 
     if (unshare(
             CLONE_NEWUSER | CLONE_NEWCGROUP | CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC |
-            CLONE_NEWUTS
+            CLONE_NEWUTS | CLONE_NEWTIME
         ))
     {
         die_with_error("unshare()");

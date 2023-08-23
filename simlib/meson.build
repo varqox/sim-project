@@ -333,6 +333,7 @@ tests = {
     'test/sandbox/sandbox_uses_ipc_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_ipc_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_net_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_net_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_pid_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_pid_namespace_tester.cc'},
+    'test/sandbox/sandbox_uses_time_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_time_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_user_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_user_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_uts_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_uts_namespace_tester.cc'},
     'test/sandbox/si.cc': {},
