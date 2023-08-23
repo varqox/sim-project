@@ -918,7 +918,7 @@ void main(int argc, char** argv) noexcept {
     auto supervisor_outside_euid = geteuid();
     auto supervisor_outside_egid = getegid();
 
-    if (unshare(CLONE_NEWUSER | CLONE_NEWCGROUP | CLONE_NEWNS | CLONE_NEWNET)) {
+    if (unshare(CLONE_NEWUSER | CLONE_NEWCGROUP | CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC)) {
         die_with_error("unshare()");
     }
 
