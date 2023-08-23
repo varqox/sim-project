@@ -43,6 +43,7 @@ def simlib_sources(src_dir):
         )
         for path in filter_subdirs(
             src_dir, [
+                'examples/',
                 'include/',
                 'src/',
                 'test/',

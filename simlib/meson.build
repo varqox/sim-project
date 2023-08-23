@@ -176,9 +176,24 @@ simlib_dep = declare_dependency(
     link_with : simlib,
 )
 
+examples = [
+    executable('sandbox_time',
+        implicit_include_directories : false,
+        sources : [
+            'examples/sandbox/time.cc',
+        ],
+        dependencies : [
+            simlib_dep,
+        ],
+        install : false,
+    ),
+]
+
 alias_target('base', simlib)
+alias_target('examples', examples)
+
 run_target('format', command : [find_program('format.py'), meson.current_source_dir()])
-run_target('tidy', command : [find_program('tidy')], depends : simlib)
+run_target('tidy', command : [find_program('tidy')], depends : [simlib, examples])
 
 #################################### Tests ####################################
 
