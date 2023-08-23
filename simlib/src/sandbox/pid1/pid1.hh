@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <ctime>
+#include <linux/filter.h>
 #include <optional>
 #include <sys/types.h>
 #include <variant>
@@ -53,6 +54,8 @@ struct Args {
     std::optional<timespec> cpu_time_limit;
     double max_tracee_parallelism; // in threads (1.5 = 1.5 parallel threads)
     bool tracee_is_restricted_to_single_thread;
+
+    sock_fprog seccomp_filter;
 };
 
 [[noreturn]] void main(Args args) noexcept;

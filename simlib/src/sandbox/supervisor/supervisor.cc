@@ -12,12 +12,14 @@
 #include <cstring>
 #include <exception>
 #include <fcntl.h>
+#include <linux/filter.h>
 #include <linux/prctl.h>
 #include <linux/securebits.h>
 #include <memory>
 #include <optional>
 #include <poll.h>
 #include <sched.h>
+#include <seccomp.h>
 #include <simlib/array_vec.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/deserialize.hh>
@@ -827,6 +829,82 @@ void Cgroups::set_tracee_limits(const request::Request::Cgroup& cg) noexcept {
 
 } // namespace cgroups
 
+namespace seccomp {
+
+sock_fprog create_filter_for_pid1() noexcept {
+    int mfd = memfd_create("seccom_filter", MFD_CLOEXEC);
+    if (mfd < 0) {
+        die_with_error("memfd_create()");
+    }
+
+    auto seccomp_ctx = seccomp_init(SECCOMP_RET_KILL);
+    if (not seccomp_ctx) {
+        die_with_msg("seccomp_init() failed");
+    }
+
+    // Disable setting NO_NEW_PRIVS as it is already set
+    int err = seccomp_attr_set(seccomp_ctx, SCMP_FLTATR_CTL_NNP, 0);
+    if (err) {
+        die_with_msg("seccomp_attr_set()", errmsg(-err));
+    }
+    // Enable binary tree sorted syscalls in the filter
+    err = seccomp_attr_set(seccomp_ctx, SCMP_FLTATR_CTL_OPTIMIZE, 2);
+    if (err) {
+        die_with_msg("seccomp_attr_set()", errmsg(-err));
+    }
+
+    auto allow_syscall = [&seccomp_ctx](auto syscall) {
+        int err = seccomp_rule_add(seccomp_ctx, SCMP_ACT_ALLOW, syscall, 0);
+        if (err) {
+            die_with_msg("seccomp_rule_add()", errmsg(-err));
+        }
+    };
+
+    allow_syscall(SCMP_SYS(waitid));
+    allow_syscall(SCMP_SYS(exit_group));
+    allow_syscall(SCMP_SYS(timer_settime));
+    allow_syscall(SCMP_SYS(rt_sigaction));
+    allow_syscall(SCMP_SYS(rt_sigreturn));
+    allow_syscall(SCMP_SYS(pread64));
+    allow_syscall(SCMP_SYS(write));
+
+    err = seccomp_export_bpf(seccomp_ctx, mfd);
+    if (err) {
+        die_with_msg("seccomp_export_bpf()", errmsg(-err));
+    }
+
+    seccomp_release(seccomp_ctx);
+
+    auto mfd_len = lseek64(mfd, 0, SEEK_END);
+    if (mfd_len < 0) {
+        die_with_error("lseek64()");
+    }
+
+    auto seccomp_filter_ptr = mmap(nullptr, mfd_len, PROT_READ, MAP_PRIVATE, mfd, 0);
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
+    if (seccomp_filter_ptr == MAP_FAILED) {
+        die_with_error("mmap()");
+    }
+    if (close(mfd)) {
+        die_with_error("close()");
+    }
+
+    if (mfd_len % sizeof(sock_filter) != 0) {
+        die_with_msg(
+            "invalid dumped seccomp filter length: ",
+            mfd_len,
+            " is not divisible by ",
+            sizeof(sock_filter)
+        );
+    }
+    return {
+        .len = static_cast<decltype(sock_fprog::len)>(mfd_len / sizeof(sock_filter)),
+        .filter = reinterpret_cast<sock_filter*>(seccomp_filter_ptr),
+    };
+}
+
+} // namespace seccomp
+
 void setup_uts_namespace() noexcept {
     if (sethostname("", 0)) {
         die_with_error("sethostname()");
@@ -950,6 +1028,8 @@ void main(int argc, char** argv) noexcept {
     capabilities::set_and_lock_all_securebits_for_this_and_all_descendant_processes();
     capabilities::set_no_new_privs_for_this_and_all_descendant_processes();
 
+    auto pid1_seccomp_filter = seccomp::create_filter_for_pid1();
+
     for (;; [&] {
              sms::reset(shared_mem_state);
              cgroups.reset_tracee_cgroup();
@@ -1027,6 +1107,7 @@ void main(int argc, char** argv) noexcept {
                         : std::thread::hardware_concurrency()
                 ),
                 .tracee_is_restricted_to_single_thread = request.cgroup.process_num_limit == 1,
+                .seccomp_filter = pid1_seccomp_filter,
             });
         }
         close_request_fds(request);

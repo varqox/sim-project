@@ -107,7 +107,10 @@ sandbox_supervisor = executable('sandbox_supervisor',
         'src/sandbox/tracee/tracee.cc',
         'src/socket_stream_ext.cc',
     ],
-    dependencies : libcap_dep,
+    dependencies : [
+        libcap_dep,
+        libseccomp_dep,
+    ],
     install : false,
 )
 

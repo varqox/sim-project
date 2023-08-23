@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <ctime>
 #include <fcntl.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
 #include <optional>
 #include <poll.h>
 #include <sched.h>
@@ -630,11 +632,13 @@ void close_all_non_std_file_descriptors_except(int (&&surviving_fds)[N]) noexcep
     }
 }
 
-void harden_against_potential_compromise() noexcept {
+void harden_against_potential_compromise(sock_fprog seccomp_filter) noexcept {
     // Cut access to cgroups other than ours
     unshare(CLONE_NEWCGROUP);
 
-    // TODO: install seccomp filters
+    if (syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &seccomp_filter)) {
+        die_with_error("seccomp()");
+    }
 }
 
 timespec get_current_time() noexcept {
@@ -744,7 +748,7 @@ namespace sandbox::pid1 {
     close_all_non_std_file_descriptors_except(
         {args.tracee_cgroup_kill_fd, args.tracee_cgroup_cpu_stat_fd}
     );
-    harden_against_potential_compromise();
+    harden_against_potential_compromise(args.seccomp_filter);
 
     timespec waitid_time;
     siginfo_t si;
