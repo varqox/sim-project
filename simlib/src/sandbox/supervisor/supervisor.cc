@@ -827,6 +827,15 @@ void Cgroups::set_tracee_limits(const request::Request::Cgroup& cg) noexcept {
 
 } // namespace cgroups
 
+void setup_uts_namespace() noexcept {
+    if (sethostname("", 0)) {
+        die_with_error("sethostname()");
+    }
+    if (setdomainname("", 0)) {
+        die_with_error("setdomainname()");
+    }
+}
+
 namespace capabilities {
 
 void set_and_lock_all_securebits_for_this_and_all_descendant_processes() noexcept {
@@ -918,7 +927,11 @@ void main(int argc, char** argv) noexcept {
     auto supervisor_outside_euid = geteuid();
     auto supervisor_outside_egid = getegid();
 
-    if (unshare(CLONE_NEWUSER | CLONE_NEWCGROUP | CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC)) {
+    if (unshare(
+            CLONE_NEWUSER | CLONE_NEWCGROUP | CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC |
+            CLONE_NEWUTS
+        ))
+    {
         die_with_error("unshare()");
     }
 
@@ -932,6 +945,7 @@ void main(int argc, char** argv) noexcept {
     });
     auto mount_ns = mount_namespace::setup();
     auto cgroups = cgroups::setup(mount_ns);
+    setup_uts_namespace();
 
     capabilities::set_and_lock_all_securebits_for_this_and_all_descendant_processes();
     capabilities::set_no_new_privs_for_this_and_all_descendant_processes();
