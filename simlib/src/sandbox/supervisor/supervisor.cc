@@ -12,6 +12,8 @@
 #include <cstring>
 #include <exception>
 #include <fcntl.h>
+#include <linux/prctl.h>
+#include <linux/securebits.h>
 #include <memory>
 #include <optional>
 #include <poll.h>
@@ -768,6 +770,26 @@ void Cgroups::set_tracee_limits(const request::Request::Cgroup& cg) noexcept {
 
 } // namespace cgroups
 
+namespace capabilities {
+
+void set_and_lock_all_securebits_for_this_and_all_descendant_processes() noexcept {
+    if (prctl(
+            PR_SET_SECUREBITS,
+            /* SECBIT_KEEP_CAPS off */
+            SECBIT_KEEP_CAPS_LOCKED | SECBIT_NO_SETUID_FIXUP | SECBIT_NO_SETUID_FIXUP_LOCKED |
+                SECBIT_NOROOT | SECBIT_NOROOT_LOCKED | SECBIT_NO_CAP_AMBIENT_RAISE |
+                SECBIT_NO_CAP_AMBIENT_RAISE_LOCKED,
+            0,
+            0,
+            0
+        ))
+    {
+        die_with_error("prctl(PR_SET_SECUREBITS)");
+    }
+}
+
+} // namespace capabilities
+
 // Waits for pid1 death or read and write shutdown of the other end of the SOCK_FD (we can't wait
 // only for the read-close)
 void wait_for_pid1_death_or_sock_fd_shutdown(int pid1_pidfd) noexcept {
@@ -846,6 +868,8 @@ void main(int argc, char** argv) noexcept {
     });
     auto mount_ns = mount_namespace::setup();
     auto cgroups = cgroups::setup(mount_ns);
+
+    capabilities::set_and_lock_all_securebits_for_this_and_all_descendant_processes();
 
     for (;; [&] {
              sms::reset(shared_mem_state);
