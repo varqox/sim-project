@@ -64,3 +64,21 @@ static_assert(Result<double, const char*>{Ok{42.1}} != Result<int, string_view>{
 static_assert(Result<double, const char*>{Err{"abcd"}} != Result<int, string_view>{Err{"abc"sv}});
 static_assert(Result<double, const char*>{Ok{42.0}} != Result<int, string_view>{Err{""sv}});
 static_assert(Result<double, const char*>{Err{"abc"}} != Result<int, string_view>{Ok{42}});
+
+static_assert(Ok{} == Ok<void>{});
+static_assert(Ok<void>{} == Ok<void>{});
+static_assert(Ok{1} != Ok<void>{});
+static_assert(Ok{} != Ok{1});
+static_assert(Ok{1} == Ok{1});
+
+static_assert(Result<void, string_view>{Ok{}} == Ok<void>{});
+static_assert(Result<void, string_view>{Err{"abc"}} == Err{"abc"});
+
+static_assert(Err{} == Err<void>{});
+static_assert(Err<void>{} == Err<void>{});
+static_assert(Err{1} != Err<void>{});
+static_assert(Err{} != Err{1});
+static_assert(Err{1} == Err{1});
+
+static_assert(Result<string_view, void>{Err{}} == Err<void>{});
+static_assert(Result<string_view, void>{Ok{"abc"}} == Ok{"abc"});
