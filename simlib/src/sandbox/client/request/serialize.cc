@@ -239,7 +239,7 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
 SerializedReuest
 serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions& options) {
     namespace request = communication::client_supervisor::request;
-    auto fds = ArrayVec<int, 4>{executable_fd};
+    auto fds = ArrayVec<int, 5>{executable_fd};
     if (options.stdin_fd) {
         fds.emplace(*options.stdin_fd);
     }
@@ -249,6 +249,9 @@ serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions&
     if (options.stderr_fd) {
         fds.emplace(*options.stderr_fd);
     }
+    if (options.seccomp_bpf_fd) {
+        fds.emplace(*options.seccomp_bpf_fd);
+    }
 
     auto do_serialize = [&](auto& writer) {
         namespace fds = request::fds;
@@ -256,6 +259,7 @@ serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions&
             {options.stdin_fd.has_value(), fds::mask::sending_stdin_fd},
             {options.stdout_fd.has_value(), fds::mask::sending_stdout_fd},
             {options.stderr_fd.has_value(), fds::mask::sending_stderr_fd},
+            {options.seccomp_bpf_fd.has_value(), fds::mask::sending_seccomp_bpf_fd},
         }, as<fds::mask_t>);
 
         writer.write(argv.size(), casted_as<request::argv_len_t>);

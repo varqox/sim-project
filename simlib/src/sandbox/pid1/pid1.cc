@@ -730,6 +730,7 @@ namespace sandbox::pid1 {
                         },
                 },
             .prlimit = args.prlimit,
+            .seccomp_bpf_fd = args.tracee_seccomp_bpf_fd,
         });
     }
 

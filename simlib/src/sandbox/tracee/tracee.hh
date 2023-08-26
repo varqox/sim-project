@@ -32,6 +32,7 @@ struct Args {
 
     using Prlimit = supervisor::request::Request::Prlimit;
     Prlimit prlimit;
+    std::optional<int> seccomp_bpf_fd;
 };
 
 [[noreturn]] void main(Args args) noexcept;

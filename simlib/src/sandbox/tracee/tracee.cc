@@ -4,14 +4,19 @@
 
 #include <ctime>
 #include <fcntl.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
 #include <sched.h>
+#include <simlib/converts_safely_to.hh>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
 #include <simlib/noexcept_concat.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
+#include <sys/mman.h>
 #include <sys/resource.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <utility>
 
@@ -86,6 +91,41 @@ namespace sandbox::tracee {
         setup_limit(RLIMIT_NOFILE, pr.file_descriptors_num_limit);
         setup_limit(RLIMIT_STACK, pr.max_stack_size_in_bytes);
     };
+    auto install_seccomp_filter = [&](std::optional<int> seccomp_bpf_fd) noexcept {
+        if (not seccomp_bpf_fd) {
+            return;
+        }
+
+        int fd = *seccomp_bpf_fd;
+        auto fd_len = lseek64(fd, 0, SEEK_END);
+        if (fd_len < 0) {
+            die_with_error("lseek64()");
+        }
+        auto seccomp_filter_ptr = mmap(nullptr, fd_len, PROT_READ, MAP_PRIVATE, fd, 0);
+        // NOLINTNEXTLINE(performance-no-int-to-ptr)
+        if (seccomp_filter_ptr == MAP_FAILED) {
+            die_with_error("mmap()");
+        }
+        if (fd_len % sizeof(sock_filter) != 0) {
+            die_with_msg(
+                "invalid seccomp_bpf_fd length: ",
+                fd_len,
+                " is not a multiple of ",
+                sizeof(sock_filter)
+            );
+        }
+        auto fprog_len = fd_len / sizeof(sock_filter);
+        if (!converts_safely_to<decltype(sock_fprog::len)>(fprog_len)) {
+            die_with_msg("seccomp_bpf_fd is too big");
+        }
+        auto fprog = sock_fprog{
+            .len = static_cast<decltype(sock_fprog::len)>(fprog_len),
+            .filter = reinterpret_cast<sock_filter*>(seccomp_filter_ptr),
+        };
+        if (syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &fprog)) {
+            die_with_error("seccomp()");
+        }
+    };
     auto get_current_time = [&]() noexcept {
         timespec ts;
         if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts)) {
@@ -126,6 +166,7 @@ namespace sandbox::tracee {
     setup_user_namespace(args.linux_namespaces.user, args.proc_dirfd);
     setup_std_fds();
     setup_prlimit(args.prlimit);
+    install_seccomp_filter(args.seccomp_bpf_fd);
 
     if (args.argv.empty() || args.argv.back() != nullptr) {
         die_with_msg("BUG: argv array does not contain nullptr as the last element");

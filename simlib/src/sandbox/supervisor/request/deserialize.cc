@@ -250,14 +250,17 @@ void deserialize(Reader& reader, ArrayVec<int, 253>& fds, Request& req) {
         bool sending_stdin_fd;
         bool sending_stdout_fd;
         bool sending_stderr_fd;
+        bool sending_seccomp_bpf_fd;
         reader.read_flags({
             {sending_stdin_fd, fds::mask::sending_stdin_fd},
             {sending_stdout_fd, fds::mask::sending_stdout_fd},
             {sending_stderr_fd, fds::mask::sending_stderr_fd},
+            {sending_seccomp_bpf_fd, fds::mask::sending_seccomp_bpf_fd},
         }, from<fds::mask_t>);
         req.stdin_fd = sending_stdin_fd ? optional{take_fd()} : std::nullopt;
         req.stdout_fd = sending_stdout_fd ? optional{take_fd()} : std::nullopt;
         req.stderr_fd = sending_stderr_fd ? optional{take_fd()} : std::nullopt;
+        req.seccomp_bpf_fd = sending_seccomp_bpf_fd ? optional{take_fd()} : std::nullopt;
     }
     if (fds_taken != fds.size()) {
         THROW("received too many file descriptors");

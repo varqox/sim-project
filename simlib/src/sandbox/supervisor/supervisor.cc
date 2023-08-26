@@ -312,6 +312,9 @@ void close_request_fds(const request::Request& req) noexcept {
     if (req.stderr_fd && close(*req.stderr_fd)) {
         die_with_error("close()");
     }
+    if (req.seccomp_bpf_fd && close(*req.seccomp_bpf_fd)) {
+        die_with_error("close()");
+    }
 }
 
 namespace response {
@@ -1108,6 +1111,7 @@ void main(int argc, char** argv) noexcept {
                 ),
                 .tracee_is_restricted_to_single_thread = request.cgroup.process_num_limit == 1,
                 .seccomp_filter = pid1_seccomp_filter,
+                .tracee_seccomp_bpf_fd = request.seccomp_bpf_fd,
             });
         }
         close_request_fds(request);

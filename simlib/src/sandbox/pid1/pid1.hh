@@ -56,6 +56,7 @@ struct Args {
     bool tracee_is_restricted_to_single_thread;
 
     sock_fprog seccomp_filter;
+    std::optional<int> tracee_seccomp_bpf_fd;
 };
 
 [[noreturn]] void main(Args args) noexcept;

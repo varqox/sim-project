@@ -92,6 +92,7 @@ struct Request {
 
     std::optional<timespec> time_limit;
     std::optional<timespec> cpu_time_limit;
+    std::optional<int> seccomp_bpf_fd;
 };
 
 } // namespace sandbox::supervisor::request

@@ -96,6 +96,12 @@ struct RequestOptions {
 
     std::optional<std::chrono::nanoseconds> time_limit = std::nullopt;
     std::optional<std::chrono::nanoseconds> cpu_time_limit = std::nullopt;
+    // For starting tracee sandbox needs allowed syscalls:
+    // - kill()
+    // - execveat()
+    // - shed_yield() if cpu_time_limit is specified
+    // - pread64() if cpu_time_limit is specified
+    std::optional<int> seccomp_bpf_fd = std::nullopt;
 };
 
 namespace result {
