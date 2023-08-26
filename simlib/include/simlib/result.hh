@@ -114,7 +114,37 @@ constexpr bool operator!=(const Err<A>& a, const Err<B>& b) {
 }
 
 template <class T, class E>
-using Result = std::variant<Ok<T>, Err<E>>;
+struct Result : std::variant<Ok<T>, Err<E>> {
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr Result(Ok<T> ok) : std::variant<Ok<T>, Err<E>>{std::move(ok)} {}
+
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr Result(Err<E> err) : std::variant<Ok<T>, Err<E>>{std::move(err)} {}
+
+    [[nodiscard]] constexpr bool is_ok() const noexcept {
+        return std::holds_alternative<Ok<T>>(*this);
+    }
+
+    [[nodiscard]] constexpr bool is_err() const noexcept {
+        return std::holds_alternative<Err<E>>(*this);
+    }
+
+    constexpr T unwrap() && noexcept {
+        if constexpr (std::is_same_v<T, void>) {
+            return;
+        } else {
+            return std::get<Ok<T>>(std::move(*this)).val;
+        }
+    }
+
+    constexpr E unwrap_err() && noexcept {
+        if constexpr (std::is_same_v<E, void>) {
+            return;
+        } else {
+            return std::get<Err<E>>(std::move(*this)).err;
+        }
+    }
+};
 
 template <
     class TA,
