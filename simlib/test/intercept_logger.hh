@@ -13,7 +13,8 @@ template <class LoggingFunc>
 std::string intercept_logger(Logger& logger, LoggingFunc&& logging_func) {
     FileDescriptor fd{open_unlinked_tmp_file()};
     throw_assert(fd.is_open());
-    std::unique_ptr<FILE, decltype(&fclose)> stream = {fdopen(fd, "r+"), fclose};
+
+    std::unique_ptr<FILE, int (*)(FILE*)> stream = {fdopen(fd, "r+"), fclose};
     throw_assert(stream);
     (void)fd.release(); // Now stream owns it
 
