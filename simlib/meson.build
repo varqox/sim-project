@@ -303,6 +303,7 @@ tests = {
     'test/macros/wont_throw.cc': {},
     'test/member_comparator.cc': {},
     'test/memory.cc': {},
+    'test/merge.cc': {},
     'test/mysql/mysql.cc': {},
     'test/noexcept_concat.cc': {},
     'test/old_sandbox.cc': {'priority': 8, 'args': meson.current_source_dir() + '/test/old_sandbox_test_cases/'},
