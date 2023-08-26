@@ -146,7 +146,12 @@ public:
     friend SupervisorConnection spawn_supervisor();
 
     SupervisorConnection(const SupervisorConnection&) = delete;
-    SupervisorConnection(SupervisorConnection&&) noexcept = delete;
+
+    SupervisorConnection(SupervisorConnection&& sc) noexcept
+    : sock_fd{std::exchange(sc.sock_fd, -1)}
+    , supervisor_pidfd{std::exchange(sc.supervisor_pidfd, -1)}
+    , supervisor_error_fd{std::exchange(sc.supervisor_error_fd, -1)} {}
+
     SupervisorConnection& operator=(const SupervisorConnection&) = delete;
     SupervisorConnection& operator=(SupervisorConnection&&) noexcept = delete;
     // Cancels pending and in-progress requests
