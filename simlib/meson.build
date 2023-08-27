@@ -98,6 +98,7 @@ sandbox_supervisor = executable('sandbox_supervisor',
     include_directories : simlib_incdir,
     sources : [
         'src/sandbox/supervisor/supervisor.cc',
+        'src/socket_stream_ext.cc',
     ],
     install : false,
 )
@@ -276,9 +277,11 @@ tests = {
     'test/sandbox/external/poll_pidfd.cc': {},
     'test/sandbox/external/polling_signalfd_sigchld_and_waitpid_work.cc': {},
     'test/sandbox/external/sigpipe_send_recv.cc': {},
+    'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr.cc': {'tester': 'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr_tester.cc'},
     'test/sandbox/sandbox_reports_unexpected_supervisor_process_death.cc': {},
     'test/sandbox/sandbox_supervisor_validates_arguments.cc': {'dependencies': [gtest_dep], 'args': sandbox_supervisor},
     'test/sandbox/si.cc': {},
+    'test/sandbox/simple.cc': {},
     'test/sha.cc': {},
     'test/shared_function.cc': {},
     'test/shared_memory_segment.cc': {},
@@ -307,10 +310,23 @@ tests = {
 }
 
 foreach test_src, args : tests
-    test_deps = args.get('dependencies', [gtest_main_dep])
+    test_deps = ['tester' in args ? gtest_dep : gtest_main_dep]
     test_kwargs = {}
     foreach key, value : args
-        if key != 'dependencies'
+        if key == 'dependencies'
+            test_deps = value
+        elif key == 'tester'
+            test_kwargs += {
+                'args': [
+                    executable(value.underscorify(),
+                        implicit_include_directories : false,
+                        sources : value,
+                        build_by_default : false,
+                        dependencies : simlib_dep,
+                    ),
+                ],
+            }
+        else
             test_kwargs += {key: value}
         endif
     endforeach

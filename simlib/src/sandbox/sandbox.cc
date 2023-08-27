@@ -1,3 +1,4 @@
+#include "communication/client_supervisor.hh"
 #include "do_die_with_error.hh"
 
 #include <cerrno>
@@ -9,9 +10,12 @@
 #include <simlib/macros/throw.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/sandbox/si.hh>
+#include <simlib/socket_stream_ext.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/to_string.hh>
+#include <simlib/utilities.hh>
 #include <string>
+#include <string_view>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -125,18 +129,80 @@ SupervisorConnection spawn_supervisor() {
     return SupervisorConnection{sock_fd, supervisor_pidfd, supervisor_error_fd};
 }
 
-// NOLINTNEXTLINE(readability-make-member-function-const)
+void SupervisorConnection::send_request(std::string_view shell_command) {
+    if (supervisor_is_dead_and_waited()) {
+        THROW("sandbox supervisor is already dead");
+    }
+
+    auto handle_send_error = [this] {
+        int send_errnum = errno;
+        kill_and_wait_supervisor_and_receive_errors(); // throws if there is an error
+        THROW("send()", errmsg(send_errnum));
+    };
+
+    namespace request = communication::client_supervisor::request;
+    request::shell_command_len_t len = shell_command.size();
+    if (send_exact(sock_fd, &len, sizeof(len), MSG_NOSIGNAL)) {
+        handle_send_error();
+    }
+    if (send_exact(sock_fd, shell_command.data(), shell_command.size(), MSG_NOSIGNAL)) {
+        handle_send_error();
+    }
+}
+
+Result SupervisorConnection::await_result() {
+    if (sock_fd == -1) {
+        THROW("unable to read more requests");
+    }
+
+    auto handle_recv_error = [this] {
+        int recv_errnum = errno;
+        (void)close(sock_fd); // we already have an error from recv_bytes_as()
+        sock_fd = -1;
+        // Receive errors if there are any
+        auto si = kill_and_wait_supervisor_and_receive_errors(); // throws if there is an error
+        if (is_one_of(recv_errnum, ECONNRESET, EPIPE)) {
+            // Connection broke unexpectedly without apparent error from the supervisor.
+            // kill_and_wait_supervisor_and_receive_errors() did not recognised an unexpected death,
+            // but we  know that the supervisor died unexpectedly.
+            THROW("sandbox supervisor died unexpectedly: ", si.description());
+        }
+        THROW("recv()", errmsg(recv_errnum));
+    };
+
+    namespace response = communication::client_supervisor::response;
+    response::error_len_t error_len;
+    if (recv_bytes_as(sock_fd, 0, error_len)) {
+        handle_recv_error();
+    }
+
+    if (error_len == 0) {
+        response::Ok res;
+        if (recv_bytes_as(sock_fd, 0, res.system_result)) {
+            handle_recv_error();
+        }
+        return ResultOk{
+            .system_result = res.system_result,
+        };
+    }
+
+    std::string error(error_len, '\0');
+    if (recv_exact(sock_fd, error.data(), error_len, 0)) {
+        handle_recv_error();
+    }
+    return ResultError{.description = std::move(error)};
+}
+
 void SupervisorConnection::kill_and_wait_supervisor() noexcept {
     (void)syscalls::pidfd_send_signal(supervisor_pidfd, SIGKILL, nullptr, 0);
     // Try to wait the supervisor process, otherwise it will become zombie until this process dies
     (void)syscalls::waitid(P_PIDFD, supervisor_pidfd, nullptr, __WALL | WEXITED, nullptr);
-    (void)close(sock_fd);
     (void)close(supervisor_pidfd);
     (void)close(supervisor_error_fd);
+    mark_supervisor_is_dead_and_waited();
 }
 
-// NOLINTNEXTLINE(readability-make-member-function-const)
-void SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
+Si SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
     std::optional<int> pidfd_send_signal_errnum = std::nullopt;
     std::optional<int> waitid_errnum = std::nullopt;
     siginfo_t si; // No need to zero out si_pid field (see man 2 waitid)
@@ -155,9 +221,10 @@ void SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
     if (close(supervisor_pidfd)) {
         close_errnum = errno;
     }
-    if (close(sock_fd)) {
-        close_errnum = errno;
-    }
+
+    mark_supervisor_is_dead_and_waited(
+    ); // this has to be done before potentially throwing operations
+
     // Check for errors
     if (pidfd_send_signal_errnum) {
         (void)close(supervisor_error_fd);
@@ -205,10 +272,14 @@ void SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
     if (close(supervisor_error_fd)) {
         THROW("close()", errmsg());
     }
+    if (si.si_code == CLD_EXITED && si.si_status == 0) {
+        return Si{.code = CLD_EXITED, .status = 0}; // supervisor saw the closed socket and exited
+    }
     // Premature death for an unexpected reason
     if (si.si_code != CLD_KILLED || si.si_status != SIGKILL) {
         THROW("sandbox supervisor died unexpectedly: ", Si{si.si_code, si.si_status}.description());
     }
+    return Si{.code = CLD_KILLED, .status = SIGKILL};
 }
 
 SupervisorConnection::~SupervisorConnection() noexcept(false) {
@@ -218,9 +289,26 @@ SupervisorConnection::~SupervisorConnection() noexcept(false) {
     // It is faster than signaling it to exit and we don't lose any errors reported by the
     // supervisor so far.
     if (can_throw) {
-        kill_and_wait_supervisor_and_receive_errors();
+        if (!supervisor_is_dead_and_waited()) {
+            try {
+                kill_and_wait_supervisor_and_receive_errors(); // may throw
+            } catch (...) {
+                if (sock_fd != -1) {
+                    (void)close(sock_fd);
+                }
+                throw;
+            }
+        }
+        if (sock_fd != -1 && close(sock_fd)) {
+            THROW("close()", errmsg());
+        }
     } else {
-        kill_and_wait_supervisor();
+        if (!supervisor_is_dead_and_waited()) {
+            kill_and_wait_supervisor();
+        }
+        if (sock_fd != -1) {
+            (void)close(sock_fd);
+        }
     }
 }
 
