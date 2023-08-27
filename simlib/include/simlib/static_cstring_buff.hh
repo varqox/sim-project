@@ -61,6 +61,9 @@ public:
 
     [[nodiscard]] constexpr const char* c_str() const noexcept { return data(); }
 
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    [[nodiscard]] constexpr operator std::string_view() const noexcept { return {data(), size()}; }
+
     constexpr auto begin() noexcept { return str_.begin(); }
 
     [[nodiscard]] constexpr auto begin() const noexcept { return str_.begin(); }
