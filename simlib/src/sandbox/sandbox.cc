@@ -1,14 +1,12 @@
+#include "client/request/serialize.hh"
 #include "communication/client_supervisor.hh"
 #include "do_die_with_error.hh"
 
 #include <cerrno>
 #include <chrono>
-#include <cstdint>
 #include <exception>
 #include <fcntl.h>
 #include <optional>
-#include <simlib/array_buff.hh>
-#include <simlib/array_vec.hh>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
@@ -29,6 +27,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
+
+using std::optional;
 
 extern "C" {
 extern const unsigned char sandbox_supervisor_dump[];
@@ -178,114 +178,33 @@ void SupervisorConnection::send_request(
         THROW(msg, errmsg(errnum));
     };
 
-    namespace request = communication::client_supervisor::request;
-
-    ArrayVec<int, 4> fds{executable_fd};
-    request::mask_t mask = 0;
-    if (options.stdin_fd) {
-        fds.push(*options.stdin_fd);
-        mask |= request::mask::sending_stdin_fd;
-    }
-    if (options.stdout_fd) {
-        fds.push(*options.stdout_fd);
-        mask |= request::mask::sending_stdout_fd;
-    }
-    if (options.stderr_fd) {
-        fds.push(*options.stderr_fd);
-        mask |= request::mask::sending_stderr_fd;
-    }
-
-    request::serialized_argv_len_t serialized_argv_len = 0;
-    for (const auto& arg : argv) {
-        serialized_argv_len += arg.size() + 1;
-    }
-    request::serialized_env_len_t serialized_env_len = 0;
-    for (const auto& str : options.env) {
-        serialized_env_len += str.size() + 1;
-    }
-
-    struct LinuxNamespaces {
-        struct User {
-            request::linux_namespaces::user::mask_t mask;
-            request::linux_namespaces::user::serialized_inside_uid_t inside_uid;
-            request::linux_namespaces::user::serialized_inside_gid_t inside_gid;
-        } user;
-    } linux_ns{
-        .user =
-            [&]() noexcept {
-                LinuxNamespaces::User u{
-                    .mask = 0,
-                    .inside_uid = 0,
-                    .inside_gid = 0,
-                };
-                namespace mask = request::linux_namespaces::user::mask;
-                auto& ops = options.linux_namespaces.user;
-                request::serialize_into(ops.inside_uid, u.mask, u.inside_uid, mask::inside_uid);
-                request::serialize_into(ops.inside_gid, u.mask, u.inside_gid, mask::inside_gid);
-                return u;
-            }(),
-    };
-
-    struct Cgroup {
-        request::cgroup::mask_t mask;
-        request::cgroup::serialized_process_num_limit_t process_num_limit;
-        request::cgroup::serialized_memory_limit_in_bytes_t memory_limit_in_bytes;
-    } cgroup = [&]() noexcept {
-        Cgroup cg = {
-            .mask = 0,
-            .process_num_limit = 0,
-            .memory_limit_in_bytes = 0,
-        };
-        namespace mask = request::cgroup::mask;
-        auto& ops = options.cgroup;
-        request::serialize_into(
-            ops.process_num_limit, cg.mask, cg.process_num_limit, mask::process_num_limit
-        );
-        request::serialize_into(
-            ops.memory_limit_in_bytes,
-            cg.mask,
-            cg.memory_limit_in_bytes,
-            mask::memory_limit_in_bytes
-        );
-        return cg;
-    }();
-
-    auto header_buff = array_buff_from(
-        mask,
-        serialized_argv_len,
-        serialized_env_len,
-        linux_ns.user.mask,
-        linux_ns.user.inside_uid,
-        linux_ns.user.inside_gid,
-        cgroup.mask,
-        cgroup.process_num_limit,
-        cgroup.memory_limit_in_bytes
-    );
-    auto rc = send_fds<fds.max_size()>(
-        sock_fd, header_buff.data(), header_buff.size(), MSG_NOSIGNAL, fds.data(), fds.size()
+    auto serialized_request = client::request::serialize(executable_fd, argv, options);
+    auto rc = send_fds<serialized_request.fds.max_size()>(
+        sock_fd,
+        serialized_request.header.data(),
+        serialized_request.header.size(),
+        MSG_NOSIGNAL,
+        serialized_request.fds.data(),
+        serialized_request.fds.size()
     );
     if (rc < 0) {
         handle_send_error("sendmsg()");
     }
     // Send the remaining bytes if some were not sent
-    if (send_exact(sock_fd, header_buff.data() + rc, header_buff.size() - rc, MSG_NOSIGNAL)) {
+    if (send_exact(
+            sock_fd,
+            serialized_request.header.data() + rc,
+            serialized_request.header.size() - rc,
+            MSG_NOSIGNAL
+        ))
+    {
         handle_send_error("send()");
     }
 
-    std::vector<uint8_t> buff;
-    buff.reserve(serialized_argv_len + serialized_env_len);
-    for (const auto& arg : argv) {
-        buff.insert(buff.end(), arg.begin(), arg.end());
-        buff.emplace_back('\0');
-    }
-    assert(buff.size() == serialized_argv_len);
-    for (const auto& str : options.env) {
-        buff.insert(buff.end(), str.begin(), str.end());
-        buff.emplace_back('\0');
-    }
-    assert(buff.size() == serialized_argv_len + serialized_env_len);
-
-    if (send_exact(sock_fd, buff.data(), buff.size(), MSG_NOSIGNAL)) {
+    if (send_exact(
+            sock_fd, serialized_request.body.get(), serialized_request.body_len, MSG_NOSIGNAL
+        ))
+    {
         handle_send_error("send()");
     }
 }
@@ -394,8 +313,8 @@ void SupervisorConnection::kill_and_wait_supervisor() noexcept {
 }
 
 Si SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
-    std::optional<int> pidfd_send_signal_errnum = std::nullopt;
-    std::optional<int> waitid_errnum = std::nullopt;
+    optional<int> pidfd_send_signal_errnum = std::nullopt;
+    optional<int> waitid_errnum = std::nullopt;
     siginfo_t si; // No need to zero out si_pid field (see man 2 waitid)
 
     // Note that sending signal to the dead but not waited process is not an error.
@@ -408,7 +327,7 @@ Si SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
         waitid_errnum = errno;
     }
 
-    std::optional<int> close_errnum = std::nullopt;
+    optional<int> close_errnum = std::nullopt;
     if (close(supervisor_pidfd)) {
         close_errnum = errno;
     }

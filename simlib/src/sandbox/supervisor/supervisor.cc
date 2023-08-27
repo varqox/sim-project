@@ -3,12 +3,14 @@
 #include "../do_die_with_error.hh"
 #include "../pid1/pid1.hh"
 #include "cgroups/read_cpu_times.hh"
+#include "request/deserialize.hh"
+#include "request/request.hh"
 
-#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
+#include <exception>
 #include <fcntl.h>
 #include <memory>
 #include <optional>
@@ -16,7 +18,7 @@
 #include <sched.h>
 #include <simlib/array_vec.hh>
 #include <simlib/concat_tostr.hh>
-#include <simlib/deserializer.hh>
+#include <simlib/deserialize.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
 #include <simlib/file_perms.hh>
@@ -39,15 +41,12 @@
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <variant>
 #include <vector>
 
 using std::optional;
-using std::unique_ptr;
-using std::vector;
 
 namespace sandbox::supervisor {
 
@@ -246,176 +245,39 @@ recv_request_header_with_fds(std::byte* buff, size_t header_len) noexcept {
     return fds;
 }
 
-namespace request = communication::client_supervisor::request;
-
-struct Request {
-    int executable_fd;
-    optional<int> stdin_fd;
-    optional<int> stdout_fd;
-    optional<int> stderr_fd;
-    unique_ptr<char[]> argv_env_buff;
-    vector<char*> argv; // with a trailing nullptr element
-    vector<char*> env; // with a trailing nullptr element
-
-    struct LinuxNamespaces {
-        struct User {
-            optional<uid_t> inside_uid;
-            optional<gid_t> inside_gid;
-        } user;
-    } linux_namespaces;
-
-    struct Cgroup {
-        optional<uint32_t> process_num_limit;
-        optional<uint64_t> memory_limit_in_bytes;
-    } cgroup;
-};
-
-Request recv_request() noexcept {
-    Request req;
+request::Request recv_request() noexcept {
     // Receive header
-    request::mask_t mask;
-    request::serialized_argv_len_t serialized_argv_len;
-    request::serialized_env_len_t serialized_env_len;
+    communication::client_supervisor::request::body_len_t body_len;
+    auto fds =
+        recv_request_header_with_fds(reinterpret_cast<std::byte*>(&body_len), sizeof(body_len));
 
-    struct LinuxNamespaces {
-        struct User {
-            request::linux_namespaces::user::mask_t mask;
-            request::linux_namespaces::user::serialized_inside_uid_t inside_uid;
-            request::linux_namespaces::user::serialized_inside_gid_t inside_gid;
-        } user;
-    } linux_ns;
-
-    struct Cgroup {
-        request::cgroup::mask_t mask;
-        request::cgroup::serialized_process_num_limit_t process_num_limit;
-        request::cgroup::serialized_memory_limit_in_bytes_t memory_limit_in_bytes;
-    } cgroup;
-
-    auto recv_and_deserialize = [&](auto&... values) noexcept {
-        std::byte buff[(... + sizeof(values))];
-        auto fds = recv_request_header_with_fds(buff, sizeof(buff));
-        Deserializer deser{buff, sizeof(buff)};
-        (deser.deserialize_bytes_as(values), ...);
-        return fds;
-    };
-    auto fds = recv_and_deserialize(
-        mask,
-        serialized_argv_len,
-        serialized_env_len,
-        linux_ns.user.mask,
-        linux_ns.user.inside_uid,
-        linux_ns.user.inside_gid,
-        cgroup.mask,
-        cgroup.process_num_limit,
-        cgroup.memory_limit_in_bytes
-    );
-    if (fds.size() < 1) {
-        die_with_msg(
-            "recv_request(): missing executable file descriptor alongside the request header"
-        );
-    }
-    req.executable_fd = fds[0];
-
-    size_t fds_taken = 1;
-    auto take_fd = [&fds, &fds_taken]() mutable noexcept {
-        if (fds_taken >= fds.size()) {
-            die_with_msg(
-                "recv_request(): too little file descriptors sent alongside the request header"
-            );
-        }
-        return fds[fds_taken++];
-    };
-    if (mask & request::mask::sending_stdin_fd) {
-        req.stdin_fd = take_fd();
-    }
-    if (mask & request::mask::sending_stdout_fd) {
-        req.stdout_fd = take_fd();
-    }
-    if (mask & request::mask::sending_stderr_fd) {
-        req.stderr_fd = take_fd();
-    }
-    if (fds_taken != fds.size()) {
-        die_with_msg("recv_request(): too many file descriptors sent alongside the request header");
-    }
-
-    {
-        namespace mask = request::linux_namespaces::user::mask;
-        request::deserialize_from(
-            req.linux_namespaces.user.inside_uid,
-            linux_ns.user.mask,
-            linux_ns.user.inside_uid,
-            mask::inside_uid
-        );
-        request::deserialize_from(
-            req.linux_namespaces.user.inside_gid,
-            linux_ns.user.mask,
-            linux_ns.user.inside_gid,
-            mask::inside_gid
-        );
-    }
-
-    {
-        namespace mask = request::cgroup::mask;
-        request::deserialize_from(
-            req.cgroup.process_num_limit,
-            cgroup.mask,
-            cgroup.process_num_limit,
-            mask::process_num_limit
-        );
-        request::deserialize_from(
-            req.cgroup.memory_limit_in_bytes,
-            cgroup.mask,
-            cgroup.memory_limit_in_bytes,
-            mask::memory_limit_in_bytes
-        );
-    }
-
-    auto buff_len = serialized_argv_len + serialized_env_len;
+    request::Request req;
     try {
-        req.argv_env_buff = std::make_unique<char[]>(buff_len);
+        req.buff = std::make_unique<std::byte[]>(body_len);
     } catch (...) {
-        die_with_msg("recv_request(): failed to allocate memory (", buff_len, " bytes)");
+        die_with_msg("recv_request(): failed to allocate memory (", body_len, " bytes)");
     }
-    // Receive argv and env
-    if (recv_exact(SOCK_FD, req.argv_env_buff.get(), buff_len, 0)) {
+
+    // Receive body
+    if (recv_exact(SOCK_FD, req.buff.get(), body_len, 0)) {
         die_with_error("recv()");
     }
-
-    auto parse_null_str_array = [](vector<char*>& vec, MutDeserializer deser, StringView name
-                                ) noexcept {
-        if (deser.size() > 0 && deser[deser.size() - 1] != std::byte{0}) {
-            die_with_msg("recv_request(): last byte of serialized ", name, " is not null");
-        }
-        // We will add a nullptr arg, so we don't need to reallocate later for execveat()
-        size_t vec_size = std::count(deser.data(), deser.data() + deser.size(), std::byte{0}) + 1;
-        try {
-            vec.reserve(vec_size);
-        } catch (...) {
+    try {
+        auto reader = deserialize::Reader{req.buff.get(), body_len};
+        request::deserialize(reader, fds, req);
+        auto remaining_size = reader.remaining_size();
+        if (remaining_size != 0) {
             die_with_msg(
-                "recv_request(): failed to allocate memory (", vec_size * sizeof(vec[0]), " bytes)"
+                "recv_request(): invalid body len: unnecessary ", remaining_size, " bytes"
             );
         }
-        while (!deser.is_empty()) {
-            vec.emplace_back(reinterpret_cast<char*>(deser.data()));
-            size_t len = 0;
-            while (deser[len] != std::byte{0}) {
-                ++len;
-            }
-            deser.extract_bytes(len + 1); // including null byte
-        }
-        vec.emplace_back(nullptr); // for execveat()
-        assert(vec.size() == vec_size);
-    };
-
-    MutDeserializer deser{req.argv_env_buff.get(), buff_len};
-    parse_null_str_array(req.argv, deser.extract_bytes(serialized_argv_len), "argv");
-    parse_null_str_array(req.env, deser.extract_bytes(serialized_env_len), "env");
-    assert(deser.size() == 0);
-
+    } catch (const std::exception& e) {
+        die_with_msg("recv_request(): deserialization error: ", e.what());
+    }
     return req;
 }
 
-void close_request_fds(const Request& req) noexcept {
+void close_request_fds(const request::Request& req) noexcept {
     if (close(req.executable_fd)) {
         die_with_error("close()");
     }
@@ -698,7 +560,7 @@ struct Cgroups {
     [[nodiscard]] uint64_t read_tracee_cgroup_current_memory_usage() const noexcept;
     [[nodiscard]] uint64_t read_tracee_cgroup_peak_memory_usage() const noexcept;
 
-    void set_tracee_limits(const Request::Cgroup& cg) noexcept;
+    void set_tracee_limits(const request::Request::Cgroup& cg) noexcept;
 };
 
 Cgroups setup(mount_namespace::MountNamespace& /*required to mount cgroup2*/) noexcept {
@@ -898,7 +760,7 @@ uint64_t Cgroups::read_tracee_cgroup_peak_memory_usage() const noexcept {
     return read_file_at_into_number<uint64_t>(tracee_cgroup_fd, "memory.peak");
 }
 
-void Cgroups::set_tracee_limits(const Request::Cgroup& cg) noexcept {
+void Cgroups::set_tracee_limits(const request::Request::Cgroup& cg) noexcept {
     write_tracee_cgroup_process_num_limit(cg.process_num_limit);
     assert(read_tracee_cgroup_current_memory_usage() == 0 && "Needed to not offset limit by this");
     write_tracee_cgroup_memory_limit(cg.memory_limit_in_bytes);
