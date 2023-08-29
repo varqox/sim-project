@@ -24,22 +24,37 @@ def filter_subdirs(dir, subdirs, allowed_extensions, denied_suffixes):
     return filter(qualifies, [str(f) for subdir in subdirs for f in (dir / subdir).glob('**/*')])
 
 class Source:
-    def __init__(self, path, dependency_files, pre_format_commands = []):
+    def __init__(self, path, format_file_path, dependency_files, pre_format_commands = []):
         self.path = path
-        self.dependency_files = dependency_files
+        self.format_file_path = format_file_path
+        self.dependency_files = [format_file_path] + dependency_files
         self.pre_format_commands = pre_format_commands
 
 def simlib_sources(src_dir):
-    # Fix includes of form "simlib/*" and "gmock/*" (thanks clangd...) to <...>
-    return [Source(path, [__file__], [["sed", r's@^#include "\(\(simlib/\|gtest\|gmock/\).*\)"$@#include <\1>@', "-i", path]]) for path in filter_subdirs(src_dir, [
-        'include/',
-        'src/',
-        'test/',
-    ], ['c', 'cc', 'h', 'hh'], [
-        'src/sim/default_checker_dump.c',
-        'test/conver_test_cases/.*',
-        'test/sandbox_test_cases/.*',
-    ])]
+    return [
+        Source(
+            path,
+            os.path.join(os.path.dirname(__file__), '.clang-format'),
+            [__file__],
+            [
+                # Fix includes of form "simlib/*", "gtest/*" "gmock/*" (thanks clangd...) to <...>
+                ["sed", r's@^#include "\(\(simlib/\|gtest\|gmock/\).*\)"$@#include <\1>@', "-i", path],
+            ]
+        )
+        for path in filter_subdirs(
+            src_dir, [
+                'include/',
+                'src/',
+                'test/',
+            ],
+            ['c', 'cc', 'h', 'hh'],
+            [
+                'src/sim/default_checker_dump.c',
+                'test/conver_test_cases/.*',
+                'test/sandbox_test_cases/.*',
+            ]
+        )
+    ]
 
 def format_sources(sources, cache_dir = Path(os.getenv('MESON_SOURCE_ROOT', '.')) / '.cache'):
     clang_format_path = subprocess.check_output(['which', 'clang-format']).strip()
@@ -76,7 +91,7 @@ def format_sources(sources, cache_dir = Path(os.getenv('MESON_SOURCE_ROOT', '.')
             print('format ' + source.path)
             for command in source.pre_format_commands:
                 subprocess.check_call(command)
-            subprocess.check_call(['clang-format', '-style=file', '-i', source.path])
+            subprocess.check_call(['clang-format', '-style=file:' + source.format_file_path, '-i', source.path])
             cache[source.path] = time.time() # this is thread safe
 
         futures = [executor.submit(run_clang_format, source) for source in sources_to_format]
