@@ -7,7 +7,7 @@
 #include <utility>
 
 #if 0 // Clang does not support std::launder yet
-#if __cplusplus > 201402L
+#if __cplusplus > 201'402L
 #warning "Since C++17 std::launder() has to be used to wrap the reinterpret_casts below"
 #endif
 #endif

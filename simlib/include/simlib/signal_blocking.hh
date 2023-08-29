@@ -30,13 +30,13 @@ private:
         sigset_t mask;
         sigemptyset(&mask);
         return mask;
-    };
+    }
 
     static sigset_t full_mask_val() noexcept {
         sigset_t mask;
         sigfillset(&mask);
         return mask;
-    };
+    }
 };
 
 template <int (*func)(int, const sigset_t*, sigset_t*)>

@@ -46,7 +46,7 @@ constexpr auto to_string(T x) noexcept {
     }
 
     res[res.len_] = '\0';
-#if __cplusplus > 201703L
+#if __cplusplus > 201'703L
 #warning "std::reverse() can be used as it became constexpr"
 #endif
     // Reverse res

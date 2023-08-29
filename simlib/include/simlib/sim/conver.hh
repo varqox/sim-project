@@ -174,7 +174,7 @@ private:
                 t.time_limit = floor_to_10ms(t.time_limit + 5ms);
             }
         }
-    };
+    }
 };
 
 } // namespace sim

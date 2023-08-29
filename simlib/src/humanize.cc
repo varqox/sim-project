@@ -10,11 +10,11 @@ string humanize_file_size(uint64_t size) {
     constexpr uint64_t MIN_TIB = 1ULL << 40;
     constexpr uint64_t MIN_PIB = 1ULL << 50;
     constexpr uint64_t MIN_EIB = 1ULL << 60;
-    constexpr uint64_t MIN_3DIGIT_KIB = 102349ULL;
-    constexpr uint64_t MIN_3DIGIT_MIB = 104805172ULL;
-    constexpr uint64_t MIN_3DIGIT_GIB = 107320495309ULL;
-    constexpr uint64_t MIN_3DIGIT_TIB = 109896187196212ULL;
-    constexpr uint64_t MIN_3DIGIT_PIB = 112533595688920269ULL;
+    constexpr uint64_t MIN_3DIGIT_KIB = 102'349ULL;
+    constexpr uint64_t MIN_3DIGIT_MIB = 104'805'172ULL;
+    constexpr uint64_t MIN_3DIGIT_GIB = 107'320'495'309ULL;
+    constexpr uint64_t MIN_3DIGIT_TIB = 109'896'187'196'212ULL;
+    constexpr uint64_t MIN_3DIGIT_PIB = 112'533'595'688'920'269ULL;
 
     // Bytes
     if (size < MIN_KIB) {

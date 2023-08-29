@@ -9,7 +9,8 @@ AlignConsecutiveBitFields: None
 AlignConsecutiveDeclarations: None
 AlignEscapedNewlines: Left
 AlignOperands:   DontAlign
-AlignTrailingComments: false
+AlignTrailingComments:
+  Kind: Never
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortEnumsOnASingleLine: true
@@ -47,8 +48,11 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: true
+BreakAfterAttributes: Never
+BreakArrays: false
 BreakBeforeBinaryOperators: None
 BreakBeforeConceptDeclarations: true
+BreakBeforeInlineASMColon: OnlyMultiline
 BreakBeforeInheritanceComma: false
 BreakInheritanceList: BeforeComma
 BreakBeforeTernaryOperators: true
@@ -97,12 +101,19 @@ IndentRequires:  true
 IndentWidth:     4
 IndentRequiresClause: true
 IndentWrappedFunctionNames: false
+InsertNewlineAtEOF: true
 InsertTrailingCommas: Wrapped
+IntegerLiteralSeparator:
+  Binary: 0
+  Decimal: 3
+  DecimalMinDigits: 6
+  Hex: -1
 InsertBraces: true
 JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
 KeepEmptyLinesAtTheStartOfBlocks: true
 LambdaBodyIndentation: Signature
+LineEnding: LF
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
 MaxEmptyLinesToKeep: 1
@@ -129,7 +140,9 @@ PackConstructorInitializers: CurrentLine
 ReferenceAlignment: Pointer
 ReflowComments:  true
 RemoveBracesLLVM: false
+RemoveSemicolon: true
 RequiresClausePosition: OwnLine
+RequiresExpressionIndentation: OuterScope
 SeparateDefinitionBlocks: Always
 ShortNamespaceLines: 0
 SortIncludes:    CaseSensitive

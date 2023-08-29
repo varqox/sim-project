@@ -124,10 +124,10 @@ TEST(http, UrlDispatcher_i32) {
     static constexpr char url[] = "/{i32}";
     ud.add_handler<url>([&](int32_t x) { return x; });
     EXPECT_EQ(ud.dispatch("/-2147483649"), std::nullopt);
-    EXPECT_EQ(ud.dispatch("/-2147483648"), -2147483648);
+    EXPECT_EQ(ud.dispatch("/-2147483648"), -2'147'483'648);
     EXPECT_EQ(ud.dispatch("/-17"), -17);
     EXPECT_EQ(ud.dispatch("/42"), 42);
-    EXPECT_EQ(ud.dispatch("/2147483647"), 2147483647);
+    EXPECT_EQ(ud.dispatch("/2147483647"), 2'147'483'647);
     EXPECT_EQ(ud.dispatch("/2147483648"), std::nullopt);
 }
 
@@ -137,10 +137,10 @@ TEST(http, UrlDispatcher_i64) {
     static constexpr char url[] = "/{i64}";
     ud.add_handler<url>([&](int64_t x) { return x; });
     EXPECT_EQ(ud.dispatch("/-9223372036854775809"), std::nullopt);
-    EXPECT_EQ(ud.dispatch("/-9223372036854775808"), -9223372036854775807 - 1);
+    EXPECT_EQ(ud.dispatch("/-9223372036854775808"), -9'223'372'036'854'775'807 - 1);
     EXPECT_EQ(ud.dispatch("/-17"), -17);
     EXPECT_EQ(ud.dispatch("/42"), 42);
-    EXPECT_EQ(ud.dispatch("/9223372036854775807"), 9223372036854775807);
+    EXPECT_EQ(ud.dispatch("/9223372036854775807"), 9'223'372'036'854'775'807);
     EXPECT_EQ(ud.dispatch("/9223372036854775808"), std::nullopt);
 }
 
@@ -179,7 +179,7 @@ TEST(http, UrlDispatcher_u32) {
     EXPECT_EQ(ud.dispatch("/0"), 0);
     EXPECT_EQ(ud.dispatch("/1"), 1);
     EXPECT_EQ(ud.dispatch("/42"), 42);
-    EXPECT_EQ(ud.dispatch("/4294967295"), 4294967295);
+    EXPECT_EQ(ud.dispatch("/4294967295"), 4'294'967'295);
     EXPECT_EQ(ud.dispatch("/4294967296"), std::nullopt);
 }
 
@@ -192,7 +192,7 @@ TEST(http, UrlDispatcher_u64) {
     EXPECT_EQ(ud.dispatch("/0"), 0);
     EXPECT_EQ(ud.dispatch("/1"), 1);
     EXPECT_EQ(ud.dispatch("/42"), 42);
-    EXPECT_EQ(ud.dispatch("/18446744073709551615"), 18446744073709551615U);
+    EXPECT_EQ(ud.dispatch("/18446744073709551615"), 18'446'744'073'709'551'615U);
     EXPECT_EQ(ud.dispatch("/18446744073709551616"), std::nullopt);
 }
 

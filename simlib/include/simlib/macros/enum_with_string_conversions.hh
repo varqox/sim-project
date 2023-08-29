@@ -67,12 +67,10 @@
     static constexpr Enum name = Enum::name;
 
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES(name, val, str_val) \
-    case name:                                                             \
-        return str_val;
+    case name: return str_val;
 
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES(name, val, str_val) \
-    case name:                                                                    \
-        return "\"" str_val "\"";
+    case name: return "\"" str_val "\"";
 
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS(name, val, str_val) \
     if (str == (str_val))                                                  \

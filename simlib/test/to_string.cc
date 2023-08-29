@@ -45,36 +45,40 @@ TEST(to_string, to_string_with_integral) {
     static_assert(to_string(std::numeric_limits<uint16_t>::max()) == "65535");
 
     static_assert(to_string(std::numeric_limits<int32_t>::min()) == "-2147483648");
-    static_assert(to_string(static_cast<int32_t>(-1642516759)) == "-1642516759");
+    static_assert(to_string(static_cast<int32_t>(-1'642'516'759)) == "-1642516759");
     static_assert(to_string(static_cast<int32_t>(-17)) == "-17");
     static_assert(to_string(static_cast<int32_t>(-1)) == "-1");
     static_assert(to_string(static_cast<int32_t>(0)) == "0");
     static_assert(to_string(static_cast<int32_t>(1)) == "1");
     static_assert(to_string(static_cast<int32_t>(42)) == "42");
-    static_assert(to_string(static_cast<int32_t>(2136532621)) == "2136532621");
+    static_assert(to_string(static_cast<int32_t>(2'136'532'621)) == "2136532621");
     static_assert(to_string(std::numeric_limits<int32_t>::max()) == "2147483647");
     static_assert(to_string(std::numeric_limits<uint32_t>::min()) == "0");
     static_assert(to_string(static_cast<uint32_t>(0)) == "0");
     static_assert(to_string(static_cast<uint32_t>(1)) == "1");
     static_assert(to_string(static_cast<uint32_t>(42)) == "42");
-    static_assert(to_string(static_cast<uint32_t>(3643551363)) == "3643551363");
+    static_assert(to_string(static_cast<uint32_t>(3'643'551'363)) == "3643551363");
     static_assert(to_string(std::numeric_limits<uint32_t>::max()) == "4294967295");
 
     static_assert(to_string(std::numeric_limits<int64_t>::min()) == "-9223372036854775808");
-    static_assert(to_string(static_cast<int64_t>(-6452185143265312634)) == "-6452185143265312634");
+    static_assert(
+        to_string(static_cast<int64_t>(-6'452'185'143'265'312'634)) == "-6452185143265312634"
+    );
     static_assert(to_string(static_cast<int64_t>(-17)) == "-17");
     static_assert(to_string(static_cast<int64_t>(-1)) == "-1");
     static_assert(to_string(static_cast<int64_t>(0)) == "0");
     static_assert(to_string(static_cast<int64_t>(1)) == "1");
     static_assert(to_string(static_cast<int64_t>(42)) == "42");
-    static_assert(to_string(static_cast<int64_t>(6421358215683281653)) == "6421358215683281653");
+    static_assert(
+        to_string(static_cast<int64_t>(6'421'358'215'683'281'653)) == "6421358215683281653"
+    );
     static_assert(to_string(std::numeric_limits<int64_t>::max()) == "9223372036854775807");
     static_assert(to_string(std::numeric_limits<uint64_t>::min()) == "0");
     static_assert(to_string(static_cast<uint64_t>(0)) == "0");
     static_assert(to_string(static_cast<uint64_t>(1)) == "1");
     static_assert(to_string(static_cast<uint64_t>(42)) == "42");
     static_assert(
-        to_string(static_cast<uint64_t>(16421358215683281653ULL)) == "16421358215683281653"
+        to_string(static_cast<uint64_t>(16'421'358'215'683'281'653ULL)) == "16421358215683281653"
     );
     static_assert(to_string(std::numeric_limits<uint64_t>::max()) == "18446744073709551615");
 }

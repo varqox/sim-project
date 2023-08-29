@@ -8,8 +8,8 @@ TEST(humanize, humanize_file_size) {
     EXPECT_EQ(humanize_file_size(2), "2 bytes");
     EXPECT_EQ(humanize_file_size(1023), "1023 bytes");
     EXPECT_EQ(humanize_file_size(1024), "1.0 KiB");
-    EXPECT_EQ(humanize_file_size(129747), "127 KiB");
-    EXPECT_EQ(humanize_file_size(97379112), "92.9 MiB");
+    EXPECT_EQ(humanize_file_size(129'747), "127 KiB");
+    EXPECT_EQ(humanize_file_size(97'379'112), "92.9 MiB");
     EXPECT_EQ(humanize_file_size(1.423 * (1ULL << 10)), "1.4 KiB");
     EXPECT_EQ(humanize_file_size(14.23 * (1ULL << 10)), "14.2 KiB");
     EXPECT_EQ(humanize_file_size(142.3 * (1ULL << 10)), "142 KiB");
@@ -41,14 +41,14 @@ TEST(humanize, humanize_file_size) {
     EXPECT_EQ(humanize_file_size((1ULL << 60) - 1), "1024 PiB");
     EXPECT_EQ(humanize_file_size((1ULL << 60)), "1.0 EiB");
 
-    EXPECT_EQ(humanize_file_size(102349ULL - 1), "99.9 KiB");
-    EXPECT_EQ(humanize_file_size(102349ULL), "100 KiB");
-    EXPECT_EQ(humanize_file_size(104805172ULL - 1), "99.9 MiB");
-    EXPECT_EQ(humanize_file_size(104805172ULL), "100 MiB");
-    EXPECT_EQ(humanize_file_size(107320495309ULL - 1), "99.9 GiB");
-    EXPECT_EQ(humanize_file_size(107320495309ULL), "100 GiB");
-    EXPECT_EQ(humanize_file_size(109896187196212ULL - 1), "99.9 TiB");
-    EXPECT_EQ(humanize_file_size(109896187196212ULL), "100 TiB");
-    EXPECT_EQ(humanize_file_size(112533595688920269ULL - 1), "99.9 PiB");
-    EXPECT_EQ(humanize_file_size(112533595688920269ULL), "100 PiB");
+    EXPECT_EQ(humanize_file_size(102'349ULL - 1), "99.9 KiB");
+    EXPECT_EQ(humanize_file_size(102'349ULL), "100 KiB");
+    EXPECT_EQ(humanize_file_size(104'805'172ULL - 1), "99.9 MiB");
+    EXPECT_EQ(humanize_file_size(104'805'172ULL), "100 MiB");
+    EXPECT_EQ(humanize_file_size(107'320'495'309ULL - 1), "99.9 GiB");
+    EXPECT_EQ(humanize_file_size(107'320'495'309ULL), "100 GiB");
+    EXPECT_EQ(humanize_file_size(109'896'187'196'212ULL - 1), "99.9 TiB");
+    EXPECT_EQ(humanize_file_size(109'896'187'196'212ULL), "100 TiB");
+    EXPECT_EQ(humanize_file_size(112'533'595'688'920'269ULL - 1), "99.9 PiB");
+    EXPECT_EQ(humanize_file_size(112'533'595'688'920'269ULL), "100 PiB");
 }

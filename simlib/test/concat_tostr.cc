@@ -21,7 +21,7 @@ TEST(concat_tostr, concat_tostr) {
         concat_tostr("abc ", true, " ", 0, ' ', 1, ' ', -1, " ", 2, ' ', 3, ' ', -3, ' ', false)
     );
 
-    EXPECT_EQ(" bac-1234567890123456789\t", concat_tostr(" bac", -1234567890123456789, '\t'));
+    EXPECT_EQ(" bac-1234567890123456789\t", concat_tostr(" bac", -1'234'567'890'123'456'789, '\t'));
 }
 
 template <size_t... Idx1, size_t... Idx2, class... Args>
@@ -86,5 +86,7 @@ TEST(concat_tostr, back_insert) {
         false
     );
 
-    test_back_insert_on(__LINE__, " bac-1234567890123456789\t", " bac", -1234567890123456789, '\t');
+    test_back_insert_on(
+        __LINE__, " bac-1234567890123456789\t", " bac", -1'234'567'890'123'456'789, '\t'
+    );
 }

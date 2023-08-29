@@ -42,19 +42,19 @@ class HandleSignalsWhileRunning {
         static_assert(sizeof(int) == 4, "Needed for the below hack to work properly");
         uint32_t usignum = signum;
         return (static_cast<uint64_t>(1) << 32 | usignum);
-    };
+    }
 
     static int unpack_signum(uint64_t packed_signum) noexcept {
         static_assert(sizeof(int) == 4, "Needed for the below hack to work properly");
         return static_cast<uint32_t>(packed_signum & ((static_cast<uint64_t>(1) << 32) - 1));
-    };
+    }
 
     static void signal_handler(int signum) noexcept {
         int errnum = errno;
         uint64_t packed_signum = pack_signum(signum);
         (void)write(signal_eventfd, &packed_signum, sizeof(packed_signum));
         errno = errnum;
-    };
+    }
 
 public:
     template <class Main, class Cleanup, class... Signals>

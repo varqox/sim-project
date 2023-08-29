@@ -56,10 +56,10 @@ TEST(concat_common, stringify) {
     EXPECT_EQ(wrap(stringify('\n')), "\n");
     EXPECT_EQ(wrap(stringify('\0')), string{'\0'});
 
-    EXPECT_EQ(wrap(stringify(1234567890123456789)), "1234567890123456789");
-    EXPECT_EQ(wrap(stringify(123456789)), "123456789");
+    EXPECT_EQ(wrap(stringify(1'234'567'890'123'456'789)), "1234567890123456789");
+    EXPECT_EQ(wrap(stringify(123'456'789)), "123456789");
     EXPECT_EQ(wrap(stringify(0)), "0");
     EXPECT_EQ(wrap(stringify(-0)), "0");
     EXPECT_EQ(wrap(stringify(-1256)), "-1256");
-    EXPECT_EQ(wrap(stringify(-1234567890123456789)), "-1234567890123456789");
+    EXPECT_EQ(wrap(stringify(-1'234'567'890'123'456'789)), "-1234567890123456789");
 }

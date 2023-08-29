@@ -37,7 +37,7 @@ constexpr auto noexcept_string_length(const StaticCStringBuff<N>& str) noexcept 
 }
 
 template <size_t N>
-constexpr auto noexcept_string_length(const char (&/*str*/)[N]) noexcept {
+constexpr auto noexcept_string_length(const char (& /*str*/)[N]) noexcept {
     return N - 1;
 }
 

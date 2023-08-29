@@ -11,7 +11,7 @@ using std::string;
 int64_t microtime() noexcept {
     timeval mtime{};
     (void)gettimeofday(&mtime, nullptr);
-    return (mtime.tv_sec * static_cast<int64_t>(1000000)) + mtime.tv_usec;
+    return (mtime.tv_sec * static_cast<int64_t>(1'000'000)) + mtime.tv_usec;
 }
 
 template <class F>

@@ -148,7 +148,7 @@ protected:
     static void send_error_message_and_exit(int fd, CStringView str) noexcept {
         (void)write_all(fd, str.data(), str.size());
         _exit(-1);
-    };
+    }
 
     // Sends @p str followed by error message of @p errnum through @p fd and
     // _exits with -1
@@ -159,7 +159,7 @@ protected:
         (void)write_all(fd, err.data(), err.size());
 
         _exit(-1);
-    };
+    }
 
     /**
      * @brief Receives error message from @p fd
