@@ -22,7 +22,7 @@ struct User {
         return std::all_of(username.begin(), username.end(), [](int c) {
             return (is_alnum(c) || c == '_' || c == '-');
         });
-    };
+    }
 
     static inline const char is_username_description[] =
         "a string consisting only of the characters [a-zA-Z0-9_-]";

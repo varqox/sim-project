@@ -86,7 +86,7 @@ static void update_db_schema(Func&& prepare_database) {
     });
 
     ErrDefer save_backup = [&] {
-        for (int i = 0; i < 100000; ++i) {
+        for (int i = 0; i < 100'000; ++i) {
             auto filename = concat("db-backup.", i);
             if (access(filename, F_OK) == 0) {
                 continue;

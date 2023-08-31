@@ -201,7 +201,7 @@ test_str_common(ValidationTest<StrType>& t, std::optional<size_t> max_len = std:
         auto str = random_bytes(len);
         VALIDATE_CHECK(t, str, Ok{str});
     }
-    if (const auto len = max_len.value_or(70'000); len > 0) {
+    if (const auto len = max_len.value_or(70000); len > 0) {
         auto str = random_bytes(len);
         VALIDATE_CHECK(t, str, Ok{str});
     }

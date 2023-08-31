@@ -204,13 +204,14 @@ std::optional<std::string> JudgeBase::compile_solution_impl(
     tmplog.flush_no_nl();
 
     std::string compilation_errors;
-    if ((jworker_.*compile_method
-        )(solution_path,
-          lang,
-          sim::SOLUTION_COMPILATION_TIME_LIMIT,
-          &compilation_errors,
-          sim::COMPILATION_ERRORS_MAX_LENGTH,
-          sim::PROOT_PATH))
+    if ((jworker_.*compile_method)(
+            solution_path,
+            lang,
+            sim::SOLUTION_COMPILATION_TIME_LIMIT,
+            &compilation_errors,
+            sim::COMPILATION_ERRORS_MAX_LENGTH,
+            sim::PROOT_PATH
+        ))
     {
         tmplog(" failed:\n", compilation_errors);
         return compilation_errors;

@@ -70,7 +70,7 @@ void MergeUsers::run_impl() {
                 (void)"switch is used only to make compiler warn if the UT "
                       "gets updated";
             }
-        };
+        }
         static_assert(
             is_sorted(std::array{EnumVal(UT::ADMIN), EnumVal(UT::TEACHER), EnumVal(UT::NORMAL)}),
             "Needed by below SQL statement (comparison between types)"
@@ -103,7 +103,7 @@ void MergeUsers::run_impl() {
                 (void)"switch is used only to make compiler warn if the CUM "
                       "gets updated";
             }
-        };
+        }
         static_assert(
             is_sorted(std::array{
                 EnumVal(CUM::CONTESTANT), EnumVal(CUM::MODERATOR), EnumVal(CUM::OWNER)}),

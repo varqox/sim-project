@@ -99,8 +99,7 @@ std::variant<Response, Request> WebWorker::handle(Request req) {
         case Request::POST: return post_dispatcher;
         }
         __builtin_unreachable();
-    }
-    ();
+    }();
     auto resp = dispatcher.dispatch(request->target);
     if (resp) {
         return *resp;
