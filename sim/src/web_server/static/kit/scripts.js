@@ -936,7 +936,7 @@ const History = (() => {
 	};
 
 	const current_view_url_state_list_from_url_hash = (url_hash) => {
-		let list = [];
+		const list = [];
 		let cursor = 0;
 
 		let beg = 0;
@@ -1017,6 +1017,7 @@ const History = (() => {
 		view_elem_to_focus.classList.remove('display-none');
 		hide_views_covering_elem(view_elem_to_focus);
 		show_views_covered_by(view_elem_to_focus); // important if e.g. somebody goes forward by 2 entries: history.go(2);
+		History.current_view_url_state_list = current_view_url_state_list_from_url_hash(window.location.hash);
 	};
 
 	return {
