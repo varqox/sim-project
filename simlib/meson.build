@@ -294,6 +294,7 @@ tests = {
     'test/sim/problem_package.cc': {},
     'test/simfile.cc': {},
     'test/simple_parser.cc': {},
+    'test/slice.cc': {},
     'test/sock_stream_ext.cc': {},
     'test/spawner.cc': {},
     'test/static_cstring_buff.cc': {},
