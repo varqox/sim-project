@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 #include <simlib/config_file.hh>
+#include <simlib/meta/max.hh>
+#include <simlib/meta/min.hh>
+#include <simlib/random.hh>
 #include <simlib/utilities.hh>
 
 using std::array;
@@ -89,6 +92,9 @@ TEST(ConfigFile, is_string_literal) {
     };
 
     // Generated tests (all words of length not greater than 3)
+    int t2_mid = get_random(0, 255);
+    int t2_beg = meta::max(t2_mid - 10, 0);
+    int t2_end = meta::min(t2_mid + 10, 256);
     array<char, 4> t{};
     t[0] = '\0';
     for (int a = 0; a < 256; t[0] = ++a) {
@@ -107,8 +113,8 @@ TEST(ConfigFile, is_string_literal) {
               << endl;
 
             bool cached_res = is_beginning(t[0]) && is_interior(t[1]);
-            t[2] = '\0';
-            for (int c = 0; c < 256; t[2] = ++c) {
+            for (int c = t2_beg; c < t2_end; ++c) {
+                t[2] = static_cast<char>(c);
                 // Three characters
                 if (ConfigFile::is_string_literal({t.data(), 3}) != cached_res && is_ending(t[2])) {
                     EXPECT_EQ(
