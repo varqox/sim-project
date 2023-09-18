@@ -12,6 +12,9 @@
 #include <simlib/file_descriptor.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/noexcept_concat.hh>
+#include <simlib/pipe.hh>
+#include <simlib/read_bytes_as.hh>
+#include <simlib/read_exact.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/sandbox/si.hh>
 #include <simlib/socket_send_fds.hh>
@@ -26,6 +29,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <utility>
 #include <vector>
 
 using std::optional;
@@ -165,7 +169,18 @@ SupervisorConnection spawn_supervisor() {
     return SupervisorConnection{sock_fd, supervisor_pidfd, supervisor_error_fd};
 }
 
-void SupervisorConnection::send_request(
+SupervisorConnection::RequestHandle::RequestHandle(int result_fd) noexcept : result_fd{result_fd} {}
+
+void SupervisorConnection::RequestHandle::do_cancel(bool can_throw) {
+    if (is_cancelled()) {
+        return;
+    }
+    if (close(std::exchange(result_fd, -1)) && can_throw) {
+        THROW("close()", errmsg());
+    }
+}
+
+SupervisorConnection::RequestHandle SupervisorConnection::send_request(
     int executable_fd, Slice<std::string_view> argv, const RequestOptions& options
 ) {
     if (supervisor_is_dead_and_waited()) {
@@ -178,7 +193,13 @@ void SupervisorConnection::send_request(
         THROW(msg, errmsg(errnum));
     };
 
-    auto serialized_request = client::request::serialize(executable_fd, argv, options);
+    auto result_pipe = pipe2(O_CLOEXEC);
+    if (!result_pipe) {
+        THROW("pipe2()", errmsg());
+    }
+
+    auto serialized_request =
+        client::request::serialize(result_pipe->writable, executable_fd, argv, options);
     auto rc = send_fds<serialized_request.fds.max_size()>(
         sock_fd,
         serialized_request.header.data(),
@@ -207,11 +228,16 @@ void SupervisorConnection::send_request(
     {
         handle_send_error("send()");
     }
+
+    if (result_pipe->writable.close()) {
+        THROW("close()", errmsg());
+    }
+
+    return RequestHandle{result_pipe->readable.release()};
 }
 
-void SupervisorConnection::send_request(
-    Slice<std::string_view> argv, const RequestOptions& options
-) {
+SupervisorConnection::RequestHandle
+SupervisorConnection::send_request(Slice<std::string_view> argv, const RequestOptions& options) {
     if (argv.is_empty()) {
         THROW("argv cannot be empty");
     }
@@ -222,14 +248,17 @@ void SupervisorConnection::send_request(
     return send_request(exe_fd, argv, options);
 }
 
-Result SupervisorConnection::await_result() {
+Result SupervisorConnection::await_result(RequestHandle&& request_handle) {
     if (sock_fd == -1) {
         THROW("unable to read more requests");
     }
+    if (request_handle.is_cancelled()) {
+        THROW("unable to await request that is cancelled");
+    }
 
-    auto handle_recv_error = [this] {
+    auto handle_read_error = [this] {
         int recv_errnum = errno;
-        (void)close(sock_fd); // we already have an error from recv_bytes_as()
+        (void)close(sock_fd); // we already have an error from read_bytes_as()
         sock_fd = -1;
         // Receive errors if there are any
         auto si = kill_and_wait_supervisor_and_receive_errors(); // throws if there is an error
@@ -239,13 +268,13 @@ Result SupervisorConnection::await_result() {
             // but we  know that the supervisor died unexpectedly.
             THROW("sandbox supervisor died unexpectedly: ", si.description());
         }
-        THROW("recv()", errmsg(recv_errnum));
+        THROW("read()", errmsg(recv_errnum));
     };
 
     namespace response = communication::client_supervisor::response;
     response::error_len_t error_len;
-    if (recv_bytes_as(sock_fd, 0, error_len)) {
-        handle_recv_error();
+    if (read_bytes_as(request_handle.result_fd, error_len)) {
+        handle_read_error();
     }
     if (error_len == 0) {
         response::si::code_t tracee_si_code;
@@ -255,9 +284,8 @@ Result SupervisorConnection::await_result() {
         response::cgroup::usec_t tracee_cgroup_cpu_user_time;
         response::cgroup::usec_t tracee_cgroup_cpu_system_time;
         response::cgroup::peak_memory_in_bytes_t tracee_cgroup_peak_memory_in_bytes;
-        if (recv_bytes_as(
-                sock_fd,
-                0,
+        if (read_bytes_as(
+                request_handle.result_fd,
                 tracee_si_code,
                 tracee_si_status,
                 tracee_runtime_sec,
@@ -267,7 +295,7 @@ Result SupervisorConnection::await_result() {
                 tracee_cgroup_peak_memory_in_bytes
             ))
         {
-            handle_recv_error();
+            handle_read_error();
         }
         static_assert(std::is_unsigned_v<decltype(tracee_runtime_sec)>, "need it to be >= 0");
         static_assert(std::is_unsigned_v<decltype(tracee_runtime_nsec)>, "need it to be >= 0");
@@ -295,8 +323,8 @@ Result SupervisorConnection::await_result() {
     }
 
     std::string error(error_len, '\0');
-    if (recv_exact(sock_fd, error.data(), error_len, 0)) {
-        handle_recv_error();
+    if (read_exact(request_handle.result_fd, error.data(), error_len)) {
+        handle_read_error();
     }
     return result::Error{
         .description = std::move(error),

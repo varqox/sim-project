@@ -23,13 +23,13 @@ TEST(sandbox, sandbox_terminates_early_upon_client_process_death) {
         throw_assert(prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) == 0);
         auto sc = sandbox::spawn_supervisor();
         int supervisor_pid = get_pid_of_the_only_child_process();
-        sc.send_request({{"/bin/sleep", "10"}});
+        auto rh = sc.send_request({{"/bin/sleep", "10"}});
         // Kill the sandbox supervisor process randomly in time
         std::this_thread::sleep_for(std::chrono::nanoseconds{get_random(0, 10'000'000)});
         throw_assert(kill(supervisor_pid, SIGKILL) == 0);
         // Reap the sandbox supervisor process
         try {
-            sc.await_result();
+            sc.await_result(std::move(rh));
             FAIL();
         } catch (const std::exception& e) {
             ASSERT_TRUE(has_prefix(

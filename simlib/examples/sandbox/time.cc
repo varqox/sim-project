@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     for (auto arg : to_arg_seq(argc, argv)) {
         sargv.emplace_back(arg);
     }
-    sb.send_request(
+    auto res = sb.await_result(sb.send_request(
         sargv,
         {
             .stdin_fd = STDIN_FILENO,
@@ -29,8 +29,7 @@ int main(int argc, char** argv) {
                     return env;
                 }(),
         }
-    );
-    auto res = sb.await_result();
+    ));
     std::visit(
         overloaded{
             [&](const sandbox::result::Ok& res_ok) {

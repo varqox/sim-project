@@ -8,6 +8,7 @@
 
 #include <array>
 #include <cerrno>
+#include <csignal>
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -40,6 +41,8 @@
 #include <simlib/syscalls.hh>
 #include <simlib/timespec_arithmetic.hh>
 #include <simlib/utilities.hh>
+#include <simlib/write_as_bytes.hh>
+#include <simlib/write_exact.hh>
 #include <string_view>
 #include <sys/mman.h>
 #include <sys/mount.h>
@@ -299,7 +302,7 @@ request::Request recv_request() noexcept {
     return req;
 }
 
-void close_request_fds(const request::Request& req) noexcept {
+void close_request_fds_except_result_fd(const request::Request& req) noexcept {
     if (close(req.executable_fd)) {
         die_with_error("close()");
     }
@@ -314,6 +317,19 @@ void close_request_fds(const request::Request& req) noexcept {
     }
     if (req.seccomp_bpf_fd && close(*req.seccomp_bpf_fd)) {
         die_with_error("close()");
+    }
+}
+
+void sigpipe_handler(int /**/) noexcept {};
+
+void ignore_sigpipe() noexcept {
+    struct sigaction sa = {};
+    // Empty handler instead of SIG_IGN, because SIG_IGN is preserved across execve, and we don't
+    // want to affect the tracee
+    sa.sa_handler = &sigpipe_handler;
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGPIPE, &sa, nullptr)) {
+        die_with_error("sigaction()");
     }
 }
 
@@ -337,11 +353,10 @@ struct Error {
     std::string_view description;
 };
 
-void send_ok(Ok resp) noexcept {
+void send_ok(int result_fd, Ok resp) noexcept {
     namespace response = communication::client_supervisor::response;
-    if (send_as_bytes(
-            SOCK_FD,
-            MSG_NOSIGNAL,
+    if (write_as_bytes(
+            result_fd,
             static_cast<response::error_len_t>(0),
             static_cast<response::si::code_t>(resp.tracee_si.code),
             static_cast<response::si::status_t>(resp.tracee_si.status),
@@ -352,22 +367,24 @@ void send_ok(Ok resp) noexcept {
             static_cast<response::cgroup::peak_memory_in_bytes_t>(
                 resp.tracee_cgroup.peak_memory_in_bytes
             )
-        ))
+        ) &&
+        errno != EPIPE) // ignore EPIPE caused by closed other end of the result_fd pipe
     {
-        die_with_error("send()");
+        die_with_error("write()");
     }
 }
 
-void send_error(Error resp) noexcept {
+void send_error(int result_fd, Error resp) noexcept {
     namespace response = communication::client_supervisor::response;
-    if (send_as_bytes(
-            SOCK_FD, MSG_NOSIGNAL, static_cast<response::error_len_t>(resp.description.size())
-        ))
+    if (write_as_bytes(result_fd, static_cast<response::error_len_t>(resp.description.size())) &&
+        errno != EPIPE) // ignore EPIPE caused by closed other end of the result_fd pipe
     {
-        die_with_error("send()");
+        die_with_error("write()");
     }
-    if (send_exact(SOCK_FD, resp.description.data(), resp.description.size(), MSG_NOSIGNAL)) {
-        die_with_error("send()");
+    if (write_exact(result_fd, resp.description.data(), resp.description.size()) &&
+        errno != EPIPE) // ignore EPIPE caused by closed other end of the result_fd pipe
+    {
+        die_with_error("write()");
     }
 }
 
@@ -377,7 +394,8 @@ void read_shared_mem_state_and_send_response(
     volatile communication::supervisor_pid1_tracee::SharedMemState* shared_mem_state,
     Si pid1_si,
     const cgroups::CpuTimes& tracee_cpu_times,
-    uint64_t tracee_cgroup_peak_memory_in_bytes
+    uint64_t tracee_cgroup_peak_memory_in_bytes,
+    int result_fd
 ) noexcept {
     namespace sms = communication::supervisor_pid1_tracee;
     auto res = sms::read_result(shared_mem_state);
@@ -394,23 +412,29 @@ void read_shared_mem_state_and_send_response(
                     !tracee_exec_start_cpu_time_system_usec_opt)
                 {
                     try {
-                        return response::send_error({
-                            .description = concat_tostr(
-                                "tracee process died unexpectedly before execveat() without an "
-                                "error message: ",
-                                res_ok.si.description()
-                            ),
-                        });
+                        return response::send_error(
+                            result_fd,
+                            {
+                                .description = concat_tostr(
+                                    "tracee process died unexpectedly before execveat() without an "
+                                    "error message: ",
+                                    res_ok.si.description()
+                                ),
+                            }
+                        );
                     } catch (...) {
-                        return response::send_error({
-                            .description = noexcept_concat(
-                                "tracee process died unexpectedly before execveat() without an "
-                                "error message: si_code = ",
-                                res_ok.si.code,
-                                ", si_status = ",
-                                res_ok.si.status
-                            ),
-                        });
+                        return response::send_error(
+                            result_fd,
+                            {
+                                .description = noexcept_concat(
+                                    "tracee process died unexpectedly before execveat() without an "
+                                    "error message: si_code = ",
+                                    res_ok.si.code,
+                                    ", si_status = ",
+                                    res_ok.si.status
+                                ),
+                            }
+                        );
                     }
                 }
                 auto tracee_exec_start_time = *tracee_exec_start_time_opt;
@@ -420,46 +444,58 @@ void read_shared_mem_state_and_send_response(
                     *tracee_exec_start_cpu_time_system_usec_opt;
                 auto tracee_waitid_time =
                     WONT_THROW(sms::read(shared_mem_state->tracee_waitid_time).value());
-                return response::send_ok({
-                    .tracee_si = res_ok.si,
-                    .tracee_runtime = tracee_waitid_time - tracee_exec_start_time,
-                    .tracee_cgroup =
-                        {
-                            .cpu_time =
-                                {
-                                    .user_usec = tracee_cpu_times.user_usec -
-                                        tracee_exec_start_cpu_time_user_usec,
-                                    .system_usec = tracee_cpu_times.system_usec -
-                                        tracee_exec_start_cpu_time_system_usec,
-                                },
-                            .peak_memory_in_bytes = tracee_cgroup_peak_memory_in_bytes,
-                        },
-                });
+                return response::send_ok(
+                    result_fd,
+                    {
+                        .tracee_si = res_ok.si,
+                        .tracee_runtime = tracee_waitid_time - tracee_exec_start_time,
+                        .tracee_cgroup =
+                            {
+                                .cpu_time =
+                                    {
+                                        .user_usec = tracee_cpu_times.user_usec -
+                                            tracee_exec_start_cpu_time_user_usec,
+                                        .system_usec = tracee_cpu_times.system_usec -
+                                            tracee_exec_start_cpu_time_system_usec,
+                                    },
+                                .peak_memory_in_bytes = tracee_cgroup_peak_memory_in_bytes,
+                            },
+                    }
+                );
             },
             [&](const sms::result::Error& res_err) noexcept {
-                return response::send_error({
-                    .description = {res_err.description.data(), res_err.description.size()},
-                });
+                return response::send_error(
+                    result_fd,
+                    {
+                        .description = {res_err.description.data(), res_err.description.size()},
+                    }
+                );
             },
             [&](const sms::result::None& /*res_none*/) noexcept {
                 try {
-                    return response::send_error({
-                        .description = concat_tostr(
-                            "pid1 process ",
-                            pid1_si.description(),
-                            " without result or error message"
-                        ),
-                    });
+                    return response::send_error(
+                        result_fd,
+                        {
+                            .description = concat_tostr(
+                                "pid1 process ",
+                                pid1_si.description(),
+                                " without result or error message"
+                            ),
+                        }
+                    );
                 } catch (...) {
-                    return response::send_error({
-                        .description = noexcept_concat(
-                            "pid1 process died (si_code = ",
-                            pid1_si.code,
-                            ", si_status = ",
-                            pid1_si.status,
-                            ") without result or error message"
-                        ),
-                    });
+                    return response::send_error(
+                        result_fd,
+                        {
+                            .description = noexcept_concat(
+                                "pid1 process died (si_code = ",
+                                pid1_si.code,
+                                ", si_status = ",
+                                pid1_si.status,
+                                ") without result or error message"
+                            ),
+                        }
+                    );
                 }
             },
         },
@@ -943,12 +979,19 @@ void set_no_new_privs_for_this_and_all_descendant_processes() noexcept {
 
 } // namespace capabilities
 
+enum class [[nodiscard]] WaitRes {
+    PIDFD_READABLE,
+    REQUEST_CANCELLED,
+};
+
 // Waits for pid1 death or read and write shutdown of the other end of the SOCK_FD (we can't wait
 // only for the read-close)
-void wait_for_pid1_death_or_sock_fd_shutdown(int pid1_pidfd) noexcept {
-    std::array<pollfd, 2> pfds;
+WaitRes
+wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error(int pid1_pidfd, int result_fd) noexcept {
+    std::array<pollfd, 3> pfds;
     auto& sock_fd_pfd = pfds[0];
     auto& pidfd_pfd = pfds[1];
+    auto& response_pfd = pfds[2];
     sock_fd_pfd = {
         .fd = SOCK_FD,
         .events = 0, // wait for POLLHUP i.e. both read and write shutdown of the other end
@@ -959,9 +1002,12 @@ void wait_for_pid1_death_or_sock_fd_shutdown(int pid1_pidfd) noexcept {
         .events = POLLIN,
         .revents = 0,
     };
+    response_pfd = {
+        .fd = result_fd,
+        .events = 0, // wait for POLLERR i.e. read end of the response pipe was closed
+        .revents = 0,
+    };
     for (;;) {
-        sock_fd_pfd.revents = 0;
-        pidfd_pfd.revents = 0;
         int rc = poll(pfds.data(), pfds.size(), -1);
         if (rc == 0 || (rc == -1 && errno == EINTR)) {
             continue;
@@ -975,7 +1021,10 @@ void wait_for_pid1_death_or_sock_fd_shutdown(int pid1_pidfd) noexcept {
             die_with_msg("the other end of the socket was closed");
         }
         if (pidfd_pfd.revents & POLLIN) {
-            return; // pid1 process is waitable
+            return WaitRes::PIDFD_READABLE; // pid1 process is waitable
+        }
+        if (response_pfd.revents & POLLERR) {
+            return WaitRes::REQUEST_CANCELLED; // read end of the response pipe was closed
         }
     }
 }
@@ -1032,6 +1081,8 @@ void main(int argc, char** argv) noexcept {
     capabilities::set_no_new_privs_for_this_and_all_descendant_processes();
 
     auto pid1_seccomp_filter = seccomp::create_filter_for_pid1();
+
+    ignore_sigpipe(); // needed for sending responses
 
     for (;; [&] {
              sms::reset(shared_mem_state);
@@ -1114,19 +1165,42 @@ void main(int argc, char** argv) noexcept {
                 .tracee_seccomp_bpf_fd = request.seccomp_bpf_fd,
             });
         }
-        close_request_fds(request);
-        wait_for_pid1_death_or_sock_fd_shutdown(pid1_pidfd);
+        close_request_fds_except_result_fd(request);
+
+        auto wait_res = wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error(
+            pid1_pidfd, request.result_fd
+        );
+        switch (wait_res) {
+        case WaitRes::PIDFD_READABLE: break;
+        case WaitRes::REQUEST_CANCELLED: {
+            if (syscalls::pidfd_send_signal(pid1_pidfd, SIGKILL, nullptr, 0)) {
+                die_with_error("pidfd_send_signal()");
+            }
+        } break;
+        }
+
         siginfo_t si;
         syscalls::waitid(P_PIDFD, pid1_pidfd, &si, __WALL | WEXITED, nullptr);
-        read_shared_mem_state_and_send_response(
-            shared_mem_state,
-            Si{
-                .code = si.si_code,
-                .status = si.si_status,
-            },
-            cgroups.read_tracee_cgroup_cpu_times(),
-            cgroups.read_tracee_cgroup_peak_memory_usage()
-        );
+
+        switch (wait_res) {
+        case WaitRes::PIDFD_READABLE: {
+            read_shared_mem_state_and_send_response(
+                shared_mem_state,
+                Si{
+                    .code = si.si_code,
+                    .status = si.si_status,
+                },
+                cgroups.read_tracee_cgroup_cpu_times(),
+                cgroups.read_tracee_cgroup_peak_memory_usage(),
+                request.result_fd
+            );
+        } break;
+        case WaitRes::REQUEST_CANCELLED: break;
+        }
+
+        if (close(request.result_fd)) {
+            die_with_error("close()");
+        }
     }
 }
 

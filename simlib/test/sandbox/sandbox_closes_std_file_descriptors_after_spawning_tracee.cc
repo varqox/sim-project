@@ -25,7 +25,7 @@ TEST(sandbox, test_closing_std_file_descriptors) {
             }
             return nullopt;
         };
-        sc.send_request(
+        auto rh = sc.send_request(
             {{tester_executable_path, tester_arg}},
             {
                 .stdin_fd = get_fd_for(STDIN_FILENO),
@@ -36,7 +36,7 @@ TEST(sandbox, test_closing_std_file_descriptors) {
         ASSERT_EQ(close(sfds[0]), 0);
         ASSERT_EQ(close(sfds[1]), 0);
         // Now only tracee should own the file descriptors
-        ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
+        ASSERT_RESULT_OK(sc.await_result(std::move(rh)), CLD_EXITED, 0);
     };
     test(STDIN_FILENO, STDOUT_FILENO, "io");
     test(STDOUT_FILENO, STDERR_FILENO, "oe");

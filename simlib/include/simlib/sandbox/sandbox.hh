@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 #include <sys/types.h>
+#include <utility>
 #include <variant>
 
 namespace sandbox {
@@ -151,20 +152,50 @@ public:
     // Cancels pending and in-progress requests
     ~SupervisorConnection() noexcept(false);
 
-    /// Sends the request and returns immediately without waiting for the request to complete.
-    /// Multiple requests can be send before awaiting completion with
-    /// await_result() - in the same order.
-    /// Throws if there is any error with the supervisor.
-    void send_request(int executable_fd, Slice<std::string_view> argv, const RequestOptions&);
+    class [[nodiscard]] RequestHandle {
+        int result_fd;
+        int uncaught_exceptions_in_constructor = std::uncaught_exceptions();
+
+        explicit RequestHandle(int result_fd) noexcept;
+
+        [[nodiscard]] bool is_cancelled() const noexcept { return result_fd < 0; }
+
+        void do_cancel(bool can_throw);
+
+    public:
+        RequestHandle(const RequestHandle&) = delete;
+
+        RequestHandle(RequestHandle&& rh) noexcept : result_fd{std::exchange(rh.result_fd, -1)} {}
+
+        RequestHandle& operator=(const RequestHandle&) = delete;
+        RequestHandle& operator=(RequestHandle&&) noexcept = delete;
+
+        ~RequestHandle() noexcept(false) {
+            // We cannot throw during the stack unwinding
+            bool can_throw = uncaught_exceptions_in_constructor == std::uncaught_exceptions();
+            do_cancel(can_throw);
+        }
+
+        // no-op on already cancelled request
+        void cancel() { do_cancel(true); }
+
+        friend class SupervisorConnection;
+    };
 
     /// Sends the request and returns immediately without waiting for the request to complete.
-    /// Multiple requests can be send before awaiting completion with
-    /// await_result() - in the same order.
+    /// Multiple requests can be send before awaiting completion with await_result().
     /// Throws if there is any error with the supervisor.
-    void send_request(Slice<std::string_view> argv, const RequestOptions& options = {});
+    [[nodiscard]] RequestHandle
+    send_request(int executable_fd, Slice<std::string_view> argv, const RequestOptions&);
+
+    /// Sends the request and returns immediately without waiting for the request to complete.
+    /// Multiple requests can be send before awaiting completion with await_result().
+    /// Throws if there is any error with the supervisor.
+    [[nodiscard]] RequestHandle
+    send_request(Slice<std::string_view> argv, const RequestOptions& options = {});
 
     /// Throws if there is any error with the supervisor.
-    Result await_result();
+    Result await_result(RequestHandle&& request_handle);
 
 private:
     void kill_and_wait_supervisor() noexcept;

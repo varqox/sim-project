@@ -35,22 +35,22 @@ int main() {
 
     // Ignore a few first runs
     for (size_t i = 0; i < N / 10; i++) {
-        sb.send_request({{"/bin/true"}}, {});
-        sb.await_result();
+        sb.await_result(sb.send_request({{"/bin/true"}}, {}));
     }
 
     benchmark(" synchronous", [&] {
         for (size_t i = 0; i < N; i++) {
-            sb.send_request({{"/bin/true"}}, {});
-            sb.await_result();
+            sb.await_result(sb.send_request({{"/bin/true"}}, {}));
         }
     });
     benchmark("asynchronous", [&] {
+        std::vector<sandbox::SupervisorConnection::RequestHandle> handles;
+        handles.reserve(N);
         for (size_t i = 0; i < N; i++) {
-            sb.send_request({{"/bin/true"}}, {});
+            handles.emplace_back(sb.send_request({{"/bin/true"}}, {}));
         }
         for (size_t i = 0; i < N; i++) {
-            sb.await_result();
+            sb.await_result(std::move(handles[i]));
         }
     });
 }

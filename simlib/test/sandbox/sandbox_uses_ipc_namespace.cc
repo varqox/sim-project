@@ -28,6 +28,11 @@ TEST(sandbox, sandbox_uses_net_namespace) {
         break;
     }
     Defer mq_unlinker = [&] { (void)mq_unlink(name.c_str()); };
-    sc.send_request({{tester_executable_path, name}}, {.stderr_fd = STDERR_FILENO});
-    ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
+    ASSERT_RESULT_OK(
+        sc.await_result(
+            sc.send_request({{tester_executable_path, name}}, {.stderr_fd = STDERR_FILENO})
+        ),
+        CLD_EXITED,
+        0
+    );
 }

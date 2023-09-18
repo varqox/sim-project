@@ -21,8 +21,7 @@ TEST(sandbox, sandbox_terminates_early_upon_client_process_death) {
         throw_assert(sandbox_client_pid != -1);
         if (sandbox_client_pid == 0) {
             auto sc = sandbox::spawn_supervisor();
-            sc.send_request({{"/bin/sleep", "10"}});
-            sc.await_result();
+            sc.await_result(sc.send_request({{"/bin/sleep", "10"}}));
             _exit(0);
         }
         // Kill the sandbox client process randomly in time

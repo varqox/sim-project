@@ -236,10 +236,11 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
     }
 }
 
-SerializedReuest
-serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions& options) {
+SerializedReuest serialize(
+    int result_fd, int executable_fd, Slice<std::string_view> argv, const RequestOptions& options
+) {
     namespace request = communication::client_supervisor::request;
-    auto fds = ArrayVec<int, 5>{executable_fd};
+    auto fds = ArrayVec<int, 6>{result_fd, executable_fd};
     if (options.stdin_fd) {
         fds.emplace(*options.stdin_fd);
     }

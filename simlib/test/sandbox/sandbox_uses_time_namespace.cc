@@ -13,9 +13,12 @@ TEST(sandbox, sandbox_uses_net_namespace) {
     ASSERT_LT(time_ns_id_len, time_ns_id.size());
 
     auto sc = sandbox::spawn_supervisor();
-    sc.send_request(
-        {{tester_executable_path, std::string_view(time_ns_id.data(), time_ns_id_len)}},
-        {.stderr_fd = STDERR_FILENO}
+    ASSERT_RESULT_OK(
+        sc.await_result(sc.send_request(
+            {{tester_executable_path, std::string_view(time_ns_id.data(), time_ns_id_len)}},
+            {.stderr_fd = STDERR_FILENO}
+        )),
+        CLD_EXITED,
+        0
     );
-    ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 0);
 }

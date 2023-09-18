@@ -10,13 +10,14 @@
 namespace sandbox::client::request {
 
 struct SerializedReuest {
-    ArrayVec<int, 5> fds;
+    ArrayVec<int, 6> fds;
     std::array<std::byte, sizeof(communication::client_supervisor::request::body_len_t)> header;
     std::unique_ptr<std::byte[]> body;
     size_t body_len;
 };
 
-SerializedReuest
-serialize(int executable_fd, Slice<std::string_view> argv, const RequestOptions& options);
+SerializedReuest serialize(
+    int result_fd, int executable_fd, Slice<std::string_view> argv, const RequestOptions& options
+);
 
 } // namespace sandbox::client::request

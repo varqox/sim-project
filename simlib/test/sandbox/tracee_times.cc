@@ -12,9 +12,9 @@ using std::chrono::operator""s;
 // NOLINTNEXTLINE
 TEST(sandbox, tracee_runtime_and_cpu_time) {
     auto sc = sandbox::spawn_supervisor();
-    sc.send_request({{"/bin/true"}});
-    sc.send_request({{"/bin/sleep", "0.05"}});
-    auto res_var = sc.await_result();
+    auto rh1 = sc.send_request({{"/bin/true"}});
+    auto rh2 = sc.send_request({{"/bin/sleep", "0.05"}});
+    auto res_var = sc.await_result(std::move(rh1));
     ASSERT_RESULT_OK(res_var, CLD_EXITED, 0);
     auto res = std::get<Ok>(res_var);
     ASSERT_GE(res.runtime, 0s);
@@ -23,7 +23,7 @@ TEST(sandbox, tracee_runtime_and_cpu_time) {
     ASSERT_EQ(res.cgroup.cpu_time.total(), res.cgroup.cpu_time.user + res.cgroup.cpu_time.system);
     ASSERT_LE(res.cgroup.cpu_time.total(), res.runtime);
 
-    res_var = sc.await_result();
+    res_var = sc.await_result(std::move(rh2));
     ASSERT_RESULT_OK(res_var, CLD_EXITED, 0);
     res = std::get<Ok>(res_var);
     ASSERT_GE(res.runtime, 0.05s);
@@ -37,8 +37,8 @@ TEST(sandbox, tracee_runtime_and_cpu_time) {
 // NOLINTNEXTLINE
 TEST(sandbox, tracee_cpu_time_is_accounted) {
     auto sc = sandbox::spawn_supervisor();
-    sc.send_request({{tester_executable_path}}, {.stderr_fd = STDERR_FILENO});
-    auto res_var = sc.await_result();
+    auto res_var =
+        sc.await_result(sc.send_request({{tester_executable_path}}, {.stderr_fd = STDERR_FILENO}));
     ASSERT_RESULT_OK(res_var, CLD_EXITED, 0);
     auto res = std::get<Ok>(res_var);
     SCOPED_TRACE(concat_tostr("real: ", to_string(res.runtime)));

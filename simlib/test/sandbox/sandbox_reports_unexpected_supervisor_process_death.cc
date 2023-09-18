@@ -62,7 +62,7 @@ TEST(sandbox, sandbox_reports_unexpected_supervisor_process_death_in_send_reques
         // kill the supervisor itself and won't report the unexpected death)
         throw_assert(syscalls::waitid(P_ALL, 0, nullptr, __WALL | WEXITED | WNOWAIT, nullptr) == 0);
         try {
-            sc.send_request({{"/bin/true"}});
+            (void)sc.send_request({{"/bin/true"}});
             throw_assert(false && "expected exception to be thrown");
         } catch (const std::exception& e) {
             throw_assert(has_prefix(
@@ -71,7 +71,7 @@ TEST(sandbox, sandbox_reports_unexpected_supervisor_process_death_in_send_reques
         }
         // Sending again should also throw
         try {
-            sc.send_request({{"/bin/true"}});
+            (void)sc.send_request({{"/bin/true"}});
             throw_assert(false && "expected exception to be thrown");
         } catch (const std::exception& e) {
             throw_assert(has_prefix(e.what(), "sandbox supervisor is already dead"));
@@ -91,7 +91,7 @@ TEST(sandbox, sandbox_reports_unexpected_supervisor_process_death_in_await_resul
     if (pid == 0) {
         auto sc = sandbox::spawn_supervisor();
         auto supervisor_pid = get_pid_of_the_only_child_process();
-        sc.send_request({{"/bin/sleep", "infinity"}}
+        auto rh = sc.send_request({{"/bin/sleep", "infinity"}}
         ); // we need an unfinished request, because await_result() returns result of a completed
            // request without error
         throw_assert(kill(supervisor_pid, SIGTERM) == 0);
@@ -100,7 +100,7 @@ TEST(sandbox, sandbox_reports_unexpected_supervisor_process_death_in_await_resul
         // kill the supervisor itself and won't report the unexpected death)
         throw_assert(syscalls::waitid(P_ALL, 0, nullptr, __WALL | WEXITED | WNOWAIT, nullptr) == 0);
         try {
-            sc.await_result();
+            sc.await_result(std::move(rh));
             throw_assert(false && "expected exception to be thrown");
         } catch (const std::exception& e) {
             throw_assert(has_prefix(
@@ -125,15 +125,15 @@ TEST(
     if (pid == 0) {
         auto sc = sandbox::spawn_supervisor();
         auto supervisor_pid = get_pid_of_the_only_child_process();
-        sc.send_request({{"/bin/sh", "-c", "exit 42"}});
-        sc.send_request({{"/bin/sh", "-c", "exit 43"}});
+        auto rh1 = sc.send_request({{"/bin/sh", "-c", "exit 42"}});
+        auto rh2 = sc.send_request({{"/bin/sh", "-c", "exit 43"}});
         auto pipe = pipe2(O_CLOEXEC).value(); // NOLINT(bugprone-unchecked-optional-access)
-        sc.send_request({{"/usr/bin/printf", "x"}}, {.stdout_fd = pipe.writable});
+        auto rh3 = sc.send_request({{"/usr/bin/printf", "x"}}, {.stdout_fd = pipe.writable});
         throw_assert(pipe.writable.close() == 0);
         // Wait for the last command to execute (it may not finish)
         char c;
         throw_assert(read_all(pipe.readable, &c, sizeof(c)) == 1);
-        sc.send_request({{"/bin/sleep", "infinity"}}
+        auto rh4 = sc.send_request({{"/bin/sleep", "infinity"}}
         ); // we need an unfinished request, because await_result() returns result of a completed
            // request without error
         throw_assert(kill(supervisor_pid, SIGTERM) == 0);
@@ -143,12 +143,12 @@ TEST(
         throw_assert(syscalls::waitid(P_ALL, 0, nullptr, __WALL | WEXITED | WNOWAIT, nullptr) == 0);
         bool completed = false;
         try {
-            ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 42);
-            ASSERT_RESULT_OK(sc.await_result(), CLD_EXITED, 43);
+            ASSERT_RESULT_OK(sc.await_result(std::move(rh1)), CLD_EXITED, 42);
+            ASSERT_RESULT_OK(sc.await_result(std::move(rh2)), CLD_EXITED, 43);
             completed = true;
-            sc.await_result(
+            sc.await_result(std::move(rh3)
             ); // it may not fail if the command completed before stoping the supervisor
-            sc.await_result(); // this will always fail if the previous did not
+            sc.await_result(std::move(rh4)); // this will always fail if the previous did not
             throw_assert(false && "expected exception to be thrown");
         } catch (const std::exception& e) {
             throw_assert(has_prefix(
