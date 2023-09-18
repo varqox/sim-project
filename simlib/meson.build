@@ -383,6 +383,7 @@ tests = {
     'test/unlinked_temporary_file.cc': {},
     'test/utilities.cc': {},
     'test/working_directory.cc': {},
+    'test/write_as_bytes.cc': {},
     'test/write_exact.cc': {},
 }
 
