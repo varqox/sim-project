@@ -312,6 +312,7 @@ tests = {
     'test/process.cc': {},
     'test/random.cc': {},
     'test/ranges.cc': {},
+    'test/read_bytes_as.cc': {},
     'test/read_exact.cc': {},
     'test/request_uri_parser.cc': {},
     'test/result.cc': {},
