@@ -164,6 +164,7 @@ simlib = library('simlib',
         'src/time.cc',
         'src/unlinked_temporary_file.cc',
         'src/working_directory.cc',
+        'src/write_exact.cc',
         sandbox_supervisor_dump_c,
         dump_file_as_c_array_gen.process(
             'src/sim/default_checker.c',
@@ -381,6 +382,7 @@ tests = {
     'test/unlinked_temporary_file.cc': {},
     'test/utilities.cc': {},
     'test/working_directory.cc': {},
+    'test/write_exact.cc': {},
 }
 
 foreach test_src, args : tests
