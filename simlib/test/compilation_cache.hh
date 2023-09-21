@@ -1,11 +1,11 @@
 #pragma once
 
 #include <chrono>
+#include <optional>
 #include <simlib/concat_tostr.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/file_path.hh>
-#include <simlib/sim/judge_worker.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
 #include <simlib/time.hh>
@@ -63,23 +63,5 @@ public:
         if (copy_using_rename(file_path, path)) {
             THROW("copy_using_rename()", errmsg());
         }
-    }
-
-    // NOLINTNEXTLINE(readability-make-member-function-const)
-    void cache_compiled_checker(StringView in_cache_path, sim::JudgeWorker& jworker) {
-        auto path = cached_path(in_cache_path);
-        if (create_subdirectories(path) == -1) {
-            THROW("create_subdirectories(", path, ')', errmsg());
-        }
-        jworker.save_compiled_checker(path, copy_using_rename);
-    }
-
-    // NOLINTNEXTLINE(readability-make-member-function-const)
-    void cache_compiled_solution(StringView in_cache_path, sim::JudgeWorker& jworker) {
-        auto path = cached_path(in_cache_path);
-        if (create_subdirectories(path) == -1) {
-            THROW("create_subdirectories(", path, ')', errmsg());
-        }
-        jworker.save_compiled_solution(path, copy_using_rename);
     }
 };

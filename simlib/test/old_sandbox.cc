@@ -7,6 +7,7 @@
 #include <linux/version.h>
 #include <simlib/concurrent/job_processor.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/logger.hh>
 #include <simlib/old_sandbox.hh>
 #include <simlib/path.hh>
 #include <simlib/temporary_file.hh>

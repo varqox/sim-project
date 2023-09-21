@@ -11,4 +11,4 @@ Global memory limit not specified in options - loading it from Simfile
 Auto-scoring: score of the group with id `4` set to 100
 
 >>>> Exception caught <<<<
-Error on test `4a`: Runtime error (thrown at ...)
+Error on test `4a`: Memory limit exceeded (thrown at ...)

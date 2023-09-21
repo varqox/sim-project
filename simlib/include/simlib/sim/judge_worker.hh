@@ -1,11 +1,16 @@
 #pragma once
 
+#include <chrono>
+#include <cstdint>
+#include <memory>
 #include <simlib/concat.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/file_path.hh>
 #include <simlib/logger.hh>
 #include <simlib/macros/stack_unwinding.hh>
-#include <simlib/old_sandbox.hh>
+#include <simlib/sim/judge/compilation_cache.hh>
+#include <simlib/sim/judge/language_suite/suite.hh>
+#include <simlib/sim/judge/test_report.hh>
 #include <simlib/sim/simfile.hh>
 #include <simlib/temporary_directory.hh>
 #include <simlib/time_format_conversions.hh>
@@ -22,6 +27,7 @@ public:
             WA, // Wrong answer
             TLE, // Time limit exceeded
             MLE, // Memory limit exceeded
+            OLE, // Output size limit exceeded
             RTE, // Runtime error
             CHECKER_ERROR,
             SKIPPED,
@@ -33,6 +39,7 @@ public:
             case WA: return CStringView{"Wrong answer"};
             case TLE: return CStringView{"Time limit exceeded"};
             case MLE: return CStringView{"Memory limit exceeded"};
+            case OLE: return CStringView{"Output size limit exceeded"};
             case RTE: return CStringView{"Runtime error"};
             case CHECKER_ERROR: return CStringView{"Checker error"};
             case SKIPPED: return CStringView{"Skipped"};
@@ -44,8 +51,10 @@ public:
 
         std::string name;
         Status status;
-        std::chrono::nanoseconds runtime, time_limit;
-        uint64_t memory_consumed, memory_limit; // in bytes
+        std::chrono::nanoseconds runtime;
+        std::chrono::nanoseconds time_limit;
+        uint64_t memory_consumed; // in bytes
+        uint64_t memory_limit; // in bytes
         std::string comment;
 
         Test(
@@ -125,6 +134,7 @@ public:
         case Test::WA: return "WA";
         case Test::TLE: return "TLE";
         case Test::MLE: return "MLE";
+        case Test::OLE: return "OLE";
         case Test::RTE: return "RTE";
         case Test::CHECKER_ERROR: return "CHECKER_ERROR";
         case Test::SKIPPED: return "SKIPPED";
@@ -137,10 +147,21 @@ public:
     [[nodiscard]] std::string pretty_dump() const { return pretty_dump(&simple_span_status); }
 };
 
-enum class SolutionLanguage { UNKNOWN, C11, C = C11, CPP11, CPP14, CPP17, CPP = CPP17, PASCAL };
+enum class SolutionLanguage {
+    UNKNOWN,
+    C11,
+    C = C11,
+    CPP11,
+    CPP14,
+    CPP17,
+    CPP = CPP17,
+    PASCAL,
+    PYTHON,
+    RUST,
+};
 
 inline bool is_source(StringView file) noexcept {
-    return has_one_of_suffixes(file, ".c", ".cc", ".cpp", ".cxx", ".pas");
+    return has_one_of_suffixes(file, ".c", ".cc", ".cpp", ".cxx", ".pas", ".py", ".rs");
 }
 
 inline SolutionLanguage filename_to_lang(const StringView& filename) {
@@ -151,6 +172,10 @@ inline SolutionLanguage filename_to_lang(const StringView& filename) {
         res = SolutionLanguage::CPP;
     } else if (has_suffix(filename, ".pas")) {
         res = SolutionLanguage::PASCAL;
+    } else if (has_suffix(filename, ".py")) {
+        res = SolutionLanguage::PYTHON;
+    } else if (has_suffix(filename, ".rs")) {
+        res = SolutionLanguage::RUST;
     }
 
     // It is written that way, so the compiler warns when the enum changes
@@ -159,6 +184,8 @@ inline SolutionLanguage filename_to_lang(const StringView& filename) {
     case SolutionLanguage::C:
     case SolutionLanguage::CPP:
     case SolutionLanguage::PASCAL:
+    case SolutionLanguage::PYTHON:
+    case SolutionLanguage::RUST:
         // If missing one, then update above ifs
         return res;
     case SolutionLanguage::CPP11:
@@ -167,6 +194,8 @@ inline SolutionLanguage filename_to_lang(const StringView& filename) {
 
     THROW("Should not reach here");
 }
+
+std::unique_ptr<judge::language_suite::Suite> lang_to_suite(SolutionLanguage lang);
 
 class JudgeLogger {
 protected:
@@ -182,16 +211,11 @@ public:
 
     virtual void begin(bool final) = 0;
 
-    virtual void
-    test(StringView test_name, JudgeReport::Test test_report, OldSandbox::ExitStat es) = 0;
-
     virtual void test(
         StringView test_name,
         JudgeReport::Test test_report,
-        OldSandbox::ExitStat es,
-        OldSandbox::ExitStat checker_es,
-        std::optional<uint64_t> checker_mem_limit,
-        StringView checker_error_str
+        judge::TestReport judge_test_report,
+        uint64_t checker_mem_limit
     ) = 0;
 
     virtual void group_score(int64_t score, int64_t max_score, double score_ratio) = 0;
@@ -207,7 +231,7 @@ public:
 
 class VerboseJudgeLogger : public JudgeLogger {
     Logger dummy_logger_;
-    Logger& logger_;
+    Logger& logger_; // NOLINT
 
     bool after_final_score_{};
     bool first_test_after_final_score_{};
@@ -219,13 +243,24 @@ class VerboseJudgeLogger : public JudgeLogger {
         return DoubleAppender<decltype(log_)>(logger_, log_, std::forward<Args>(args)...);
     }
 
-    template <class Func>
-    void log_test(
-        const StringView& test_name,
-        const JudgeReport::Test& test_report,
-        OldSandbox::ExitStat es,
-        Func&& func
-    ) {
+public:
+    explicit VerboseJudgeLogger(bool log_to_stdlog = false)
+    : dummy_logger_(nullptr)
+    , logger_(log_to_stdlog ? stdlog : dummy_logger_) {}
+
+    void begin(bool final) override {
+        log_.clear();
+        after_final_score_ = first_test_after_final_score_ = false;
+        final_ = final;
+        log("Judging (", (final ? "final" : "initial"), "): {");
+    }
+
+    void test(
+        StringView test_name,
+        JudgeReport::Test test_report,
+        judge::TestReport judge_test_report,
+        uint64_t checker_mem_limit
+    ) override {
         if (after_final_score_) {
             auto gid = sim::Simfile::TestNameComparator::split(test_name).gid;
             if (first_test_after_final_score_) {
@@ -254,78 +289,37 @@ class VerboseJudgeLogger : public JudgeLogger {
         switch (test_report.status) {
         case JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;
         case JudgeReport::Test::MLE: tmplog("\033[1;33mMLE\033[m"); break;
-        case JudgeReport::Test::RTE: tmplog("\033[1;31mRTE\033[m (", es.message, ')'); break;
+        case JudgeReport::Test::OLE: tmplog("\033[1;33mOLE\033[m"); break;
+        case JudgeReport::Test::RTE: tmplog("\033[1;31mRTE\033[m"); break;
         case JudgeReport::Test::OK: tmplog("\033[1;32mOK\033[m"); break;
         case JudgeReport::Test::WA: tmplog("\033[1;31mWA\033[m"); break;
-        case JudgeReport::Test::CHECKER_ERROR:
-            tmplog("\033[1;35mCHECKER ERROR\033[m (Running \033[1;32mOK\033[m)");
-            break;
+        case JudgeReport::Test::CHECKER_ERROR: tmplog("\033[1;35mCHECKER ERROR\033[m"); break;
         case JudgeReport::Test::SKIPPED: tmplog("\033[1;36mSKIPPED\033[m"); break;
+        }
+        if (!test_report.comment.empty()) {
+            tmplog(" (", test_report.comment, ')');
         }
 
         // Rest
         tmplog(
             " [ CPU: ",
-            ::to_string(es.cpu_runtime, false),
+            ::to_string(judge_test_report.program.cpu_time, false),
             " RT: ",
-            ::to_string(es.runtime, false),
+            ::to_string(judge_test_report.program.runtime, false),
             " ]"
         );
 
-        func(tmplog);
-    }
-
-public:
-    explicit VerboseJudgeLogger(bool log_to_stdlog = false)
-    : dummy_logger_(nullptr)
-    , logger_(log_to_stdlog ? stdlog : dummy_logger_) {}
-
-    void begin(bool final) override {
-        log_.clear();
-        after_final_score_ = first_test_after_final_score_ = false;
-        final_ = final;
-        log("Judging (", (final ? "final" : "initial"), "): {");
-    }
-
-    void
-    test(StringView test_name, JudgeReport::Test test_report, OldSandbox::ExitStat es) override {
-        log_test(test_name, test_report, es, [](auto& /*unused*/) {});
-    }
-
-    void test(
-        StringView test_name,
-        JudgeReport::Test test_report,
-        OldSandbox::ExitStat es,
-        OldSandbox::ExitStat checker_es,
-        std::optional<uint64_t> checker_mem_limit,
-        StringView checker_error_str
-    ) override {
-        log_test(test_name, test_report, es, [&](auto& tmplog) {
-            tmplog("  Checker: ");
-
-            // Checker status
-            if (test_report.status == JudgeReport::Test::OK) {
-                tmplog("\033[1;32mOK\033[m ", test_report.comment);
-            } else if (test_report.status == JudgeReport::Test::WA) {
-                tmplog("\033[1;31mWA\033[m ", test_report.comment);
-            } else if (test_report.status == JudgeReport::Test::CHECKER_ERROR) {
-                tmplog("\033[1;35mERROR\033[m ", checker_error_str);
-            } else {
-                return; // Checker was not run
-            }
-
+        if (judge_test_report.checker) {
             tmplog(
-                " [ CPU: ",
-                ::to_string(checker_es.cpu_runtime, false),
+                "  Checker: [ CPU: ",
+                ::to_string(judge_test_report.checker->cpu_time, false),
                 " RT: ",
-                ::to_string(checker_es.runtime, false),
+                ::to_string(judge_test_report.checker->runtime, false),
                 " ] ",
-                checker_es.vm_peak >> 10
+                judge_test_report.checker->peak_memory_in_bytes >> 10
             );
-            if (checker_mem_limit.has_value()) {
-                tmplog(" / ", checker_mem_limit.value() >> 10, " KiB");
-            }
-        });
+            tmplog(" / ", checker_mem_limit >> 10, " KiB");
+        }
     }
 
     void group_score(int64_t score, int64_t max_score, double score_ratio) override {
@@ -387,22 +381,10 @@ public:
     virtual std::string load_as_str(FilePath path) = 0;
 };
 
-/**
- * @brief Manages a judge worker
- * @details Only to use in ONE thread.
- */
-class JudgeWorker {
-    TemporaryDirectory tmp_dir{"/tmp/judge-worker.XXXXXX"};
-    Simfile sf;
-
-    static constexpr const char CHECKER_FILENAME[] = "checker";
-    static constexpr const char SOLUTION_FILENAME[] = "solution";
-
-    std::unique_ptr<PackageLoader> package_loader;
-
-public:
-    std::optional<std::chrono::nanoseconds> checker_time_limit = std::chrono::seconds(10);
-    std::optional<uint64_t> checker_memory_limit = 256 << 20; // 256 MiB
+struct JudgeWorkerOptions {
+    uint64_t max_executable_size_in_bytes = 32 << 20;
+    std::chrono::nanoseconds checker_time_limit = std::chrono::seconds{10};
+    uint64_t checker_memory_limit_in_bytes = 256 << 20;
     // It means that score ratio for runtime in range
     // [score_cut_lambda * time_limit, time_limit] falls linearly to 0.
     // For T = time limit, A = score_cut_lambda * T, the plot of score ratio
@@ -419,8 +401,27 @@ public:
     // |        0                                 |
     // +------------------------------------------+
     double score_cut_lambda = 2.0 / 3; // has to be from [0, 1]
+};
 
-    JudgeWorker() = default;
+/**
+ * @brief Manages a judge worker
+ * @details Only to use in ONE thread.
+ */
+class JudgeWorker {
+    TemporaryDirectory tmp_dir{"/tmp/judge-worker.XXXXXX"};
+    Simfile sf;
+    std::unique_ptr<judge::language_suite::Suite> checker_suite;
+    std::unique_ptr<judge::language_suite::Suite> solution_suite;
+
+    std::unique_ptr<PackageLoader> package_loader;
+
+    uint64_t max_executable_size_in_bytes;
+    std::chrono::nanoseconds checker_time_limit;
+    uint64_t checker_memory_limit_in_bytes;
+    double score_cut_lambda; // has to be from [0, 1]
+
+public:
+    explicit JudgeWorker(JudgeWorkerOptions options = {});
 
     JudgeWorker(const JudgeWorker&) = delete;
     JudgeWorker(JudgeWorker&&) noexcept = default;
@@ -439,105 +440,54 @@ public:
     // Returns a const reference to the loaded package's Simfile
     [[nodiscard]] const Simfile& simfile() const noexcept { return sf; }
 
-private:
-    int compile_impl(
-        FilePath source,
-        SolutionLanguage lang,
-        std::optional<std::chrono::nanoseconds> time_limit,
-        std::string* c_errors,
-        size_t c_errors_max_len,
-        const std::string& proot_path,
-        StringView compilation_source_basename,
-        StringView exec_dest_filename
-    );
-
-public:
-    /// Compiles checker (using sim::compile())
+    /// Compiles checker
     int compile_checker(
-        std::optional<std::chrono::nanoseconds> time_limit,
+        std::chrono::nanoseconds time_limit,
+        uint64_t compiler_memory_limit_in_bytes,
         std::string* c_errors,
         size_t c_errors_max_len,
-        const std::string& proot_path
+        judge::CompilationCache* cache = nullptr,
+        std::optional<std::string> cached_name = std::nullopt
     );
 
-    /// Compiles solution (using sim::compile())
+    /// Compiles solution
     int compile_solution(
         FilePath source,
         SolutionLanguage lang,
-        std::optional<std::chrono::nanoseconds> time_limit,
+        std::chrono::nanoseconds time_limit,
+        uint64_t compiler_memory_limit_in_bytes,
         std::string* c_errors,
         size_t c_errors_max_len,
-        const std::string& proot_path
-    ) {
-        STACK_UNWINDING_MARK;
-        return compile_impl(
-            source,
-            lang,
-            time_limit,
-            c_errors,
-            c_errors_max_len,
-            proot_path,
-            "source",
-            SOLUTION_FILENAME
-        );
-    }
+        judge::CompilationCache* cache = nullptr,
+        std::optional<std::string> cached_name = std::nullopt
+    );
 
-    /// Compiles solution (using sim::compile())
+    /// Compiles solution
     /// @p source should be a path in package main dir e.g. If main dir ==
     /// "foo/" and solution has path "foo/bar/test", then @p source should be
     /// "bar/test"
     int compile_solution_from_package(
         FilePath source,
         SolutionLanguage lang,
-        std::optional<std::chrono::nanoseconds> time_limit,
+        std::chrono::nanoseconds time_limit,
+        uint64_t compiler_memory_limit_in_bytes,
         std::string* c_errors,
         size_t c_errors_max_len,
-        const std::string& proot_path
+        judge::CompilationCache* cache = nullptr,
+        std::optional<std::string> cached_name = std::nullopt
     ) {
         STACK_UNWINDING_MARK;
         auto solution_path = package_loader->load_as_file(source, "source");
-        return compile_impl(
+        return compile_solution(
             solution_path,
             lang,
             time_limit,
+            compiler_memory_limit_in_bytes,
             c_errors,
             c_errors_max_len,
-            proot_path,
-            "source",
-            SOLUTION_FILENAME
+            cache,
+            std::move(cached_name)
         );
-    }
-
-    void load_compiled_checker(FilePath compiled_checker) {
-        STACK_UNWINDING_MARK;
-        thread_fork_safe_copy(
-            compiled_checker, concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), S_0755
-        );
-    }
-
-    void load_compiled_solution(FilePath compiled_solution) {
-        STACK_UNWINDING_MARK;
-        thread_fork_safe_copy(
-            compiled_solution, concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755
-        );
-    }
-
-    void save_compiled_checker(
-        FilePath destination, int (*copy_fn)(FilePath, FilePath, mode_t) = copy
-    ) const {
-        STACK_UNWINDING_MARK;
-        if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), destination, S_0755)) {
-            THROW("copy()", errmsg());
-        }
-    }
-
-    void save_compiled_solution(
-        FilePath destination, int (*copy_fn)(FilePath, FilePath, mode_t) = copy
-    ) const {
-        STACK_UNWINDING_MARK;
-        if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), destination, S_0755)) {
-            THROW("copy()", errmsg());
-        }
     }
 
     /**
@@ -547,14 +497,14 @@ public:
      * @param input_file path to file to set as stdin
      * @param output_file path to file to set as stdout
      * @param time_limit time limit
-     * @param memory_limit memory limit in bytes
+     * @param memory_limit_in_bytes memory limit in bytes
      * @return exit status of running the solution (in the sandbox)
      */
-    [[nodiscard]] OldSandbox::ExitStat run_solution(
+    [[nodiscard]] sandbox::result::Ok run_solution(
         FilePath input_file,
         FilePath output_file,
-        std::optional<std::chrono::nanoseconds> time_limit,
-        std::optional<uint64_t> memory_limit
+        std::chrono::nanoseconds time_limit,
+        uint64_t memory_limit_in_bytes
     ) const;
 
 private:
@@ -564,13 +514,6 @@ private:
         JudgeLogger& judge_log,
         const std::optional<std::function<void(const JudgeReport&)>>& partial_report_callback,
         Func&& judge_on_test
-    ) const;
-
-    JudgeReport judge_interactive(
-        bool final,
-        JudgeLogger& judge_log,
-        const std::optional<std::function<void(const JudgeReport&)>>& partial_report_callback =
-            std::nullopt
     ) const;
 
 public:

@@ -1,5 +1,5 @@
 package: interactive_problem/
-override_main_solution_with: prog/sol_rte1.cc
+override_main_solution_with: prog/sol_mle.cc
 
 name: null
 label: null
