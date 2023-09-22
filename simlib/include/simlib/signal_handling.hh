@@ -8,7 +8,9 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <simlib/defer.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/macros/throw.hh>
 #include <sys/eventfd.h>
 #include <thread>
 #include <type_traits>
