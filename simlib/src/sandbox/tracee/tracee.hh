@@ -20,6 +20,7 @@ struct Args {
     int proc_dirfd;
     int tracee_cgroup_cpu_stat_fd;
     std::optional<int> signal_pid1_to_setup_tracee_cpu_timer_fd;
+    int fd_to_close_upon_execve;
 
     struct LinuxNamespaces {
         struct User {

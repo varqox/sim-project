@@ -152,11 +152,37 @@ public:
     // Cancels pending and in-progress requests
     ~SupervisorConnection() noexcept(false);
 
-    class [[nodiscard]] RequestHandle {
-        int result_fd;
+    class RequestHandle;
+
+    class [[nodiscard]] KillRequestHandle {
+        int kill_fd;
         int uncaught_exceptions_in_constructor = std::uncaught_exceptions();
 
-        explicit RequestHandle(int result_fd) noexcept;
+        explicit KillRequestHandle(int kill_fd) noexcept : kill_fd{kill_fd} {}
+
+    public:
+        KillRequestHandle(const KillRequestHandle&) = delete;
+
+        KillRequestHandle(KillRequestHandle&& krh) noexcept
+        : kill_fd{std::exchange(krh.kill_fd, -1)} {}
+
+        KillRequestHandle& operator=(const KillRequestHandle&) = delete;
+        KillRequestHandle& operator=(KillRequestHandle&&) noexcept = delete;
+
+        ~KillRequestHandle() noexcept(false);
+
+        // no-op on already killed or cancelled request
+        void kill();
+
+        friend class SupervisorConnection::RequestHandle;
+    };
+
+    class [[nodiscard]] RequestHandle {
+        int result_fd;
+        int kill_fd;
+        int uncaught_exceptions_in_constructor = std::uncaught_exceptions();
+
+        explicit RequestHandle(int result_fd, int kill_fd) noexcept;
 
         [[nodiscard]] bool is_cancelled() const noexcept { return result_fd < 0; }
 
@@ -165,19 +191,24 @@ public:
     public:
         RequestHandle(const RequestHandle&) = delete;
 
-        RequestHandle(RequestHandle&& rh) noexcept : result_fd{std::exchange(rh.result_fd, -1)} {}
+        RequestHandle(RequestHandle&& rh) noexcept
+        : result_fd{std::exchange(rh.result_fd, -1)}
+        , kill_fd{std::exchange(rh.kill_fd, -1)} {}
 
         RequestHandle& operator=(const RequestHandle&) = delete;
         RequestHandle& operator=(RequestHandle&&) noexcept = delete;
 
-        ~RequestHandle() noexcept(false) {
-            // We cannot throw during the stack unwinding
-            bool can_throw = uncaught_exceptions_in_constructor == std::uncaught_exceptions();
-            do_cancel(can_throw);
-        }
+        // Cancels the request
+        ~RequestHandle() noexcept(false);
 
         // no-op on already cancelled request
         void cancel() { do_cancel(true); }
+
+        // returned fd can be polled with POLLIN
+        [[nodiscard]] int pollable_fd() const noexcept { return result_fd; }
+
+        // can be called only once
+        KillRequestHandle get_kill_handle() noexcept;
 
         friend class SupervisorConnection;
     };

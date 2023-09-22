@@ -12,6 +12,7 @@ namespace sandbox::supervisor::request {
 
 struct Request {
     int result_fd;
+    int kill_tracee_fd;
     int executable_fd;
     std::optional<int> stdin_fd;
     std::optional<int> stdout_fd;

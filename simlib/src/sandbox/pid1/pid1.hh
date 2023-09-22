@@ -22,6 +22,7 @@ struct Args {
     std::vector<char*> argv; // with a trailing nullptr element
     std::vector<char*> env; // with a trailing nullptr element
     int supervisor_pidfd;
+    int fd_to_close_upon_execve;
     int tracee_cgroup_fd;
     int tracee_cgroup_kill_fd;
     int tracee_cgroup_cpu_stat_fd;

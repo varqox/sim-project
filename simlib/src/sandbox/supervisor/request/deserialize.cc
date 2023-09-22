@@ -245,6 +245,7 @@ void deserialize(Reader& reader, ArrayVec<int, 253>& fds, Request& req) {
         return fds[fds_taken++];
     };
     req.result_fd = take_fd();
+    req.kill_tracee_fd = take_fd();
     req.executable_fd = take_fd();
     {
         namespace fds = request::fds;

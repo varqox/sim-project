@@ -302,7 +302,7 @@ request::Request recv_request() noexcept {
     return req;
 }
 
-void close_request_fds_except_result_fd(const request::Request& req) noexcept {
+void close_request_fds_except_result_fd_and_kill_tracee_fd(const request::Request& req) noexcept {
     if (close(req.executable_fd)) {
         die_with_error("close()");
     }
@@ -979,19 +979,42 @@ void set_no_new_privs_for_this_and_all_descendant_processes() noexcept {
 
 } // namespace capabilities
 
+namespace killing_request {
+
+struct Fds {
+    int fd_to_wait_on_for_close_of_the_other_fd;
+    int fd_to_close_upon_execve;
+};
+
+Fds open_fds() noexcept {
+    int pfd[2];
+    if (pipe2(pfd, O_CLOEXEC)) {
+        die_with_error("pipe2()");
+    }
+    return {
+        .fd_to_wait_on_for_close_of_the_other_fd = pfd[0],
+        .fd_to_close_upon_execve = pfd[1],
+    };
+}
+
+} // namespace killing_request
+
 enum class [[nodiscard]] WaitRes {
     PIDFD_READABLE,
     REQUEST_CANCELLED,
+    KILL_TRACEE,
 };
 
 // Waits for pid1 death or read and write shutdown of the other end of the SOCK_FD (we can't wait
 // only for the read-close)
-WaitRes
-wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error(int pid1_pidfd, int result_fd) noexcept {
-    std::array<pollfd, 3> pfds;
+WaitRes wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error_or_kill_fd(
+    int pid1_pidfd, int result_fd, int kill_tracee_fd
+) noexcept {
+    std::array<pollfd, 4> pfds;
     auto& sock_fd_pfd = pfds[0];
     auto& pidfd_pfd = pfds[1];
     auto& response_pfd = pfds[2];
+    auto& kill_tracee_pfd = pfds[3];
     sock_fd_pfd = {
         .fd = SOCK_FD,
         .events = 0, // wait for POLLHUP i.e. both read and write shutdown of the other end
@@ -1005,6 +1028,11 @@ wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error(int pid1_pidfd, int r
     response_pfd = {
         .fd = result_fd,
         .events = 0, // wait for POLLERR i.e. read end of the response pipe was closed
+        .revents = 0,
+    };
+    kill_tracee_pfd = {
+        .fd = kill_tracee_fd,
+        .events = POLLIN,
         .revents = 0,
     };
     for (;;) {
@@ -1025,6 +1053,9 @@ wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error(int pid1_pidfd, int r
         }
         if (response_pfd.revents & POLLERR) {
             return WaitRes::REQUEST_CANCELLED; // read end of the response pipe was closed
+        }
+        if (kill_tracee_pfd.revents & POLLIN) {
+            return WaitRes::KILL_TRACEE;
         }
     }
 }
@@ -1090,6 +1121,7 @@ void main(int argc, char** argv) noexcept {
          }())
     {
         auto request = recv_request();
+        auto killing_request_fds = killing_request::open_fds();
 
         cgroups.set_tracee_limits(request.cgroup);
 
@@ -1117,6 +1149,7 @@ void main(int argc, char** argv) noexcept {
                 .argv = std::move(request.argv),
                 .env = std::move(request.env),
                 .supervisor_pidfd = supervisor_pidfd,
+                .fd_to_close_upon_execve = killing_request_fds.fd_to_close_upon_execve,
                 .tracee_cgroup_fd = cgroups.tracee_cgroup_fd,
                 .tracee_cgroup_kill_fd = cgroups.tracee_cgroup_kill_fd,
                 .tracee_cgroup_cpu_stat_fd = cgroups.tracee_cgroup_cpu_stat_fd,
@@ -1165,10 +1198,13 @@ void main(int argc, char** argv) noexcept {
                 .tracee_seccomp_bpf_fd = request.seccomp_bpf_fd,
             });
         }
-        close_request_fds_except_result_fd(request);
+        close_request_fds_except_result_fd_and_kill_tracee_fd(request);
+        if (close(killing_request_fds.fd_to_close_upon_execve)) {
+            die_with_error("close()");
+        }
 
-        auto wait_res = wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error(
-            pid1_pidfd, request.result_fd
+        auto wait_res = wait_for_pid1_death_or_sock_fd_shutdown_or_result_fd_error_or_kill_fd(
+            pid1_pidfd, request.result_fd, request.kill_tracee_fd
         );
         switch (wait_res) {
         case WaitRes::PIDFD_READABLE: break;
@@ -1177,13 +1213,25 @@ void main(int argc, char** argv) noexcept {
                 die_with_error("pidfd_send_signal()");
             }
         } break;
+        case WaitRes::KILL_TRACEE: {
+            char c;
+            if (read(killing_request_fds.fd_to_wait_on_for_close_of_the_other_fd, &c, sizeof(c)) <
+                0)
+            {
+                die_with_error("read()");
+            }
+            if (write(cgroups.tracee_cgroup_kill_fd, "1", 1) < 0) {
+                die_with_error("write()");
+            }
+        } break;
         }
 
         siginfo_t si;
         syscalls::waitid(P_PIDFD, pid1_pidfd, &si, __WALL | WEXITED, nullptr);
 
         switch (wait_res) {
-        case WaitRes::PIDFD_READABLE: {
+        case WaitRes::PIDFD_READABLE:
+        case WaitRes::KILL_TRACEE: {
             read_shared_mem_state_and_send_response(
                 shared_mem_state,
                 Si{
@@ -1199,6 +1247,12 @@ void main(int argc, char** argv) noexcept {
         }
 
         if (close(request.result_fd)) {
+            die_with_error("close()");
+        }
+        if (close(request.kill_tracee_fd)) {
+            die_with_error("close()");
+        }
+        if (close(killing_request_fds.fd_to_wait_on_for_close_of_the_other_fd)) {
             die_with_error("close()");
         }
     }

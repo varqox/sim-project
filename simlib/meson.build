@@ -328,6 +328,7 @@ tests = {
     'test/sandbox/external/polling_signalfd_sigchld_and_waitpid_work.cc': {},
     'test/sandbox/external/sigpipe_send_recv.cc': {},
     'test/sandbox/invalid_request.cc': {},
+    'test/sandbox/killing_request.cc': {},
     'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee.cc': {'tester': 'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee_tester.cc'},
     'test/sandbox/sandbox_closes_unnecessary_file_descriptors.cc': {'tester': 'test/sandbox/sandbox_closes_unnecessary_file_descriptors_tester.cc'},
     'test/sandbox/sandbox_mount_namespace.cc': {'tester': 'test/sandbox/sandbox_mount_namespace_tester.cc', 'priority': 10},

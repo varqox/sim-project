@@ -78,6 +78,15 @@ TEST(sandbox, requests_and_cancelling_after_cancelling_request_work) {
 }
 
 // NOLINTNEXTLINE
+TEST(sandbox, killing_after_cancelling_request_works) {
+    auto sc = sandbox::spawn_supervisor();
+    sc.send_request({{"/bin/sleep", "10"}}).cancel();
+    auto rh = sc.send_request({{"/bin/sleep", "10"}});
+    rh.get_kill_handle().kill();
+    ASSERT_RESULT_OK(sc.await_result(std::move(rh)), CLD_KILLED, SIGKILL);
+}
+
+// NOLINTNEXTLINE
 TEST(sandbox, cancelling_does_not_interfere_with_other_requests) {
     auto sc = sandbox::spawn_supervisor();
     auto rh1 = sc.send_request({{"/bin/true"}});

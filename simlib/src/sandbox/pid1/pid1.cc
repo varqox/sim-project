@@ -719,6 +719,8 @@ namespace sandbox::pid1 {
             .signal_pid1_to_setup_tracee_cpu_timer_fd = pipe_to_signal_to_setup_tracee_cpu_timer
                 ? optional{pipe_to_signal_to_setup_tracee_cpu_timer->write_fd}
                 : std::nullopt,
+
+            .fd_to_close_upon_execve = args.fd_to_close_upon_execve,
             .linux_namespaces =
                 {
                     .user =

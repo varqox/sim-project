@@ -24,8 +24,10 @@
 #include <simlib/syscalls.hh>
 #include <simlib/to_string.hh>
 #include <simlib/utilities.hh>
+#include <simlib/write_as_bytes.hh>
 #include <string>
 #include <string_view>
+#include <sys/eventfd.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -169,13 +171,48 @@ SupervisorConnection spawn_supervisor() {
     return SupervisorConnection{sock_fd, supervisor_pidfd, supervisor_error_fd};
 }
 
-SupervisorConnection::RequestHandle::RequestHandle(int result_fd) noexcept : result_fd{result_fd} {}
+SupervisorConnection::KillRequestHandle::~KillRequestHandle() noexcept(false) {
+    // We cannot throw during the stack unwinding
+    bool can_throw = uncaught_exceptions_in_constructor == std::uncaught_exceptions();
+    if (kill_fd != -1 && close(kill_fd) && can_throw) {
+        THROW("close()", errmsg());
+    }
+}
+
+void SupervisorConnection::KillRequestHandle::kill() {
+    if (kill_fd != -1) {
+        if (write_as_bytes(kill_fd, uint64_t{1})) {
+            THROW("write()", errmsg());
+        }
+        if (close(std::exchange(kill_fd, -1))) {
+            THROW("close()", errmsg());
+        }
+    }
+}
+
+SupervisorConnection::RequestHandle::RequestHandle(int result_fd, int kill_fd) noexcept
+: result_fd{result_fd}
+, kill_fd{kill_fd} {}
 
 void SupervisorConnection::RequestHandle::do_cancel(bool can_throw) {
     if (is_cancelled()) {
         return;
     }
     if (close(std::exchange(result_fd, -1)) && can_throw) {
+        THROW("close()", errmsg());
+    }
+}
+
+SupervisorConnection::KillRequestHandle
+SupervisorConnection::RequestHandle::get_kill_handle() noexcept {
+    return KillRequestHandle{std::exchange(kill_fd, -1)};
+}
+
+SupervisorConnection::RequestHandle::~RequestHandle() noexcept(false) {
+    // We cannot throw during the stack unwinding
+    bool can_throw = uncaught_exceptions_in_constructor == std::uncaught_exceptions();
+    do_cancel(can_throw);
+    if (kill_fd != -1 && close(kill_fd) && can_throw) {
         THROW("close()", errmsg());
     }
 }
@@ -198,8 +235,13 @@ SupervisorConnection::RequestHandle SupervisorConnection::send_request(
         THROW("pipe2()", errmsg());
     }
 
+    auto kill_fd = FileDescriptor{eventfd(0, EFD_CLOEXEC)};
+    if (!kill_fd.is_open()) {
+        THROW("eventfd()", errmsg());
+    }
+
     auto serialized_request =
-        client::request::serialize(result_pipe->writable, executable_fd, argv, options);
+        client::request::serialize(result_pipe->writable, kill_fd, executable_fd, argv, options);
     auto rc = send_fds<serialized_request.fds.max_size()>(
         sock_fd,
         serialized_request.header.data(),
@@ -233,7 +275,7 @@ SupervisorConnection::RequestHandle SupervisorConnection::send_request(
         THROW("close()", errmsg());
     }
 
-    return RequestHandle{result_pipe->readable.release()};
+    return RequestHandle{result_pipe->readable.release(), kill_fd.release()};
 }
 
 SupervisorConnection::RequestHandle
