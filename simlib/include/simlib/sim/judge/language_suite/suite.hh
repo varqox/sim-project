@@ -6,6 +6,7 @@
 #include <simlib/file_descriptor.hh>
 #include <simlib/result.hh>
 #include <simlib/sandbox/sandbox.hh>
+#include <simlib/sim/judge/compilation_cache.hh>
 #include <simlib/slice.hh>
 #include <string_view>
 #include <vector>
@@ -33,6 +34,13 @@ public:
         std::chrono::nanoseconds cpu_time_limit;
         uint64_t memory_limit_in_bytes;
         uint64_t max_file_size_in_bytes;
+
+        struct Cache {
+            CompilationCache& compilation_cache; // NOLINT
+            std::string_view cached_name;
+        };
+
+        std::optional<Cache> cache = std::nullopt;
     };
 
     [[nodiscard]] virtual bool is_supported() = 0;

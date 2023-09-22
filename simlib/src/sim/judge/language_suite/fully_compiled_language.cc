@@ -1,7 +1,10 @@
+#include <algorithm>
 #include <chrono>
 #include <fcntl.h>
 #include <simlib/errmsg.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_path.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/merge.hh>
 #include <simlib/overloaded.hh>
@@ -58,12 +61,28 @@ FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
         THROW("close()", errmsg());
     }
 
+    if (options.cache &&
+        options.cache->compilation_cache.copy_from_cache_if_newer_than(
+            options.cache->cached_name,
+            executable_tmp_file.path(),
+            std::max(get_modification_time(source), get_modification_time(compiler_executable_fd))
+        ))
+    {
+        executable_file_fd.open(executable_tmp_file.path(), O_RDONLY | O_CLOEXEC);
+        if (!executable_file_fd.is_open()) {
+            THROW("open()");
+        }
+        return Ok{};
+    }
+
     auto compilation_errors_fd = FileDescriptor{memfd_create("compilation errors fd", MFD_CLOEXEC)};
     if (!compilation_errors_fd.is_open()) {
         THROW("memfd_create()", errmsg());
     }
 
-    auto sres = compile_impl(source, executable_tmp_file.path(), compilation_errors_fd, options);
+    auto cache = options.cache;
+    auto sres =
+        compile_impl(source, executable_tmp_file.path(), compilation_errors_fd, std::move(options));
     return std::visit(
         overloaded{
             [&](const sandbox::result::Ok& ok) -> Result<void, FileDescriptor> {
@@ -71,6 +90,11 @@ FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
                     executable_file_fd.open(executable_tmp_file.path(), O_RDONLY | O_CLOEXEC);
                     if (!executable_file_fd.is_open()) {
                         THROW("open()");
+                    }
+                    if (cache) {
+                        cache->compilation_cache.save_or_override(
+                            cache->cached_name, executable_tmp_file.path()
+                        );
                     }
                     return Ok{};
                 }
