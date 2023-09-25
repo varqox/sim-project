@@ -63,6 +63,7 @@ Suite::RunHandle Bash::async_run(
                                     CreateDir{.path = "/../lib64"},
                                     CreateDir{.path = "/../usr"},
                                     CreateDir{.path = "/../usr/lib"},
+                                    CreateDir{.path = "/../usr/lib64"},
                                     CreateFile{.path = "/../source.sh"},
                                     BindMount{
                                         .source = "/lib",
@@ -77,6 +78,11 @@ Suite::RunHandle Bash::async_run(
                                     BindMount{
                                         .source = "/usr/lib",
                                         .dest = "/../usr/lib",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/usr/lib64",
+                                        .dest = "/../usr/lib64",
                                         .no_exec = false,
                                     },
                                     BindMount{

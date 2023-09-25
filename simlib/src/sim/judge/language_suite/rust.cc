@@ -143,6 +143,7 @@ sandbox::Result Rust::run_compiler(
                                         CreateDir{.path = "/../usr"},
                                         CreateDir{.path = "/../usr/bin"},
                                         CreateDir{.path = "/../usr/lib"},
+                                        CreateDir{.path = "/../usr/lib64"},
                                         BindMount{
                                             .source = "/lib",
                                             .dest = "/../lib",
@@ -161,6 +162,11 @@ sandbox::Result Rust::run_compiler(
                                         BindMount{
                                             .source = "/usr/lib",
                                             .dest = "/../usr/lib",
+                                            .no_exec = false,
+                                        },
+                                        BindMount{
+                                            .source = "/usr/lib64",
+                                            .dest = "/../usr/lib64",
                                             .no_exec = false,
                                         },
                                     },

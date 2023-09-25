@@ -20,7 +20,7 @@ namespace sim::judge::language_suite {
 
 Python::Python()
 : FullyInterpretedLanguage{
-      "/usr/bin/python", [] {
+      "/usr/bin/python3", [] {
           auto bpf = sandbox::seccomp::BpfBuilder{};
           sandbox::seccomp::allow_common_safe_syscalls(bpf);
           bpf.allow_syscall(SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{FIOCLEX});
@@ -35,7 +35,7 @@ Suite::RunHandle Python::async_run(
 ) {
     return RunHandle{sc.send_request(
         interpreter_executable_fd,
-        merge(std::vector<std::string_view>{"python", "source.py"}, args),
+        merge(std::vector<std::string_view>{"python3", "source.py"}, args),
         {
             .stdin_fd = options.stdin_fd,
             .stdout_fd = options.stdout_fd,
@@ -64,6 +64,7 @@ Suite::RunHandle Python::async_run(
                                     CreateDir{.path = "/../lib64"},
                                     CreateDir{.path = "/../usr"},
                                     CreateDir{.path = "/../usr/lib"},
+                                    CreateDir{.path = "/../usr/lib64"},
                                     CreateFile{.path = "/../source.py"},
                                     BindMount{
                                         .source = "/lib",
@@ -78,6 +79,11 @@ Suite::RunHandle Python::async_run(
                                     BindMount{
                                         .source = "/usr/lib",
                                         .dest = "/../usr/lib",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/usr/lib64",
+                                        .dest = "/../usr/lib64",
                                         .no_exec = false,
                                     },
                                     BindMount{

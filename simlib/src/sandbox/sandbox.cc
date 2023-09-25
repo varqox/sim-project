@@ -93,7 +93,7 @@ namespace sandbox {
     }
 
     // Execute the supervisor
-    char str_systemd_run[] = "/sbin/systemd-run";
+    char str_systemd_run[] = "/usr/bin/systemd-run";
     char str_arg_user[] = "--user";
     char str_arg_scope[] = "--scope"; // preserve the execution environment
     char str_arg_property_delegate[] = "--property=Delegate=yes";

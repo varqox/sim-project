@@ -120,6 +120,7 @@ sandbox::Result Cpp_GCC::run_compiler(
                                                 CreateDir{.path = "/../usr/bin"},
                                                 CreateDir{.path = "/../usr/include"},
                                                 CreateDir{.path = "/../usr/lib"},
+                                                CreateDir{.path = "/../usr/lib64"},
                                                 BindMount{
                                                     .source = "/lib",
                                                     .dest = "/../lib",
@@ -142,6 +143,11 @@ sandbox::Result Cpp_GCC::run_compiler(
                                                 BindMount{
                                                     .source = "/usr/lib",
                                                     .dest = "/../usr/lib",
+                                                    .no_exec = false,
+                                                },
+                                                BindMount{
+                                                    .source = "/usr/lib64",
+                                                    .dest = "/../usr/lib64",
                                                     .no_exec = false,
                                                 },
                                             },
