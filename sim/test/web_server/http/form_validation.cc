@@ -14,7 +14,8 @@
 #include <sim/sql_fields/varbinary.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/enum_val.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
+#include <simlib/macros/stringify.hh>
 #include <simlib/random_bytes.hh>
 #include <simlib/ranges.hh>
 #include <simlib/result.hh>
@@ -200,7 +201,7 @@ test_str_common(ValidationTest<StrType>& t, std::optional<size_t> max_len = std:
         auto str = random_bytes(len);
         VALIDATE_CHECK(t, str, Ok{str});
     }
-    if (const auto len = max_len.value_or(70'000); len > 0) {
+    if (const auto len = max_len.value_or(70000); len > 0) {
         auto str = random_bytes(len);
         VALIDATE_CHECK(t, str, Ok{str});
     }

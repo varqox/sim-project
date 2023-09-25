@@ -126,9 +126,7 @@ void MergeProblems::run_impl() {
                 default_priority(Job::Type::REJUDGE_SUBMISSION),
                 EnumVal(Job::Type::REJUDGE_SUBMISSION),
                 mysql_date(),
-                sim::jobs::dump_string(
-                    intentional_unsafe_string_view(to_string(info_.target_problem_id))
-                ),
+                sim::jobs::dump_string(from_unsafe{to_string(info_.target_problem_id)}),
                 donor_problem_id_
             );
     }

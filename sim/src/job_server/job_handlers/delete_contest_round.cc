@@ -2,6 +2,7 @@
 #include "delete_contest_round.hh"
 
 #include <sim/jobs/job.hh>
+#include <simlib/time.hh>
 
 using sim::jobs::Job;
 

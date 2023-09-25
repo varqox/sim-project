@@ -61,9 +61,9 @@ static void update_db_schema(Func&& prepare_database) {
     OpenedTemporaryFile mysql_cnf("/tmp/sim-upgrade-mysql-cnf.XXXXXX");
     write_all_throw(
         mysql_cnf,
-        intentional_unsafe_string_view(concat(
+        from_unsafe{concat(
             "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd, "\"\n"
-        ))
+        )}
     );
 
     static constexpr auto backup_table_suffix = "_bkp";
@@ -86,7 +86,7 @@ static void update_db_schema(Func&& prepare_database) {
     });
 
     ErrDefer save_backup = [&] {
-        for (int i = 0; i < 100000; ++i) {
+        for (int i = 0; i < 100'000; ++i) {
             auto filename = concat("db-backup.", i);
             if (access(filename, F_OK) == 0) {
                 continue;
@@ -170,9 +170,8 @@ static void update_db_schema(Func&& prepare_database) {
 static int perform_upgrade() {
     STACK_UNWINDING_MARK;
 
-    conn.update("ALTER TABLE problems RENAME COLUMN owner TO owner_id");
-    conn.update("ALTER TABLE problems RENAME COLUMN added TO created_at");
-    conn.update("ALTER TABLE problems RENAME COLUMN last_edit TO updated_at");
+    conn.update("UPDATE submissions SET initial_status=6 WHERE initial_status=5");
+    conn.update("UPDATE submissions SET full_status=6 WHERE full_status=5");
 
     // update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
 
@@ -208,14 +207,14 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
         if (argv[i][0] == '-') {
             if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help")) { // Help
                 print_help(argv[0]); // argv[0] is valid (argc > 1)
-                exit(0);
+                _exit(0);
 
             } else if (0 == strcmp(argv[i], "-q") or 0 == strcmp(argv[i], "--quiet"))
             { // Quiet mode
                 stdlog.open("/dev/null");
 
             } else { // Unknown
-                eprintf("Unknown option: '%s'\n", argv[i]);
+                (void)fprintf(stderr, "Unknown option: '%s'\n", argv[i]);
             }
 
         } else {

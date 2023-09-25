@@ -11,7 +11,9 @@
 #include <sim/sql_fields/blob.hh>
 #include <sim/sql_fields/datetime.hh>
 #include <sim/users/user.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
+#include <simlib/meta/max.hh>
+#include <simlib/meta/min.hh>
 
 namespace sim::submissions {
 
@@ -28,6 +30,8 @@ struct Submission {
         (PASCAL, 2, "pascal")
         (CPP14, 3, "cpp14")
         (CPP17, 4, "cpp17")
+        (PYTHON, 5, "python")
+        (RUST, 6, "rust")
     );
 
     // Initial and final values may be combined, but special not
@@ -37,7 +41,8 @@ struct Submission {
         (WA, 2, "wa")
         (TLE, 3, "tle")
         (MLE, 4, "mle")
-        (RTE, 5, "rte")
+        (OLE, 5, "ole")
+        (RTE, 6, "rte")
         // Special
         (PENDING, 8 + 0, "pending")
         // Fatal
@@ -88,6 +93,8 @@ constexpr const char* to_string(Submission::Language x) {
     case Submission::Language::CPP14: return "C++14";
     case Submission::Language::CPP17: return "C++17";
     case Submission::Language::PASCAL: return "Pascal";
+    case Submission::Language::PYTHON: return "Python";
+    case Submission::Language::RUST: return "Rust";
     }
     return "Unknown";
 }
@@ -99,6 +106,8 @@ constexpr const char* to_extension(Submission::Language x) {
     case Submission::Language::CPP14:
     case Submission::Language::CPP17: return ".cpp";
     case Submission::Language::PASCAL: return ".pas";
+    case Submission::Language::PYTHON: return ".py";
+    case Submission::Language::RUST: return ".rs";
     }
     return "Unknown";
 }
@@ -110,6 +119,8 @@ constexpr const char* to_mime(Submission::Language x) {
     case Submission::Language::CPP14:
     case Submission::Language::CPP17: return "text/x-c++src";
     case Submission::Language::PASCAL: return "text/x-pascal";
+    case Submission::Language::PYTHON: return "text/x-python";
+    case Submission::Language::RUST: return "text/x-rust";
     }
     return "Unknown";
 }
@@ -121,6 +132,7 @@ static_assert(
         Submission::Status::WA,
         Submission::Status::TLE,
         Submission::Status::MLE,
+        Submission::Status::OLE,
         Submission::Status::RTE
     ) < Submission::Status::PENDING,
     "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
@@ -151,7 +163,8 @@ constexpr const char* css_color_class(Submission::Status status) noexcept {
     case Submission::Status::OK: return "green";
     case Submission::Status::WA: return "red";
     case Submission::Status::TLE:
-    case Submission::Status::MLE: return "yellow";
+    case Submission::Status::MLE:
+    case Submission::Status::OLE: return "yellow";
     case Submission::Status::RTE: return "intense-red";
     case Submission::Status::PENDING: return "";
     case Submission::Status::COMPILATION_ERROR: return "purple";

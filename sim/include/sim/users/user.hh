@@ -6,7 +6,7 @@
 #include <sim/sql_fields/satisfying_predicate.hh>
 #include <sim/sql_fields/varbinary.hh>
 #include <simlib/enum_val.hh>
-#include <simlib/enum_with_string_conversions.hh>
+#include <simlib/macros/enum_with_string_conversions.hh>
 
 namespace sim::users {
 
@@ -22,7 +22,7 @@ struct User {
         return std::all_of(username.begin(), username.end(), [](int c) {
             return (is_alnum(c) || c == '_' || c == '-');
         });
-    };
+    }
 
     static inline const char is_username_description[] =
         "a string consisting only of the characters [a-zA-Z0-9_-]";

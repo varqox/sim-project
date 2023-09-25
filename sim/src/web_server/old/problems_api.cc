@@ -10,6 +10,7 @@
 #include <simlib/enum_val.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/humanize.hh>
 #include <simlib/libzip.hh>
 #include <simlib/sim/problem_package.hh>
@@ -51,7 +52,7 @@ void Sim::api_problems() {
     qwhere.append(
         " FROM problems p LEFT JOIN users u ON p.owner_id=u.id "
         "LEFT JOIN submissions s ON s.owner=",
-        (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id)) : "''"),
+        (session.has_value() ? StringView{from_unsafe{to_string(session->user_id)}} : "''"),
         " AND s.problem_id=p.id AND s.problem_final=1 "
         "WHERE TRUE"
     ); // Needed to easily append constraints
@@ -127,9 +128,7 @@ void Sim::api_problems() {
             } else if (arg_id == "CON") {
                 qwhere.append(" AND p.type=", EnumVal(Problem::Type::CONTEST_ONLY).to_int());
             } else {
-                return api_error400(
-                    intentional_unsafe_string_view(concat("Invalid problem type: ", arg_id))
-                );
+                return api_error400(from_unsafe{concat("Invalid problem type: ", arg_id)});
             }
 
             mask |= PTYPE_COND;
@@ -588,10 +587,8 @@ void Sim::api_statement_impl(
         resp.headers["Content-type"] = "text/markdown; charset=utf-8";
     }
 
-    resp.headers["Content-Disposition"] = concat_tostr(
-        "inline; filename=",
-        ::http::quote(intentional_unsafe_string_view(concat(problem_label, ext)))
-    );
+    resp.headers["Content-Disposition"] =
+        concat_tostr("inline; filename=", ::http::quote(from_unsafe{concat(problem_label, ext)}));
 
     // TODO: maybe add some cache system for the statements?
     ZipFile zip(sim::internal_files::path_of(problem_file_id), ZIP_RDONLY);

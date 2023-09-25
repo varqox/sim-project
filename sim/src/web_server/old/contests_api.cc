@@ -16,6 +16,7 @@
 #include <sim/is_username.hh>
 #include <sim/jobs/utils.hh>
 #include <sim/submissions/submission.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 #include <utility>
@@ -270,8 +271,7 @@ void Sim::api_contests() {
     qwhere.append(
         " FROM contests c LEFT JOIN contest_users cu ON "
         "cu.contest_id=c.id AND cu.user_id=",
-        (session.has_value() ? intentional_unsafe_string_view(to_string(session->user_id))
-                             : StringView("''"))
+        (session.has_value() ? from_unsafe{to_string(session->user_id)} : StringView("''"))
     );
 
     enum ColumnIdx { CID, CNAME, IS_PUBLIC, USER_MODE };
@@ -321,9 +321,7 @@ void Sim::api_contests() {
             } else if (arg_id == "N") {
                 qwhere_append("c.is_public=0");
             } else {
-                return api_error400(
-                    intentional_unsafe_string_view(concat("Invalid is_public condition: ", arg_id))
-                );
+                return api_error400(from_unsafe{concat("Invalid is_public condition: ", arg_id)});
             }
 
             mask |= PUBLIC_COND;
@@ -793,13 +791,13 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     );
 
     if (unclonable_contest_problem) {
-        return api_error403(intentional_unsafe_string_view(concat(
+        return api_error403(from_unsafe{concat(
             "You have no permissions to clone the contest problem with id ",
             unclonable_contest_problem->id,
             " because you have no permission to attach the problem with id ",
             unclonable_contest_problem->problem_id,
             " to a contest round"
-        )));
+        )});
     }
 
     // Add contest
@@ -1082,13 +1080,13 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     );
 
     if (unclonable_contest_problem) {
-        return api_error403(intentional_unsafe_string_view(concat(
+        return api_error403(from_unsafe{concat(
             "You have no permissions to clone the contest problem with id ",
             unclonable_contest_problem->id,
             " because you have no permission to attach the problem with id ",
             unclonable_contest_problem->problem_id,
             " to a contest round"
-        )));
+        )});
     }
 
     // Add contest round
@@ -1255,9 +1253,7 @@ void Sim::api_contest_problem_add(
     decltype(Problem::name) problem_name;
     stmt.res_bind_all(problem_owner_id, problem_type, problem_name);
     if (not stmt.next()) {
-        return api_error404(
-            intentional_unsafe_string_view(concat("No problem was found with ID = ", problem_id))
-        );
+        return api_error404(from_unsafe{concat("No problem was found with ID = ", problem_id)});
     }
 
     auto problem_perms = sim::problems::get_permissions(
@@ -1467,12 +1463,12 @@ void Sim::api_contest_ranking(
     auto transaction = mysql.start_transaction();
 
     // Gather submissions owners
-    auto stmt = mysql.prepare(intentional_unsafe_string_view(concat(
+    auto stmt = mysql.prepare(
         "SELECT u.id, u.first_name, u.last_name FROM submissions s JOIN "
         "users u ON s.owner=u.id WHERE s.",
         submissions_query_id_name,
         "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id"
-    )));
+    );
     stmt.bind_and_execute(query_id);
 
     decltype(User::id) u_id = 0;

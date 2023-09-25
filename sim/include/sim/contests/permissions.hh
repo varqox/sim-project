@@ -3,7 +3,7 @@
 #include <optional>
 #include <sim/contest_users/contest_user.hh>
 #include <sim/users/user.hh>
-#include <simlib/meta.hh>
+#include <simlib/macros/enum_operator_macros.hh>
 #include <simlib/mysql/mysql.hh>
 
 namespace sim::contests {

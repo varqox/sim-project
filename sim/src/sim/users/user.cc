@@ -1,7 +1,10 @@
 #include <sim/users/user.hh>
+#include <simlib/concat.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/random.hh>
 #include <simlib/sha.hh>
 #include <simlib/string_compare.hh>
+#include <simlib/string_transform.hh>
 
 namespace sim::users {
 
@@ -20,7 +23,7 @@ bool password_matches(
     StringView password, StringView password_salt, StringView password_hash
 ) noexcept {
     auto salted_password = concat(password_salt, password);
-    return slow_equal(intentional_unsafe_string_view(sha3_512(salted_password)), password_hash);
+    return slow_equal(from_unsafe{sha3_512(salted_password)}, password_hash);
 }
 
 } // namespace sim::users

@@ -20,8 +20,10 @@
 #include <sim/sql_fields/datetime.hh>
 #include <sim/submissions/submission.hh>
 #include <sim/users/user.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/ranges.hh>
 #include <simlib/time.hh>
+#include <simlib/time_format_conversions.hh>
 
 namespace sim_merger {
 
@@ -171,7 +173,7 @@ struct PrimaryKeysFromJobs {
 };
 
 struct PrimaryKeysFromMainAndOtherJobs {
-    PrimaryKeysFromJobs main{intentional_unsafe_string_view(concat(main_sim_table_prefix, "jobs"))};
+    PrimaryKeysFromJobs main{from_unsafe{concat(main_sim_table_prefix, "jobs")}};
     PrimaryKeysFromJobs other{"jobs"};
 };
 

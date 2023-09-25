@@ -2,7 +2,6 @@
 
 #include <optional>
 #include <simlib/constructor_traits.hh>
-#include <simlib/debug.hh>
 #include <type_traits>
 #include <utility>
 

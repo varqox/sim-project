@@ -2,7 +2,6 @@
 
 #include <ctime>
 #include <simlib/concat_tostr.hh>
-#include <simlib/debug.hh>
 #include <simlib/string_view.hh>
 
 using std::string;

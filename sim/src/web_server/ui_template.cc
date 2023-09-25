@@ -16,6 +16,7 @@
 #include <simlib/json_str/json_str.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
+#include <simlib/time.hh>
 
 using sim::users::User;
 using web_server::http::Response;

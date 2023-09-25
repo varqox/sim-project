@@ -3,6 +3,7 @@
 #include <sim/jobs/utils.hh>
 #include <simlib/path.hh>
 #include <simlib/time.hh>
+#include <simlib/time_format_conversions.hh>
 #include <type_traits>
 
 using sim::jobs::Job;
@@ -140,13 +141,11 @@ void Sim::api_jobs() {
 
             // Grant permissions if possible
             if (is_problem_management_job(jtype) and aux_id) {
-                granted_perms |= jobs_granted_permissions_problem(
-                    intentional_unsafe_string_view(concat(aux_id.value()))
-                );
+                granted_perms |=
+                    jobs_granted_permissions_problem(from_unsafe{concat(aux_id.value())});
             } else if (is_submission_job(jtype) and aux_id) {
-                granted_perms |= jobs_granted_permissions_submission(
-                    intentional_unsafe_string_view(concat(aux_id.value()))
-                );
+                granted_perms |=
+                    jobs_granted_permissions_submission(from_unsafe{concat(aux_id.value())});
             }
             allow_access |= (granted_perms != PERM::NONE);
 
@@ -477,13 +476,9 @@ void Sim::api_job() {
     }
     // Grant permissions if possible
     if (is_problem_management_job(jtype) and aux_id) {
-        jobs_perms |=
-            jobs_granted_permissions_problem(intentional_unsafe_string_view(concat(aux_id.value()))
-            );
+        jobs_perms |= jobs_granted_permissions_problem(from_unsafe{concat(aux_id.value())});
     } else if (is_submission_job(jtype) and aux_id) {
-        jobs_perms |= jobs_granted_permissions_submission(
-            intentional_unsafe_string_view(concat(aux_id.value()))
-        );
+        jobs_perms |= jobs_granted_permissions_submission(from_unsafe{concat(aux_id.value())});
     }
 
     StringView next_arg = url_args.extract_next_arg();
@@ -600,9 +595,8 @@ void Sim::api_job_download_uploaded_statement(
 
     resp.headers["Content-Disposition"] = concat_tostr(
         "attachment; filename=",
-        encode_uri(intentional_unsafe_string_view(path_filename(intentional_unsafe_string_view(
-            sim::jobs::ChangeProblemStatementInfo(info).new_statement_path
-        ))))
+        encode_uri(from_unsafe{path_filename(from_unsafe{
+            sim::jobs::ChangeProblemStatementInfo(info).new_statement_path})})
     );
     resp.content_type = http::Response::FILE;
     resp.content = sim::internal_files::path_of(file_id.value());

@@ -13,6 +13,7 @@
 #include <simlib/file_contents.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/humanize.hh>
 #include <simlib/process.hh>
 #include <simlib/string_view.hh>
@@ -41,6 +42,7 @@ void Sim::append_submission_status(
         case SS::WA: return R"(","Wrong answer"])";
         case SS::TLE: return R"(","Time limit exceeded"])";
         case SS::MLE: return R"(","Memory limit exceeded"])";
+        case SS::OLE: return R"(","Output size limit exceeded"])";
         case SS::RTE: return R"(","Runtime error"])";
         case SS::PENDING: return R"(","Pending"])";
         case SS::COMPILATION_ERROR: return R"(","Compilation failed"])";
@@ -241,9 +243,7 @@ void Sim::api_submissions() {
                         " AND s.type=", EnumVal(Submission::Type::PROBLEM_SOLUTION).to_int()
                     );
                 } else {
-                    return api_error400(
-                        intentional_unsafe_string_view(concat("Invalid submission type: ", arg_id))
-                    );
+                    return api_error400(from_unsafe{concat("Invalid submission type: ", arg_id)});
                 }
 
                 // NOLINTNEXTLINE(bugprone-branch-clone)
@@ -423,9 +423,7 @@ void Sim::api_submissions() {
     }
 
     // Execute query
-    auto res = mysql.query(intentional_unsafe_string_view(
-        concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT ", rows_limit)
-    ));
+    auto res = mysql.query(qfields, qwhere, " ORDER BY s.id DESC LIMIT ", rows_limit);
 
     append_column_names();
 
@@ -890,6 +888,10 @@ void Sim::api_submission_add() {
         slang = Submission::Language::CPP17;
     } else if (slang_str == "pascal") {
         slang = Submission::Language::PASCAL;
+    } else if (slang_str == "python") {
+        slang = Submission::Language::PYTHON;
+    } else if (slang_str == "rust") {
+        slang = Submission::Language::RUST;
     } else {
         add_notification("error", "Invalid language");
     }
@@ -989,9 +991,8 @@ void Sim::api_submission_source() {
         return api_error403();
     }
 
-    append(cpp_syntax_highlighter(intentional_unsafe_cstring_view(
-        get_file_contents(sim::internal_files::path_of(submissions_file_id))
-    )));
+    append(cpp_syntax_highlighter(from_unsafe{
+        get_file_contents(sim::internal_files::path_of(submissions_file_id))}));
 }
 
 void Sim::api_submission_download() {

@@ -124,9 +124,7 @@ class JobsMerger : public Merger<sim::jobs::Job> {
             case Job::Type::EDIT_PROBLEM: THROW("TODO");
             }
 
-            record_set.add_record(
-                job, str_to_time_point(intentional_unsafe_cstring_view(job.added.to_string()))
-            );
+            record_set.add_record(job, str_to_time_point(from_unsafe{job.added.to_string()}));
         }
     }
 

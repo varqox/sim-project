@@ -347,7 +347,7 @@ Response add(Context& ctx) {
     auto user_id = stmt.insert_id();
     stdlog("New user: {id: ", user_id, ", username: ", json_stringify(username), '}');
 
-    return ctx.response_ok(intentional_unsafe_cstring_view(to_string(user_id)));
+    return ctx.response_ok(from_unsafe{to_string(user_id)});
 }
 
 Response edit(Context& ctx, decltype(User::id) user_id) {

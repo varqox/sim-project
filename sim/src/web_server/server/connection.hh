@@ -4,7 +4,7 @@
 #include "../http/response.hh"
 
 #include <cstdint>
-#include <simlib/likely.hh>
+#include <simlib/macros/likely.hh>
 
 namespace web_server::server {
 

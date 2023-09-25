@@ -197,6 +197,8 @@ static Submission::Language filename_to_lang(StringView extension) {
     case sim::SolutionLanguage::CPP14: return Submission::Language::CPP14;
     case sim::SolutionLanguage::CPP17: return Submission::Language::CPP17;
     case sim::SolutionLanguage::PASCAL: return Submission::Language::PASCAL;
+    case sim::SolutionLanguage::PYTHON: return Submission::Language::PYTHON;
+    case sim::SolutionLanguage::RUST: return Submission::Language::RUST;
     case sim::SolutionLanguage::UNKNOWN: THROW("Not supported language");
     }
 
@@ -368,7 +370,7 @@ void AddOrReuploadProblemBase::submit_solutions() {
             default_priority(Job::Type::JUDGE_SUBMISSION) + 1,
             EnumVal(Job::Status::PENDING),
             current_date_,
-            sim::jobs::dump_string(intentional_unsafe_string_view(to_string(problem_id_.value()))),
+            sim::jobs::dump_string(from_unsafe{to_string(problem_id_.value())}),
             problem_id_.value(),
             EnumVal(Submission::Type::PROBLEM_SOLUTION)
         );

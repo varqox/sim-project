@@ -143,9 +143,7 @@ void Sim::api_contest_files() {
     }
 
     // Execute query
-    auto res = mysql.query(
-        intentional_unsafe_string_view(concat(query, " ORDER BY cf.id DESC LIMIT ", rows_limit))
-    );
+    auto res = mysql.query(query, " ORDER BY cf.id DESC LIMIT ", rows_limit);
 
     append_column_names();
 

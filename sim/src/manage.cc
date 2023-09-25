@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <simlib/argv_parser.hh>
 #include <simlib/concat_tostr.hh>
-#include <simlib/debug.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/logger.hh>
 #include <simlib/path.hh>

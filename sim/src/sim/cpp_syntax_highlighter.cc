@@ -1,10 +1,10 @@
 #include <limits>
 #include <sim/cpp_syntax_highlighter.hh>
-#include <simlib/debug.hh>
 #include <simlib/logger.hh>
-#include <simlib/meta.hh>
+#include <simlib/macros/throw.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
+#include <simlib/throw_assert.hh>
 #include <simlib/utilities.hh>
 
 using std::array;

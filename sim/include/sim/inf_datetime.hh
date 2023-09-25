@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <simlib/concat.hh>
+#include <simlib/macros/throw.hh>
+#include <simlib/macros/wont_throw.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/time.hh>
@@ -8,7 +11,7 @@
 namespace sim {
 
 constexpr bool is_safe_timestamp(StringView str) noexcept {
-    return (str <= intentional_unsafe_string_view(::to_string(std::numeric_limits<time_t>::max())));
+    return (str <= StringView{from_unsafe{::to_string(std::numeric_limits<time_t>::max())}});
 }
 
 constexpr bool is_safe_inf_timestamp(StringView str) noexcept {
@@ -155,9 +158,7 @@ inline InfDatetime inf_timestamp_to_InfDatetime(StringView str) {
     } else if (str == "-inf") {
         res.set_neg_inf();
     } else {
-        res.set_datetime(
-            intentional_unsafe_cstring_view(mysql_date(WONT_THROW(str2num<uint64_t>(str).value())))
-        );
+        res.set_datetime(from_unsafe{mysql_date(WONT_THROW(str2num<uint64_t>(str).value()))});
     }
 
     return res;

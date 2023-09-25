@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <sim/contest_users/contest_user.hh>
 #include <sim/users/user.hh>
-#include <simlib/debug.hh>
 #include <simlib/mysql/mysql.hh>
 #include <simlib/utilities.hh>
 

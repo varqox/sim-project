@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <map>
 #include <sim/cpp_syntax_highlighter.hh>
+#include <simlib/concat.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/path.hh>
@@ -51,9 +52,7 @@ void test_cpp_systax_highlighter(string&& tests_dir) {
     }
     sim::CppSyntaxHighlighter csh;
     for (const auto& test_name : tests) {
-        auto csh_ans = csh(
-            intentional_unsafe_cstring_view(get_file_contents(concat(tests_dir, test_name, ".in")))
-        );
+        auto csh_ans = csh(from_unsafe{get_file_contents(concat(tests_dir, test_name, ".in"))});
         auto test_out_path = concat(tests_dir, test_name, ".out");
         if (regenerate_outs) {
             put_file_contents(test_out_path, csh_ans);
