@@ -10,9 +10,6 @@
 #include <simlib/sim/conver.hh>
 
 class SipPackage {
-private:
-    class CompilationCache;
-
 public:
     std::string simfile_contents;
     sim::Simfile simfile;

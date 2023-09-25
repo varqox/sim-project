@@ -24,7 +24,6 @@ def sip_sources(srcdir):
             ['c', 'cc', 'h', 'hh'],
             [
                 'src/git_commit.hh',
-                'src/proot_dump.c',
                 'test/sip_test_cases/.*'
             ]
         )

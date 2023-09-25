@@ -19,6 +19,9 @@ if get_option('warning_level') > '0'
         '-Wdocumentation',
         '-Wgnu',
         '-Wunused-lambda-capture',
+        '-Wno-c++20-designator',
+        '-Wno-gnu-zero-variadic-macro-arguments',
+        '-Wno-c++2b-extensions',
     ]
     foreach warning : warnings
         if cc.has_argument(warning)
@@ -44,14 +47,6 @@ simlib_proj = subproject('simlib')
 simlib_dep = simlib_proj.get_variable('simlib_dep')
 
 dump_file_as_c_array_gen = simlib_proj.get_variable('dump_file_as_c_array_gen')
-
-if host_machine.cpu_family() == 'x86'
-    proot_bin = 'bin/proot-x86'
-elif host_machine.cpu_family() == 'x86_64'
-    proot_bin = 'bin/proot-x86_64'
-else
-    error('This CPU architecture is not supported')
-endif
 
 sip = executable('sip',
     implicit_include_directories : false,
@@ -90,10 +85,6 @@ sip = executable('sip',
         'src/templates/templates.cc',
         'src/tests_files.cc',
         'src/utils.cc',
-        dump_file_as_c_array_gen.process(
-            proot_bin,
-            extra_args : 'proot_dump'
-        ),
         dump_file_as_c_array_gen.process(
             'templates/checker.cc',
             extra_args : 'checker_cc'

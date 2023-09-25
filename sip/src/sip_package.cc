@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <fcntl.h>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -24,25 +25,43 @@
 #include <simlib/from_unsafe.hh>
 #include <simlib/inotify.hh>
 #include <simlib/libzip.hh>
+#include <simlib/overloaded.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
 #include <simlib/random.hh>
 #include <simlib/ranges.hh>
 #include <simlib/repeating.hh>
+#include <simlib/sandbox/sandbox.hh>
+#include <simlib/sandbox/seccomp/allow_common_safe_syscalls.hh>
+#include <simlib/sandbox/seccomp/bpf_builder.hh>
+#include <simlib/sim/judge/language_suite/bash.hh>
+#include <simlib/sim/judge/language_suite/suite.hh>
+#include <simlib/sim/judge/test_report.hh>
+#include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/problem_package.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
+#include <simlib/temporary_file.hh>
+#include <simlib/throw_assert.hh>
 #include <simlib/time.hh>
 #include <simlib/unlinked_temporary_file.hh>
 #include <simlib/utilities.hh>
 #include <simlib/working_directory.hh>
+#include <simlib/write_exact.hh>
 #include <string>
 #include <sys/inotify.h>
+#include <sys/mman.h>
 #include <unistd.h>
+#include <variant>
 
 using std::set;
 using std::string;
 using std::vector;
+
+using MountTmpfs = sandbox::RequestOptions::LinuxNamespaces::Mount::MountTmpfs;
+using CreateDir = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateDir;
+using CreateFile = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateFile;
+using BindMount = sandbox::RequestOptions::LinuxNamespaces::Mount::BindMount;
 
 namespace {
 constexpr std::chrono::nanoseconds DEFAULT_TIME_LIMIT = std::chrono::seconds(5);
@@ -78,10 +97,11 @@ void SipPackage::prepare_judge_worker() {
         return;
     }
 
-    jworker = sim::JudgeWorker();
-    jworker.value().checker_time_limit = CHECKER_TIME_LIMIT;
-    jworker.value().checker_memory_limit = CHECKER_MEMORY_LIMIT;
-    jworker.value().score_cut_lambda = SCORE_CUT_LAMBDA;
+    jworker = sim::JudgeWorker({
+        .checker_time_limit = CHECKER_TIME_LIMIT,
+        .checker_memory_limit_in_bytes = CHECKER_MEMORY_LIMIT,
+        .score_cut_lambda = SCORE_CUT_LAMBDA,
+    });
 
     jworker.value().load_package(".", full_simfile.dump());
 }
@@ -96,13 +116,63 @@ static uint64_t test_name_hash(StringView test_name) {
 
 void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringView in_file) const {
     STACK_UNWINDING_MARK;
+    using sim::judge::language_suite::Suite;
 
-    auto generator = [&] {
+    auto& generator_suite = [&]() -> Suite& {
+        Suite* generator_suite;
+        auto compile_generator = [&generator_suite](FilePath generator) {
+            auto compilation_cache = compilation_cache::get_cache();
+            auto generator_path = concat_tostr(generator);
+            if (!has_prefix(generator_path, "/")) {
+                generator_path = concat_tostr(get_cwd(), generator_path);
+            }
+            static std::set<std::string> compiled_generators;
+            bool log_compilation = compiled_generators.emplace(generator.to_str()).second;
+            if (log_compilation) {
+                stdlog("compiling ", generator, "...").flush_no_nl();
+            }
+            auto cres = generator_suite->compile(
+                generator_path,
+                {
+                    .time_limit = GENERATOR_COMPILATION_TIME_LIMIT,
+                    .cpu_time_limit = GENERATOR_COMPILATION_TIME_LIMIT,
+                    .memory_limit_in_bytes = GENERATOR_COMPILATION_MEMORY_LIMIT,
+                    .max_file_size_in_bytes = 32 << 20,
+                    .cache =
+                        Suite::CompileOptions::Cache{
+                            .compilation_cache = compilation_cache,
+                            .cached_name = concat_tostr("generator:", generator),
+                        },
+                }
+            );
+            if (cres.is_err()) {
+                if (log_compilation) {
+                    stdlog(" failed:\n", get_file_contents(std::move(cres).unwrap_err(), 0, COMPILATION_ERRORS_MAX_LENGTH));
+                }
+                throw SipError("Generator compilation failed");
+            }
+            if (log_compilation) {
+                stdlog(" done.");
+            }
+        };
+
+        auto set_and_compile_bash_generator = [&](StringView command) {
+            // Cache bash suite
+            static auto bash_suite = sim::judge::language_suite::Bash{};
+            generator_suite = &bash_suite;
+            auto tmp_file = TemporaryFile{"/tmp/sip-bash-generator.XXXXXX"};
+            put_file_contents(tmp_file.path(), command);
+            compile_generator(tmp_file.path());
+        };
+
         if (has_prefix(test.generator, "sh:")) {
-            return concat(substring(test.generator, 3));
+            set_and_compile_bash_generator(from_unsafe{
+                concat_tostr(substring(test.generator, 3), ' ', test.generator_args)});
+            return *generator_suite;
         }
 
-        if (sim::filename_to_lang(test.generator) == sim::SolutionLanguage::UNKNOWN) {
+        auto generator_lang = sim::filename_to_lang(test.generator);
+        if (generator_lang == sim::SolutionLanguage::UNKNOWN) {
             log_warning(
                 "generator source file `",
                 test.generator,
@@ -118,70 +188,118 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
                 "generator with sh: in Sipfile - e.g. sh:echo"
             );
 
-            return concat(test.generator);
+            set_and_compile_bash_generator(from_unsafe{
+                concat_tostr(test.generator, ' ', test.generator_args)});
+            return *generator_suite;
         }
 
-        return CompilationCache::compile(test.generator);
+        // Cache suites
+        static std::map<sim::SolutionLanguage, std::unique_ptr<Suite>> suites;
+        auto it = suites.find(generator_lang);
+        if (it != suites.end()) {
+            generator_suite = it->second.get();
+        } else {
+            generator_suite = suites.emplace(generator_lang, sim::lang_to_suite(generator_lang))
+                                  .first->second.get();
+        }
+        compile_generator(test.generator.to_string());
+        return *generator_suite;
     }();
 
-    stdlog("generating ", test.name, ".in...").flush_no_nl();
+    stdlog("\033[2K\033[Ggenerating ", test.name, ".in...").flush_no_nl();
+
     // Prepare environment
-    if (setenv("SIP_TEST_NAME", test.name.to_string().data(), true)) {
-        throw SipError("setenv()", errmsg());
-    }
+    auto env_sip_test_name = concat_tostr("SIP_TEST_NAME=", test.name);
     auto seed = test_name_hash(test.name) ^ sipfile.base_seed;
-    if (setenv("SIP_TEST_SEED", to_string(seed).data(), true)) {
-        throw SipError("setenv()", errmsg());
+    auto env_sip_test_seed = concat_tostr("SIP_TEST_SEED=", seed);
+    auto env = vector<std::string_view>{
+        env_sip_test_name,
+        env_sip_test_seed,
+        "PATH=/usr/bin",
+    };
+
+    auto in_file_fd = FileDescriptor{in_file, O_WRONLY | O_CREAT | O_TRUNC | O_LARGEFILE};
+    throw_assert(in_file_fd.is_open());
+
+    auto args_str = vector<string>{};
+    {
+        auto str = StringView{test.generator_args};
+        for (;;) {
+            str.extract_leading([](auto c) { return c == ' '; });
+            if (str.empty()) {
+                break;
+            }
+            string arg;
+            while (!str.empty()) {
+                if (str[0] == '\\' && str.size() > 1) {
+                    arg += str[1];
+                    str.remove_prefix(2);
+                } else if (str[0] == ' ') {
+                    break;
+                } else {
+                    arg += str[0];
+                    str.remove_prefix(1);
+                }
+            }
+            args_str.emplace_back(std::move(arg));
+        }
+    }
+    auto args = vector<std::string_view>{};
+    for (auto&& arg : args_str) {
+        args.emplace_back(arg);
     }
 
     // Run generator
-    FileDescriptor errfd = open_unlinked_tmp_file();
-    auto print_errfd = [&] {
-        auto offset = lseek64(errfd, 0, SEEK_CUR);
-        if (offset == 0) {
-            return;
-        }
-        // Check if the output ends with newline
-        (void)lseek64(errfd, -1, SEEK_CUR);
-        char c = 0;
-        if (read(errfd, &c, 1) != 1) {
-            throw SipError("read()", errmsg());
-        }
-        // Print errfd to stderr
-        (void)lseek(errfd, 0, SEEK_SET);
-        if (blast(errfd, STDERR_FILENO)) {
-            throw SipError("blast()", errmsg());
-        }
-        if (c != '\n') {
-            (void)fputc('\n', stderr);
+    auto errors_fd = memfd_create("generator errors", MFD_CLOEXEC);
+    auto res = generator_suite.await_result(generator_suite.async_run(
+        args,
+        {
+            .stdin_fd = std::nullopt,
+            .stdout_fd = in_file_fd,
+            .stderr_fd = errors_fd,
+            .time_limit = GENERATOR_TIME_LIMIT,
+            .cpu_time_limit = GENERATOR_TIME_LIMIT,
+            .memory_limit_in_bytes = GENERATOR_MEMORY_LIMIT,
+            .max_stack_size_in_bytes = GENERATOR_MEMORY_LIMIT,
+            .max_file_size_in_bytes = GENERATED_INPUT_FILE_SIZE_LIMIT,
+            .process_num_limit = 256,
+            .env = std::move(env),
+        },
+        {}
+    ));
+
+    auto print_errors = [&] {
+        auto errors = get_file_contents(errors_fd, 0, -1);
+        if (!errors.empty()) {
+            if (errors.back() != '\n') {
+                errors += '\n';
+            }
+            if (write_exact(STDERR_FILENO, errors.data(), errors.size())) {
+                THROW("write()", errmsg());
+            }
         }
     };
-    auto es = Spawner::run(
-        "sh",
-        {"sh", "-c", concat_tostr(generator, ' ', test.generator_args)},
-        Spawner::Options(-1, FileDescriptor(in_file, O_WRONLY | O_CREAT | O_TRUNC), errfd)
-    );
 
-    if (es.si.code == CLD_EXITED and es.si.status == 0) { // OK
+    if (res.si.code == CLD_EXITED and res.si.status == 0) { // OK
         stdlog(
             " \033[1;32mdone\033[m in ",
-            to_string(floor_to_10ms(es.cpu_runtime), false),
+            to_string(floor_to_10ms(res.cgroup.cpu_time.total()), false),
             " [ RT: ",
-            to_string(floor_to_10ms(es.runtime), false),
+            to_string(floor_to_10ms(res.runtime), false),
             " ]"
         );
-        print_errfd();
+        print_errors();
     } else { // RTE
         stdlog(
             " \033[1;31mfailed\033[m in ",
-            to_string(floor_to_10ms(es.cpu_runtime), false),
+            to_string(floor_to_10ms(res.cgroup.cpu_time.total()), false),
             " [ RT: ",
-            to_string(floor_to_10ms(es.runtime), false),
+            to_string(floor_to_10ms(res.runtime), false),
             " ] (",
-            es.message,
+            res.si.description(),
             ')'
         );
-        print_errfd();
+        print_errors();
         throw SipError("failed to generate test: ", test.name, " seed: ", seed);
     }
 }
@@ -192,42 +310,63 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test, SipJudgeLo
 
     stdlog("generating ", test.name, ".out...").flush_no_nl();
 
-    auto es =
+    auto sres =
         jworker.value().run_solution(test.in, test.out.value(), test.time_limit, test.memory_limit);
 
     sim::JudgeReport::Test res(
         test.name,
         sim::JudgeReport::Test::OK,
-        es.cpu_runtime,
+        sres.cgroup.cpu_time.total(),
         test.time_limit,
-        es.vm_peak,
+        sres.cgroup.peak_memory_in_bytes,
         test.memory_limit,
         string{}
     );
 
-    if (es.si.code == CLD_EXITED and es.si.status == 0 and res.runtime <= res.time_limit) {
+    sim::judge::TestReport::Status tr_status;
+    double score;
+    if (sres.si.code == CLD_EXITED && sres.si.status == 0) {
         // OK
-    } else if (res.runtime >= res.time_limit or es.runtime >= res.time_limit) {
+        tr_status = sim::judge::TestReport::Status::OK;
+        score = 1;
+    } else if (sres.runtime > res.time_limit or sres.cgroup.cpu_time.total() > res.time_limit) {
         // TLE
         res.status = sim::JudgeReport::Test::TLE;
-        res.comment = "Time limit exceeded";
-    } else if (es.message == "Memory limit exceeded" or res.memory_consumed > res.memory_limit) {
+        tr_status = sim::judge::TestReport::Status::TimeLimitExceeded;
+        score = 0;
+    } else if (res.memory_consumed > res.memory_limit) {
         // MLE
         res.status = sim::JudgeReport::Test::MLE;
-        res.comment = "Memory limit exceeded";
+        tr_status = sim::judge::TestReport::Status::MemoryLimitExceeded;
+        score = 0;
     } else {
         // RTE
         res.status = sim::JudgeReport::Test::RTE;
-        res.comment = "Runtime error";
-        if (!es.message.empty()) {
-            back_insert(res.comment, " (", es.message, ')');
-        }
+        tr_status = sim::judge::TestReport::Status::RuntimeError;
+        res.comment = concat_tostr("Runtime error (", sres.si.description(), ')');
+        score = 0;
     }
 
     // Move cursor back to the beginning of the line
     stdlog("\033[G").flush_no_nl();
 
-    logger.test(test.name, res, es);
+    logger.test(
+        test.name,
+        res,
+        {
+            .status = tr_status,
+            .comment = res.comment,
+            .score = 1,
+            .program =
+                {
+                    .runtime = sres.runtime,
+                    .cpu_time = sres.cgroup.cpu_time.total(),
+                    .peak_memory_in_bytes = sres.cgroup.peak_memory_in_bytes,
+                },
+            .checker = std::nullopt,
+        },
+        0
+    );
     return res;
 }
 
@@ -473,9 +612,6 @@ void SipPackage::generate_test_output_files() {
 void SipPackage::judge_solution(StringView solution) {
     STACK_UNWINDING_MARK;
 
-    compile_solution(solution);
-    compile_checker();
-
     // For the main solution, default time limits are used
     if (solution == full_simfile.solutions.front()) {
         auto default_time_limit = get_default_time_limit();
@@ -490,9 +626,10 @@ void SipPackage::judge_solution(StringView solution) {
 
     prepare_judge_worker();
 
+    compile_solution(solution);
+    compile_checker();
+
     stdlog('{');
-    CompilationCache::load_solution(jworker.value(), solution);
-    CompilationCache::load_checker(jworker.value());
     SipJudgeLogger jlogger{full_simfile};
     auto jrep1 = jworker.value().judge(false, jlogger);
     auto jrep2 = jworker.value().judge(true, jlogger);
@@ -512,19 +649,51 @@ void SipPackage::compile_solution(StringView solution) {
     STACK_UNWINDING_MARK;
 
     prepare_judge_worker();
-    stdlog("\033[1;34m", solution, "\033[m:");
-    if (CompilationCache::is_cached(solution)) {
-        stdlog("Solution is already compiled.");
+    stdlog("\033[1;34m", solution, "\033[m:\nCompiling...").flush_no_nl();
+
+    std::string compilation_errors;
+    auto compilation_cache = compilation_cache::get_cache();
+    if (jworker->compile_solution(
+            solution.to_string(),
+            sim::filename_to_lang(solution),
+            SOLUTION_COMPILATION_TIME_LIMIT,
+            SOLUTION_COMPILATION_MEMORY_LIMIT,
+            &compilation_errors,
+            COMPILATION_ERRORS_MAX_LENGTH,
+            &compilation_cache,
+            concat_tostr("solution:", solution)
+        ))
+    {
+        stdlog(" failed:\n", compilation_errors);
+        throw SipError("Solution compilation failed");
     }
 
-    CompilationCache::load_solution(jworker.value(), solution);
+    stdlog(" done.");
 }
 
 void SipPackage::compile_checker() {
     STACK_UNWINDING_MARK;
 
     prepare_judge_worker();
-    CompilationCache::load_checker(jworker.value());
+
+    stdlog("Compiling checker...").flush_no_nl();
+    std::string compilation_errors;
+    auto compilation_cache = compilation_cache::get_cache();
+    if (jworker->compile_checker(
+            CHECKER_COMPILATION_TIME_LIMIT,
+            CHECKER_COMPILATION_MEMORY_LIMIT,
+            &compilation_errors,
+            COMPILATION_ERRORS_MAX_LENGTH,
+            &compilation_cache,
+            full_simfile.checker ? concat_tostr("checker:", *full_simfile.checker)
+                                 : std::string{"default_checker"}
+        ))
+    {
+        stdlog(" failed:\n", compilation_errors);
+        throw SipError("Checker compilation failed");
+    }
+
+    stdlog(" done.");
 }
 
 static bool is_elf_file(FilePath path) noexcept {
@@ -572,7 +741,7 @@ void SipPackage::clean() {
 
     stdlog("Cleaning...").flush_no_nl();
 
-    CompilationCache::clear();
+    compilation_cache::clear();
     if (remove_r("utils/latex/") and errno != ENOENT) {
         THROW("remove_r()", errmsg());
     }
@@ -778,28 +947,142 @@ static void compile_tex_file(StringView file) {
 
     stdlog("\033[1mCompiling ", file, "\033[m");
     // Make pdflatex look for classes and other files in the file's directory
-    setenv("TEXINPUTS", concat_tostr(".:", path_dirpath(file), ':').data(), true);
+    auto env_texinputs = concat_tostr("TEXINPUTS=.:", path_dirpath(file), ':');
+    auto env = vector<std::string_view>{
+        "PATH=/usr/bin",
+        env_texinputs,
+    };
+
+    auto sc = sandbox::spawn_supervisor();
+    auto cwd = get_cwd();
+    auto file_path = has_prefix(file, "/") ? file.to_string() : concat_tostr(cwd, file);
+    auto dest_path = concat_tostr(StringView{file_path}.without_suffix(3), "pdf");
+    TemporaryFile tmp_file{"/tmp/sip-doc-output.XXXXXX"};
+
     // It is necessary (essential) to run latex two times
     for (int iter = 0; iter < 2; ++iter) {
-        auto es = Spawner::run(
-            "pdflatex",
-            {"pdflatex", "-halt-on-error", "-output-dir=utils/latex", file.to_string()},
-            {-1, STDOUT_FILENO, STDERR_FILENO}
+        auto res =
+        sc.await_result(sc.send_request(
+            {{"/usr/bin/pdflatex",
+              "-halt-on-error",
+              "/main.tex",
+          }},
+            {
+                .stdin_fd = std::nullopt,
+                .stdout_fd = STDOUT_FILENO,
+                .stderr_fd = STDERR_FILENO,
+                .env = env,
+                .linux_namespaces =
+                    {
+                        .user =
+                            {
+                                .inside_uid = 1000,
+                                .inside_gid = 1000,
+                            },
+                        .mount =
+                            {
+                                .operations = {{
+                                    MountTmpfs{
+                                        .path = "/",
+                                        .max_total_size_of_files_in_bytes = 128 << 20,
+                                        .inode_limit = 32,
+                                        .read_only = false,
+                                    },
+                                    CreateDir{.path = "/../lib"},
+                                    CreateDir{.path = "/../lib64"},
+                                    CreateDir{.path = "/../tmp"},
+                                    CreateDir{.path = "/../usr"},
+                                    CreateDir{.path = "/../usr/bin"},
+                                    CreateDir{.path = "/../usr/lib"},
+                                    CreateDir{.path = "/../usr/share/"},
+                                    CreateDir{.path = "/../usr/share/texmf-dist"},
+                                    CreateDir{.path = "/../var"},
+                                    CreateDir{.path = "/../var/lib"},
+                                    CreateDir{.path = "/../var/lib/texmf"},
+                                    CreateFile{.path = "/../main.pdf"},
+                                    CreateFile{.path = "/../main.tex"},
+                                    BindMount{
+                                        .source = "/lib",
+                                        .dest = "/../lib",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/lib64",
+                                        .dest = "/../lib64",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/usr/bin",
+                                        .dest = "/../usr/bin",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/usr/lib",
+                                        .dest = "/../usr/lib",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/usr/share/texmf-dist",
+                                        .dest = "/../usr/share/texmf-dist",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/var/lib/texmf",
+                                        .dest = "/../var/lib/texmf",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = tmp_file.path(),
+                                        .dest = "/../main.pdf",
+                                        .read_only = false,
+                                    },
+                                    BindMount{
+                                        .source = file_path,
+                                        .dest = "/../main.tex",
+                                    },
+                                }},
+                                .new_root_mount_path = "/..",
+                            },
+                    },
+                .cgroup =
+                    {
+                        .process_num_limit = 32,
+                        .memory_limit_in_bytes = 1 << 30,
+                    },
+                .prlimit =
+                    {
+                        .max_core_file_size_in_bytes = 0,
+                        .max_file_size_in_bytes = 32 << 20,
+                    },
+                .time_limit = LATEX_COMPILATION_TIME_LIMIT,
+                .cpu_time_limit = LATEX_COMPILATION_TIME_LIMIT,
+                .seccomp_bpf_fd = [] {
+                    auto bpf = sandbox::seccomp::BpfBuilder{};
+                    sandbox::seccomp::allow_common_safe_syscalls(bpf);
+                    return bpf.export_to_fd();
+                }(),
+            }
+        ));
+
+        auto res_ok = std::visit(
+            overloaded{
+                [](sandbox::result::Ok res_ok) { return res_ok; },
+                [](sandbox::result::Error res_err) -> sandbox::result::Ok {
+                    throw SipError("sandbox error: ", res_err.description);
+                }},
+            std::move(res)
         );
 
-        if (es.si.code != CLD_EXITED or es.si.status != 0) {
+        if (res_ok.si.code != CLD_EXITED or res_ok.si.status != 0) {
             // During watching it is not intended to stop on compilation error
             errlog("\033[1m", file, ": \033[1;31mcompilation failed\033[m");
             return; // Second iteration makes no sense on compilation error
         }
     }
 
-    auto src = concat("utils/latex/", path_filename(file).without_suffix(3), "pdf");
-    auto dest = concat(file.without_suffix(3), "pdf");
-    if (move(src, dest) == -1 and errno != ENOENT) {
-        throw SipError("failed to rename file ", src, " into ", dest, " (move()", errmsg(), ')');
+    if (move(tmp_file.path(), dest_path)) {
+        THROW("move()", errmsg());
     }
-
     stdlog("\033[1m", file, ": \033[1;32mcompilation complete\033[m");
 }
 

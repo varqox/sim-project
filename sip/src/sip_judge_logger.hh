@@ -53,13 +53,24 @@ class SipJudgeLogger : public sim::JudgeLogger {
         return str;
     }
 
-    template <class Func>
-    void log_test(
+public:
+    explicit SipJudgeLogger(const sim::Simfile& simfile) {
+        for (const auto& tg : simfile.tgroups) {
+            for (const auto& test : tg.tests) {
+                test_name_max_len_ = std::max(test_name_max_len_, test.name.size());
+            }
+        }
+    }
+
+    void begin(bool final) override { final_ = final; }
+
+    void test(
         StringView test_name,
-        const sim::JudgeReport::Test& test_report,
-        Sandbox::ExitStat es,
-        Func&& func
-    ) {
+        sim::JudgeReport::Test test_report,
+        sim::judge::TestReport judge_test_report,
+        uint64_t checker_mem_limit
+    ) override {
+
         assert(test_name.size() <= test_name_max_len_);
         ++status_count_[test_report.status];
         auto tmplog =
@@ -78,77 +89,40 @@ class SipJudgeLogger : public sim::JudgeLogger {
         switch (test_report.status) {
         case sim::JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;
         case sim::JudgeReport::Test::MLE: tmplog("\033[1;33mMLE\033[m"); break;
-        case sim::JudgeReport::Test::RTE: tmplog("\033[1;31mRTE\033[m (", es.message, ')'); break;
+        case sim::JudgeReport::Test::OLE: tmplog("\033[1;33mOLE\033[m"); break;
+        case sim::JudgeReport::Test::RTE: tmplog("\033[1;31mRTE\033[m"); break;
         case sim::JudgeReport::Test::OK: tmplog("\033[1;32mOK\033[m"); break;
         case sim::JudgeReport::Test::WA: tmplog("\033[1;31mWA\033[m"); break;
-        case sim::JudgeReport::Test::CHECKER_ERROR:
-            tmplog("\033[1;35mCHECKER ERROR\033[m (Running \033[1;32mOK\033[m)");
-            break;
+        case sim::JudgeReport::Test::CHECKER_ERROR: tmplog("\033[1;35mCHECKER ERROR\033[m"); break;
         case sim::JudgeReport::Test::SKIPPED: tmplog("\033[1;36mSKIPPED\033[m"); break;
+        }
+
+        if (!test_report.comment.empty()) {
+            tmplog(" (", test_report.comment, ')');
         }
 
         // Rest
         if (test_report.status != sim::JudgeReport::Test::OK or sip_verbose) {
-            tmplog(" \033[2m[RT: ", to_string(floor_to_10ms(es.runtime), false), "]\033[m");
+            tmplog(
+                " \033[2m[RT: ",
+                to_string(floor_to_10ms(judge_test_report.program.runtime), false),
+                "]\033[m"
+            );
         }
 
-        func(tmplog);
-    }
-
-public:
-    explicit SipJudgeLogger(const sim::Simfile& simfile) {
-        for (const auto& tg : simfile.tgroups) {
-            for (const auto& test : tg.tests) {
-                test_name_max_len_ = std::max(test_name_max_len_, test.name.size());
+        if (judge_test_report.checker &&
+            (sip_verbose || (test_report.status != sim::JudgeReport::Test::OK)))
+        {
+            tmplog(
+                " Checker: \033[2m[RT: ",
+                to_string(floor_to_10ms(judge_test_report.checker->runtime), false),
+                "]\033[m ",
+                mem_to_str(judge_test_report.checker->peak_memory_in_bytes)
+            );
+            if (checker_mem_limit) {
+                tmplog(" / ", mem_to_str(checker_mem_limit, false));
             }
         }
-    }
-
-    void begin(bool final) override { final_ = final; }
-
-    void
-    test(StringView test_name, sim::JudgeReport::Test test_report, Sandbox::ExitStat es) override {
-        log_test(test_name, test_report, es, [](auto& /*unused*/) {});
-    }
-
-    void test(
-        StringView test_name,
-        sim::JudgeReport::Test test_report,
-        Sandbox::ExitStat es,
-        Sandbox::ExitStat checker_es,
-        std::optional<uint64_t> checker_mem_limit,
-        StringView checker_error_str
-    ) override {
-        log_test(test_name, test_report, es, [&](auto& tmplog) {
-            // Checker status
-            if (test_report.status == sim::JudgeReport::Test::OK) {
-                if (sip_verbose) {
-                    tmplog(" Checker: \033[1;32mOK\033[m");
-                }
-                tmplog(' ', test_report.comment);
-            } else if (test_report.status == sim::JudgeReport::Test::WA) {
-                if (sip_verbose) {
-                    tmplog(" Checker: \033[1;31mWA\033[m");
-                }
-                tmplog(' ', test_report.comment);
-            } else if (test_report.status == sim::JudgeReport::Test::CHECKER_ERROR) {
-                tmplog(" Checker: \033[1;35mERROR\033[m ", checker_error_str);
-            } else {
-                return; // Checker was not run
-            }
-
-            if (test_report.status == sim::JudgeReport::Test::CHECKER_ERROR or sip_verbose) {
-                tmplog(
-                    " \033[2m[RT: ",
-                    to_string(floor_to_10ms(checker_es.runtime), false),
-                    "]\033[m ",
-                    mem_to_str(checker_es.vm_peak)
-                );
-                if (checker_mem_limit.has_value()) {
-                    tmplog(" / ", mem_to_str(checker_mem_limit.value(), false));
-                }
-            }
-        });
     }
 
     void group_score(int64_t score, int64_t max_score, double /*score_ratio*/) override {
@@ -173,6 +147,7 @@ public:
                 case S::WA: log("\033[1;31mWA\033[m            ", num); break;
                 case S::TLE: log("\033[1;33mTLE\033[m           ", num); break;
                 case S::MLE: log("\033[1;33mMLE\033[m           ", num); break;
+                case S::OLE: log("\033[1;33mOLE\033[m           ", num); break;
                 case S::RTE: log("\033[1;31mRTE\033[m           ", num); break;
                 case S::CHECKER_ERROR: log("\033[1;35mCHECKER_ERROR\033[m ", num); break;
                 case S::SKIPPED: log("\033[1;36mSKIPPED\033[m       ", num); break;
