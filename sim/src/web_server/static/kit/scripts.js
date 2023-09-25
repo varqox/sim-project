@@ -3934,7 +3934,13 @@ function add_submission_impl(as_oldmodal, url, api_url, problem_field_elem, mayb
 						selected: true
 					}).add('<option>', {
 						value: 'pascal',
-						text: 'PASCAL'
+						text: 'Pascal'
+					}).add('<option>', {
+						value: 'python',
+						text: 'Python'
+					}).add('<option>', {
+						value: 'rust',
+						text: 'Rust'
 					})
 				})
 			)).add(OldForm.field_group('Solution', {

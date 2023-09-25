@@ -170,9 +170,8 @@ static void update_db_schema(Func&& prepare_database) {
 static int perform_upgrade() {
     STACK_UNWINDING_MARK;
 
-    conn.update("ALTER TABLE problems RENAME COLUMN owner TO owner_id");
-    conn.update("ALTER TABLE problems RENAME COLUMN added TO created_at");
-    conn.update("ALTER TABLE problems RENAME COLUMN last_edit TO updated_at");
+    conn.update("UPDATE submissions SET initial_status=6 WHERE initial_status=5");
+    conn.update("UPDATE submissions SET full_status=6 WHERE full_status=5");
 
     // update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
 

@@ -888,6 +888,10 @@ void Sim::api_submission_add() {
         slang = Submission::Language::CPP17;
     } else if (slang_str == "pascal") {
         slang = Submission::Language::PASCAL;
+    } else if (slang_str == "python") {
+        slang = Submission::Language::PYTHON;
+    } else if (slang_str == "rust") {
+        slang = Submission::Language::RUST;
     } else {
         add_notification("error", "Invalid language");
     }
