@@ -60,14 +60,6 @@ mariadb_dep = dependency('mariadb')
 simlib_proj = subproject('simlib')
 simlib_dep = simlib_proj.get_variable('simlib_dep')
 
-if host_machine.cpu_family() == 'x86'
-    proot_bin = 'bin/proot-x86'
-elif host_machine.cpu_family() == 'x86_64'
-    proot_bin = 'bin/proot-x86_64'
-else
-    error('This CPU architecture is not supported')
-endif
-
 libsim_dependencies = [
     simlib_dep,
     mariadb_dep,
@@ -264,15 +256,6 @@ run_target('tidy', command : [find_program('tidy')], depends : base_targets)
 ################################# Installation #################################
 
 install_subdir('src/web_server/static', install_dir : '.')
-
-if host_machine.cpu_family() == 'x86'
-    proot_bin = 'bin/proot-x86'
-elif host_machine.cpu_family() == 'x86_64'
-    proot_bin = 'bin/proot-x86_64'
-else
-    error('This CPU architecture is not supported')
-endif
-install_data(proot_bin, install_dir : '.', rename : 'proot')
 
 mkdir_p = 'mkdir -p "$MESON_INSTALL_DESTDIR_PREFIX/@0@"'
 cp_if_missing = 'test -e "$MESON_INSTALL_DESTDIR_PREFIX/@1@" || cp "$MESON_SOURCE_ROOT/@0@" "$MESON_INSTALL_DESTDIR_PREFIX/@1@"'

@@ -42,6 +42,7 @@ void Sim::append_submission_status(
         case SS::WA: return R"(","Wrong answer"])";
         case SS::TLE: return R"(","Time limit exceeded"])";
         case SS::MLE: return R"(","Memory limit exceeded"])";
+        case SS::OLE: return R"(","Output size limit exceeded"])";
         case SS::RTE: return R"(","Runtime error"])";
         case SS::PENDING: return R"(","Pending"])";
         case SS::COMPILATION_ERROR: return R"(","Compilation failed"])";

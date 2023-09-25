@@ -1,5 +1,7 @@
 #include "judge_base.hh"
+#include "simlib/sim/judge_worker.hh"
 
+#include <optional>
 #include <sim/judging_config.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/throw_assert.hh>
@@ -8,10 +10,11 @@ using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
-JudgeBase::JudgeBase() {
-    jworker_.checker_time_limit = sim::CHECKER_TIME_LIMIT;
-    jworker_.checker_memory_limit = sim::CHECKER_MEMORY_LIMIT;
-    jworker_.score_cut_lambda = sim::SCORE_CUT_LAMBDA;
+JudgeBase::JudgeBase() : jworker_{{
+    .checker_time_limit = sim::CHECKER_TIME_LIMIT,
+    .checker_memory_limit_in_bytes = sim::CHECKER_MEMORY_LIMIT,
+    .score_cut_lambda = sim::SCORE_CUT_LAMBDA,
+}} {
 }
 
 sim::SolutionLanguage JudgeBase::to_sol_lang(Submission::Language lang) {
@@ -63,6 +66,8 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
                 return "<td class=\"status yellow\">Time limit exceeded</td>";
             case JudgeReport::Test::MLE:
                 return "<td class=\"status yellow\">Memory limit exceeded</td>";
+            case JudgeReport::Test::OLE:
+                return "<td class=\"status yellow\">Output size limit exceeded</td>";
             case JudgeReport::Test::RTE:
                 return "<td class=\"status intense-red\">Runtime error</td>";
             case JudgeReport::Test::CHECKER_ERROR:
@@ -169,6 +174,7 @@ Submission::Status JudgeBase::calc_status(const sim::JudgeReport& jr) {
             case JudgeReport::Test::WA: return Submission::Status::WA;
             case JudgeReport::Test::TLE: return Submission::Status::TLE;
             case JudgeReport::Test::MLE: return Submission::Status::MLE;
+            case JudgeReport::Test::OLE: return Submission::Status::OLE;
             case JudgeReport::Test::RTE: return Submission::Status::RTE;
             case JudgeReport::Test::CHECKER_ERROR:
                 throw_assert(false); // This should be handled in the above loops
@@ -208,9 +214,11 @@ std::optional<std::string> JudgeBase::compile_solution_impl(
             solution_path,
             lang,
             sim::SOLUTION_COMPILATION_TIME_LIMIT,
+            sim::SOLUTION_COMPILATION_MEMORY_LIMIT,
             &compilation_errors,
             sim::COMPILATION_ERRORS_MAX_LENGTH,
-            sim::PROOT_PATH
+            nullptr,
+            std::nullopt
         ))
     {
         tmplog(" failed:\n", compilation_errors);
@@ -248,9 +256,9 @@ std::optional<std::string> JudgeBase::compile_checker() {
     std::string compilation_errors;
     if (jworker_.compile_checker(
             sim::SOLUTION_COMPILATION_TIME_LIMIT,
+            sim::CHECKER_COMPILATION_MEMORY_LIMIT,
             &compilation_errors,
-            sim::COMPILATION_ERRORS_MAX_LENGTH,
-            sim::PROOT_PATH
+            sim::COMPILATION_ERRORS_MAX_LENGTH
         ))
     {
         tmplog(" failed:\n", compilation_errors);

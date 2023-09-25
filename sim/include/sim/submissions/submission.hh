@@ -39,7 +39,8 @@ struct Submission {
         (WA, 2, "wa")
         (TLE, 3, "tle")
         (MLE, 4, "mle")
-        (RTE, 5, "rte")
+        (OLE, 5, "ole")
+        (RTE, 6, "rte")
         // Special
         (PENDING, 8 + 0, "pending")
         // Fatal
@@ -123,6 +124,7 @@ static_assert(
         Submission::Status::WA,
         Submission::Status::TLE,
         Submission::Status::MLE,
+        Submission::Status::OLE,
         Submission::Status::RTE
     ) < Submission::Status::PENDING,
     "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
@@ -153,7 +155,8 @@ constexpr const char* css_color_class(Submission::Status status) noexcept {
     case Submission::Status::OK: return "green";
     case Submission::Status::WA: return "red";
     case Submission::Status::TLE:
-    case Submission::Status::MLE: return "yellow";
+    case Submission::Status::MLE:
+    case Submission::Status::OLE: return "yellow";
     case Submission::Status::RTE: return "intense-red";
     case Submission::Status::PENDING: return "";
     case Submission::Status::COMPILATION_ERROR: return "purple";
