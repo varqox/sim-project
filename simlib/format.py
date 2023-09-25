@@ -43,6 +43,7 @@ def simlib_sources(src_dir):
         )
         for path in filter_subdirs(
             src_dir, [
+                'examples/',
                 'include/',
                 'src/',
                 'test/',
@@ -51,7 +52,7 @@ def simlib_sources(src_dir):
             [
                 'src/sim/default_checker_dump.c',
                 'test/conver_test_cases/.*',
-                'test/sandbox_test_cases/.*',
+                'test/old_sandbox_test_cases/.*',
             ]
         )
     ]

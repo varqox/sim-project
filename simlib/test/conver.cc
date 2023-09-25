@@ -1,7 +1,6 @@
-#include "compilation_cache.hh"
-
 #include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <linux/limits.h>
 #include <regex>
@@ -10,14 +9,18 @@
 #include <simlib/concurrent/job_processor.hh>
 #include <simlib/config_file.hh>
 #include <simlib/directory.hh>
+#include <simlib/file_contents.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
 #include <simlib/inplace_buff.hh>
 #include <simlib/logger.hh>
 #include <simlib/path.hh>
 #include <simlib/sim/conver.hh>
+#include <simlib/sim/judge/disk_compilation_cache.hh>
+#include <simlib/sim/judge/test_report.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/string_compare.hh>
+#include <simlib/string_view.hh>
 #include <simlib/time_format_conversions.hh>
 #include <utility>
 
@@ -39,6 +42,9 @@ constexpr auto judge_log = "judge_log";
 constexpr auto post_judge_simfile = "post_judge_simfile";
 constexpr auto conver_report = "conver_report";
 } // namespace test_filenames
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+CStringView compilation_cache_dir;
 
 struct TestConfig {
     string pkg_path;
@@ -150,13 +156,20 @@ class TestingJudgeLogger : public sim::JudgeLogger {
         back_insert(log_, std::forward<Args>(args)...);
     }
 
-    template <class Func>
-    void log_test(
+public:
+    TestingJudgeLogger() = default;
+
+    void begin(bool final) override {
+        log_.clear();
+        log("Judging (", (final ? "final" : "initial"), "): {\n");
+    }
+
+    void test(
         StringView test_name,
-        const JudgeReport::Test& test_report,
-        const Sandbox::ExitStat& es,
-        Func&& func
-    ) {
+        JudgeReport::Test test_report,
+        sim::judge::TestReport judge_test_report,
+        uint64_t checker_mem_limit
+    ) override {
         log("  ",
             padded_string(test_name, 8, LEFT),
             ' ',
@@ -167,52 +180,18 @@ class TestingJudgeLogger : public sim::JudgeLogger {
             " KiB ]  Status: ",
             JudgeReport::simple_span_status(test_report.status));
 
-        if (test_report.status == JudgeReport::Test::RTE) {
-            log(" (", std::regex_replace(es.message, std::regex("killed and dumped"), "killed"), ')'
-            );
+        if (!test_report.comment.empty()) {
+            log(" (", test_report.comment, ")");
         }
-        func();
-        log('\n');
-    }
-
-public:
-    TestingJudgeLogger() = default;
-
-    void begin(bool final) override {
-        log_.clear();
-        log("Judging (", (final ? "final" : "initial"), "): {\n");
-    }
-
-    void test(StringView test_name, JudgeReport::Test test_report, Sandbox::ExitStat es) override {
-        log_test(test_name, test_report, es, [] {});
-    }
-
-    void test(
-        StringView test_name,
-        JudgeReport::Test test_report,
-        Sandbox::ExitStat es,
-        Sandbox::ExitStat /*checker_es*/,
-        optional<uint64_t> checker_mem_limit,
-        StringView checker_error_str
-    ) override {
-        log_test(test_name, test_report, es, [&]() {
+        if (judge_test_report.checker) {
             log("  Checker: ");
 
             // Checker status
-            if (test_report.status == JudgeReport::Test::OK) {
-                log("OK: ", test_report.comment);
-            } else if (test_report.status == JudgeReport::Test::WA) {
-                log("WA: ", test_report.comment);
-            } else if (test_report.status == JudgeReport::Test::CHECKER_ERROR) {
-                log("ERROR: ", checker_error_str);
-            } else {
-                return; // Checker was not run
+            if (checker_mem_limit) {
+                log(" [ ML: ", checker_mem_limit >> 10, " KiB ]");
             }
-
-            if (checker_mem_limit.has_value()) {
-                log(" [ ML: ", checker_mem_limit.value() >> 10, " KiB ]");
-            }
-        });
+        }
+        log('\n');
     }
 
     void group_score(int64_t score, int64_t max_score, double score_ratio) override {
@@ -226,9 +205,9 @@ public:
 
 class ConverTestCaseRunner {
     static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT{30};
+    static constexpr uint64_t COMPILATION_MEMORY_LIMIT = 1 << 30;
     static constexpr size_t COMPILATION_ERRORS_MAX_LENGTH = 4096;
 
-    const string& tests_dir_;
     const string test_case_name_;
     const InplaceBuff<PATH_MAX> test_case_dir_;
     const TestConfig conf_;
@@ -241,8 +220,7 @@ class ConverTestCaseRunner {
 
 public:
     ConverTestCaseRunner(const string& tests_dir, string&& test_case_name)
-    : tests_dir_(tests_dir)
-    , test_case_name_(std::move(test_case_name))
+    : test_case_name_(std::move(test_case_name))
     , test_case_dir_(concat(tests_dir, test_cases_subdir, test_case_name_, '/'))
     , conf_(load_config_from_file(concat(test_case_dir_, test_filenames::config))) {
         conver_.package_path(concat_tostr(tests_dir, packages_subdir, conf_.pkg_path));
@@ -284,7 +262,9 @@ private:
         case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: break;
         }
 
-        JudgeWorker jworker;
+        auto jworker = JudgeWorker{{
+            .checker_memory_limit_in_bytes = 256 << 20,
+        }};
         jworker.load_package(conver_.package_path(), post_judge_simfile_.dump());
         compile_checker_and_solution(jworker);
 
@@ -298,69 +278,35 @@ private:
     }
 
     void compile_checker_and_solution(JudgeWorker& jworker) {
-        using time_point = std::chrono::system_clock::time_point;
-        CompilationCache ccache = {
-            "/tmp/simlib-conver-test-compilation-cache/", std::chrono::hours(24)};
+        auto compilation_cache = sim::judge::DiskCompilationCache{
+            compilation_cache_dir.to_string(), std::chrono::hours(7 * 24)};
         string compilation_errors;
-        // Checker
-        auto [checker_cache_path, checker_mtime] = [&] {
-            string path;
-            time_point tp;
-            if (not pre_judge_simfile_.checker) {
-                path = "default_checker";
-                tp = get_modification_time(concat(tests_dir_, "../../src/sim/default_checker.c"));
-            } else if (is_directory(conver_.package_path())) {
-                path = concat_tostr(conver_.package_path(), *pre_judge_simfile_.checker);
-                tp = get_modification_time(path);
-            } else {
-                path = concat_tostr(conver_.package_path(), '/', *pre_judge_simfile_.checker);
-                tp = get_modification_time(conver_.package_path());
-            }
-            return pair{path, tp};
-        }();
-
-        if (ccache.is_cached(checker_cache_path, checker_mtime)) {
-            jworker.load_compiled_checker(ccache.cached_path(checker_cache_path));
-        } else {
-            if (jworker.compile_checker(
-                    COMPILATION_TIME_LIMIT, &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, ""
-                ))
-            {
-                THROW("failed to compile checker: \n", compilation_errors);
-            }
-            ccache.cache_compiled_checker(checker_cache_path, jworker);
+        if (jworker.compile_checker(
+                COMPILATION_TIME_LIMIT,
+                COMPILATION_MEMORY_LIMIT,
+                &compilation_errors,
+                COMPILATION_ERRORS_MAX_LENGTH,
+                &compilation_cache,
+                concat_tostr(conver_.package_path(), ":checker")
+            ))
+        {
+            THROW("failed to compile checker: \n", compilation_errors);
         }
 
         // Solution
         const auto& main_solution = post_judge_simfile_.solutions[0];
-        auto [sol_cache_path, sol_mtime] = [&] {
-            string path;
-            time_point tp;
-            if (is_directory(conver_.package_path())) {
-                path = concat_tostr(conver_.package_path(), main_solution);
-                tp = get_modification_time(path);
-            } else {
-                path = concat_tostr(conver_.package_path(), '/', main_solution);
-                tp = get_modification_time(conver_.package_path());
-            }
-            return pair{path, tp};
-        }();
-
-        if (ccache.is_cached(sol_cache_path, sol_mtime)) {
-            jworker.load_compiled_solution(ccache.cached_path(sol_cache_path));
-        } else {
-            if (jworker.compile_solution_from_package(
-                    main_solution,
-                    sim::filename_to_lang(main_solution),
-                    COMPILATION_TIME_LIMIT,
-                    &compilation_errors,
-                    COMPILATION_ERRORS_MAX_LENGTH,
-                    ""
-                ))
-            {
-                THROW("failed to compile solution: \n", compilation_errors);
-            }
-            ccache.cache_compiled_solution(sol_cache_path, jworker);
+        if (jworker.compile_solution_from_package(
+                main_solution,
+                sim::filename_to_lang(main_solution),
+                COMPILATION_TIME_LIMIT,
+                COMPILATION_MEMORY_LIMIT,
+                &compilation_errors,
+                COMPILATION_ERRORS_MAX_LENGTH,
+                &compilation_cache,
+                concat_tostr(conver_.package_path(), ':', main_solution)
+            ))
+        {
+            THROW("failed to compile solution: \n", compilation_errors);
         }
     }
 
@@ -463,12 +409,14 @@ protected:
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static CStringView test_cases_dir;
+CStringView test_cases_dir;
 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
-    assert(argc == 2);
+    assert(argc == 3);
     test_cases_dir = CStringView{argv[1]};
+    compilation_cache_dir = CStringView{argv[2]};
+
     return RUN_ALL_TESTS();
 }
 

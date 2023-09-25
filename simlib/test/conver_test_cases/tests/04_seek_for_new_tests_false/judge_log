@@ -1,6 +1,6 @@
 Judging (initial): {
 }
 Judging (final): {
-  3         [ TL: 6.05 s ML: 9216 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+  3         [ TL: 6.05 s ML: 9216 KiB ]  Status: OK  Checker:  [ ML: 262144 KiB ]
 Score: 100 / 100 (ratio: 1.0000)
 }

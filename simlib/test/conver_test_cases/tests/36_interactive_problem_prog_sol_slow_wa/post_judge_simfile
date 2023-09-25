@@ -2,7 +2,7 @@ name: Interactive test
 label: int
 interactive: true
 checker: checker/checker.cc
-solutions: [prog/sol_slow_wa.cc, prog/sol.cc, prog/rte1.cc, prog/sol_rte1.cc, prog/sol_slow1.cc, prog/sol_slow2.cc, prog/sol_tle1.cc, prog/sol_tle2.cc, prog/sol_wa1.cc, prog/sol_wa2.cc, prog/sol_wa3.cc, prog/tle1.cc, prog/tle2.cc, prog/wa1.cc, prog/wa2.cc, prog/wa3.cc, prog/wa4.cc, prog/wa5.cc]
+solutions: [prog/sol_slow_wa.cc, prog/sol.cc, prog/rte1.cc, prog/sol_mle.cc, prog/sol_slow1.cc, prog/sol_slow2.cc, prog/sol_tle1.cc, prog/sol_tle2.cc, prog/sol_wa1.cc, prog/sol_wa2.cc, prog/sol_wa3.cc, prog/tle1.cc, prog/tle2.cc, prog/wa1.cc, prog/wa2.cc, prog/wa3.cc, prog/wa4.cc, prog/wa5.cc]
 memory_limit: 32
 limits: [
 	0 0

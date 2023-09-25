@@ -255,9 +255,9 @@ before_script:
   - export EXTRA_CXX_FLAGS=" -I $PWD/libseccomp/usr/include -D__NR_mlock2=325"
   - export EXTRA_LD_FLAGS=" -L $PWD/libseccomp/usr/lib/x86_64-linux-gnu"
   - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PWD/libseccomp/usr/lib/x86_64-linux-gnu"
-  - sed 's/LINUX_VERSION_CODE/266241/' -i src/sandbox.cc
-  - sed 's@\t$(PREFIX)test/exec@\t$(PREFIX)test/exec --gtest_filter=-Sandbox.run@' Makefile -i
-  - sed 's/TEST (Sandbox,/TEST (DISABLED_Sandbox,/' test/sandbox.cc -i
+  - sed 's/LINUX_VERSION_CODE/266241/' -i src/old_sandbox.cc
+  - sed 's@\t$(PREFIX)test/exec@\t$(PREFIX)test/exec --gtest_filter=-OldSandbox.run@' Makefile -i
+  - sed 's/TEST (OldSandbox,/TEST (DISABLED_OldSandbox,/' test/old_sandbox.cc -i
   - sed 's/TEST (Conver,/TEST (DISABLED_Conver,/' test/conver.cc -i
 
 script:

@@ -66,3 +66,13 @@ inline std::chrono::system_clock::time_point get_modification_time(FilePath file
 
     return get_modification_time(st);
 }
+
+// Returns file modification time (with second precision) as a time_point
+inline std::chrono::system_clock::time_point get_modification_time(int fd) {
+    struct stat64 st = {};
+    if (fstat64(fd, &st)) {
+        THROW("stat()", errmsg());
+    }
+
+    return get_modification_time(st);
+}

@@ -19,8 +19,23 @@ struct Ok {
 
     template <class U, std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    Ok(Ok<U>&& other) noexcept : val{std::move(other.val)} {}
+    constexpr Ok(Ok<U>&& other) noexcept : val{std::move(other.val)} {}
 };
+
+template <>
+struct Ok<void> {
+    constexpr Ok() noexcept = default;
+
+    Ok(const Ok&) = default;
+    Ok(Ok&&) noexcept = default;
+    Ok& operator=(const Ok&) = default;
+    Ok& operator=(Ok&&) noexcept = default;
+    ~Ok() = default;
+};
+
+Ok() -> Ok<void>;
+
+inline std::ostream& operator<<(std::ostream& os, const Ok<void>& /*ok*/) { return os << "Ok{}"; }
 
 template <class T, std::enable_if_t<is_printable<T>, int> = 0>
 std::ostream& operator<<(std::ostream& os, const Ok<T>& ok) {
@@ -29,12 +44,18 @@ std::ostream& operator<<(std::ostream& os, const Ok<T>& ok) {
 
 template <class A, class B>
 constexpr bool operator==(const Ok<A>& a, const Ok<B>& b) {
-    return a.val == b.val;
+    if constexpr (std::is_same_v<A, void> && std::is_same_v<B, void>) {
+        return true;
+    } else if constexpr (std::is_same_v<A, void> || std::is_same_v<B, void>) {
+        return false;
+    } else {
+        return a.val == b.val;
+    }
 }
 
 template <class A, class B>
 constexpr bool operator!=(const Ok<A>& a, const Ok<B>& b) {
-    return a.val != b.val;
+    return !(a == b);
 }
 
 template <class T>
@@ -51,26 +72,79 @@ struct Err {
 
     template <class U, std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    Err(Err<U>&& other) noexcept : err{std::move(other.err)} {}
+    constexpr Err(Err<U>&& other) noexcept : err{std::move(other.err)} {}
 };
 
+template <>
+struct Err<void> {
+    constexpr Err() noexcept = default;
+
+    Err(const Err&) = default;
+    Err(Err&&) noexcept = default;
+    Err& operator=(const Err&) = default;
+    Err& operator=(Err&&) noexcept = default;
+    ~Err() = default;
+};
+
+Err() -> Err<void>;
+
+inline std::ostream& operator<<(std::ostream& os, const Err<void>& /*err*/) {
+    return os << "Err{}";
+}
+
 template <class T, std::enable_if_t<is_printable<T>, int> = 0>
-std::ostream& operator<<(std::ostream& os, const Err<T>& e) {
-    return os << "Err{" << e.err << "}";
+std::ostream& operator<<(std::ostream& os, const Err<T>& err) {
+    return os << "Err{" << err.err << "}";
 }
 
 template <class A, class B>
 constexpr bool operator==(const Err<A>& a, const Err<B>& b) {
-    return a.err == b.err;
+    if constexpr (std::is_same_v<A, void> && std::is_same_v<B, void>) {
+        return true;
+    } else if constexpr (std::is_same_v<A, void> || std::is_same_v<B, void>) {
+        return false;
+    } else {
+        return a.err == b.err;
+    }
 }
 
 template <class A, class B>
 constexpr bool operator!=(const Err<A>& a, const Err<B>& b) {
-    return a.err != b.err;
+    return !(a == b);
 }
 
 template <class T, class E>
-using Result = std::variant<Ok<T>, Err<E>>;
+struct Result : std::variant<Ok<T>, Err<E>> {
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr Result(Ok<T> ok) : std::variant<Ok<T>, Err<E>>{std::move(ok)} {}
+
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr Result(Err<E> err) : std::variant<Ok<T>, Err<E>>{std::move(err)} {}
+
+    [[nodiscard]] constexpr bool is_ok() const noexcept {
+        return std::holds_alternative<Ok<T>>(*this);
+    }
+
+    [[nodiscard]] constexpr bool is_err() const noexcept {
+        return std::holds_alternative<Err<E>>(*this);
+    }
+
+    constexpr T unwrap() && noexcept {
+        if constexpr (std::is_same_v<T, void>) {
+            return;
+        } else {
+            return std::get<Ok<T>>(std::move(*this)).val;
+        }
+    }
+
+    constexpr E unwrap_err() && noexcept {
+        if constexpr (std::is_same_v<E, void>) {
+            return;
+        } else {
+            return std::get<Err<E>>(std::move(*this)).err;
+        }
+    }
+};
 
 template <
     class TA,
