@@ -137,7 +137,7 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
                                         .path = "/",
                                         .max_total_size_of_files_in_bytes =
                                             options.rootfs.max_total_size_of_files_in_bytes,
-                                        .inode_limit = 4 + options.rootfs.inode_limit,
+                                        .inode_limit = 5 + options.rootfs.inode_limit,
                                         .read_only = false,
                                     },
                                     CreateDir{.path = "/../lib"},

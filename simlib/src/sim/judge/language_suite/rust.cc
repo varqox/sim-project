@@ -97,105 +97,110 @@ sandbox::Result Rust::run_compiler(
     Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops,
     CompileOptions options
 ) {
-    return sc.await_result(
-        sc.send_request(
-            compiler_executable_fd,
-            merge(
-                std::vector<std::string_view>{
-                    "rustc",
-                    "--edition",
-                    edition_str,
-                    "--codegen",
-                    "debuginfo=0",
-                    "--codegen",
-                    "opt-level=2",
-                    "--codegen",
-                    "panic=abort",
-                },
-                extra_args
-            ),
-            {
-                .stdout_fd = compilation_errors_fd,
-                .stderr_fd = compilation_errors_fd,
-                .env = {{"PATH=/usr/bin"}},
-                .linux_namespaces =
+    return sc
+        .await_result(
+            sc
+                .send_request(
+                    compiler_executable_fd,
+                    merge(
+                        std::vector<std::string_view>{
+                            "rustc",
+                            "--edition",
+                            edition_str,
+                            "--codegen",
+                            "debuginfo=0",
+                            "--codegen",
+                            "opt-level=2",
+                            "--codegen",
+                            "panic=abort",
+                        },
+                        extra_args
+                    ),
                     {
-                        .user =
+                        .stdout_fd = compilation_errors_fd,
+                        .stderr_fd = compilation_errors_fd,
+                        .env = {{"PATH=/usr/bin"}},
+                        .linux_namespaces =
                             {
-                                .inside_uid = 1000,
-                                .inside_gid = 1000,
-                            },
-                        .mount =
-                            {
-                                .operations = merge(
-                                    std::vector<
-                                        sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{
-                                        MountTmpfs{
-                                            .path = "/",
-                                            .max_total_size_of_files_in_bytes =
-                                                options.max_file_size_in_bytes,
-                                            .inode_limit = 32,
-                                            .read_only = false,
-                                        },
-                                        CreateDir{.path = "/../lib"},
-                                        CreateDir{.path = "/../lib64"},
-                                        CreateDir{.path = "/../tmp"},
-                                        CreateDir{.path = "/../usr"},
-                                        CreateDir{.path = "/../usr/bin"},
-                                        CreateDir{.path = "/../usr/lib"},
-                                        CreateDir{.path = "/../usr/lib64"},
-                                        BindMount{
-                                            .source = "/lib",
-                                            .dest = "/../lib",
-                                            .no_exec = false,
-                                        },
-                                        BindMount{
-                                            .source = "/lib64",
-                                            .dest = "/../lib64",
-                                            .no_exec = false,
-                                        },
-                                        BindMount{
-                                            .source = "/usr/bin",
-                                            .dest = "/../usr/bin",
-                                            .no_exec = false,
-                                        },
-                                        BindMount{
-                                            .source = "/usr/lib",
-                                            .dest = "/../usr/lib",
-                                            .no_exec = false,
-                                        },
-                                        BindMount{
-                                            .source = "/usr/lib64",
-                                            .dest = "/../usr/lib64",
-                                            .no_exec = false,
-                                        },
+                                .user =
+                                    {
+                                        .inside_uid = 1000,
+                                        .inside_gid = 1000,
                                     },
-                                    mount_ops
-                                ),
-                                .new_root_mount_path = "/..",
+                                .mount =
+                                    {
+                                        .operations =
+                                            merge(
+                                                std::vector<sandbox::RequestOptions::
+                                                                LinuxNamespaces::Mount::Operation>{
+                                                    MountTmpfs{
+                                                        .path = "/",
+                                                        .max_total_size_of_files_in_bytes =
+                                                            options.max_file_size_in_bytes,
+                                                        .inode_limit = 32,
+                                                        .read_only = false,
+                                                    },
+                                                    CreateDir{.path = "/../lib"},
+                                                    CreateDir{.path = "/../lib64"},
+                                                    CreateDir{.path = "/../tmp"},
+                                                    CreateDir{.path = "/../usr"},
+                                                    CreateDir{.path = "/../usr/bin"},
+                                                    CreateDir{.path = "/../usr/lib"},
+                                                    CreateDir{.path = "/../usr/lib64"},
+                                                    BindMount{
+                                                        .source = "/lib",
+                                                        .dest = "/../lib",
+                                                        .no_exec = false,
+                                                    },
+                                                    BindMount{
+                                                        .source = "/lib64",
+                                                        .dest = "/../lib64",
+                                                        .no_exec = false,
+                                                    },
+                                                    BindMount{
+                                                        .source = "/usr/bin",
+                                                        .dest = "/../usr/bin",
+                                                        .no_exec = false,
+                                                    },
+                                                    BindMount{
+                                                        .source = "/usr/lib",
+                                                        .dest = "/../usr/lib",
+                                                        .no_exec =
+                                                            false,
+                                                    },
+                                                    BindMount{
+                                                        .source = "/usr/lib64",
+                                                        .dest = "/../usr/lib64",
+                                                        .no_exec =
+                                                            false,
+                                                    },
+                                                },
+                                                mount_ops
+                                            ),
+                                        .new_root_mount_path = "/..",
+                                    },
                             },
-                    },
-                .cgroup =
-                    {
-                        .process_num_limit = 32,
-                        .memory_limit_in_bytes = options.memory_limit_in_bytes,
-                        .cpu_max_bandwidth =
-                            sandbox::RequestOptions::Cgroup::CpuMaxBandwidth{
-                                .max_usec = 10000,
-                                .period_usec = 10000,
+                        .cgroup =
+                            {
+                                .process_num_limit = 32,
+                                .memory_limit_in_bytes = options.memory_limit_in_bytes,
+                                .cpu_max_bandwidth =
+                                    sandbox::RequestOptions::Cgroup::CpuMaxBandwidth{
+                                        .max_usec = 10000,
+                                        .period_usec = 10000,
+                                    },
                             },
-                    },
-                .prlimit =
-                    {
-                        .max_core_file_size_in_bytes = 0,
-                        .max_file_size_in_bytes = options.max_file_size_in_bytes,
-                    },
-                .time_limit = options.time_limit,
-                .cpu_time_limit = options.cpu_time_limit,
-                .seccomp_bpf_fd = compiler_seccomp_bpf_fd,
-            }
-        )
-    );
+                        .prlimit =
+                            {
+                                .max_core_file_size_in_bytes = 0,
+                                .max_file_size_in_bytes = options.max_file_size_in_bytes,
+                            },
+                        .time_limit = options.time_limit,
+                        .cpu_time_limit = options.cpu_time_limit,
+                        .seccomp_bpf_fd = compiler_seccomp_bpf_fd,
+                    }
+                )
+        );
 }
 
 sandbox::Result Rust::is_supported_impl(CompileOptions options) {
