@@ -1246,6 +1246,9 @@ void main(int argc, char** argv) noexcept {
         case WaitRes::REQUEST_CANCELLED: break;
         }
 
+        if (close(pid1_pidfd)) {
+            die_with_error("close()");
+        }
         if (close(request.result_fd)) {
             die_with_error("close()");
         }
