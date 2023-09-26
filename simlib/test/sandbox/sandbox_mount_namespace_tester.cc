@@ -21,8 +21,6 @@ void no_operations_no_new_root_mount_path() {
     throw_assert(close(fd) == 0);
 }
 
-void new_root_mount_path() { throw_assert(access("/tmp", F_OK) == -1 && errno == ENOENT); }
-
 void test_exec(FilePath path_for_executable, bool expect_execable) {
     char* empty[] = {nullptr};
     auto exe_contents = get_file_contents(expect_execable ? "/bin/true" : "/bin/false");
@@ -218,8 +216,6 @@ int main(int argc, char** argv) {
     std::string_view arg = argv[1];
     if (arg == "no_operations_no_new_root_mount_path") {
         no_operations_no_new_root_mount_path();
-    } else if (arg == "new_root_mount_path") {
-        new_root_mount_path();
     } else if (arg == "mount_tmpfs") {
         mount_tmpfs();
     } else if (arg == "mount_proc") {

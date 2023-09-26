@@ -61,7 +61,7 @@ TEST(sandbox, new_root_mount_path) {
     auto& sc = get_sc();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            {{tester_executable_path, "new_root_mount_path"}},
+            {{"/usr/bin/bash", "-c", "test ! -e /tmp"}},
             {
                 .stderr_fd = STDERR_FILENO,
                 .linux_namespaces =
@@ -107,7 +107,7 @@ TEST(sandbox, new_root_mount_path_equals_root) {
     auto& sc = get_sc();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            {{tester_executable_path, "new_root_mount_path"}},
+            {{"/usr/bin/bash", "-c", "test ! -e /tmp"}},
             {
                 .stderr_fd = STDERR_FILENO,
                 .linux_namespaces =
