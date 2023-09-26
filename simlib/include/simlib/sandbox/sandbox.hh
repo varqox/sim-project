@@ -19,7 +19,7 @@ struct RequestOptions {
     std::optional<int> stdin_fd = std::nullopt;
     std::optional<int> stdout_fd = std::nullopt;
     std::optional<int> stderr_fd = std::nullopt;
-    Slice<std::string_view> env = {};
+    Slice<const std::string_view> env = {};
 
     struct LinuxNamespaces {
         struct User {
@@ -67,7 +67,7 @@ struct RequestOptions {
 
             using Operation = std::variant<MountTmpfs, MountProc, BindMount, CreateDir, CreateFile>;
 
-            Slice<Operation> operations = {};
+            Slice<const Operation> operations = {};
             std::optional<std::string_view> new_root_mount_path = std::nullopt;
         } mount = {};
     } linux_namespaces = {};
@@ -223,26 +223,26 @@ private:
     /// Multiple requests can be send before awaiting completion with await_result().
     /// Throws if there is any error with the supervisor.
     [[nodiscard]] RequestHandle
-    do_send_request(std::variant<int, std::string_view> executable, Slice<std::string_view> argv, const RequestOptions&);
+    do_send_request(std::variant<int, std::string_view> executable, Slice<const std::string_view> argv, const RequestOptions&);
 
 public:
     /// Sends the request and returns immediately without waiting for the request to complete.
     /// Multiple requests can be send before awaiting completion with await_result().
     /// Throws if there is any error with the supervisor.
     [[nodiscard]] RequestHandle
-    send_request(int executable_fd, Slice<std::string_view> argv, const RequestOptions&);
+    send_request(int executable_fd, Slice<const std::string_view> argv, const RequestOptions&);
 
     /// Sends the request and returns immediately without waiting for the request to complete.
     /// Multiple requests can be send before awaiting completion with await_result().
     /// Throws if there is any error with the supervisor.
     [[nodiscard]] RequestHandle
-    send_request(std::string_view executable_path, Slice<std::string_view> argv, const RequestOptions&);
+    send_request(std::string_view executable_path, Slice<const std::string_view> argv, const RequestOptions&);
 
     /// Sends the request and returns immediately without waiting for the request to complete.
     /// Multiple requests can be send before awaiting completion with await_result().
     /// Throws if there is any error with the supervisor.
     [[nodiscard]] RequestHandle
-    send_request(Slice<std::string_view> argv, const RequestOptions& options = {});
+    send_request(Slice<const std::string_view> argv, const RequestOptions& options = {});
 
     /// Throws if there is any error with the supervisor.
     Result await_result(RequestHandle&& request_handle);

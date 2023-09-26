@@ -241,7 +241,7 @@ SerializedReuest serialize(
     int result_fd,
     int kill_fd,
     std::variant<int, std::string_view> executable,
-    Slice<std::string_view> argv,
+    Slice<const std::string_view> argv,
     const RequestOptions& options
 ) {
     namespace request = communication::client_supervisor::request;

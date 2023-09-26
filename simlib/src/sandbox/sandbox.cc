@@ -219,7 +219,7 @@ SupervisorConnection::RequestHandle::~RequestHandle() noexcept(false) {
 
 SupervisorConnection::RequestHandle SupervisorConnection::do_send_request(
     std::variant<int, std::string_view> executable,
-    Slice<std::string_view> argv,
+    Slice<const std::string_view> argv,
     const RequestOptions& options
 ) {
     if (supervisor_is_dead_and_waited()) {
@@ -281,13 +281,15 @@ SupervisorConnection::RequestHandle SupervisorConnection::do_send_request(
 }
 
 SupervisorConnection::RequestHandle SupervisorConnection::send_request(
-    int executable_fd, Slice<std::string_view> argv, const RequestOptions& options
+    int executable_fd, Slice<const std::string_view> argv, const RequestOptions& options
 ) {
     return do_send_request(executable_fd, argv, options);
 }
 
 SupervisorConnection::RequestHandle SupervisorConnection::send_request(
-    std::string_view executable_path, Slice<std::string_view> argv, const RequestOptions& options
+    std::string_view executable_path,
+    Slice<const std::string_view> argv,
+    const RequestOptions& options
 ) {
     if (executable_path.empty()) {
         THROW("executable path cannot be empty");
@@ -295,8 +297,9 @@ SupervisorConnection::RequestHandle SupervisorConnection::send_request(
     return do_send_request(executable_path, argv, options);
 }
 
-SupervisorConnection::RequestHandle
-SupervisorConnection::send_request(Slice<std::string_view> argv, const RequestOptions& options) {
+SupervisorConnection::RequestHandle SupervisorConnection::send_request(
+    Slice<const std::string_view> argv, const RequestOptions& options
+) {
     if (argv.is_empty()) {
         THROW("argv cannot be empty");
     }
