@@ -110,27 +110,27 @@ sandbox::Result Pascal::run_compiler(
                                                     CreateDir{.path = "/../usr/lib"},
                                                     CreateDir{.path = "/../usr/lib64"},
                                                     BindMount{
-                                                        .source = "/lib",
+                                                        .source = "/lib/",
                                                         .dest = "/../lib",
                                                         .no_exec = false,
                                                     },
                                                     BindMount{
-                                                        .source = "/lib64",
+                                                        .source = "/lib64/",
                                                         .dest = "/../lib64",
                                                         .no_exec = false,
                                                     },
                                                     BindMount{
-                                                        .source = "/usr/bin",
+                                                        .source = "/usr/bin/",
                                                         .dest = "/../usr/bin",
                                                         .no_exec = false,
                                                     },
                                                     BindMount{
-                                                        .source = "/usr/lib",
+                                                        .source = "/usr/lib/",
                                                         .dest = "/../usr/lib",
                                                         .no_exec = false,
                                                     },
                                                     BindMount{
-                                                        .source = "/usr/lib64",
+                                                        .source = "/usr/lib64/",
                                                         .dest = "/../usr/lib64",
                                                         .no_exec = false,
                                                     },
