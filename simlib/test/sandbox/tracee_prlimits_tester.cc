@@ -2,6 +2,7 @@
 #include <csignal>
 #include <fcntl.h>
 #include <simlib/file_contents.hh>
+#include <simlib/file_perms.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/random_bytes.hh>
 #include <simlib/throw_assert.hh>
@@ -87,14 +88,14 @@ int main(int argc, char** argv) {
 
         throw_assert(signal(SIGXFSZ, SIG_IGN) != SIG_ERR); // NOLINT(performance-no-int-to-ptr)
 
-        int fd = open("/tmp/file", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC);
+        int fd = open("/tmp/file", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, S_0644);
         throw_assert(fd >= 0);
         throw_assert(ftruncate(fd, 42) == 0);
         throw_assert(ftruncate(fd, 43) == -1 && errno == EFBIG);
         throw_assert(close(fd) == 0);
 
         // Create another file (the limit is not on the cumulative size)
-        fd = open("/tmp/another_file", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC);
+        fd = open("/tmp/another_file", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, S_0644);
         throw_assert(write_all(fd, from_unsafe{random_bytes(42)}) == 42);
         throw_assert(write_all(fd, "x", 1) == 0 && errno == EFBIG);
         throw_assert(close(fd) == 0);
