@@ -1,21 +1,21 @@
 #include "judge_base.hh"
-#include "simlib/sim/judge_worker.hh"
 
 #include <optional>
 #include <sim/judging_config.hh>
 #include <simlib/enum_val.hh>
+#include <simlib/sim/judge_worker.hh>
 #include <simlib/throw_assert.hh>
 
 using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
-JudgeBase::JudgeBase() : jworker_{{
-    .checker_time_limit = sim::CHECKER_TIME_LIMIT,
-    .checker_memory_limit_in_bytes = sim::CHECKER_MEMORY_LIMIT,
-    .score_cut_lambda = sim::SCORE_CUT_LAMBDA,
-}} {
-}
+JudgeBase::JudgeBase()
+: jworker_{{
+      .checker_time_limit = sim::CHECKER_TIME_LIMIT,
+      .checker_memory_limit_in_bytes = sim::CHECKER_MEMORY_LIMIT,
+      .score_cut_lambda = sim::SCORE_CUT_LAMBDA,
+  }} {}
 
 sim::SolutionLanguage JudgeBase::to_sol_lang(Submission::Language lang) {
     STACK_UNWINDING_MARK;

@@ -27,7 +27,7 @@ You will need `meson` build system to be installed (on most platforms it is in t
 #### Debian
 
 ```sh
-sudo apt install g++-multilib mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev pkgconf meson
+sudo apt install g++-multilib mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev libcap-dev pkgconf meson
 ```
 
 Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ versions of some of the above packages are needed to build sim successfully.
@@ -35,7 +35,7 @@ Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ 
 #### Arch Linux
 
 ```sh
-sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip meson && \
+sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip libcap meson && \
 sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql && \
 sudo systemctl enable mariadb && sudo systemctl start mariadb
 ```
