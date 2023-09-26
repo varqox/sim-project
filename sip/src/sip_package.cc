@@ -147,7 +147,12 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
             );
             if (cres.is_err()) {
                 if (log_compilation) {
-                    stdlog(" failed:\n", get_file_contents(std::move(cres).unwrap_err(), 0, COMPILATION_ERRORS_MAX_LENGTH));
+                    stdlog(
+                        " failed:\n",
+                        get_file_contents(
+                            std::move(cres).unwrap_err(), 0, COMPILATION_ERRORS_MAX_LENGTH
+                        )
+                    );
                 }
                 throw SipError("Generator compilation failed");
             }
@@ -1002,32 +1007,32 @@ static void compile_tex_file(StringView file) {
                                     CreateFile{.path = "/../main.pdf"},
                                     CreateFile{.path = "/../main.tex"},
                                     BindMount{
-                                        .source = "/lib",
+                                        .source = "/lib/",
                                         .dest = "/../lib",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/lib64",
+                                        .source = "/lib64/",
                                         .dest = "/../lib64",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/usr/bin",
+                                        .source = "/usr/bin/",
                                         .dest = "/../usr/bin",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/usr/lib",
+                                        .source = "/usr/lib/",
                                         .dest = "/../usr/lib",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/usr/share/texmf-dist",
+                                        .source = "/usr/share/texmf-dist/",
                                         .dest = "/../usr/share/texmf-dist",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/var/lib/texmf",
+                                        .source = "/var/lib/texmf/",
                                         .dest = "/../var/lib/texmf",
                                         .no_exec = false,
                                     },
