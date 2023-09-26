@@ -215,6 +215,16 @@ examples = [
         ],
         install : false,
     ),
+    executable('sandbox_identify_needed_paths',
+        implicit_include_directories : false,
+        sources : [
+            'examples/sandbox/identify_needed_paths.cc',
+        ],
+        dependencies : [
+            simlib_dep,
+        ],
+        install : false,
+    ),
 ]
 
 alias_target('base', simlib)
