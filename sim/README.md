@@ -8,10 +8,10 @@ Sim is an open source platform for carrying out algorithmic contests
 
 ## How to build
 
-> **_NOTE:_** There are two scripts `scripts/setup-sim-for-camp-on-debian11.sh` and `scripts/setup-public-sim-on-debian11.sh`. So if you need to look at very precise instructions that set up Sim, you can check out these scripts.
+> **_NOTE:_** There are two scripts `scripts/setup-sim-for-camp-on-debian12.sh` and `scripts/setup-public-sim-on-debian12.sh`. So if you need to look at very precise instructions that set up Sim, you can check out these scripts.
 > If you intend to use them, first look and edit the configuration options inside the scripts to your needs.
-> * `scripts/setup-sim-for-camp-on-debian11.sh` setups sim and an Nginx HTTPS proxy for an offline camp on Debian 11.
-> * `scripts/setup-public-sim-on-debian11.sh` setups Nginx, Certbot, emails, and much more.
+> * `scripts/setup-sim-for-camp-on-debian12.sh` setups sim and an Nginx HTTPS proxy for an offline camp on Debian 12.
+> * `scripts/setup-public-sim-on-debian12.sh` setups Nginx, Certbot, emails, and much more.
 
 You will need `meson` build system to be installed (on most platforms it is in the _meson_ package).
 
@@ -27,7 +27,7 @@ You will need `meson` build system to be installed (on most platforms it is in t
 #### Debian
 
 ```sh
-sudo apt install g++-multilib mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev libcap-dev pkgconf meson
+sudo apt install g++ mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev libcap-dev rustc fpc pkgconf meson
 ```
 
 Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ versions of some of the above packages are needed to build sim successfully.
@@ -35,7 +35,7 @@ Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ 
 #### Arch Linux
 
 ```sh
-sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip libcap meson && \
+sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip libcap rust fpc meson && \
 sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql && \
 sudo systemctl enable mariadb && sudo systemctl start mariadb
 ```
