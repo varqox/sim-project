@@ -217,8 +217,10 @@ SupervisorConnection::RequestHandle::~RequestHandle() noexcept(false) {
     }
 }
 
-SupervisorConnection::RequestHandle SupervisorConnection::send_request(
-    int executable_fd, Slice<std::string_view> argv, const RequestOptions& options
+SupervisorConnection::RequestHandle SupervisorConnection::do_send_request(
+    std::variant<int, std::string_view> executable,
+    Slice<std::string_view> argv,
+    const RequestOptions& options
 ) {
     if (supervisor_is_dead_and_waited()) {
         THROW("sandbox supervisor is already dead");
@@ -241,7 +243,7 @@ SupervisorConnection::RequestHandle SupervisorConnection::send_request(
     }
 
     auto serialized_request =
-        client::request::serialize(result_pipe->writable, kill_fd, executable_fd, argv, options);
+        client::request::serialize(result_pipe->writable, kill_fd, executable, argv, options);
     auto rc = send_fds<serialized_request.fds.max_size()>(
         sock_fd,
         serialized_request.header.data(),
@@ -278,16 +280,27 @@ SupervisorConnection::RequestHandle SupervisorConnection::send_request(
     return RequestHandle{result_pipe->readable.release(), kill_fd.release()};
 }
 
+SupervisorConnection::RequestHandle SupervisorConnection::send_request(
+    int executable_fd, Slice<std::string_view> argv, const RequestOptions& options
+) {
+    return do_send_request(executable_fd, argv, options);
+}
+
+SupervisorConnection::RequestHandle SupervisorConnection::send_request(
+    std::string_view executable_path, Slice<std::string_view> argv, const RequestOptions& options
+) {
+    if (executable_path.empty()) {
+        THROW("executable path cannot be empty");
+    }
+    return do_send_request(executable_path, argv, options);
+}
+
 SupervisorConnection::RequestHandle
 SupervisorConnection::send_request(Slice<std::string_view> argv, const RequestOptions& options) {
     if (argv.is_empty()) {
         THROW("argv cannot be empty");
     }
-    FileDescriptor exe_fd{open(std::string(argv[0]).c_str(), O_RDONLY | O_CLOEXEC)};
-    if (!exe_fd.is_open()) {
-        THROW("open(\"", argv[0], "\")", errmsg());
-    }
-    return send_request(exe_fd, argv, options);
+    return send_request(argv[0], argv, options);
 }
 
 Result SupervisorConnection::await_result(RequestHandle&& request_handle) {

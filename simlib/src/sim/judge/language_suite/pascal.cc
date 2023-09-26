@@ -76,7 +76,7 @@ sandbox::Result Pascal::run_compiler(
         .await_result(
             sc
                 .send_request(
-                    compiler_executable_fd,
+                    compiler_executable_path,
                     merge(std::vector<std::string_view>{"fpc", "-O2", "-XS", "-Xt"}, extra_args),
                     {
                         .stdout_fd = compilation_errors_fd,

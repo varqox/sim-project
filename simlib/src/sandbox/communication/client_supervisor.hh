@@ -20,10 +20,11 @@ namespace fds {
 using mask_t = uint8_t;
 
 namespace mask {
-static constexpr mask_t sending_stdin_fd = 1 << 0;
-static constexpr mask_t sending_stdout_fd = 1 << 1;
-static constexpr mask_t sending_stderr_fd = 1 << 2;
-static constexpr mask_t sending_seccomp_bpf_fd = 1 << 3;
+static constexpr mask_t sending_executable_fd = 1 << 0;
+static constexpr mask_t sending_stdin_fd = 1 << 1;
+static constexpr mask_t sending_stdout_fd = 1 << 2;
+static constexpr mask_t sending_stderr_fd = 1 << 3;
+static constexpr mask_t sending_seccomp_bpf_fd = 1 << 4;
 } // namespace mask
 
 } // namespace fds

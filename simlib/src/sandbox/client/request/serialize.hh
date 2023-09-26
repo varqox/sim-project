@@ -6,6 +6,7 @@
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/slice.hh>
 #include <string_view>
+#include <variant>
 
 namespace sandbox::client::request {
 
@@ -19,7 +20,7 @@ struct SerializedReuest {
 SerializedReuest serialize(
     int result_fd,
     int kill_fd,
-    int executable_fd,
+    std::variant<int, std::string_view> executable,
     Slice<std::string_view> argv,
     const RequestOptions& options
 );

@@ -33,7 +33,7 @@ Suite::RunHandle Bash::async_run(
     Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops
 ) {
     return RunHandle{sc.send_request(
-        interpreter_executable_fd,
+        interpreter_executable_path,
         merge(std::vector<std::string_view>{"bash", "source.sh"}, args),
         {
             .stdin_fd = options.stdin_fd,
@@ -56,12 +56,13 @@ Suite::RunHandle Bash::async_run(
                                         .path = "/",
                                         .max_total_size_of_files_in_bytes =
                                             options.rootfs.max_total_size_of_files_in_bytes,
-                                        .inode_limit = 6 + options.rootfs.inode_limit,
+                                        .inode_limit = 7 + options.rootfs.inode_limit,
                                         .read_only = false,
                                     },
                                     CreateDir{.path = "/../lib"},
                                     CreateDir{.path = "/../lib64"},
                                     CreateDir{.path = "/../usr"},
+                                    CreateDir{.path = "/../usr/bin"},
                                     CreateDir{.path = "/../usr/lib"},
                                     CreateDir{.path = "/../usr/lib64"},
                                     CreateFile{.path = "/../source.sh"},
@@ -73,6 +74,11 @@ Suite::RunHandle Bash::async_run(
                                     BindMount{
                                         .source = "/lib64/",
                                         .dest = "/../lib64",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = "/usr/bin/",
+                                        .dest = "/../usr/bin",
                                         .no_exec = false,
                                     },
                                     BindMount{

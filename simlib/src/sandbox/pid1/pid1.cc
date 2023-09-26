@@ -708,7 +708,7 @@ namespace sandbox::pid1 {
     if (tracee_pid == 0) {
         tracee::main({
             .shared_mem_state = args.shared_mem_state,
-            .executable_fd = args.executable_fd,
+            .executable = args.executable,
             .stdin_fd = args.stdin_fd,
             .stdout_fd = args.stdout_fd,
             .stderr_fd = args.stderr_fd,

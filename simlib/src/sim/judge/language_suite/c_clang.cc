@@ -81,7 +81,7 @@ sandbox::Result C_Clang::run_compiler(
 ) {
     return sc.await_result(
         sc.send_request(
-            compiler_executable_fd,
+            compiler_executable_path,
             merge(std::vector<std::string_view>{"clang", std_flag, "-O2", "-static"}, extra_args),
             {
                 .stdout_fd = compilation_errors_fd,

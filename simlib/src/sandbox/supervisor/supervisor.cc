@@ -303,7 +303,7 @@ request::Request recv_request() noexcept {
 }
 
 void close_request_fds_except_result_fd_and_kill_tracee_fd(const request::Request& req) noexcept {
-    if (close(req.executable_fd)) {
+    if (std::holds_alternative<int>(req.executable) && close(std::get<int>(req.executable))) {
         die_with_error("close()");
     }
     if (req.stdin_fd && close(*req.stdin_fd)) {
@@ -1142,7 +1142,7 @@ void main(int argc, char** argv) noexcept {
             constexpr uid_t PID1_USER_NS_INSIDE_GID = 1;
             pid1::main({
                 .shared_mem_state = shared_mem_state,
-                .executable_fd = request.executable_fd,
+                .executable = request.executable,
                 .stdin_fd = request.stdin_fd,
                 .stdout_fd = request.stdout_fd,
                 .stderr_fd = request.stderr_fd,

@@ -11,7 +11,7 @@ TEST(sandbox, nonexistent_argv0) {
     ASSERT_THAT(
         [&] { (void)sc.send_request({{""}}); },
         testing::ThrowsMessage<std::runtime_error>(
-            testing::StartsWith("open(\"\") - No such file or directory (os error 2)")
+            testing::StartsWith("executable path cannot be empty")
         )
     );
 }

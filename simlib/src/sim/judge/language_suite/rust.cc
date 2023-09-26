@@ -101,7 +101,7 @@ sandbox::Result Rust::run_compiler(
         .await_result(
             sc
                 .send_request(
-                    compiler_executable_fd,
+                    compiler_executable_path,
                     merge(
                         std::vector<std::string_view>{
                             "rustc",

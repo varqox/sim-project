@@ -218,11 +218,25 @@ public:
         friend class SupervisorConnection;
     };
 
+private:
+    /// Sends the request and returns immediately without waiting for the request to complete.
+    /// Multiple requests can be send before awaiting completion with await_result().
+    /// Throws if there is any error with the supervisor.
+    [[nodiscard]] RequestHandle
+    do_send_request(std::variant<int, std::string_view> executable, Slice<std::string_view> argv, const RequestOptions&);
+
+public:
     /// Sends the request and returns immediately without waiting for the request to complete.
     /// Multiple requests can be send before awaiting completion with await_result().
     /// Throws if there is any error with the supervisor.
     [[nodiscard]] RequestHandle
     send_request(int executable_fd, Slice<std::string_view> argv, const RequestOptions&);
+
+    /// Sends the request and returns immediately without waiting for the request to complete.
+    /// Multiple requests can be send before awaiting completion with await_result().
+    /// Throws if there is any error with the supervisor.
+    [[nodiscard]] RequestHandle
+    send_request(std::string_view executable_path, Slice<std::string_view> argv, const RequestOptions&);
 
     /// Sends the request and returns immediately without waiting for the request to complete.
     /// Multiple requests can be send before awaiting completion with await_result().

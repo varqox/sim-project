@@ -15,7 +15,7 @@ namespace sandbox::pid1 {
 
 struct Args {
     volatile communication::supervisor_pid1_tracee::SharedMemState* shared_mem_state;
-    int executable_fd;
+    std::variant<int, char*> executable;
     std::optional<int> stdin_fd;
     std::optional<int> stdout_fd;
     std::optional<int> stderr_fd;

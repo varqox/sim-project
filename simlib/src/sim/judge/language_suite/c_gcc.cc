@@ -79,7 +79,7 @@ sandbox::Result C_GCC::run_compiler(
     return sc
         .await_result(
             sc.send_request(
-                compiler_executable_fd,
+                compiler_executable_path,
                 merge(std::vector<std::string_view>{"gcc", std_flag, "-O2", "-static"}, extra_args),
                 {
                     .stdout_fd = compilation_errors_fd,

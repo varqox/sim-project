@@ -14,6 +14,7 @@
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/serialize.hh>
 #include <simlib/slice.hh>
+#include <string_view>
 #include <sys/stat.h>
 #include <type_traits>
 #include <utility>
@@ -239,12 +240,15 @@ void serialize(Writer<phase>& writer, const RequestOptions::Prlimit& pr) {
 SerializedReuest serialize(
     int result_fd,
     int kill_fd,
-    int executable_fd,
+    std::variant<int, std::string_view> executable,
     Slice<std::string_view> argv,
     const RequestOptions& options
 ) {
     namespace request = communication::client_supervisor::request;
-    auto fds = ArrayVec<int, 7>{result_fd, kill_fd, executable_fd};
+    auto fds = ArrayVec<int, 7>{result_fd, kill_fd};
+    if (std::holds_alternative<int>(executable)) {
+        fds.emplace(std::get<int>(executable));
+    }
     if (options.stdin_fd) {
         fds.emplace(*options.stdin_fd);
     }
@@ -261,11 +265,18 @@ SerializedReuest serialize(
     auto do_serialize = [&](auto& writer) {
         namespace fds = request::fds;
         writer.write_flags({
+            {std::holds_alternative<int>(executable), fds::mask::sending_executable_fd},
             {options.stdin_fd.has_value(), fds::mask::sending_stdin_fd},
             {options.stdout_fd.has_value(), fds::mask::sending_stdout_fd},
             {options.stderr_fd.has_value(), fds::mask::sending_stderr_fd},
             {options.seccomp_bpf_fd.has_value(), fds::mask::sending_seccomp_bpf_fd},
         }, as<fds::mask_t>);
+
+        if (std::holds_alternative<std::string_view>(executable)) {
+            auto executable_path = std::get<std::string_view>(executable);
+            assert(!executable_path.empty());
+            serialize_as_null_terminated(writer, executable_path);
+        }
 
         writer.write(argv.size(), casted_as<request::argv_len_t>);
         for (auto const& arg : argv) {

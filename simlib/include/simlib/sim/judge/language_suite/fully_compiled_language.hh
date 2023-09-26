@@ -13,19 +13,19 @@ namespace sim::judge::language_suite {
 
 class FullyCompiledLanguage : public Suite {
 protected:
-    FileDescriptor compiler_executable_fd;
+    std::string compiler_executable_path;
     FileDescriptor compiler_seccomp_bpf_fd;
 
 private:
     TemporaryFile executable_tmp_file{"/tmp/sim_fully_compiled_language_suite_executable.XXXXXX"};
-    FileDescriptor executable_file_fd;
+    bool executable_file_is_ready = false;
 
 protected:
     FileDescriptor executable_seccomp_bpf_fd;
 
 public:
     explicit FullyCompiledLanguage(
-        FilePath compiler_executable_path, FileDescriptor compiler_seccomp_bpf_fd
+        std::string compiler_executable_path, FileDescriptor compiler_seccomp_bpf_fd
     );
 
     [[nodiscard]] bool is_supported() final;

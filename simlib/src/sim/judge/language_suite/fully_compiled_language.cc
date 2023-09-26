@@ -15,19 +15,21 @@
 #include <simlib/slice.hh>
 #include <string_view>
 #include <sys/wait.h>
+#include <unistd.h>
 #include <variant>
 #include <vector>
 
 using MountTmpfs = sandbox::RequestOptions::LinuxNamespaces::Mount::MountTmpfs;
 using BindMount = sandbox::RequestOptions::LinuxNamespaces::Mount::BindMount;
 using CreateDir = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateDir;
+using CreateFile = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateFile;
 
 namespace sim::judge::language_suite {
 
 FullyCompiledLanguage::FullyCompiledLanguage(
-    FilePath compiler_executable_path, FileDescriptor compiler_seccomp_bpf_fd
+    std::string compiler_executable_path, FileDescriptor compiler_seccomp_bpf_fd
 )
-: compiler_executable_fd{compiler_executable_path, O_RDONLY | O_CLOEXEC}
+: compiler_executable_path{std::move(compiler_executable_path)}
 , compiler_seccomp_bpf_fd{std::move(compiler_seccomp_bpf_fd)}
 , executable_seccomp_bpf_fd{[] {
     auto bpf = sandbox::seccomp::BpfBuilder{};
@@ -36,7 +38,7 @@ FullyCompiledLanguage::FullyCompiledLanguage(
 }()} {}
 
 bool FullyCompiledLanguage::is_supported() {
-    if (!compiler_executable_fd.is_open()) {
+    if (access(compiler_executable_path, F_OK) == 0) {
         return false;
     }
     return std::visit(
@@ -57,21 +59,16 @@ bool FullyCompiledLanguage::is_supported() {
 
 Result<void, FileDescriptor>
 FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
-    if (executable_file_fd.is_open() && executable_file_fd.close()) {
-        THROW("close()", errmsg());
-    }
+    executable_file_is_ready = false;
 
     if (options.cache &&
         options.cache->compilation_cache.copy_from_cache_if_newer_than(
             options.cache->cached_name,
             executable_tmp_file.path(),
-            std::max(get_modification_time(source), get_modification_time(compiler_executable_fd))
+            std::max(get_modification_time(source), get_modification_time(compiler_executable_path))
         ))
     {
-        executable_file_fd.open(executable_tmp_file.path(), O_RDONLY | O_CLOEXEC);
-        if (!executable_file_fd.is_open()) {
-            THROW("open()");
-        }
+        executable_file_is_ready = true;
         return Ok{};
     }
 
@@ -87,10 +84,7 @@ FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
         overloaded{
             [&](const sandbox::result::Ok& ok) -> Result<void, FileDescriptor> {
                 if (ok.si == sandbox::Si{.code = CLD_EXITED, .status = 0}) {
-                    executable_file_fd.open(executable_tmp_file.path(), O_RDONLY | O_CLOEXEC);
-                    if (!executable_file_fd.is_open()) {
-                        THROW("open()");
-                    }
+                    executable_file_is_ready = true;
                     if (cache) {
                         cache->compilation_cache.save_or_override(
                             cache->cached_name, executable_tmp_file.path()
@@ -113,8 +107,11 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
     RunOptions options,
     Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops
 ) {
+    if (!executable_file_is_ready) {
+        THROW("cannot run without successful compilation preceding the run");
+    }
     return RunHandle{sc.send_request(
-        executable_file_fd,
+        "/exe",
         merge(std::vector<std::string_view>{""}, args),
         {
             .stdin_fd = options.stdin_fd,
@@ -137,7 +134,7 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
                                         .path = "/",
                                         .max_total_size_of_files_in_bytes =
                                             options.rootfs.max_total_size_of_files_in_bytes,
-                                        .inode_limit = 5 + options.rootfs.inode_limit,
+                                        .inode_limit = 6 + options.rootfs.inode_limit,
                                         .read_only = false,
                                     },
                                     CreateDir{.path = "/../lib"},
@@ -145,6 +142,7 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
                                     CreateDir{.path = "/../usr"},
                                     CreateDir{.path = "/../usr/lib"},
                                     CreateDir{.path = "/../usr/lib64"},
+                                    CreateFile{.path = "/../exe"},
                                     BindMount{
                                         .source = "/lib/",
                                         .dest = "/../lib",
@@ -163,6 +161,11 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
                                     BindMount{
                                         .source = "/usr/lib64/",
                                         .dest = "/../usr/lib64",
+                                        .no_exec = false,
+                                    },
+                                    BindMount{
+                                        .source = executable_tmp_file.path(),
+                                        .dest = "/../exe",
                                         .no_exec = false,
                                     },
                                 },

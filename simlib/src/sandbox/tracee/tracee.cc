@@ -12,6 +12,7 @@
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
 #include <simlib/noexcept_concat.hh>
+#include <simlib/overloaded.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <sys/mman.h>
@@ -19,6 +20,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <utility>
+#include <variant>
 
 namespace sandbox::tracee {
 
@@ -177,7 +179,16 @@ namespace sandbox::tracee {
 
     save_exec_start_times();
     signal_pid1_that_exec_start_times_are_saved();
-    syscalls::execveat(args.executable_fd, "", args.argv.data(), args.env.data(), AT_EMPTY_PATH);
+    std::visit(
+        overloaded{
+            [&](int fd) {
+                syscalls::execveat(fd, "", args.argv.data(), args.env.data(), AT_EMPTY_PATH);
+            },
+            [&](char* path) {
+                syscalls::execveat(AT_FDCWD, path, args.argv.data(), args.env.data(), 0);
+            }},
+        args.executable
+    );
     die_with_error("execveat()");
 }
 

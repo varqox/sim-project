@@ -4,7 +4,9 @@
 #include <exception>
 #include <gmock/gmock.h>
 #include <optional>
+#include <simlib/concat_tostr.hh>
 #include <simlib/sandbox/sandbox.hh>
+#include <simlib/string_view.hh>
 #include <stdexcept>
 
 using std::nullopt;
