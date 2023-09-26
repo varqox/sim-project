@@ -413,21 +413,22 @@ tests = {
 }
 
 foreach test_src, args : tests
-    test_deps = ['tester' in args ? gtest_dep : gtest_main_dep]
+    test_executable_deps = ['tester' in args ? gtest_dep : gtest_main_dep]
+    tester_dep = []
     test_kwargs = {}
     foreach key, value : args
         if key == 'dependencies'
-            test_deps = value
+            test_executable_deps = value
         elif key == 'tester'
+            tester = executable(value.underscorify(),
+                implicit_include_directories : false,
+                sources : value,
+                build_by_default : false,
+                dependencies : simlib_dep,
+            )
+            tester_dep = [tester]
             test_kwargs += {
-                'args': [
-                    executable(value.underscorify(),
-                        implicit_include_directories : false,
-                        sources : value,
-                        build_by_default : false,
-                        dependencies : simlib_dep,
-                    ),
-                ],
+                'args': [tester.full_path()],
             }
         else
             test_kwargs += {key: value}
@@ -439,10 +440,11 @@ foreach test_src, args : tests
             sources : test_src,
             dependencies : [
                 simlib_dep,
-                test_deps,
+                test_executable_deps,
             ],
             build_by_default : false,
         ),
+        depends : tester_dep,
         timeout : 300,
         kwargs : test_kwargs,
     )
