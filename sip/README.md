@@ -13,13 +13,13 @@ Here are instructions how to satisfy dependencies on some systems:
 #### Debian / Ubuntu
 
 ```sh
-sudo apt-get install meson g++-multilib libseccomp-dev libzip-dev
+sudo apt-get install meson g++ libseccomp-dev libzip-dev libcap-dev
 ```
 
 #### Arch Linux
 
 ```sh
-sudo pacman -S meson gcc libseccomp libzip
+sudo pacman -S meson gcc libseccomp libzip libcap
 ```
 
 ### Tutorial: release build step by step
