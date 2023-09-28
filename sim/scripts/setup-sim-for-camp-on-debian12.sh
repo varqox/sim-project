@@ -7,7 +7,7 @@ database_user="camp_sim"
 database_name="camp_simdb"
 database_user_password="camp_simpasswd"
 setup_nginx=true
-setup_cron=true
+setup_systemd_to_start_sim_at_boot=true
 
 user=$1
 [ -z "$user" ] && echo "Usage: $0 <user>" && false
@@ -38,7 +38,7 @@ user_cmd 'test -e camp_sim/' || user_cmd 'git clone --recursive https://github.c
 user_cmd '(cd camp_sim && meson setup build/ -Dbuildtype=release)'
 user_cmd '(cd camp_sim && meson configure build/ --prefix "$(pwd)/sim")'
 user_cmd '(cd camp_sim && meson compile -C build)'
-user_cmd '(cd camp_sim && meson test -C build)'
+user_cmd '(cd camp_sim && meson test -C build --print-errorlogs)'
 
 /bin/echo -e '\033[1;32m==>\033[0;1m Configure sim\033[m'
 user_cmd "(cd camp_sim && mkdir -p sim && /bin/echo -e \"user: '${database_user}'\npassword: '${database_user_password}'\ndb: '${database_name}'\nhost: 'localhost'\" > sim/.db.config)"
@@ -122,19 +122,22 @@ HEREDOCEND
     systemctl restart nginx
 fi
 
-if ${setup_cron}; then
-    /bin/echo -e '\033[1;32m==>\033[0;1m Install cron\033[m'
-    apt install cron -y
+if ${setup_systemd_to_start_sim_at_boot}; then
+    /bin/echo -e '\033[1;32m==>\033[0;1m Setup systemd to start sim at system startup\033[m'
+    # Doing it as user to make systemd specify XDG_RUNTIME_DIR variable that needed by Sim's sandbox
+    user_cmd 'mkdir -p "$HOME/.config/systemd/user/"'
+    user_cmd "cat > '\$HOME/.config/systemd/user/start_camp_sim.service'" << HEREDOCEND
+[Unit]
+Description=Start Sim instance
 
-    /bin/echo -e '\033[1;32m==>\033[0;1m Setup cron to start sim at system startup\033[m'
-    crontab_line=$(user_cmd "echo \"@reboot sh -c 'until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; \\\"\$(pwd)/camp_sim/sim/manage\\\" start&'\"")
-    if ! user_cmd 'crontab -l' > /dev/null; then
-        # No crontab
-        echo "${crontab_line}" | user_cmd 'crontab -'
-    elif ! user_cmd 'crontab -l' | grep -F "${crontab_line}" -q; then
-        # crontab without ${crontab_line}
-        (user_cmd 'crontab -l'; echo "${crontab_line}") | user_cmd "crontab -"
-    fi
+[Service]
+ExecStart=sh -c "until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; echo abc; \\\"\$HOME/camp_sim/sim/manage\\\" start"
+
+[Install]
+WantedBy=default.target
+HEREDOCEND
+    user_cmd "systemctl --user enable --now start_camp_sim.service"
+    loginctl enable-linger "${user}" # make user session start at boot
 fi
 
 /bin/echo -e '\033[1;32m==>\033[0;1m Done.\033[m'
