@@ -24,6 +24,7 @@ Cpp_Clang::Cpp_Clang(Standard standard)
     bpf.allow_syscall(SCMP_SYS(arch_prctl));
     bpf.allow_syscall(SCMP_SYS(brk));
     bpf.allow_syscall(SCMP_SYS(chmod));
+    bpf.allow_syscall(SCMP_SYS(clock_gettime));
     bpf.allow_syscall(SCMP_SYS(clone3));
     bpf.allow_syscall(SCMP_SYS(close));
     bpf.allow_syscall(SCMP_SYS(execve));

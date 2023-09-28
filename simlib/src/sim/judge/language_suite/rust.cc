@@ -24,6 +24,7 @@ Rust::Rust(Edition edition)
     bpf.allow_syscall(SCMP_SYS(arch_prctl));
     bpf.allow_syscall(SCMP_SYS(brk));
     bpf.allow_syscall(SCMP_SYS(chmod));
+    bpf.allow_syscall(SCMP_SYS(clock_gettime));
     bpf.allow_syscall(SCMP_SYS(clone));
     bpf.allow_syscall(SCMP_SYS(clone3));
     bpf.allow_syscall(SCMP_SYS(close));

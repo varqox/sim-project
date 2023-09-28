@@ -899,12 +899,13 @@ sock_fprog create_filter_for_pid1() noexcept {
         }
     };
 
-    allow_syscall(SCMP_SYS(waitid));
+    allow_syscall(SCMP_SYS(clock_gettime));
     allow_syscall(SCMP_SYS(exit_group));
-    allow_syscall(SCMP_SYS(timer_settime));
+    allow_syscall(SCMP_SYS(pread64));
     allow_syscall(SCMP_SYS(rt_sigaction));
     allow_syscall(SCMP_SYS(rt_sigreturn));
-    allow_syscall(SCMP_SYS(pread64));
+    allow_syscall(SCMP_SYS(timer_settime));
+    allow_syscall(SCMP_SYS(waitid));
     allow_syscall(SCMP_SYS(write));
 
     err = seccomp_export_bpf(seccomp_ctx, mfd);

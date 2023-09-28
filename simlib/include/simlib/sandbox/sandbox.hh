@@ -101,6 +101,7 @@ struct RequestOptions {
     // - kill()
     // - execveat()
     // - write()
+    // - clock_getttime()
     // - shed_yield() if cpu_time_limit is specified
     // - pread64() if cpu_time_limit is specified
     std::optional<int> seccomp_bpf_fd = std::nullopt;
