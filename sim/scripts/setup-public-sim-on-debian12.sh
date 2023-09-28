@@ -28,7 +28,7 @@ setup_sslh=false
 setup_nginx=true
 nginx_sim_site_name="${meta_sim_instance_name}"
 nginx_sim_ssl_certs_dir="/etc/nginx/${nginx_sim_site_name}_ssl"
-setup_cron_to_start_sim_at_boot=true
+setup_systemd_to_start_sim_at_boot=true
 setup_daily_reboot=true
 setup_daily_backup=true
 backup_name="${meta_sim_instance_name}"
@@ -75,7 +75,7 @@ user_cmd "test -e '${sim_src_dir}'/" || user_cmd "git clone --recursive https://
 user_cmd "(cd '${sim_src_dir}' && meson setup build/ -Dbuildtype=release)"
 user_cmd "(cd '${sim_src_dir}' && meson configure build/ --prefix \"\$(pwd)/sim\")"
 user_cmd "(cd '${sim_src_dir}' && meson compile -C build)"
-user_cmd "(cd '${sim_src_dir}' && meson test -C build)"
+user_cmd "(cd '${sim_src_dir}' && meson test -C build --print-errorlogs)"
 
 /bin/echo -e '\033[1;32m==>\033[0;1m Configure sim\033[m'
 user_cmd "(cd '${sim_src_dir}' && mkdir --parents sim && /bin/echo -e \"user: '${database_user}'\npassword: '${database_user_password}'\ndb: '${database_name}'\nhost: 'localhost'\" > sim/.db.config)"
@@ -234,24 +234,22 @@ HEREDOCEND
     systemctl restart nginx
 fi
 
-# Args: <crontab_line>
-add_line_to_user_crontab() {
-    if ! command -v crontab > /dev/null; then
-        /bin/echo -e '\033[1;32m==>\033[0;1m Install cron\033[m'
-        apt install cron -y
-    fi
-    if ! user_cmd 'crontab -l' > /dev/null; then
-        # No crontab
-        echo "$1" | user_cmd 'crontab -'
-    elif ! user_cmd 'crontab -l' | grep -F "$1" -q; then
-        # crontab without $1
-        (user_cmd 'crontab -l'; echo "$1") | user_cmd "crontab -"
-    fi
-}
+if ${setup_systemd_to_start_sim_at_boot}; then
+    /bin/echo -e '\033[1;32m==>\033[0;1m Setup systemd to start sim at system startup\033[m'
+    # Doing it as user to make systemd specify XDG_RUNTIME_DIR variable that needed by Sim's sandbox
+    user_cmd 'mkdir -p "$HOME/.config/systemd/user/"'
+    user_cmd "cat > '\$HOME/.config/systemd/user/start_$(systemd-escape --path "${sim_src_dir}").service'" << HEREDOCEND
+[Unit]
+Description=Start Sim instance
 
-if ${setup_cron_to_start_sim_at_boot}; then
-    /bin/echo -e '\033[1;32m==>\033[0;1m Setup cron to start sim at system startup\033[m'
-    add_line_to_user_crontab "@reboot sh -c 'until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; '${sim_src_dir}/sim/manage' start&'"
+[Service]
+ExecStart=sh -c "until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; echo abc; '${sim_src_dir}/sim/manage' start"
+
+[Install]
+WantedBy=default.target
+HEREDOCEND
+    user_cmd "systemctl --user enable --now start_$(systemd-escape --path "${sim_src_dir}").service"
+    loginctl enable-linger "${user}" # make user session start at boot
 fi
 
 if ${setup_daily_reboot}; then
