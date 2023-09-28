@@ -100,6 +100,7 @@ struct RequestOptions {
     // For starting tracee sandbox needs allowed syscalls:
     // - kill()
     // - execveat()
+    // - write()
     // - shed_yield() if cpu_time_limit is specified
     // - pread64() if cpu_time_limit is specified
     std::optional<int> seccomp_bpf_fd = std::nullopt;
