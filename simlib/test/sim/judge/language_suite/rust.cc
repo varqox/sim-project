@@ -1,6 +1,7 @@
 #include "test_compiled_language_suite.hh"
 
 #include <gtest/gtest.h>
+#include <simlib/file_info.hh>
 #include <simlib/sim/judge/language_suite/rust.hh>
 
 using sim::judge::language_suite::Rust;
@@ -18,6 +19,7 @@ fn main() { p }
 // NOLINTNEXTLINE
 TEST(sim_judge_compiler, rust) {
     auto suite = Rust{Rust::Edition::ed2021};
+    ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/rustc"));
     if (suite.is_supported()) {
         test_compiled_language_suite(
             suite, test_prog_ok, test_prog_invalid, "cannot find value `p` in this scope"

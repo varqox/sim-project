@@ -1,6 +1,7 @@
 #include "test_compiled_language_suite.hh"
 
 #include <gtest/gtest.h>
+#include <simlib/file_info.hh>
 #include <simlib/sim/judge/language_suite/pascal.hh>
 
 constexpr auto test_prog_ok = R"(
@@ -18,6 +19,7 @@ end.
 // NOLINTNEXTLINE
 TEST(sim_judge_compiler, pascal) {
     auto suite = sim::judge::language_suite::Pascal{};
+    ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/fpc"));
     if (suite.is_supported()) {
         test_compiled_language_suite(
             suite, test_prog_ok, test_prog_invalid, "Error: Identifier not found \"w\""
