@@ -38,7 +38,7 @@ FullyCompiledLanguage::FullyCompiledLanguage(
 }()} {}
 
 bool FullyCompiledLanguage::is_supported() {
-    if (access(compiler_executable_path, F_OK) == 0) {
+    if (access(compiler_executable_path, F_OK) != 0) {
         return false;
     }
     return std::visit(
