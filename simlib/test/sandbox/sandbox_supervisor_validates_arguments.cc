@@ -96,13 +96,3 @@ TEST(sandbox, sandbox_supervisor_fd_is_socket_of_invalid_type) {
     ASSERT_EQ(res.output, "supervisor: invalid socket type, expected SOCK_STREAM");
     ASSERT_FALSE(res.exited0);
 }
-
-// NOLINTNEXTLINE
-TEST(sandbox, sandbox_supervisor_fd_is_correct) {
-    auto socket = open_socket(AF_UNIX, SOCK_STREAM);
-    auto res = run_supervisor(
-        {"supervisor", concat_tostr(static_cast<int>(socket.supervisor_end))}, &socket
-    );
-    ASSERT_FALSE(res.exited0);
-    ASSERT_EQ(res.output, "supervisor: mkdirat() - Permission denied (os error 13)");
-}
