@@ -1,6 +1,8 @@
 #include <optional>
+#include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
 #include <simlib/merge.hh>
+#include <simlib/recursive_readlink.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/sandbox/seccomp/allow_common_safe_syscalls.hh>
 #include <simlib/sandbox/seccomp/bpf_builder.hh>
@@ -53,48 +55,68 @@ sandbox::Result Pascal::run_compiler(
                                     {
                                         .operations =
                                             merge(
-                                                std::vector<sandbox::RequestOptions::
+                                                merge(
+                                                    std::
+                                                        vector<
+                                                            sandbox::RequestOptions::
                                                                 LinuxNamespaces::Mount::Operation>{
-                                                    MountTmpfs{
-                                                        .path = "/",
-                                                        .max_total_size_of_files_in_bytes =
-                                                            options.max_file_size_in_bytes,
-                                                        .inode_limit = 32,
-                                                        .read_only = false,
-                                                    },
-                                                    CreateDir{.path = "/../lib"},
-                                                    CreateDir{.path = "/../lib64"},
-                                                    CreateDir{.path = "/../tmp"},
-                                                    CreateDir{.path = "/../usr"},
-                                                    CreateDir{.path = "/../usr/bin"},
-                                                    CreateDir{.path = "/../usr/lib"},
-                                                    CreateDir{.path = "/../usr/lib64"},
-                                                    BindMount{
-                                                        .source = "/lib/",
-                                                        .dest = "/../lib",
-                                                        .no_exec = false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/lib64/",
-                                                        .dest = "/../lib64",
-                                                        .no_exec = false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/usr/bin/",
-                                                        .dest = "/../usr/bin",
-                                                        .no_exec = false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/usr/lib/",
-                                                        .dest = "/../usr/lib",
-                                                        .no_exec = false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/usr/lib64/",
-                                                        .dest = "/../usr/lib64",
-                                                        .no_exec = false,
-                                                    },
-                                                },
+                                                            MountTmpfs{
+                                                                .path = "/",
+                                                                .max_total_size_of_files_in_bytes =
+                                                                    options.max_file_size_in_bytes,
+                                                                .inode_limit = 32,
+                                                                .read_only = false,
+                                                            },
+                                                            CreateDir{.path = "/../etc"},
+                                                            CreateDir{.path = "/../lib"},
+                                                            CreateDir{.path = "/../lib64"},
+                                                            CreateDir{.path = "/../tmp"},
+                                                            CreateDir{.path = "/../usr"},
+                                                            CreateDir{.path = "/../usr/bin"},
+                                                            CreateDir{.path = "/../usr/lib"},
+                                                            CreateDir{.path = "/../usr/lib64"},
+                                                            CreateFile{.path = "/../etc/fpc.cfg"},
+                                                            BindMount{
+                                                                .source = "/lib/",
+                                                                .dest = "/../lib",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/lib64/",
+                                                                .dest = "/../lib64",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/usr/bin/",
+                                                                .dest = "/../usr/bin",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/usr/lib/",
+                                                                .dest = "/../usr/lib",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/usr/lib64/",
+                                                                .dest = "/../usr/lib64",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = recursive_readlink_throw("/etc/fpc.cfg"),
+                                                                .dest = "/../etc/fpc.cfg",
+                                                            },
+                                                        },
+                                                    path_exists("/etc/alternatives/") ? Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{{
+                                                                                            CreateDir{
+                                                                                                .path = "/../etc/alternatives"},
+                                                                                            BindMount{
+                                                                                                .source =
+                                                                                                    "/etc/alternatives/",
+                                                                                                .dest = "/../etc/alternatives",
+                                                                                            },
+                                                                                        }}
+                                                                                      : Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{}
+                                                ),
                                                 mount_ops
                                             ),
                                         .new_root_mount_path = "/..",
