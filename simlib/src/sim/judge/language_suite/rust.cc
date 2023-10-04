@@ -1,4 +1,5 @@
 #include <optional>
+#include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
 #include <simlib/merge.hh>
 #include <simlib/sandbox/sandbox.hh>
@@ -16,6 +17,7 @@ using MountTmpfs = sandbox::RequestOptions::LinuxNamespaces::Mount::MountTmpfs;
 using BindMount = sandbox::RequestOptions::LinuxNamespaces::Mount::BindMount;
 using CreateDir = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateDir;
 using CreateFile = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateFile;
+using MountProc = sandbox::RequestOptions::LinuxNamespaces::Mount::MountProc;
 
 namespace sim::judge::language_suite {
 
@@ -79,50 +81,77 @@ sandbox::Result Rust::run_compiler(
                                     {
                                         .operations =
                                             merge(
-                                                std::vector<sandbox::RequestOptions::
+                                                merge(
+                                                    std::
+                                                        vector<
+                                                            sandbox::RequestOptions::
                                                                 LinuxNamespaces::Mount::Operation>{
-                                                    MountTmpfs{
-                                                        .path = "/",
-                                                        .max_total_size_of_files_in_bytes =
-                                                            options.max_file_size_in_bytes,
-                                                        .inode_limit = 32,
-                                                        .read_only = false,
-                                                    },
-                                                    CreateDir{.path = "/../lib"},
-                                                    CreateDir{.path = "/../lib64"},
-                                                    CreateDir{.path = "/../tmp"},
-                                                    CreateDir{.path = "/../usr"},
-                                                    CreateDir{.path = "/../usr/bin"},
-                                                    CreateDir{.path = "/../usr/lib"},
-                                                    CreateDir{.path = "/../usr/lib64"},
-                                                    BindMount{
-                                                        .source = "/lib/",
-                                                        .dest = "/../lib",
-                                                        .no_exec = false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/lib64/",
-                                                        .dest = "/../lib64",
-                                                        .no_exec = false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/usr/bin/",
-                                                        .dest = "/../usr/bin",
-                                                        .no_exec = false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/usr/lib/",
-                                                        .dest = "/../usr/lib",
-                                                        .no_exec =
-                                                            false,
-                                                    },
-                                                    BindMount{
-                                                        .source = "/usr/lib64/",
-                                                        .dest = "/../usr/lib64",
-                                                        .no_exec =
-                                                            false,
-                                                    },
-                                                },
+                                                            MountTmpfs{
+                                                                .path = "/",
+                                                                .max_total_size_of_files_in_bytes =
+                                                                    options.max_file_size_in_bytes,
+                                                                .inode_limit = 32,
+                                                                .read_only = false,
+                                                            },
+                                                            CreateDir{.path = "/../lib"},
+                                                            CreateDir{.path = "/../lib64"},
+                                                            CreateDir{.path = "/../proc"},
+                                                            CreateDir{.path = "/../tmp"},
+                                                            CreateDir{.path = "/../usr"},
+                                                            CreateDir{.path = "/../usr/bin"},
+                                                            CreateDir{.path = "/../usr/lib"},
+                                                            CreateDir{.path = "/../usr/lib64"},
+                                                            BindMount{
+                                                                .source = "/lib/",
+                                                                .dest = "/../lib",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/lib64/",
+                                                                .dest = "/../lib64",
+                                                                .no_exec = false,
+                                                            },
+                                                            MountProc{
+                                                                .path = "/../proc",
+                                                            },
+                                                            BindMount{
+                                                                .source = "/usr/bin/",
+                                                                .dest = "/../usr/bin",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/usr/lib/",
+                                                                .dest = "/../usr/lib",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/usr/lib64/",
+                                                                .dest = "/../usr/lib64",
+                                                                .no_exec = false,
+                                                            },
+                                                            BindMount{
+                                                                .source = "/usr/bin/rustc",
+                                                                .dest = "/../proc/self/exe",
+                                                                .no_exec = false,
+                                                            },
+                                                        },
+                                                    path_exists("/etc/alternatives/") ? Slice<
+                                                                                            sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{{
+                                                                                            CreateDir{
+                                                                                                .path = "/../etc"},
+                                                                                            CreateDir{
+                                                                                                .path = "/../etc/alternatives"},
+                                                                                            BindMount{
+                                                                                                .source =
+                                                                                                    "/etc/alternatives/",
+                                                                                                .dest = "/../etc/alternatives",
+                                                                                            },
+                                                                                        }}
+                                                                                      : Slice<sandbox::
+                                                                                                  RequestOptions::
+                                                                                                      LinuxNamespaces::
+                                                                                                          Mount::Operation>{}
+                                                ),
                                                 mount_ops
                                             ),
                                         .new_root_mount_path = "/..",
