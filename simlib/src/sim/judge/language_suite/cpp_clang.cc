@@ -2,6 +2,7 @@
 #include <simlib/file_path.hh>
 #include <simlib/merge.hh>
 #include <simlib/sandbox/sandbox.hh>
+#include <simlib/sandbox/seccomp/allow_common_safe_syscalls.hh>
 #include <simlib/sandbox/seccomp/bpf_builder.hh>
 #include <simlib/sim/judge/language_suite/cpp_clang.hh>
 #include <simlib/sim/judge/language_suite/fully_compiled_language.hh>
@@ -20,48 +21,7 @@ namespace sim::judge::language_suite {
 Cpp_Clang::Cpp_Clang(Standard standard)
 : FullyCompiledLanguage{"/usr/bin/clang++", [] {
     auto bpf = sandbox::seccomp::BpfBuilder{};
-    bpf.allow_syscall(SCMP_SYS(access));
-    bpf.allow_syscall(SCMP_SYS(arch_prctl));
-    bpf.allow_syscall(SCMP_SYS(brk));
-    bpf.allow_syscall(SCMP_SYS(chmod));
-    bpf.allow_syscall(SCMP_SYS(clock_gettime));
-    bpf.allow_syscall(SCMP_SYS(clone3));
-    bpf.allow_syscall(SCMP_SYS(close));
-    bpf.allow_syscall(SCMP_SYS(execve));
-    bpf.allow_syscall(SCMP_SYS(execveat));
-    bpf.allow_syscall(SCMP_SYS(exit_group));
-    bpf.allow_syscall(SCMP_SYS(faccessat2));
-    bpf.allow_syscall(SCMP_SYS(fcntl));
-    bpf.allow_syscall(SCMP_SYS(futex));
-    bpf.allow_syscall(SCMP_SYS(getcwd));
-    bpf.allow_syscall(SCMP_SYS(getdents64));
-    bpf.allow_syscall(SCMP_SYS(getrandom));
-    bpf.allow_syscall(SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{TCGETS});
-    bpf.allow_syscall(SCMP_SYS(kill));
-    bpf.allow_syscall(SCMP_SYS(lseek));
-    bpf.allow_syscall(SCMP_SYS(mmap));
-    bpf.allow_syscall(SCMP_SYS(mprotect));
-    bpf.allow_syscall(SCMP_SYS(mremap));
-    bpf.allow_syscall(SCMP_SYS(munmap));
-    bpf.allow_syscall(SCMP_SYS(newfstatat));
-    bpf.allow_syscall(SCMP_SYS(openat));
-    bpf.allow_syscall(SCMP_SYS(pread64));
-    bpf.allow_syscall(SCMP_SYS(prlimit64));
-    bpf.allow_syscall(SCMP_SYS(read));
-    bpf.allow_syscall(SCMP_SYS(readlink));
-    bpf.allow_syscall(SCMP_SYS(rename));
-    bpf.allow_syscall(SCMP_SYS(rseq));
-    bpf.allow_syscall(SCMP_SYS(rt_sigaction));
-    bpf.allow_syscall(SCMP_SYS(rt_sigprocmask));
-    bpf.allow_syscall(SCMP_SYS(sched_yield));
-    bpf.allow_syscall(SCMP_SYS(set_robust_list));
-    bpf.allow_syscall(SCMP_SYS(set_tid_address));
-    bpf.allow_syscall(SCMP_SYS(sigaltstack));
-    bpf.allow_syscall(SCMP_SYS(umask));
-    bpf.allow_syscall(SCMP_SYS(unlink));
-    bpf.allow_syscall(SCMP_SYS(wait4));
-    bpf.allow_syscall(SCMP_SYS(write));
-    bpf.err_syscall(EPERM, SCMP_SYS(getrusage));
+    sandbox::seccomp::allow_common_safe_syscalls(bpf);
     bpf.err_syscall(EPERM, SCMP_SYS(sysinfo));
     return bpf.export_to_fd();
 }()}
