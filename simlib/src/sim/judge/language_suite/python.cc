@@ -68,27 +68,27 @@ Suite::RunHandle Python::async_run(
                                     CreateDir{.path = "/../usr/lib64"},
                                     CreateFile{.path = "/../source.py"},
                                     BindMount{
-                                        .source = "/lib/",
+                                        .source = "/lib",
                                         .dest = "/../lib",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/lib64/",
+                                        .source = "/lib64",
                                         .dest = "/../lib64",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/usr/bin/",
+                                        .source = "/usr/bin",
                                         .dest = "/../usr/bin",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/usr/lib/",
+                                        .source = "/usr/lib",
                                         .dest = "/../usr/lib",
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = "/usr/lib64/",
+                                        .source = "/usr/lib64",
                                         .dest = "/../usr/lib64",
                                         .no_exec = false,
                                     },

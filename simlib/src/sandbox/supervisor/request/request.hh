@@ -52,6 +52,7 @@ struct Request {
                 bool recursive;
                 bool read_only;
                 bool no_exec;
+                bool symlink_nofollow;
             };
 
             struct CreateDir {

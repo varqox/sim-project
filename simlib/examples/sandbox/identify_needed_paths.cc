@@ -115,6 +115,7 @@ int main(int argc, char** argv) {
                                                             .source = cd.source,
                                                             .dest = cd.dest,
                                                             .no_exec = false,
+                                                            .symlink_nofollow = true,
                                                         });
                                                     },
                                                 },

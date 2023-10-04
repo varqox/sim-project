@@ -53,6 +53,8 @@ struct RequestOptions {
                 bool recursive = true; // create a recursive bind mount
                 bool read_only = true; // make the mount read-only
                 bool no_exec = true; // do not allow programs to be executed from this mount
+                bool symlink_nofollow =
+                    false; // do not follow symbolic links if source points to one
             };
 
             struct CreateDir {

@@ -91,6 +91,7 @@ namespace flags {
 static constexpr flags_t recursive = 1 << 0;
 static constexpr flags_t read_only = 1 << 1;
 static constexpr flags_t no_exec = 1 << 2;
+static constexpr flags_t symlink_nofollow = 1 << 3;
 } // namespace flags
 } // namespace bind_mount
 

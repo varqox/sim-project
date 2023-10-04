@@ -107,6 +107,7 @@ void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mou
             {bm.recursive, bind_mount::flags::recursive},
             {bm.read_only, bind_mount::flags::read_only},
             {bm.no_exec, bind_mount::flags::no_exec},
+            {bm.symlink_nofollow, bind_mount::flags::symlink_nofollow},
         },
         as<bind_mount::flags_t>
     );
