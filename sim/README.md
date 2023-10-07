@@ -8,10 +8,8 @@ Sim is an open source platform for carrying out algorithmic contests
 
 ## How to build
 
-> **_NOTE:_** There are two scripts `scripts/setup-sim-for-camp-on-debian12.sh` and `scripts/setup-public-sim-on-debian12.sh`. So if you need to look at very precise instructions that set up Sim, you can check out these scripts.
-> If you intend to use them, first look and edit the configuration options inside the scripts to your needs.
-> * `scripts/setup-sim-for-camp-on-debian12.sh` setups sim and an Nginx HTTPS proxy for an offline camp on Debian 12.
-> * `scripts/setup-public-sim-on-debian12.sh` setups Nginx, Certbot, emails, and much more.
+> **_NOTE:_** There is a script `scripts/setup_sim_on_debian_12.py`. So if you need to look at very precise instructions that set up Sim, you can check out these scripts.
+> If you intend to use it, first look at help, by just running the script without arguments, choose what you need and the script will guide you through the rest.
 
 You will need `meson` build system to be installed (on most platforms it is in the _meson_ package).
 
