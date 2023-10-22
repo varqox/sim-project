@@ -104,7 +104,7 @@ struct RequestOptions {
     // - execveat()
     // - kill()
     // - pread64()
-    // - shed_yield()
+    // - sched_yield()
     // - write()
     std::optional<int> seccomp_bpf_fd = std::nullopt;
 };
