@@ -679,7 +679,7 @@ namespace sandbox::pid1 {
     if (UNDEFINED_SANITIZER) {
         auto ignore_signal = [&](int sig) noexcept {
             struct sigaction sa = {};
-            sa.sa_handler = SIG_IGN;
+            sa.sa_handler = SIG_DFL;
             if (sigemptyset(&sa.sa_mask)) {
                 die_with_error("sigemptyset()");
             }
