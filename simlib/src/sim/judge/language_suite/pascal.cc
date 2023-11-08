@@ -105,7 +105,8 @@ sandbox::Result Pascal::run_compiler(
                                                                 .dest = "/../etc/fpc.cfg",
                                                             },
                                                         },
-                                                    path_exists("/etc/alternatives/") ? Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{{
+                                                    path_exists("/etc/alternatives/") ? Slice<
+                                                                                            sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{{
                                                                                             CreateDir{
                                                                                                 .path = "/../etc/alternatives"},
                                                                                             BindMount{
@@ -114,7 +115,10 @@ sandbox::Result Pascal::run_compiler(
                                                                                                 .dest = "/../etc/alternatives",
                                                                                             },
                                                                                         }}
-                                                                                      : Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{}
+                                                                                      : Slice<sandbox::
+                                                                                                  RequestOptions::
+                                                                                                      LinuxNamespaces::
+                                                                                                          Mount::Operation>{}
                                                 ),
                                                 mount_ops
                                             ),

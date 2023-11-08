@@ -184,7 +184,8 @@ void setup_mount_namespace(const sandbox::pid1::Args::LinuxNamespaces::Mount& mo
                     int mount_fd = open_tree(
                         AT_FDCWD,
                         bind_mount.source.c_str(),
-                        OPEN_TREE_CLOEXEC | OPEN_TREE_CLONE | (bind_mount.symlink_nofollow ? AT_SYMLINK_NOFOLLOW : 0) |
+                        OPEN_TREE_CLOEXEC | OPEN_TREE_CLONE |
+                            (bind_mount.symlink_nofollow ? AT_SYMLINK_NOFOLLOW : 0) |
                             (bind_mount.recursive ? AT_RECURSIVE : 0)
                     );
                     if (mount_fd < 0) {
