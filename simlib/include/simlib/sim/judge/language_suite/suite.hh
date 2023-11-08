@@ -45,7 +45,8 @@ public:
 
     [[nodiscard]] virtual bool is_supported() = 0;
 
-    virtual Result<void, FileDescriptor> compile(FilePath source, CompileOptions options) = 0;
+    virtual Result<std::optional<sandbox::result::Ok>, FileDescriptor>
+    compile(FilePath source, CompileOptions options) = 0;
 
     struct RunOptions {
         std::optional<int> stdin_fd;

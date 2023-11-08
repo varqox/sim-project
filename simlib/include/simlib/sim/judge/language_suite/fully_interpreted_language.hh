@@ -3,6 +3,7 @@
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_path.hh>
 #include <simlib/result.hh>
+#include <simlib/sandbox/sandbox.hh>
 #include <simlib/sim/judge/language_suite/suite.hh>
 #include <simlib/slice.hh>
 #include <simlib/temporary_file.hh>
@@ -25,7 +26,8 @@ public:
         return access(interpreter_executable_path.c_str(), F_OK) == 0;
     }
 
-    Result<void, FileDescriptor> compile(FilePath source, CompileOptions /*options*/) final;
+    Result<std::optional<sandbox::result::Ok>, FileDescriptor>
+    compile(FilePath source, CompileOptions /*options*/) final;
 
     RunHandle async_run(
         Slice<std::string_view> args,

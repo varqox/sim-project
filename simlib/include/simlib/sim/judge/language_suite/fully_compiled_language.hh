@@ -30,7 +30,8 @@ public:
 
     [[nodiscard]] bool is_supported() final;
 
-    Result<void, FileDescriptor> compile(FilePath source, CompileOptions options) final;
+    Result<std::optional<sandbox::result::Ok>, FileDescriptor>
+    compile(FilePath source, CompileOptions options) final;
 
     RunHandle async_run(
         Slice<std::string_view> args,

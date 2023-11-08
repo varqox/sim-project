@@ -57,7 +57,7 @@ bool FullyCompiledLanguage::is_supported() {
     );
 }
 
-Result<void, FileDescriptor>
+Result<std::optional<sandbox::result::Ok>, FileDescriptor>
 FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
     executable_file_is_ready = false;
 
@@ -69,7 +69,7 @@ FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
         ))
     {
         executable_file_is_ready = true;
-        return Ok{};
+        return Ok<std::optional<sandbox::result::Ok>>{std::nullopt};
     }
 
     auto compilation_errors_fd = FileDescriptor{memfd_create("compilation errors fd", MFD_CLOEXEC)};
@@ -82,7 +82,8 @@ FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
         compile_impl(source, executable_tmp_file.path(), compilation_errors_fd, std::move(options));
     return std::visit(
         overloaded{
-            [&](const sandbox::result::Ok& ok) -> Result<void, FileDescriptor> {
+            [&](const sandbox::result::Ok& ok
+            ) -> Result<std::optional<sandbox::result::Ok>, FileDescriptor> {
                 if (ok.si == sandbox::Si{.code = CLD_EXITED, .status = 0}) {
                     executable_file_is_ready = true;
                     if (cache) {
@@ -90,11 +91,12 @@ FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
                             cache->cached_name, executable_tmp_file.path()
                         );
                     }
-                    return Ok{};
+                    return Ok{std::optional{ok}};
                 }
                 return Err{std::move(compilation_errors_fd)};
             },
-            [](const sandbox::result::Error& err) -> Result<void, FileDescriptor> {
+            [](const sandbox::result::Error& err
+            ) -> Result<std::optional<sandbox::result::Ok>, FileDescriptor> {
                 THROW(err.description);
             },
         },
