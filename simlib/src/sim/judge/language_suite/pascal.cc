@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <optional>
 #include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
@@ -21,9 +22,8 @@ namespace sim::judge::language_suite {
 
 Pascal::Pascal()
 : FullyCompiledLanguage{"/usr/bin/fpc", [] {
-                            auto bpf = sandbox::seccomp::BpfBuilder{};
+                            auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
                             sandbox::seccomp::allow_common_safe_syscalls(bpf);
-                            bpf.err_syscall(EPERM, SCMP_SYS(sysinfo));
                             return bpf.export_to_fd();
                         }()} {}
 

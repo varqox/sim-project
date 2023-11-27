@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <chrono>
 #include <simlib/merge.hh>
 #include <simlib/sandbox/sandbox.hh>
@@ -18,14 +19,11 @@ using CreateFile = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateFile;
 namespace sim::judge::language_suite {
 
 Bash::Bash()
-: FullyInterpretedLanguage{
-      "/usr/bin/bash", [] {
-          auto bpf = sandbox::seccomp::BpfBuilder{};
-          sandbox::seccomp::allow_common_safe_syscalls(bpf);
-          bpf.allow_syscall(SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{TIOCGPGRP});
-          bpf.err_syscall(EPERM, SCMP_SYS(sysinfo));
-          return bpf.export_to_fd();
-      }()} {}
+: FullyInterpretedLanguage{"/usr/bin/bash", [] {
+                               auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
+                               sandbox::seccomp::allow_common_safe_syscalls(bpf);
+                               return bpf.export_to_fd();
+                           }()} {}
 
 Suite::RunHandle Bash::async_run(
     Slice<std::string_view> args,

@@ -21,10 +21,9 @@ namespace sim::judge::language_suite {
 Python::Python()
 : FullyInterpretedLanguage{
       "/usr/bin/python3", [] {
-          auto bpf = sandbox::seccomp::BpfBuilder{};
+          auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
           sandbox::seccomp::allow_common_safe_syscalls(bpf);
           bpf.allow_syscall(SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{FIOCLEX});
-          bpf.err_syscall(EPERM, SCMP_SYS(sysinfo));
           return bpf.export_to_fd();
       }()} {}
 

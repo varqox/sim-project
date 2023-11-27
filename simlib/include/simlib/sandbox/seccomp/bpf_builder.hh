@@ -87,8 +87,7 @@ class BpfBuilder {
 #endif
 
 public:
-    explicit BpfBuilder(uint32_t def_action = SCMP_ACT_KILL)
-    : seccomp_ctx{seccomp_init(def_action)} {
+    explicit BpfBuilder(uint32_t def_action) : seccomp_ctx{seccomp_init(def_action)} {
         if (!seccomp_ctx) {
             THROW("seccom_init() failed");
         }

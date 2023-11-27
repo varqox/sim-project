@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <optional>
 #include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
@@ -23,13 +24,9 @@ namespace sim::judge::language_suite {
 
 Rust::Rust(Edition edition)
 : FullyCompiledLanguage{"/usr/bin/rustc", [] {
-    auto bpf = sandbox::seccomp::BpfBuilder{};
+    auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
     sandbox::seccomp::allow_common_safe_syscalls(bpf);
     bpf.allow_syscall(SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{FIONBIO});
-    bpf.allow_syscall(SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{TIOCGWINSZ});
-    bpf.allow_syscall(SCMP_SYS(prctl), sandbox::seccomp::ARG0_EQ{PR_SET_NAME});
-    bpf.allow_syscall(SCMP_SYS(sched_getaffinity));
-    bpf.err_syscall(EPERM, SCMP_SYS(sysinfo));
     return bpf.export_to_fd();
 }()}
 , edition_str([&] {

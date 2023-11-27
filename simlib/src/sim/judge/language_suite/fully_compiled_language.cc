@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <fcntl.h>
 #include <simlib/errmsg.hh>
@@ -32,7 +33,7 @@ FullyCompiledLanguage::FullyCompiledLanguage(
 : compiler_executable_path{std::move(compiler_executable_path)}
 , compiler_seccomp_bpf_fd{std::move(compiler_seccomp_bpf_fd)}
 , executable_seccomp_bpf_fd{[] {
-    auto bpf = sandbox::seccomp::BpfBuilder{};
+    auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
     sandbox::seccomp::allow_common_safe_syscalls(bpf);
     return bpf.export_to_fd();
 }()} {}

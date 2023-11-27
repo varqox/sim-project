@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <optional>
 #include <simlib/file_path.hh>
 #include <simlib/merge.hh>
@@ -20,9 +21,8 @@ namespace sim::judge::language_suite {
 
 Cpp_GCC::Cpp_GCC(Standard standard)
 : FullyCompiledLanguage{"/usr/bin/g++", [] {
-    auto bpf = sandbox::seccomp::BpfBuilder{};
+    auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
     sandbox::seccomp::allow_common_safe_syscalls(bpf);
-    bpf.err_syscall(EPERM, SCMP_SYS(sysinfo));
     return bpf.export_to_fd();
 }()}
 , std_flag([&] {
