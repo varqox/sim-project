@@ -2,7 +2,9 @@
 #include "assert_result.hh"
 
 #include <chrono>
+#include <fcntl.h>
 #include <optional>
+#include <simlib/file_descriptor.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <unistd.h>
 
@@ -80,6 +82,7 @@ TEST(sandbox, max_file_size_in_bytes) {
     auto sc = sandbox::spawn_supervisor();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
+            FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "file_size"}},
             {
                 .stderr_fd = STDERR_FILENO,
