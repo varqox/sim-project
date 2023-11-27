@@ -6,6 +6,7 @@
 #include "templates/templates.hh"
 #include "utils.hh"
 
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -14,6 +15,7 @@
 #include <limits>
 #include <memory>
 #include <poll.h>
+#include <seccomp.h>
 #include <simlib/argv_parser.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/defer.hh>
@@ -1062,7 +1064,7 @@ static void compile_tex_file(StringView file) {
                 .time_limit = LATEX_COMPILATION_TIME_LIMIT,
                 .cpu_time_limit = LATEX_COMPILATION_TIME_LIMIT,
                 .seccomp_bpf_fd = [] {
-                    auto bpf = sandbox::seccomp::BpfBuilder{};
+                    auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
                     sandbox::seccomp::allow_common_safe_syscalls(bpf);
                     return bpf.export_to_fd();
                 }(),
