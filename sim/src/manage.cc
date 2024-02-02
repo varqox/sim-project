@@ -1,6 +1,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
+#include <fcntl.h>
 #include <simlib/argv_parser.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/errmsg.hh>
@@ -20,7 +21,7 @@ static void daemonize() {
     pid_t pid = fork();
     if (pid < 0) {
         errlog("fork()", errmsg());
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
     }
     if (pid > 0) {
         _exit(EXIT_SUCCESS);
@@ -30,14 +31,14 @@ static void daemonize() {
 
     if (setsid() == -1) {
         errlog("setsid()", errmsg());
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
     }
 
     FileDescriptor fd{"/dev/null", O_RDWR};
     for (int fdx : {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO}) {
         if (fd != fdx and dup2(fd, fdx) == -1) {
             errlog("dup2()", errmsg());
-            exit(EXIT_FAILURE);
+            _exit(EXIT_FAILURE);
         }
     }
 }
@@ -98,16 +99,18 @@ static void restart(const CmdOptions& cmd_options) {
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGCHLD);
-    if (sigprocmask(SIG_BLOCK, &mask, nullptr)) {
-        errlog("sigprocmask()", errmsg());
-        exit(EXIT_FAILURE);
+    if (pthread_sigmask(SIG_BLOCK, &mask, nullptr)) {
+        errlog("pthread_sigmask()", errmsg());
+        _exit(EXIT_FAILURE);
     }
 
     using std::chrono::system_clock;
 
     struct Server {
         pid_t pid = -1;
-        const string& path;
+        // Respawn from file desciptor to prevent running a newer executable that may require e.g.
+        // new database schema, but the database is not yet upgraded
+        FileDescriptor executable_fd;
         system_clock::time_point last_spawn = system_clock::time_point::min();
     };
 
@@ -128,8 +131,8 @@ static void restart(const CmdOptions& cmd_options) {
             }
             if (pid == 0) { // Child
                 char* empty_arr[] = {nullptr};
-                execv(server.path.data(), empty_arr);
-                _exit(EXIT_FAILURE); // execve() failed
+                syscalls::execveat(server.executable_fd, "", empty_arr, environ, AT_EMPTY_PATH);
+                _exit(EXIT_FAILURE); // execveat() failed
             }
             // Parent
             server.pid = pid;
@@ -138,8 +141,8 @@ static void restart(const CmdOptions& cmd_options) {
         }
     };
     std::array<Server, 2> servers = {{
-        {-1, paths.sim_server},
-        {-1, paths.job_server},
+        {-1, FileDescriptor{paths.sim_server, O_PATH | O_CLOEXEC}},
+        {-1, FileDescriptor{paths.job_server, O_PATH | O_CLOEXEC}},
     }};
 
     if (cmd_options.make_background) {
