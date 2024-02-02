@@ -88,7 +88,7 @@ public:
     )
 
 #define ERRLOG_CATCH(...)                                                       \
-    do {                                                                        \
+    [&] {                                                                        \
         auto tmplog = errlog(                                                   \
             __FILE__ ":" STRINGIFY(__LINE__) ": Caught exception",              \
             ::stack_unwinding::detail::is_va_empty(__VA_ARGS__) ? "" : " -> ",  \
@@ -102,4 +102,4 @@ public:
                                                                                 \
         tmplog.flush_no_nl();                                                   \
         ::stack_unwinding::StackGuard::marks_collected.clear();                 \
-    } while (false)
+    }()
