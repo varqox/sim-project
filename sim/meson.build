@@ -145,7 +145,7 @@ sim_upgrader = executable('sim-upgrader',
         libsim_dep,
         static_dep,
     ],
-    install : false,
+    install : true,
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 

@@ -12,6 +12,7 @@
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
 
@@ -85,16 +86,26 @@ static void help(const char* program_name) {
     // clang-format on
 }
 
-struct sim_paths {
+struct SimPaths {
     string manage = executable_path(getpid());
     string sim_server = concat_tostr(path_dirpath(manage), "bin/sim-server");
     string job_server = concat_tostr(path_dirpath(manage), "bin/job-server");
+    string sim_upgrader = concat_tostr(path_dirpath(manage), "bin/sim-upgrader");
 };
 
-static void restart(const CmdOptions& cmd_options) {
-    sim_paths paths;
-    // First kill manage so that we are the only one instance running
+static void stop() {
+    SimPaths paths;
+    // First kill manage so that it won't restart servers
     kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
+    // Kill servers
+    kill_processes_by_exec({paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
+}
+
+static void restart(const CmdOptions& cmd_options) {
+    // First stop
+    stop();
+
+    SimPaths paths;
 
     sigset_t mask;
     sigemptyset(&mask);
@@ -145,14 +156,38 @@ static void restart(const CmdOptions& cmd_options) {
         {-1, FileDescriptor{paths.job_server, O_PATH | O_CLOEXEC}},
     }};
 
+    // Run sim upgrader
+    {
+        auto pid = fork();
+        if (pid < 0) {
+            errlog("fork()", errmsg());
+            _exit(EXIT_FAILURE);
+        }
+        if (pid == 0) {
+            char* empty_arr[] = {nullptr};
+            syscalls::execveat(AT_FDCWD, paths.sim_upgrader.c_str(), empty_arr, environ, 0);
+            _exit(EXIT_FAILURE); // execveat() failed
+        }
+        siginfo_t si;
+        if (syscalls::waitid(P_PID, pid, &si, WEXITED, nullptr)) {
+            errlog("waitid()", errmsg());
+            _exit(EXIT_FAILURE);
+        }
+        if (si.si_code != CLD_EXITED || si.si_status != 0) {
+            errlog("Sim upgrade failed, aborting staring server.");
+            _exit(EXIT_FAILURE);
+        }
+    }
+
     if (cmd_options.make_background) {
         daemonize();
     }
 
-    spawn(servers[0]);
-    spawn(servers[1]);
+    for (auto& server : servers) {
+        spawn(server);
+    }
 
-    while (true) {
+    for (;;) {
         siginfo_t si;
         if (syscalls::waitid(P_ALL, 0, &si, WEXITED, nullptr)) {
             errlog("waitid()", errmsg());
@@ -168,14 +203,6 @@ static void restart(const CmdOptions& cmd_options) {
 }
 
 static void start(const CmdOptions& cmd_options) { restart(cmd_options); }
-
-static void stop() {
-    sim_paths paths;
-    // First kill manage so that it won't restart servers
-    kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
-    // Kill servers
-    kill_processes_by_exec({paths.sim_server, paths.job_server}, std::chrono::seconds(4), true);
-}
 
 } // namespace command
 
