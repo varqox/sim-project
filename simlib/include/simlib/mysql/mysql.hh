@@ -853,7 +853,7 @@ public:
     }
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
-    Result query(Args&&... sql) {
+    [[nodiscard]] Result query(Args&&... sql) {
         STACK_UNWINDING_MARK;
         auto sql_str = concat(std::forward<Args>(sql)...);
         DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ", sql_str);)
@@ -878,7 +878,7 @@ public:
     }
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
-    Statement prepare(Args&&... sql) {
+    [[nodiscard]] Statement prepare(Args&&... sql) {
         STACK_UNWINDING_MARK;
         auto sql_str = concat(std::forward<Args>(sql)...);
         DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): prepare -> ", sql_str);)
