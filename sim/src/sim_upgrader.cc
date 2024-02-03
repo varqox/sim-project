@@ -53,7 +53,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hashes and body of the function do_perform_upgrade()
 constexpr StringView SCHEMA_HASH_BEFORE_UPGRADE =
-    "TODO";
+    "2ea89e5d6caf5e6a5792a064536762ff5e4bbc59e02b9fc437f92e16abec173d";
 constexpr StringView SCHEMA_HASH_AFTER_UPGRADE =
     "2ea89e5d6caf5e6a5792a064536762ff5e4bbc59e02b9fc437f92e16abec173d";
 
@@ -85,7 +85,15 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& conn) {
         lock_all_tables(conn, LockKind::WRITE);
         do_perform_upgrade(sim_dir, conn);
         stdlog("\033[1;32mSim upgrading is complete.\033[m");
-        stdlog("schema hash after upgrade = ", sha3_256(from_unsafe{get_db_schema(conn)}));
+
+        auto schema_hash_after_upgrade = sha3_256(from_unsafe{get_db_schema(conn)});
+        stdlog("schema hash after upgrade = ", schema_hash_after_upgrade);
+        if (schema_hash_after_upgrade != SCHEMA_HASH_AFTER_UPGRADE) {
+            stdlog(
+                "\033[1;31mUpgrade succeeded but the schema hash is different than expected\033[m"
+            );
+            return 1;
+        }
         return 0;
     }
 
