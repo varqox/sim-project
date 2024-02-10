@@ -3,16 +3,20 @@
 #include "simlib/sha.hh"
 #include "simlib/simple_parser.hh"
 #include "simlib/string_traits.hh"
+#include "simlib/string_transform.hh"
 #include "simlib/throw_assert.hh"
+#include "simlib/time.hh"
 #include "sql_tables.hh"
 #include "web_server/logs.hh"
 
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <cstdio>
 #include <exception>
 #include <fcntl.h>
 #include <fstream>
+#include <map>
 #include <regex>
 #include <sim/contest_entry_tokens/contest_entry_token.hh>
 #include <sim/contest_files/contest_file.hh>
@@ -53,28 +57,54 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hashes and body of the function do_perform_upgrade()
 constexpr StringView SCHEMA_HASH_BEFORE_UPGRADE =
-    "2ea89e5d6caf5e6a5792a064536762ff5e4bbc59e02b9fc437f92e16abec173d";
+    "fbada911240043e120c9a71690e4c65167830603caae6c0888d748614524e19c";
 constexpr StringView SCHEMA_HASH_AFTER_UPGRADE =
-    "2ea89e5d6caf5e6a5792a064536762ff5e4bbc59e02b9fc437f92e16abec173d";
+    "01591982c758693acec24be6f96671cca171b55e1f58ec04ee08a09f62dcdcbd";
 
 static void do_perform_upgrade(
-    [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& conn
+    [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
 ) {
     // Upgrade here
+    mysql.update("ALTER TABLE users ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id");
+
+    auto res = mysql.query(
+        "SELECT jobs.creator, MIN(jobs.added)FROM jobs "
+        "WHERE jobs.creator IS NOT NULL GROUP BY jobs.creator ORDER BY jobs.creator DESC"
+    );
+    string min_date = "3333-33-33 33-77-77";
+    std::map<uint64_t, string> user_id_to_creation_time;
+    while (res.next()) {
+        auto user_id = res[0];
+        auto added = res[1];
+        min_date = std::min(min_date, added.to_string());
+        user_id_to_creation_time.insert({str2num<uint64_t>(user_id).value(), min_date});
+    }
+
+    res = mysql.query("SELECT id FROM users ORDER BY id");
+    while (res.next()) {
+        auto user_id = res[0];
+        auto it = user_id_to_creation_time.lower_bound(str2num<uint64_t>(user_id).value());
+        auto created_at = it == user_id_to_creation_time.end() ? mysql_date() : it->second;
+        mysql.prepare("UPDATE users SET created_at=? WHERE id=?")
+            .bind_and_execute(created_at, user_id);
+        stdlog(user_id, ' ', created_at);
+    }
+
+    mysql.update("ALTER TABLE users MODIFY COLUMN created_at datetime NOT NULL");
 }
 
 enum class LockKind {
     READ,
     WRITE,
 };
-static void lock_all_tables(mysql::Connection& conn, LockKind lock_kind);
-static string get_db_schema(mysql::Connection& conn);
+static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind);
+static string get_db_schema(mysql::Connection& mysql);
 
-static int perform_upgrade(const string& sim_dir, mysql::Connection& conn) {
+static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
     stdlog("\033[1;34mChecking if upgrade is needed.\033[m");
-    lock_all_tables(conn, LockKind::READ);
-    auto schema = get_db_schema(conn);
+    lock_all_tables(mysql, LockKind::READ);
+    auto schema = get_db_schema(mysql);
     auto schema_hash = sha3_256(schema);
     if (schema_hash == SCHEMA_HASH_AFTER_UPGRADE) {
         stdlog("\033[1;32mNo upgrade is needed.\033[m");
@@ -82,11 +112,11 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& conn) {
     }
     if (schema_hash == SCHEMA_HASH_BEFORE_UPGRADE) {
         stdlog("\033[1;34mStarted the sim upgrade.\033[m");
-        lock_all_tables(conn, LockKind::WRITE);
-        do_perform_upgrade(sim_dir, conn);
+        lock_all_tables(mysql, LockKind::WRITE);
+        do_perform_upgrade(sim_dir, mysql);
         stdlog("\033[1;32mSim upgrading is complete.\033[m");
 
-        auto schema_hash_after_upgrade = sha3_256(from_unsafe{get_db_schema(conn)});
+        auto schema_hash_after_upgrade = sha3_256(from_unsafe{get_db_schema(mysql)});
         stdlog("schema hash after upgrade = ", schema_hash_after_upgrade);
         if (schema_hash_after_upgrade != SCHEMA_HASH_AFTER_UPGRADE) {
             stdlog(
@@ -104,9 +134,9 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& conn) {
     return 1;
 }
 
-static vector<string> get_all_table_names(mysql::Connection& conn) {
+static vector<string> get_all_table_names(mysql::Connection& mysql) {
     vector<string> table_names;
-    auto res = conn.query("SHOW TABLES");
+    auto res = mysql.query("SHOW TABLES");
     while (res.next()) {
         table_names.emplace_back(res[0].to_string());
     }
@@ -114,10 +144,10 @@ static vector<string> get_all_table_names(mysql::Connection& conn) {
     return table_names;
 }
 
-static void lock_all_tables(mysql::Connection& conn, LockKind lock_kind) {
+static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind) {
     std::string query = "LOCK TABLES";
     bool first = true;
-    for (const auto& table_name : get_all_table_names(conn)) {
+    for (const auto& table_name : get_all_table_names(mysql)) {
         if (first) {
             first = false;
         } else {
@@ -129,13 +159,13 @@ static void lock_all_tables(mysql::Connection& conn, LockKind lock_kind) {
         case LockKind::WRITE: query += "WRITE"; break;
         }
     }
-    conn.update(query);
+    mysql.update(query);
 }
 
-static string get_db_schema(mysql::Connection& conn) {
+static string get_db_schema(mysql::Connection& mysql) {
     string schema;
-    for (const auto& table_name : get_all_table_names(conn)) {
-        auto res = conn.query("SHOW CREATE TABLE `", table_name, '`');
+    for (const auto& table_name : get_all_table_names(mysql)) {
+        auto res = mysql.query("SHOW CREATE TABLE `", table_name, '`');
         throw_assert(res.next());
         auto table_schema = res[1].to_string();
         // Remove AUTOINCREMENT=
@@ -152,32 +182,32 @@ static string get_db_schema(mysql::Connection& conn) {
             }
         }
         // Sort table schema by rows
-        auto row_to_kind = [](StringView row) {
+        auto row_to_comparable = [](StringView row) -> std::pair<int, StringView> {
             if (has_prefix(row, "CREATE TABLE ")) {
-                return 0;
+                return {0, row};
             }
             if (has_prefix(row, "  `")) {
-                return 1;
+                return {1, ""}; // preserve column order
             }
             if (has_prefix(row, "  PRIMARY KEY ")) {
-                return 2;
+                return {2, row};
             }
             if (has_prefix(row, "  UNIQUE KEY ")) {
-                return 3;
+                return {3, row};
             }
             if (has_prefix(row, "  KEY ")) {
-                return 4;
+                return {4, row};
             }
             if (has_prefix(row, "  CONSTRAINT ")) {
-                return 5;
+                return {5, row};
             }
             if (has_prefix(row, ")")) {
-                return 6;
+                return {6, row};
             }
             THROW("BUG: unknown prefix");
         };
-        std::sort(rows.begin(), rows.end(), [&](StringView a, StringView b) {
-            return std::pair{row_to_kind(a), a} < std::pair{row_to_kind(b), b};
+        std::stable_sort(rows.begin(), rows.end(), [&](StringView a, StringView b) {
+            return row_to_comparable(a) < row_to_comparable(b);
         });
         // Append the schema
         for (StringView row : rows) {
@@ -274,16 +304,16 @@ static int true_main(int argc, char** argv) {
     sim_dir.resize(path_dirpath(sim_dir).size());
     sim_dir += "../";
 
-    sim::mysql::Connection conn;
+    sim::mysql::Connection mysql;
     try {
         // Get database connection
-        conn = sim::mysql::make_conn_with_credential_file(concat(sim_dir, ".db.config"));
+        mysql = sim::mysql::make_conn_with_credential_file(concat(sim_dir, ".db.config"));
     } catch (const std::exception& e) {
         errlog("\033[31mFailed to connect to database\033[m - ", e.what());
         return 1;
     }
 
-    return perform_upgrade(sim_dir, conn);
+    return perform_upgrade(sim_dir, mysql);
 }
 
 int main(int argc, char** argv) {

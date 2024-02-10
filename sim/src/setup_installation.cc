@@ -218,6 +218,7 @@ int main(int argc, char** argv) {
     try_to_create_table("users", concat(
         "CREATE TABLE IF NOT EXISTS `users` ("
             "`id` bigint unsigned NOT NULL AUTO_INCREMENT,"
+            "`created_at` datetime NOT NULL,"
             "`type` tinyint unsigned NOT NULL,"
             "`username` VARBINARY(", decltype(User::username)::max_len, ") NOT NULL,"
             "`first_name` VARBINARY(", decltype(User::first_name)::max_len, ") NOT NULL,"

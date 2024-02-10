@@ -25,6 +25,8 @@ class UsersMerger : public Merger<sim::users::User> {
             THROW("BUG");
         }();
 
+        THROW("TODO: use created_at");
+
         sim::users::User user;
         auto stmt = conn.prepare(
             "SELECT id, type, username, first_name, last_name, "
