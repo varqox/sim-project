@@ -19,13 +19,13 @@ struct Problem {
     );
 
     uint64_t id;
+    sql_fields::Datetime created_at;
     decltype(internal_files::InternalFile::id) file_id;
     EnumVal<Type> type;
     sql_fields::Varbinary<128> name;
     sql_fields::Varbinary<64> label;
     sql_fields::Blob<4096> simfile;
     std::optional<decltype(users::User::id)> owner_id;
-    sql_fields::Datetime created_at;
     sql_fields::Datetime updated_at;
 
     static constexpr auto primary_key = PrimaryKey{&Problem::id};

@@ -22,7 +22,7 @@ class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProble
             "SELECT cp.id, cp.contest_round_id, cp.contest_id,"
             " cp.problem_id, cp.name, cp.item,"
             " cp.method_of_choosing_final_submission, cp.score_revealing,"
-            " MIN(s.submit_time) "
+            " MIN(s.created_at) "
             "FROM ",
             record_set.sql_table_name,
             " cp LEFT JOIN ",

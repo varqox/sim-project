@@ -15,7 +15,7 @@ class ContestsMerger : public Merger<sim::contests::Contest> {
         sim::contests::Contest c;
         mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
         auto stmt = conn.prepare(
-            "SELECT c.id, c.name, c.is_public, MIN(s.submit_time) "
+            "SELECT c.id, c.name, c.is_public, MIN(s.created_at) "
             "FROM ",
             record_set.sql_table_name,
             " c LEFT JOIN ",

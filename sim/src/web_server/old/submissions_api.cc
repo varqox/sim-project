@@ -79,7 +79,7 @@ void Sim::api_submissions() {
                    " p.name, s.contest_problem_id, cp.name,"
                    " cp.method_of_choosing_final_submission, cp.score_revealing,"
                    " s.contest_round_id, r.name, r.full_results, r.ends,"
-                   " s.contest_id, c.name, s.submit_time, s.problem_final,"
+                   " s.contest_id, c.name, s.created_at, s.problem_final,"
                    " s.contest_final, s.contest_initial_final,"
                    " s.initial_status, s.full_status, s.score");
     qwhere.append(
@@ -154,7 +154,7 @@ void Sim::api_submissions() {
                    "\"contest_round_name\","
                    "\"contest_id\","
                    "\"contest_name\","
-                   "\"submit_time\","
+                   "\"created_at\","
                    "{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
                    "\"score\","
                    "\"actions\"");
@@ -942,7 +942,7 @@ void Sim::api_submission_add() {
     auto stmt = mysql.prepare("INSERT submissions (file_id, owner, problem_id,"
                               " contest_problem_id, contest_round_id,"
                               " contest_id, type, language, initial_status,"
-                              " full_status, submit_time, last_judgment,"
+                              " full_status, created_at, last_judgment,"
                               " initial_report, final_report) "
                               "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '',"
                               " '')");

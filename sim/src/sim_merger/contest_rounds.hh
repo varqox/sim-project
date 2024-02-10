@@ -18,7 +18,7 @@ class ContestRoundsMerger : public Merger<sim::contest_rounds::ContestRound> {
         auto stmt = conn.prepare(
             "SELECT cr.id, cr.contest_id, cr.name, cr.item,"
             " cr.begins, cr.ends, cr.full_results,"
-            " cr.ranking_exposure, MIN(s.submit_time) "
+            " cr.ranking_exposure, MIN(s.created_at) "
             "FROM ",
             record_set.sql_table_name,
             " cr LEFT JOIN ",

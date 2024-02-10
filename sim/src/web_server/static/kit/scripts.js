@@ -4150,8 +4150,8 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 											undefined, view_problem.bind(null, true, s.problem_id))
 									}),
 									normalize_datetime($('<td>', {
-										datetime: s.submit_time,
-										text: s.submit_time
+										datetime: s.created_at,
+										text: s.created_at
 									}), true),
 									$('<td>', {
 										class: 'status ' + s.status.class,
@@ -4336,9 +4336,9 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 
 			// Submission time
 			td = document.createElement('td');
-			var avb = a_view_button('/s/' + x.id, x.submit_time, undefined,
+			var avb = a_view_button('/s/' + x.id, x.created_at, undefined,
 				view_submission.bind(null, true, x.id));
-			avb.setAttribute('datetime', x.submit_time);
+			avb.setAttribute('datetime', x.created_at);
 			td.appendChild(normalize_datetime(avb, false)[0]);
 			row.appendChild(td);
 

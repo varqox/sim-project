@@ -241,6 +241,7 @@ const DbSchema schema = {
                 .create_table_sql = concat_tostr(
                     "CREATE TABLE `submissions` ("
                     "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
+                    "  `created_at` datetime NOT NULL,"
                     "  `file_id` bigint(20) unsigned NOT NULL,"
                     "  `owner` bigint(20) unsigned DEFAULT NULL,"
                     "  `problem_id` bigint(20) unsigned NOT NULL,"
@@ -256,7 +257,6 @@ const DbSchema schema = {
                     "  `contest_initial_final` tinyint(1) NOT NULL DEFAULT 0,"
                     "  `initial_status` tinyint(3) unsigned NOT NULL,"
                     "  `full_status` tinyint(3) unsigned NOT NULL,"
-                    "  `submit_time` datetime NOT NULL,"
                     "  `score` bigint(20) DEFAULT NULL,"
                     "  `last_judgment` datetime NOT NULL,"
                     "  `initial_report` mediumblob NOT NULL,"
