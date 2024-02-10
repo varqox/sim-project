@@ -29,7 +29,7 @@ void DeleteContest::run() {
     // Add jobs to delete submission files
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data)"
+                 " created_at, aux_id, info, data)"
                  " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM submissions WHERE contest_id=?")
         .bind_and_execute(
@@ -43,7 +43,7 @@ void DeleteContest::run() {
     // Add jobs to delete contest files
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data)"
+                 " created_at, aux_id, info, data)"
                  " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM contest_files WHERE contest_id=?")
         .bind_and_execute(

@@ -28,7 +28,7 @@ class JobsMerger : public Merger<sim::jobs::Job> {
         mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id;
         auto stmt = conn.prepare(
             "SELECT id, file_id, tmp_file_id, creator, type,"
-            " priority, status, added, aux_id, info, data "
+            " priority, status, created_at, aux_id, info, data "
             "FROM ",
             record_set.sql_table_name
         );
@@ -41,7 +41,7 @@ class JobsMerger : public Merger<sim::jobs::Job> {
             job.type,
             job.priority,
             job.status,
-            job.added,
+            job.created_at,
             m_aux_id,
             job.info,
             job.data
@@ -124,7 +124,7 @@ class JobsMerger : public Merger<sim::jobs::Job> {
             case Job::Type::EDIT_PROBLEM: THROW("TODO");
             }
 
-            record_set.add_record(job, str_to_time_point(from_unsafe{job.added.to_string()}));
+            record_set.add_record(job, str_to_time_point(from_unsafe{job.created_at.to_string()}));
         }
     }
 
@@ -142,7 +142,7 @@ public:
             "INSERT INTO ",
             sql_table_name(),
             "(id, file_id, tmp_file_id, creator, type, priority,"
-            " status, added, aux_id, info, data) "
+            " status, created_at, aux_id, info, data) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
@@ -158,7 +158,7 @@ public:
                 x.type,
                 x.priority,
                 x.status,
-                x.added,
+                x.created_at,
                 x.aux_id,
                 x.info,
                 x.data

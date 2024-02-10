@@ -1685,7 +1685,7 @@ table.problems th.label {
 table.problems th.owner {
 	/*min-width: 60px;*/
 }
-table.problems th.added {
+table.problems th.updated_at {
 	min-width: 100px;
 }
 table.problems tr > td:first-child {
@@ -1742,7 +1742,7 @@ table.jobs th {
 	padding: 6px;
 	line-height: 20px;
 }
-table.jobs th.added {
+table.jobs th.created_at {
 	min-width: 100px;
 }
 table.jobs th.type {

@@ -40,7 +40,7 @@ void DeleteProblem::run() {
     // Add job to delete problem file
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data) "
+                 " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM problems WHERE id=?")
         .bind_and_execute(
@@ -54,7 +54,7 @@ void DeleteProblem::run() {
     // Add jobs to delete problem submissions' files
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data) "
+                 " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM submissions WHERE problem_id=?")
         .bind_and_execute(

@@ -58,7 +58,7 @@ void Sim::api_jobs() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT j.id, j.added, j.type, j.status, j.priority, j.aux_id,"
+    qfields.append("SELECT j.id, j.created_at, j.type, j.status, j.priority, j.aux_id,"
                    " j.info, j.creator, u.username");
     qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id WHERE TRUE"
     ); // Needed to easily
@@ -66,7 +66,7 @@ void Sim::api_jobs() {
 
     enum ColumnIdx {
         JID,
-        ADDED,
+        CREATED_AT,
         JTYPE,
         JSTATUS,
         PRIORITY,
@@ -81,7 +81,7 @@ void Sim::api_jobs() {
         // clang-format off
         append("[\n{\"columns\":["
                    "\"id\","
-                   "\"added\","
+                   "\"created_at\","
                    "\"type\","
                    "{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
                    "\"priority\","
@@ -232,7 +232,7 @@ void Sim::api_jobs() {
 
         // clang-format off
         append(",\n[", res[JID], ","
-               "\"", res[ADDED], "\","
+               "\"", res[CREATED_AT], "\","
                "\"", job_type_str(job_type), "\",");
         // clang-format on
 

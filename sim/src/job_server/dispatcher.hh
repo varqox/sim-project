@@ -15,7 +15,7 @@ void job_dispatcher(
     std::optional<StringView> creator,
     std::optional<uint64_t> aux_id,
     StringView info,
-    StringView added
+    StringView created_at
 );
 
 } // namespace job_server

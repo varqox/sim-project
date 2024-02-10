@@ -95,25 +95,25 @@ struct PrimaryKeysFromJobs {
 
         auto stmt = conn.prepare(
             "SELECT id, creator, type, file_id, "
-            "tmp_file_id, added, aux_id, info FROM ",
+            "tmp_file_id, created_at, aux_id, info FROM ",
             job_table_name,
             " ORDER BY id"
         );
         stmt.bind_and_execute();
         stmt.res_bind_all(id, creator, type, file_id, tmp_file_id, added_str, aux_id, info);
         while (stmt.next()) {
-            auto added = str_to_time_point(added_str.to_cstr());
+            auto created_at = str_to_time_point(added_str.to_cstr());
 
             // Process non-type-specific ids
-            jobs.add_id(id, added);
+            jobs.add_id(id, created_at);
             if (file_id.has_value()) {
-                internal_files.add_id(file_id.value(), added);
+                internal_files.add_id(file_id.value(), created_at);
             }
             if (tmp_file_id.has_value()) {
-                internal_files.add_id(tmp_file_id.value(), added);
+                internal_files.add_id(tmp_file_id.value(), created_at);
             }
             if (creator.has_value()) {
-                users.add_id(creator.value(), added);
+                users.add_id(creator.value(), created_at);
             }
 
             // Process type-specific ids
@@ -123,41 +123,41 @@ struct PrimaryKeysFromJobs {
                 break;
 
             case Job::Type::JUDGE_SUBMISSION:
-            case Job::Type::REJUDGE_SUBMISSION: submissions.add_id(aux_id.value(), added); break;
+            case Job::Type::REJUDGE_SUBMISSION: submissions.add_id(aux_id.value(), created_at); break;
 
             case Job::Type::DELETE_PROBLEM:
             case Job::Type::REUPLOAD_PROBLEM:
             case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-            case Job::Type::CHANGE_PROBLEM_STATEMENT: problems.add_id(aux_id.value(), added); break;
+            case Job::Type::CHANGE_PROBLEM_STATEMENT: problems.add_id(aux_id.value(), created_at); break;
 
             case Job::Type::MERGE_PROBLEMS:
-                problems.add_id(aux_id.value(), added);
-                problems.add_id(sim::jobs::MergeProblemsInfo(info).target_problem_id, added);
+                problems.add_id(aux_id.value(), created_at);
+                problems.add_id(sim::jobs::MergeProblemsInfo(info).target_problem_id, created_at);
                 break;
 
-            case Job::Type::DELETE_USER: users.add_id(aux_id.value(), added); break;
+            case Job::Type::DELETE_USER: users.add_id(aux_id.value(), created_at); break;
 
             case Job::Type::MERGE_USERS:
-                users.add_id(aux_id.value(), added);
-                users.add_id(sim::jobs::MergeUsersInfo(info).target_user_id, added);
+                users.add_id(aux_id.value(), created_at);
+                users.add_id(sim::jobs::MergeUsersInfo(info).target_user_id, created_at);
                 break;
 
-            case Job::Type::DELETE_CONTEST: contests.add_id(aux_id.value(), added); break;
+            case Job::Type::DELETE_CONTEST: contests.add_id(aux_id.value(), created_at); break;
 
             case Job::Type::DELETE_CONTEST_ROUND:
-                contest_rounds.add_id(aux_id.value(), added);
+                contest_rounds.add_id(aux_id.value(), created_at);
                 break;
 
             case Job::Type::DELETE_CONTEST_PROBLEM:
             case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
-                contest_problems.add_id(aux_id.value(), added);
+                contest_problems.add_id(aux_id.value(), created_at);
                 break;
 
             case Job::Type::ADD_PROBLEM:
             case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
                 if (aux_id.has_value()) {
-                    problems.add_id(aux_id.value(), added);
+                    problems.add_id(aux_id.value(), created_at);
                 }
                 break;
 

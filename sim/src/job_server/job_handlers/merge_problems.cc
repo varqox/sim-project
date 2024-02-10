@@ -63,7 +63,7 @@ void MergeProblems::run_impl() {
     // Add job to delete problem file
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data) "
+                 " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                  "FROM problems WHERE id=?")
         .bind_and_execute(
@@ -77,7 +77,7 @@ void MergeProblems::run_impl() {
     // Add jobs to delete problem solutions' files
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data) "
+                 " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                  "FROM submissions WHERE problem_id=? AND "
                  "type=?")
@@ -117,7 +117,7 @@ void MergeProblems::run_impl() {
     // Schedule rejudge of the transferred submissions
     if (info_.rejudge_transferred_submissions) {
         mysql
-            .prepare("INSERT INTO jobs(creator, status, priority, type, added,"
+            .prepare("INSERT INTO jobs(creator, status, priority, type, created_at,"
                      " aux_id, info, data) "
                      "SELECT NULL, ?, ?, ?, ?, id, ?, '' "
                      "FROM submissions WHERE problem_id=? ORDER BY id")

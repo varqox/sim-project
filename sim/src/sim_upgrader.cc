@@ -58,13 +58,13 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "784dbf630df9cb5713a6f17515b2e283625df5e1663e485a224e0e387ae851b4";
+    "e12416d77982d84163d5c2089352aa164287abd20ff6b598817d5d9e8231a1be";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
 ) {
     // Upgrade here
-    mysql.update("ALTER TABLE submissions CHANGE COLUMN submit_time created_at datetime NOT NULL AFTER id");
+    mysql.update("ALTER TABLE jobs CHANGE COLUMN added created_at datetime NOT NULL AFTER id");
 }
 
 enum class LockKind {

@@ -190,7 +190,7 @@ public:
         // Add jobs to merge the problems
         for (auto [src_id, dest_id] : to_merge_) {
             throw_assert(src_id != dest_id);
-            conn.prepare("INSERT jobs (creator, status, priority, type, added,"
+            conn.prepare("INSERT jobs (creator, status, priority, type, created_at,"
                          " aux_id, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
                 .bind_and_execute(
                     EnumVal(sim::jobs::Job::Status::PENDING),
@@ -217,7 +217,7 @@ public:
 private:
     static void schedule_reseting_problem_time_limits(decltype(sim::problems::Problem::id
     ) problem_new_id) {
-        conn.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+        conn.prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
                      " info, data) "
                      "VALUES(NULL, ?, ?, ?, ?, ?, '', '')")
             .bind_and_execute(

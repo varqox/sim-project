@@ -30,7 +30,7 @@ void restart_job(
         // Delete temporary files created during problem adding
         mysql
             .prepare("INSERT INTO jobs(file_id, creator, type, priority,"
-                     " status, added, aux_id, info, data) "
+                     " status, created_at, aux_id, info, data) "
                      "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                      "FROM jobs "
                      "WHERE id=? AND tmp_file_id IS NOT NULL")

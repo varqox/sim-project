@@ -32,7 +32,7 @@ void job_dispatcher(
     std::optional<StringView> creator,
     std::optional<uint64_t> aux_id,
     StringView info,
-    StringView added
+    StringView created_at
 ) {
     STACK_UNWINDING_MARK;
     using std::make_unique;
@@ -107,7 +107,7 @@ void job_dispatcher(
 
         case JT::JUDGE_SUBMISSION:
         case JT::REJUDGE_SUBMISSION:
-            job_handler = make_unique<JudgeOrRejudge>(job_id, aux_id.value(), added);
+            job_handler = make_unique<JudgeOrRejudge>(job_id, aux_id.value(), created_at);
             break;
 
         case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
@@ -140,7 +140,7 @@ void job_dispatcher(
 
         // Add job to delete temporary file
         auto stmt = mysql.prepare("INSERT INTO jobs(file_id, creator, type,"
-                                  " priority, status, added, aux_id, info, data) "
+                                  " priority, status, created_at, aux_id, info, data) "
                                   "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM jobs"
                                   " WHERE id=? AND tmp_file_id IS NOT NULL");
         stmt.bind_and_execute(

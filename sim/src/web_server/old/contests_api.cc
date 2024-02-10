@@ -923,7 +923,7 @@ void Sim::api_contest_delete(StringView contest_id, sim::contests::Permissions p
 
     // Queue deleting job
     auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                              " added, aux_id, info, data) "
+                              " created_at, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
         session->user_id,
@@ -1195,7 +1195,7 @@ void Sim::api_contest_round_delete(
 
     // Queue deleting job
     auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                              " added, aux_id, info, data) "
+                              " created_at, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
         session->user_id,
@@ -1302,7 +1302,7 @@ void Sim::api_contest_problem_rejudge_all_submissions(
 
     mysql
         .prepare("INSERT jobs (creator, status, priority, type,"
-                 " added, aux_id, info, data) "
+                 " created_at, aux_id, info, data) "
                  "SELECT ?, ?, ?, ?, ?, id, ?, '' "
                  "FROM submissions WHERE contest_problem_id=? ORDER BY id")
         .bind_and_execute(
@@ -1358,7 +1358,7 @@ void Sim::api_contest_problem_edit(
 
     if (reselect_final_sumbissions) {
         // Queue reselecting final submissions
-        stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
+        stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, created_at,"
                              " aux_id, info, data) "
                              "VALUES(?, ?, ?, ?, ?, ?, '', '')");
         stmt.bind_and_execute(
@@ -1400,7 +1400,7 @@ void Sim::api_contest_problem_delete(
 
     // Queue deleting job
     auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                              " added, aux_id, info, data) "
+                              " created_at, aux_id, info, data) "
                               "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
         session->user_id,
