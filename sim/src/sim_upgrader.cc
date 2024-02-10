@@ -1,12 +1,3 @@
-#include "simlib/mysql/mysql.hh"
-#include "simlib/path.hh"
-#include "simlib/sha.hh"
-#include "simlib/simple_parser.hh"
-#include "simlib/string_traits.hh"
-#include "simlib/string_transform.hh"
-#include "simlib/throw_assert.hh"
-#include "simlib/time.hh"
-#include "sql_tables.hh"
 #include "web_server/logs.hh"
 
 #include <algorithm>
@@ -35,12 +26,20 @@
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/mysql/mysql.hh>
 #include <simlib/opened_temporary_file.hh>
+#include <simlib/path.hh>
 #include <simlib/process.hh>
 #include <simlib/ranges.hh>
+#include <simlib/sha.hh>
+#include <simlib/simple_parser.hh>
 #include <simlib/spawner.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <simlib/temporary_file.hh>
+#include <simlib/throw_assert.hh>
+#include <simlib/time.hh>
 #include <unistd.h>
 #include <utility>
 
