@@ -58,38 +58,13 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "7c693df294522bad909d5778553d8c40ba0ef66eb4ef9a2cc4e3c6fdc925cc0d";
+    "a78f3629ed18a4eb7bce1a47de529bd8f145f8589cce37a109ee31ea599e96c5";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
 ) {
     // Upgrade here
-    mysql.update("ALTER TABLE users ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id");
-
-    auto res = mysql.query(
-        "SELECT jobs.creator, MIN(jobs.added)FROM jobs "
-        "WHERE jobs.creator IS NOT NULL GROUP BY jobs.creator ORDER BY jobs.creator DESC"
-    );
-    string min_date = "3333-33-33 33-77-77";
-    std::map<uint64_t, string> user_id_to_creation_time;
-    while (res.next()) {
-        auto user_id = res[0];
-        auto added = res[1];
-        min_date = std::min(min_date, added.to_string());
-        user_id_to_creation_time.insert({str2num<uint64_t>(user_id).value(), min_date});
-    }
-
-    res = mysql.query("SELECT id FROM users ORDER BY id");
-    while (res.next()) {
-        auto user_id = res[0];
-        auto it = user_id_to_creation_time.lower_bound(str2num<uint64_t>(user_id).value());
-        auto created_at = it == user_id_to_creation_time.end() ? mysql_date() : it->second;
-        mysql.prepare("UPDATE users SET created_at=? WHERE id=?")
-            .bind_and_execute(created_at, user_id);
-        stdlog(user_id, ' ', created_at);
-    }
-
-    mysql.update("ALTER TABLE users MODIFY COLUMN created_at datetime NOT NULL");
+    mysql.update("ALTER TABLE problems MODIFY COLUMN created_at datetime NOT NULL AFTER id");
 }
 
 enum class LockKind {
