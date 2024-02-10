@@ -12,7 +12,7 @@ def sim_sources(srcdir):
             [__file__],
             [
                 # Fix includes of form "simlib/*", "gtest/*" "gmock/*" (thanks clangd...) to <...>
-                ["sed", r's@^#include "\(\(simlib/\|gtest/\|gmock/\).*\)"$@#include <\1>@', "-i", path]
+                ["sed", r's@^#include "\(\(sim/\|simlib/\|gtest/\|gmock/\).*\)"$@#include <\1>@', "-i", path]
             ]
         )
         for path in filter_subdirs(

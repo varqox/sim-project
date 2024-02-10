@@ -1,14 +1,19 @@
-#include "sql_tables.hh"
 #include "web_server/logs.hh"
 
+#include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <cstdio>
+#include <exception>
 #include <fcntl.h>
 #include <fstream>
+#include <map>
+#include <regex>
 #include <sim/contest_entry_tokens/contest_entry_token.hh>
 #include <sim/contest_files/contest_file.hh>
 #include <sim/contest_rounds/contest_round.hh>
 #include <sim/contest_users/contest_user.hh>
+#include <sim/db/schema.hh>
 #include <sim/inf_datetime.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/problem_tags/problem_tag.hh>
@@ -22,161 +27,170 @@
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/from_unsafe.hh>
+#include <simlib/mysql/mysql.hh>
 #include <simlib/opened_temporary_file.hh>
+#include <simlib/path.hh>
 #include <simlib/process.hh>
 #include <simlib/ranges.hh>
+#include <simlib/sha.hh>
+#include <simlib/simple_parser.hh>
 #include <simlib/spawner.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <simlib/temporary_file.hh>
+#include <simlib/throw_assert.hh>
+#include <simlib/time.hh>
 #include <unistd.h>
+#include <utility>
 
-namespace {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-mysql::Connection conn;
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-InplaceBuff<PATH_MAX> sim_build; // with trailing '/'
-
-struct CmdOptions {
-    bool reset_new_problems_time_limits = false;
-};
-
-} // namespace
+using std::string;
+using std::vector;
 
 [[maybe_unused]] static void
-run_command(const std::vector<std::string>& args, const Spawner::Options& options = {}) {
+run_command(const vector<string>& args, const Spawner::Options& options = {}) {
     auto es = Spawner::run(args[0], args, options);
     if (es.si.code != CLD_EXITED or es.si.status != 0) {
         THROW(args[0], " failed: ", es.message);
     }
 }
 
-// Works if and only if:
-// - no table is renamed
-// - no column is added / removed
-// - columns stay in the same order
-// - column's type is convertible to column's new type compatible
-template <class Func>
-static void update_db_schema(Func&& prepare_database) {
-    OpenedTemporaryFile mysql_cnf("/tmp/sim-upgrade-mysql-cnf.XXXXXX");
-    write_all_throw(
-        mysql_cnf,
-        from_unsafe{concat(
-            "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd, "\"\n"
-        )}
+// Update the below hash and body of the function do_perform_upgrade()
+constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
+    "7c693df294522bad909d5778553d8c40ba0ef66eb4ef9a2cc4e3c6fdc925cc0d";
+
+static void do_perform_upgrade(
+    [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
+) {
+    // Upgrade here
+    mysql.update("ALTER TABLE users ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id");
+
+    auto res = mysql.query(
+        "SELECT jobs.creator, MIN(jobs.added)FROM jobs "
+        "WHERE jobs.creator IS NOT NULL GROUP BY jobs.creator ORDER BY jobs.creator DESC"
     );
-
-    static constexpr auto backup_table_suffix = "_bkp";
-    auto drop_backup_tables = [&] {
-        for (auto table : reverse_view(tables)) {
-            conn.update("DROP TABLE IF EXISTS `", table, backup_table_suffix, '`');
-        }
-    };
-
-    TemporaryFile db_backup("/tmp/sim-upgrade-db-backup.XXXXXX");
-    TemporaryFile db_dump("/tmp/sim-upgrade-db-dump.XXXXXX");
-
-    drop_backup_tables();
-    run_command({
-        "mysqldump",
-        concat_tostr("--defaults-file=", mysql_cnf.path()),
-        concat_tostr("--result-file=", db_backup.path()),
-        "--single-transaction",
-        conn.impl()->db,
-    });
-
-    ErrDefer save_backup = [&] {
-        for (int i = 0; i < 100'000; ++i) {
-            auto filename = concat("db-backup.", i);
-            if (access(filename, F_OK) == 0) {
-                continue;
-            }
-            if (copy(db_backup.path(), filename) == 0) {
-                stdlog("Database backup saved as: ", filename);
-                break;
-            }
-        }
-    };
-    {
-        ErrDefer restore_from_backup = [&] {
-            stdlog("Restore tables from dump-backup");
-            run_command(
-                {
-                    "mysql",
-                    concat_tostr("--defaults-file=", mysql_cnf.path()),
-                    conn.impl()->db,
-                },
-                Spawner::Options{
-                    FileDescriptor{db_backup.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO, "."}
-            );
-            drop_backup_tables();
-        };
-        prepare_database();
-        // Save records for reinsertion in the new schema
-        run_command({
-            "mysqldump",
-            concat_tostr("--defaults-file=", mysql_cnf.path()),
-            concat_tostr("--result-file=", db_dump.path()),
-            "--single-transaction",
-            "-t",
-            conn.impl()->db,
-        });
-        // Rename tables (as a fast backup)
-        stdlog("Rename tables (as a backup)");
-        std::string query = "RENAME TABLE ";
-        for (auto table : tables) {
-            if (table != tables.front()) {
-                back_insert(query, ", ");
-            }
-            back_insert(query, '`', table, "` TO `", table, backup_table_suffix, '`');
-        }
-        conn.update(query);
+    string min_date = "3333-33-33 33-77-77";
+    std::map<uint64_t, string> user_id_to_creation_time;
+    while (res.next()) {
+        auto user_id = res[0];
+        auto added = res[1];
+        min_date = std::min(min_date, added.to_string());
+        user_id_to_creation_time.insert({str2num<uint64_t>(user_id).value(), min_date});
     }
-    bool done = false;
-    ErrDefer restore_by_rename = [&] {
-        if (done) {
-            return;
-        }
-        stdlog("Restore backup via renaming tables");
-        // First drop tables that we will rename to
-        for (auto table : reverse_view(tables)) {
-            conn.update("DROP TABLE IF EXISTS `", table, '`');
-        }
-        std::string query = "RENAME TABLE ";
-        for (auto table : tables) {
-            if (table != tables.front()) {
-                back_insert(query, ", ");
-            }
-            back_insert(query, '`', table, backup_table_suffix, "` TO `", table, '`');
-        }
-        conn.update(query);
-    };
 
-    run_command({"build/setup-installation", "--drop-tables", sim_build.to_string()});
-    conn.update("DELETE FROM users"); // Remove the just created root account
-    run_command(
-        {
-            "mysql",
-            concat_tostr("--defaults-file=", mysql_cnf.path()),
-            conn.impl()->db,
-        },
-        Spawner::Options{
-            FileDescriptor{db_dump.path(), O_RDONLY}, STDOUT_FILENO, STDERR_FILENO, "."}
-    );
-    done = true;
-    drop_backup_tables();
+    res = mysql.query("SELECT id FROM users ORDER BY id");
+    while (res.next()) {
+        auto user_id = res[0];
+        auto it = user_id_to_creation_time.lower_bound(str2num<uint64_t>(user_id).value());
+        auto created_at = it == user_id_to_creation_time.end() ? mysql_date() : it->second;
+        mysql.prepare("UPDATE users SET created_at=? WHERE id=?")
+            .bind_and_execute(created_at, user_id);
+        stdlog(user_id, ' ', created_at);
+    }
+
+    mysql.update("ALTER TABLE users MODIFY COLUMN created_at datetime NOT NULL");
 }
 
-static int perform_upgrade() {
+enum class LockKind {
+    READ,
+    WRITE,
+};
+static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind);
+
+static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
+    stdlog("\033[1;34mChecking if upgrade is needed.\033[m");
+    lock_all_tables(mysql, LockKind::READ);
+    auto normalized_schema = normalized(sim::db::get_db_schema(mysql));
+    auto normalized_schema_hash = sha3_256(normalized_schema);
 
-    conn.update("UPDATE submissions SET initial_status=6 WHERE initial_status=5");
-    conn.update("UPDATE submissions SET full_status=6 WHERE full_status=5");
+    auto normalized_schema_after_upgrade = normalized(sim::db::schema);
+    auto normalized_schema_hash_after_upgrade = sha3_256(normalized_schema_after_upgrade);
 
-    // update_db_schema([&] { conn.update("RENAME TABLE session TO sessions"); });
+    if (normalized_schema_hash == normalized_schema_hash_after_upgrade) {
+        stdlog("\033[1;32mNo upgrade is needed.\033[m");
+        return 0;
+    }
+    if (normalized_schema_hash == NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE) {
+        stdlog("\033[1;34mStarted the sim upgrade.\033[m");
+        lock_all_tables(mysql, LockKind::WRITE);
+        do_perform_upgrade(sim_dir, mysql);
+        stdlog("\033[1;32mSim upgrading is complete.\033[m");
 
-    stdlog("\033[1;32mSim upgrading is complete\033[m");
-    return 0;
+        normalized_schema = normalized(sim::db::get_db_schema(mysql));
+        normalized_schema_hash = sha3_256(normalized_schema);
+        stdlog("normalized schema hash after upgrade = ", normalized_schema_hash);
+        if (normalized_schema_hash != normalized_schema_hash_after_upgrade) {
+            stdlog(
+                "\033[1;31mUpgrade succeeded but the schema hash is different than expected\033[m"
+            );
+            return 1;
+        }
+        return 0;
+    }
+    if (normalized_schema.empty()) {
+        stdlog("\033[1;34mDatabase is empty. Started initializing the database.\033[m");
+        for (const auto& table_schema : sim::db::schema.table_schemas) {
+            mysql.update(table_schema.create_table_sql);
+        }
+        // Create sim root user
+        {
+            auto [salt, hash] = sim::users::salt_and_hash_password("sim");
+            decltype(sim::users::User::type) type = sim::users::User::Type::ADMIN;
+            mysql
+                .prepare(
+                    "INSERT INTO users (id, created_at, type, username, first_name, last_name, "
+                    "email, password_salt, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind_and_execute(
+                    sim::users::SIM_ROOT_UID,
+                    mysql_date(),
+                    type,
+                    "sim",
+                    "sim",
+                    "sim",
+                    "sim@sim",
+                    salt,
+                    hash
+                );
+        }
+        stdlog("\033[1;32mDatabase initialized.\033[m");
+        return 0;
+    }
+
+    stdlog("\033[1;31mCannot upgrade, unknown schema hash = ", normalized_schema_hash, "\033[m");
+    // Dump current normalized schema
+    assert(has_prefix(sim_dir, "/"));
+    auto dump_path = path_absolute(from_unsafe{concat_tostr(sim_dir, "normalized_schema.sql")});
+    put_file_contents(dump_path, from_unsafe{concat_tostr(normalized_schema, '\n')});
+    stdlog("Dumped the current normalized schema to file: ", dump_path);
+    // Dump expected normalized schema
+    dump_path = path_absolute(from_unsafe{concat_tostr(sim_dir, "expected_normalized_schema.sql")});
+    put_file_contents(dump_path, from_unsafe{concat_tostr(normalized_schema_after_upgrade, '\n')});
+    stdlog("Dumped the expected normalized schema to file: ", dump_path);
+    return 1;
+}
+
+static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind) {
+    std::string query = "LOCK TABLES";
+    bool first = true;
+    for (const auto& table_name : sim::db::get_all_table_names(mysql)) {
+        if (first) {
+            first = false;
+        } else {
+            query += ',';
+        }
+        back_insert(query, " `", table_name, "` ");
+        switch (lock_kind) {
+        case LockKind::READ: query += "READ"; break;
+        case LockKind::WRITE: query += "WRITE"; break;
+        }
+    }
+    if (!first) {
+        // There are tables to lock
+        mysql.update(query);
+    }
 }
 
 static void print_help(const char* program_name) {
@@ -188,8 +202,7 @@ static void print_help(const char* program_name) {
     errlog(
         "Usage: ",
         program_name,
-        " [options] <sim_build>\n"
-        "  Where sim_build is a path to build directory of a Sim to upgrade\n"
+        " [options]\n"
         "\n"
         "Options:\n"
         "  -h, --help            Display this information\n"
@@ -197,26 +210,27 @@ static void print_help(const char* program_name) {
     );
 }
 
+namespace {
+
+struct CmdOptions {};
+
+} // namespace
+
 static CmdOptions parse_cmd_options(int& argc, char** argv) {
     STACK_UNWINDING_MARK;
 
     int new_argc = 1;
     CmdOptions cmd_options;
     for (int i = 1; i < argc; ++i) {
-
         if (argv[i][0] == '-') {
-            if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help")) { // Help
+            if (0 == strcmp(argv[i], "-h") or 0 == strcmp(argv[i], "--help")) {
                 print_help(argv[0]); // argv[0] is valid (argc > 1)
                 _exit(0);
-
-            } else if (0 == strcmp(argv[i], "-q") or 0 == strcmp(argv[i], "--quiet"))
-            { // Quiet mode
+            } else if (0 == strcmp(argv[i], "-q") or 0 == strcmp(argv[i], "--quiet")) {
                 stdlog.open("/dev/null");
-
-            } else { // Unknown
+            } else {
                 (void)fprintf(stderr, "Unknown option: '%s'\n", argv[i]);
             }
-
         } else {
             argv[new_argc++] = argv[i];
         }
@@ -230,7 +244,7 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 static int true_main(int argc, char** argv) {
     STACK_UNWINDING_MARK;
 
-    // Signal control
+    // Signal control: ignore all common signals. The upgrade process cannot be interrupted.
     struct sigaction sa = {};
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_IGN; // NOLINT
@@ -242,40 +256,26 @@ static int true_main(int argc, char** argv) {
     stdlog.use(stdout);
     errlog.use(stderr);
 
-    CmdOptions cmd_options = parse_cmd_options(argc, argv);
-    (void)cmd_options;
-    if (argc != 2) {
+    parse_cmd_options(argc, argv);
+    if (argc != 1) {
         print_help(argv[0]);
         return 1;
     }
 
-    sim_build.append(argv[1]);
-    if (not has_suffix(sim_build, "/")) {
-        sim_build.append('/');
-    }
+    auto sim_dir = executable_path(getpid());
+    sim_dir.resize(path_dirpath(sim_dir).size());
+    sim_dir += "../";
 
+    sim::mysql::Connection mysql;
     try {
-        // Get connection
-        conn = sim::mysql::make_conn_with_credential_file(concat(sim_build, ".db.config"));
+        // Get database connection
+        mysql = sim::mysql::make_conn_with_credential_file(concat(sim_dir, ".db.config"));
     } catch (const std::exception& e) {
         errlog("\033[31mFailed to connect to database\033[m - ", e.what());
         return 1;
     }
 
-    auto manage_path = concat_tostr(sim_build, "manage");
-    // Stop web server and job server
-    Spawner::run(manage_path, {manage_path, "stop"});
-
-    Defer servers_restorer([&] {
-        try {
-            stdlog("Restoring servers");
-        } catch (...) {
-        }
-
-        Spawner::run(manage_path, {manage_path, "-b", "start"});
-    });
-
-    return perform_upgrade();
+    return perform_upgrade(sim_dir, mysql);
 }
 
 int main(int argc, char** argv) {

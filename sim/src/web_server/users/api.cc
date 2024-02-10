@@ -280,11 +280,19 @@ Response sign_up(Context& ctx) {
 
     auto [password_salt, password_hash] = sim::users::salt_and_hash_password(password);
     decltype(User::type) user_type = User::Type::NORMAL;
-    auto stmt =
-        ctx.mysql.prepare("INSERT IGNORE INTO users(type, username, first_name, last_name, email, "
-                          "password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
+    auto stmt = ctx.mysql.prepare(
+        "INSERT IGNORE INTO users(created_at, type, username, first_name, last_name, email, "
+        "password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?, ?)"
+    );
     stmt.bind_and_execute(
-        user_type, username, first_name, last_name, email, password_salt, password_hash
+        mysql_date(),
+        user_type,
+        username,
+        first_name,
+        last_name,
+        email,
+        password_salt,
+        password_hash
     );
     if (stmt.affected_rows() != 1) {
         return ctx.response_400("Username taken");
@@ -336,10 +344,11 @@ Response add(Context& ctx) {
     }
 
     auto [salt, hash] = sim::users::salt_and_hash_password(password);
-    auto stmt =
-        ctx.mysql.prepare("INSERT IGNORE INTO users(type, username, first_name, last_name, "
-                          "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?)");
-    stmt.bind_and_execute(type, username, first_name, last_name, email, salt, hash);
+    auto stmt = ctx.mysql.prepare(
+        "INSERT IGNORE INTO users(created_at, type, username, first_name, last_name, "
+        "email, password_salt, password_hash) VALUES(?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    stmt.bind_and_execute(mysql_date(), type, username, first_name, last_name, email, salt, hash);
     if (stmt.affected_rows() != 1) {
         return ctx.response_400("Username taken");
     }
