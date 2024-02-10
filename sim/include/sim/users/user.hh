@@ -5,6 +5,7 @@
 #include <sim/primary_key.hh>
 #include <sim/sql_fields/satisfying_predicate.hh>
 #include <sim/sql_fields/varbinary.hh>
+#include <sim/sql_fields/datetime.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
 
@@ -28,6 +29,7 @@ struct User {
         "a string consisting only of the characters [a-zA-Z0-9_-]";
 
     uint64_t id;
+    sql_fields::Datetime created_at;
     EnumVal<Type> type;
     sql_fields::SatisfyingPredicate<sql_fields::Varbinary<30>, is_username, is_username_description>
         username;

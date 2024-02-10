@@ -326,7 +326,7 @@ void AddOrReuploadProblemBase::submit_solutions() {
     auto submission_inserter =
         mysql.prepare("INSERT INTO submissions (file_id, owner, problem_id, "
                       "contest_problem_id, contest_round_id, contest_id, type, language, "
-                      "initial_status, full_status, submit_time, last_judgment, "
+                      "initial_status, full_status, created_at, last_judgment, "
                       "initial_report, final_report) VALUES(?, NULL, ?, NULL, NULL, "
                       "NULL, ?, ?, ?, ?, ?, ?, '', '')");
 

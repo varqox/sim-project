@@ -52,6 +52,7 @@ struct Submission {
     );
 
     uint64_t id;
+    sql_fields::Datetime created_at;
     decltype(internal_files::InternalFile::id) file_id;
     std::optional<decltype(sim::users::User::id)> owner;
     decltype(sim::problems::Problem::id) problem_id;
@@ -66,7 +67,6 @@ struct Submission {
     sql_fields::Bool contest_initial_final;
     EnumVal<Status> initial_status;
     EnumVal<Status> full_status;
-    sql_fields::Datetime submit_time;
     std::optional<int64_t> score;
     sql_fields::Datetime last_judgment;
     sql_fields::Blob<0> initial_report;

@@ -28,7 +28,7 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
             " contest_problem_id, contest_round_id, contest_id,"
             " type, language, final_candidate, problem_final,"
             " contest_final, contest_initial_final, initial_status,"
-            " full_status, submit_time, score, last_judgment,"
+            " full_status, created_at, score, last_judgment,"
             " initial_report, final_report "
             "FROM ",
             record_set.sql_table_name
@@ -50,7 +50,7 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
             s.contest_initial_final,
             s.initial_status,
             s.full_status,
-            s.submit_time,
+            s.created_at,
             m_score,
             s.last_judgment,
             s.initial_report,
@@ -80,7 +80,7 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
                 s.contest_id = contests_.new_id(s.contest_id.value(), record_set.kind);
             }
 
-            record_set.add_record(s, str_to_time_point(from_unsafe{s.submit_time.to_string()}));
+            record_set.add_record(s, str_to_time_point(from_unsafe{s.created_at.to_string()}));
         }
     }
 
@@ -101,7 +101,7 @@ public:
             " contest_round_id, contest_id, type, language,"
             " final_candidate, problem_final, contest_final,"
             " contest_initial_final, initial_status, full_status,"
-            " submit_time, score, last_judgment, initial_report,"
+            " created_at, score, last_judgment, initial_report,"
             " final_report) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
             " ?, ?, ?, ?)"
@@ -127,7 +127,7 @@ public:
                 x.contest_initial_final,
                 x.initial_status,
                 x.full_status,
-                x.submit_time,
+                x.created_at,
                 x.score,
                 x.last_judgment,
                 x.initial_report,
