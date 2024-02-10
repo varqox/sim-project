@@ -1800,7 +1800,7 @@ function ProblemsLister(elem, query_url, list_capabilties) {
 			thead.appendChild(elem_with_class_and_text('th', 'owner', 'Owner'));
 		}
 		if (list_capabilties.ui_show_updated_at_column) {
-			thead.appendChild(elem_with_class_of('th', 'added', 'Updated at', elem_timezone_marker()));
+			thead.appendChild(elem_with_class_of('th', 'updated_at', 'Updated at', elem_timezone_marker()));
 		}
 		thead.appendChild(elem_with_class_and_text('th', 'actions', 'Actions'));
 		self.elem.appendChild(thead);
@@ -3686,8 +3686,8 @@ function view_job(as_oldmodal, job_id, opt_hash /*= ''*/) {
 						html: $('<td>', {
 							text: job.type
 						}).add(normalize_datetime($('<td>', {
-								datetime: job.added,
-								text: job.added
+								datetime: job.created_at,
+								text: job.created_at
 							}), true)
 						).add('<td>', {
 							class: 'status ' + job.status.class,
@@ -3765,13 +3765,13 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					'<th>Id</th>' +
 					'<th class="type">Type</th>' +
 					'<th class="priority">Priority</th>' +
-					'<th class="added">Added</th>' +
+					'<th class="created_at">Created at</th>' +
 					'<th class="status">Status</th>' +
 					'<th class="owner">Owner</th>' +
 					'<th class="info">Info</th>' +
 					'<th class="actions">Actions</th>' +
 				'</tr></thead><tbody></tbody>');
-			add_tz_marker(this_.elem.find('thead th.added'));
+			add_tz_marker(this_.elem.find('thead th.created_at'));
 		}
 
 		for (var x in data) {
@@ -3783,9 +3783,9 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			row.append($('<td>', {text: x.type}));
 			row.append($('<td>', {text: x.priority}));
 
-			var avb = a_view_button('/jobs/' + x.id, x.added, undefined,
+			var avb = a_view_button('/jobs/' + x.id, x.created_at, undefined,
 				view_job.bind(null, true, x.id));
-			avb.setAttribute('datetime', x.added);
+			avb.setAttribute('datetime', x.created_at);
 			row.append($('<td>', {
 				html: normalize_datetime(avb, false)
 			}));
@@ -5067,11 +5067,11 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('a') !== -1)
 			$(this).find('.problem-info').append($('<div>', {
-					class: 'added',
-					html: $('<label>', {text: 'Added'})
+					class: 'created_at',
+					html: $('<label>', {text: 'Created at'})
 				}).append(normalize_datetime($('<span>', {
-					datetime: problem.added,
-					text: problem.added
+					datetime: problem.created_at,
+					text: problem.created_at
 				}), true)));
 
 		var elem = $(this);

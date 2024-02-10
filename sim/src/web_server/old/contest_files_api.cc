@@ -448,7 +448,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
 
         mysql
             .prepare("INSERT INTO jobs(file_id, creator, type, priority,"
-                     " status, added, aux_id, info, data) "
+                     " status, created_at, aux_id, info, data) "
                      "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                      "FROM contest_files WHERE id=?")
             .bind_and_execute(
@@ -495,7 +495,7 @@ void Sim::api_contest_file_delete(
 
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data) "
+                 " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                  "FROM contest_files WHERE id=?")
         .bind_and_execute(

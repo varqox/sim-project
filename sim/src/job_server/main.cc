@@ -695,17 +695,17 @@ static void process_job(const WorkersPool::NextJob& job) {
     mysql::Optional<uint64_t> file_id;
     mysql::Optional<uint64_t> tmp_file_id;
     mysql::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
-    InplaceBuff<32> added;
+    InplaceBuff<32> created_at;
     mysql::Optional<uint64_t> aux_id; // TODO: normalize this column...
     InplaceBuff<512> info;
 
     {
         auto stmt = job_server::mysql.prepare(
-            "SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
+            "SELECT file_id, tmp_file_id, creator, created_at, type, aux_id, info "
             "FROM jobs WHERE id=? AND status!=?"
         );
         stmt.bind_and_execute(job.id, EnumVal(sim::jobs::Job::Status::CANCELED));
-        stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
+        stmt.res_bind_all(file_id, tmp_file_id, creator, created_at, jtype, aux_id, info);
 
         if (not stmt.next()) { // Job has been probably canceled
             return exit_procedures();
@@ -722,7 +722,7 @@ static void process_job(const WorkersPool::NextJob& job) {
     if (creator.has_value()) {
         creat = creator.value();
     }
-    job_server::job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, added);
+    job_server::job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, created_at);
 
     exit_procedures();
 }

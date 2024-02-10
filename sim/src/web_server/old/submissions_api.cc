@@ -117,7 +117,7 @@ void Sim::api_submissions() {
         CRENDS,
         CID,
         CNAME,
-        SUBMIT_TIME,
+        CREATED_AT,
         PFINAL,
         CFINAL,
         CINIFINAL,
@@ -626,7 +626,7 @@ void Sim::api_submissions() {
         }
 
         // Submit time
-        append("\"", res[SUBMIT_TIME], "\",");
+        append("\"", res[CREATED_AT], "\",");
 
         bool show_full_status = (show_full_results or [&] {
             if (score_revealing) {
@@ -964,7 +964,7 @@ void Sim::api_submission_add() {
     // Create a job to judge the submission
     auto submission_id = stmt.insert_id();
     mysql
-        .prepare("INSERT jobs (file_id, creator, status, priority, type, added,"
+        .prepare("INSERT jobs (file_id, creator, status, priority, type, created_at,"
                  " aux_id, info, data) "
                  "VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
@@ -1024,7 +1024,7 @@ void Sim::api_submission_rejudge() {
     throw_assert(stmt.next());
 
     stmt = mysql.prepare("INSERT jobs (file_id, creator, status, priority,"
-                         " type, added, aux_id, info, data) "
+                         " type, created_at, aux_id, info, data) "
                          "VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, '')");
     stmt.bind_and_execute(
         session->user_id,
@@ -1117,7 +1117,7 @@ void Sim::api_submission_delete() {
 
     mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " added, aux_id, info, data)"
+                 " created_at, aux_id, info, data)"
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM submissions WHERE id=?")
         .bind_and_execute(

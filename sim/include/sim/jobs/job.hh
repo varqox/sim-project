@@ -47,13 +47,13 @@ struct Job {
     );
 
     uint64_t id;
+    sql_fields::Datetime created_at;
     std::optional<decltype(internal_files::InternalFile::id)> file_id;
     std::optional<decltype(internal_files::InternalFile::id)> tmp_file_id;
     std::optional<decltype(users::User::id)> creator;
     EnumVal<Type> type;
     uint8_t priority;
     EnumVal<Status> status;
-    sql_fields::Datetime added;
     std::optional<uint64_t> aux_id;
     sql_fields::Blob<128> info;
     sql_fields::Blob<0> data;

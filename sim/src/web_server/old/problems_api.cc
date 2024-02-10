@@ -174,7 +174,7 @@ void Sim::api_problems() {
     // clang-format off
     append("[\n{\"columns\":["
                "\"id\","
-               "\"added\","
+               "\"created_at\","
                "\"type\","
                "\"name\","
                "\"label\","
@@ -535,7 +535,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     decltype(Job::type) jtype =
         (reuploading ? Job::Type::REUPLOAD_PROBLEM : Job::Type::ADD_PROBLEM);
     mysql
-        .prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
+        .prepare("INSERT jobs(file_id, creator, priority, type, status, created_at,"
                  " aux_id, info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
@@ -629,7 +629,7 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
     }
 
     mysql
-        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
                  " info, data) "
                  "SELECT ?, ?, ?, ?, ?, id, ?, '' "
                  "FROM submissions WHERE problem_id=? ORDER BY id")
@@ -654,7 +654,7 @@ void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
     }
 
     mysql
-        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
                  " info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, '', '')")
         .bind_and_execute(
@@ -683,7 +683,7 @@ void Sim::api_problem_delete(sim::problems::Permissions perms) {
 
     // Queue deleting job
     mysql
-        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
                  " info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, '', '')")
         .bind_and_execute(
@@ -740,7 +740,7 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
 
     // Queue merging job
     mysql
-        .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
                  " info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
@@ -935,7 +935,7 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
 
     mysql
         .prepare("INSERT jobs (file_id, creator, status, priority, type,"
-                 " added, aux_id, info, data) "
+                 " created_at, aux_id, info, data) "
                  "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
             job_file_id,
