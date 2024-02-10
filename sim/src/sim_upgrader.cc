@@ -13,6 +13,7 @@
 #include <sim/contest_files/contest_file.hh>
 #include <sim/contest_rounds/contest_round.hh>
 #include <sim/contest_users/contest_user.hh>
+#include <sim/db/schema.hh>
 #include <sim/inf_datetime.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/problem_tags/problem_tag.hh>
@@ -26,6 +27,7 @@
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/from_unsafe.hh>
 #include <simlib/mysql/mysql.hh>
 #include <simlib/opened_temporary_file.hh>
 #include <simlib/path.hh>
@@ -54,11 +56,9 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
     }
 }
 
-// Update the below hashes and body of the function do_perform_upgrade()
-constexpr StringView SCHEMA_HASH_BEFORE_UPGRADE =
-    "fbada911240043e120c9a71690e4c65167830603caae6c0888d748614524e19c";
-constexpr StringView SCHEMA_HASH_AFTER_UPGRADE =
-    "01591982c758693acec24be6f96671cca171b55e1f58ec04ee08a09f62dcdcbd";
+// Update the below hash and body of the function do_perform_upgrade()
+constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
+    "7c693df294522bad909d5778553d8c40ba0ef66eb4ef9a2cc4e3c6fdc925cc0d";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
@@ -97,27 +97,31 @@ enum class LockKind {
     WRITE,
 };
 static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind);
-static string get_db_schema(mysql::Connection& mysql);
 
 static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
     stdlog("\033[1;34mChecking if upgrade is needed.\033[m");
     lock_all_tables(mysql, LockKind::READ);
-    auto schema = get_db_schema(mysql);
-    auto schema_hash = sha3_256(schema);
-    if (schema_hash == SCHEMA_HASH_AFTER_UPGRADE) {
+    auto normalized_schema = normalized(sim::db::get_db_schema(mysql));
+    auto normalized_schema_hash = sha3_256(normalized_schema);
+
+    auto normalized_schema_after_upgrade = normalized(sim::db::schema);
+    auto normalized_schema_hash_after_upgrade = sha3_256(normalized_schema_after_upgrade);
+
+    if (normalized_schema_hash == normalized_schema_hash_after_upgrade) {
         stdlog("\033[1;32mNo upgrade is needed.\033[m");
         return 0;
     }
-    if (schema_hash == SCHEMA_HASH_BEFORE_UPGRADE) {
+    if (normalized_schema_hash == NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE) {
         stdlog("\033[1;34mStarted the sim upgrade.\033[m");
         lock_all_tables(mysql, LockKind::WRITE);
         do_perform_upgrade(sim_dir, mysql);
         stdlog("\033[1;32mSim upgrading is complete.\033[m");
 
-        auto schema_hash_after_upgrade = sha3_256(from_unsafe{get_db_schema(mysql)});
-        stdlog("schema hash after upgrade = ", schema_hash_after_upgrade);
-        if (schema_hash_after_upgrade != SCHEMA_HASH_AFTER_UPGRADE) {
+        normalized_schema = normalized(sim::db::get_db_schema(mysql));
+        normalized_schema_hash = sha3_256(normalized_schema);
+        stdlog("normalized schema hash after upgrade = ", normalized_schema_hash);
+        if (normalized_schema_hash != normalized_schema_hash_after_upgrade) {
             stdlog(
                 "\033[1;31mUpgrade succeeded but the schema hash is different than expected\033[m"
             );
@@ -125,28 +129,53 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
         }
         return 0;
     }
-
-    stdlog("\033[1;31mCannot upgrade, unknown schema hash = ", schema_hash, "\033[m");
-    auto schema_dump_path = concat_tostr(sim_dir, "schema_dump.sql");
-    put_file_contents(schema_dump_path, schema);
-    stdlog("Dumped the current schema to file: ", schema_dump_path);
-    return 1;
-}
-
-static vector<string> get_all_table_names(mysql::Connection& mysql) {
-    vector<string> table_names;
-    auto res = mysql.query("SHOW TABLES");
-    while (res.next()) {
-        table_names.emplace_back(res[0].to_string());
+    if (normalized_schema.empty()) {
+        stdlog("\033[1;34mDatabase is empty. Started initializing the database.\033[m");
+        for (const auto& table_schema : sim::db::schema.table_schemas) {
+            mysql.update(table_schema.create_table_sql);
+        }
+        // Create sim root user
+        {
+            auto [salt, hash] = sim::users::salt_and_hash_password("sim");
+            decltype(sim::users::User::type) type = sim::users::User::Type::ADMIN;
+            mysql
+                .prepare(
+                    "INSERT INTO users (id, created_at, type, username, first_name, last_name, "
+                    "email, password_salt, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind_and_execute(
+                    sim::users::SIM_ROOT_UID,
+                    mysql_date(),
+                    type,
+                    "sim",
+                    "sim",
+                    "sim",
+                    "sim@sim",
+                    salt,
+                    hash
+                );
+        }
+        stdlog("\033[1;32mDatabase initialized.\033[m");
+        return 0;
     }
-    sort(table_names.begin(), table_names.end());
-    return table_names;
+
+    stdlog("\033[1;31mCannot upgrade, unknown schema hash = ", normalized_schema_hash, "\033[m");
+    // Dump current normalized schema
+    assert(has_prefix(sim_dir, "/"));
+    auto dump_path = path_absolute(from_unsafe{concat_tostr(sim_dir, "normalized_schema.sql")});
+    put_file_contents(dump_path, from_unsafe{concat_tostr(normalized_schema, '\n')});
+    stdlog("Dumped the current normalized schema to file: ", dump_path);
+    // Dump expected normalized schema
+    dump_path = path_absolute(from_unsafe{concat_tostr(sim_dir, "expected_normalized_schema.sql")});
+    put_file_contents(dump_path, from_unsafe{concat_tostr(normalized_schema_after_upgrade, '\n')});
+    stdlog("Dumped the expected normalized schema to file: ", dump_path);
+    return 1;
 }
 
 static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind) {
     std::string query = "LOCK TABLES";
     bool first = true;
-    for (const auto& table_name : get_all_table_names(mysql)) {
+    for (const auto& table_name : sim::db::get_all_table_names(mysql)) {
         if (first) {
             first = false;
         } else {
@@ -158,76 +187,10 @@ static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind) {
         case LockKind::WRITE: query += "WRITE"; break;
         }
     }
-    mysql.update(query);
-}
-
-static string get_db_schema(mysql::Connection& mysql) {
-    string schema;
-    for (const auto& table_name : get_all_table_names(mysql)) {
-        auto res = mysql.query("SHOW CREATE TABLE `", table_name, '`');
-        throw_assert(res.next());
-        auto table_schema = res[1].to_string();
-        // Remove AUTOINCREMENT=
-        table_schema =
-            std::regex_replace(table_schema, std::regex{R"((\n\).*) AUTO_INCREMENT=\w+)"}, "$1");
-        // Split schema to rows
-        vector<StringView> rows;
-        {
-            auto table_schema_parser = SimpleParser{table_schema};
-            auto row = table_schema_parser.extract_next_non_empty('\n');
-            while (!row.empty()) {
-                rows.emplace_back(row);
-                row = table_schema_parser.extract_next_non_empty('\n');
-            }
-        }
-        // Sort table schema by rows
-        auto row_to_comparable = [](StringView row) -> std::pair<int, StringView> {
-            if (has_prefix(row, "CREATE TABLE ")) {
-                return {0, row};
-            }
-            if (has_prefix(row, "  `")) {
-                return {1, ""}; // preserve column order
-            }
-            if (has_prefix(row, "  PRIMARY KEY ")) {
-                return {2, row};
-            }
-            if (has_prefix(row, "  UNIQUE KEY ")) {
-                return {3, row};
-            }
-            if (has_prefix(row, "  KEY ")) {
-                return {4, row};
-            }
-            if (has_prefix(row, "  CONSTRAINT ")) {
-                return {5, row};
-            }
-            if (has_prefix(row, ")")) {
-                return {6, row};
-            }
-            THROW("BUG: unknown prefix");
-        };
-        std::stable_sort(rows.begin(), rows.end(), [&](StringView a, StringView b) {
-            return row_to_comparable(a) < row_to_comparable(b);
-        });
-        // Append the schema
-        for (StringView row : rows) {
-            // Remove comma before end of table definition
-            if (has_prefix(row, ")") && has_suffix(schema, ",\n")) {
-                schema.pop_back();
-                schema.back() = '\n';
-            }
-            back_insert(schema, row);
-            // Append missing commas
-            if (has_prefix(row, "  ") && !has_suffix(row, ",")) {
-                schema += ',';
-            }
-            // Append semicolon after table definition
-            if (has_prefix(row, ")")) {
-                schema += ';';
-            }
-            schema += '\n';
-        }
+    if (!first) {
+        // There are tables to lock
+        mysql.update(query);
     }
-    return schema;
 }
 
 static void print_help(const char* program_name) {

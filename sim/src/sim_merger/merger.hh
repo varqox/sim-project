@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../sql_tables.hh"
 #include "primary_keys_from_jobs.hh"
 #include "sim_merger.hh"
 
 #include <map>
+#include <sim/db/tables.hh>
 #include <sim/primary_key.hh>
 #include <type_traits>
 #include <utility>
@@ -286,7 +286,10 @@ protected:
     , other_{IdKind::Other, orig_sql_table_name.to_string(), "", std::move(other_ids)} {
         STACK_UNWINDING_MARK;
 
-        assert(std::find(tables.begin(), tables.end(), orig_sql_table_name) != tables.end());
+        assert(
+            std::find(sim::db::tables.begin(), sim::db::tables.end(), orig_sql_table_name) !=
+            sim::db::tables.end()
+        );
     }
 
     void initialize() {
