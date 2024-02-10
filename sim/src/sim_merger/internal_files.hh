@@ -51,6 +51,8 @@ public:
             "VALUES(?)"
         );
 
+        THROW("TODO: created_at");
+
         auto bkp_path = internal_files_backup_path();
         auto dest_path = concat(main_sim_build, "internal_files/");
         auto trash_path = internal_files_trash_path();

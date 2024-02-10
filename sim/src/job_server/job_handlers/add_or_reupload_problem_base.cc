@@ -44,7 +44,7 @@ void AddOrReuploadProblemBase::build_package() {
 
     auto source_package = sim::internal_files::path_of(job_file_id_);
 
-    mysql.update("INSERT INTO internal_files VALUES()");
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
     tmp_file_id_ = mysql.insert_id();
 
     /* Construct Simfile */
@@ -330,12 +330,12 @@ void AddOrReuploadProblemBase::submit_solutions() {
                       "initial_report, final_report) VALUES(?, NULL, ?, NULL, NULL, "
                       "NULL, ?, ?, ?, ?, ?, ?, '', '')");
 
-    auto file_inserter = mysql.prepare("INSERT INTO internal_files VALUES()");
+    auto file_inserter = mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)");
 
     for (const auto& solution : simfile_.solutions) {
         job_log("Submit: ", solution);
 
-        file_inserter.execute();
+        file_inserter.bind_and_execute(mysql_date());
         uint64_t file_id = file_inserter.insert_id();
         EnumVal<Submission::Language> lang = filename_to_lang(solution);
         submission_inserter.bind_and_execute(

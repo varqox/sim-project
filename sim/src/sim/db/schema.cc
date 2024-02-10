@@ -43,6 +43,7 @@ const DbSchema schema = {
                 .create_table_sql = concat_tostr(
                     "CREATE TABLE `internal_files` ("
                     "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
+                    "  `created_at` datetime NOT NULL,"
                     "  PRIMARY KEY (`id`)"
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                 ),

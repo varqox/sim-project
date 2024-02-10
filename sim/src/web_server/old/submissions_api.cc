@@ -927,7 +927,7 @@ void Sim::api_submission_add() {
 
     auto transaction = mysql.start_transaction();
 
-    mysql.update("INSERT INTO internal_files VALUES()");
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
     auto file_id = mysql.insert_id();
     CallInDtor file_remover([file_id] { (void)unlink(sim::internal_files::path_of(file_id)); });
 
