@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <sim/is_username.hh>
 #include <sim/primary_key.hh>
+#include <sim/sql_fields/datetime.hh>
 #include <sim/sql_fields/satisfying_predicate.hh>
 #include <sim/sql_fields/varbinary.hh>
-#include <sim/sql_fields/datetime.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
 

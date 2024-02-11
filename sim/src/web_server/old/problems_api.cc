@@ -523,7 +523,8 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
         ptype};
 
     auto transaction = mysql.start_transaction();
-    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+        .bind_and_execute(mysql_date());
     auto job_file_id = mysql.insert_id();
     FileRemover job_file_remover(sim::internal_files::path_of(job_file_id));
 
@@ -924,7 +925,8 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
     sim::jobs::ChangeProblemStatementInfo cps_info(statement_path);
 
     auto transaction = mysql.start_transaction();
-    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+        .bind_and_execute(mysql_date());
     auto job_file_id = mysql.insert_id();
     FileRemover job_file_remover(sim::internal_files::path_of(job_file_id));
 

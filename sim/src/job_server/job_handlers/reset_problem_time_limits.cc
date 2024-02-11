@@ -30,7 +30,8 @@ void ResetProblemTimeLimits::run() {
 
     auto transaction = mysql.start_transaction();
 
-    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+        .bind_and_execute(mysql_date());
     uint64_t new_file_id = mysql.insert_id();
     auto new_pkg_path = sim::internal_files::path_of(new_file_id);
 

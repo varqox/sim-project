@@ -850,9 +850,11 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Add contest problems to the new contest
-    stmt = mysql.prepare("INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
-                         " item, method_of_choosing_final_submission, score_revealing) "
-                         "VALUES(?,?, ?, ?, ?, ?, ?, ?)");
+    stmt = mysql.prepare(
+        "INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
+        " item, method_of_choosing_final_submission, score_revealing) "
+        "VALUES(?,?, ?, ?, ?, ?, ?, ?)"
+    );
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
             mysql_date(),
@@ -1098,10 +1100,11 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     // Add contest round
-    auto stmt = mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends,"
-                              " full_results, ranking_exposure) "
-                              "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
-                              "FROM contest_rounds WHERE contest_id=?");
+    auto stmt =
+        mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends,"
+                      " full_results, ranking_exposure) "
+                      "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
+                      "FROM contest_rounds WHERE contest_id=?");
     stmt.bind_and_execute(
         mysql_date(),
         contest_id,
@@ -1125,9 +1128,11 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     // Add contest problems to the new contest round
-    stmt = mysql.prepare("INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
-                         " item, method_of_choosing_final_submission, score_revealing) "
-                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+    stmt = mysql.prepare(
+        "INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
+        " item, method_of_choosing_final_submission, score_revealing) "
+        "VALUES(?, ?, ?, ?, ?, ?, ?, ?)"
+    );
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
             mysql_date(),

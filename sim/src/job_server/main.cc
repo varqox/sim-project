@@ -722,7 +722,9 @@ static void process_job(const WorkersPool::NextJob& job) {
     if (creator.has_value()) {
         creat = creator.value();
     }
-    job_server::job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, created_at);
+    job_server::job_dispatcher(
+        job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, created_at
+    );
 
     exit_procedures();
 }

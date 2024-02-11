@@ -90,9 +90,7 @@ static void do_perform_upgrade(
         contests_ids.emplace(contest_id);
     }
 
-    mysql.update(
-        "ALTER TABLE contests ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id"
-    );
+    mysql.update("ALTER TABLE contests ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id");
 
     auto min_date = mysql_date();
     for (auto contest_id : contests_ids) {

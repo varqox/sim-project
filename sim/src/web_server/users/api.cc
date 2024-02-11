@@ -466,8 +466,9 @@ Response delete_(Context& ctx, decltype(User::id) user_id) {
     }
 
     // Queue the deleting job
-    auto stmt = ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
-                                  "created_at, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, '', '')");
+    auto stmt =
+        ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                          "created_at, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, '', '')");
     constexpr auto type = Job::Type::DELETE_USER;
     stmt.bind_and_execute(
         ctx.session.value().user_id,
@@ -517,8 +518,9 @@ Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
     }
 
     // Queue the merging job
-    auto stmt = ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
-                                  "created_at, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, ?, '')");
+    auto stmt =
+        ctx.mysql.prepare("INSERT INTO jobs (creator, type, priority, status, "
+                          "created_at, aux_id, info, data) VALUES(?, ?, ?, ?, ?, ?, ?, '')");
     constexpr auto type = Job::Type::MERGE_USERS;
     stmt.bind_and_execute(
         ctx.session.value().user_id,
