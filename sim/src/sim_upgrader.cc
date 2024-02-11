@@ -59,67 +59,61 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "fcaef26c1c217e9894d7c4cb692617b38df6a556f864aac35788189f2c45f393";
+    "e513f4bdae5875e9180a1cbd3645ba47153188687e79af0e23f118f02354bbaa";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
 ) {
     // Upgrade here
+    std::set<uint64_t, std::greater<>> contest_problems_ids;
+
+    std::map<uint64_t, std::string> contest_problem_id_to_min_submission_time;
+    auto res =
+        mysql.query("SELECT contest_problems.id, submissions.created_at FROM contest_problems "
+                    "JOIN submissions ON submissions.id=(SELECT MIN(submissions.id) FROM "
+                    "submissions WHERE submissions.contest_problem_id=contest_problems.id)");
+    while (res.next()) {
+        auto contest_problem_id = str2num<uint64_t>(res[0]).value();
+        contest_problems_ids.emplace(contest_problem_id);
+        contest_problem_id_to_min_submission_time.emplace(contest_problem_id, res[1].to_string());
+    }
+
+    mysql.update("UNLOCK TABLES"); // Seems like a bug in MariaDB that we need it before the next query
+    std::map<uint64_t, std::string> contest_problem_id_to_min_job_creation_time;
+    res = mysql.query("SELECT aux_id, MIN(created_at) FROM jobs WHERE type IN (8, 12) GROUP BY aux_id");
+    while (res.next()) {
+        auto contest_problem_id = str2num<uint64_t>(res[0]).value();
+        contest_problems_ids.emplace(contest_problem_id);
+        contest_problem_id_to_min_job_creation_time.emplace(contest_problem_id, res[1].to_string());
+    }
+
+    res = mysql.query("SELECT id from contest_problems");
+    while (res.next()) {
+        auto contest_problem_id = str2num<uint64_t>(res[0]).value();
+        contest_problems_ids.emplace(contest_problem_id);
+    }
+
     mysql.update(
-        "ALTER TABLE internal_files ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id"
+        "ALTER TABLE contest_problems ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id"
     );
 
-    std::set<uint64_t, std::greater<uint64_t>> file_ids;
-    std::map<uint64_t, std::string> file_id_to_job_creation_time;
-    auto res = mysql.query("SELECT file_id, created_at FROM jobs WHERE file_id IS NOT NULL");
-    while (res.next()) {
-        auto file_id = str2num<uint64_t>(res[0]).value();
-        file_ids.emplace(file_id);
-        file_id_to_job_creation_time.emplace(file_id, res[1].to_string());
-    }
-
-    std::map<uint64_t, std::string> file_id_to_job_creation_time2;
-    res = mysql.query("SELECT tmp_file_id, created_at FROM jobs WHERE tmp_file_id IS NOT NULL");
-    while (res.next()) {
-        auto file_id = str2num<uint64_t>(res[0]).value();
-        file_ids.emplace(file_id);
-        file_id_to_job_creation_time2.emplace(file_id, res[1].to_string());
-    }
-
-    std::map<uint64_t, std::string> file_id_to_submission_creation_time;
-    res = mysql.query("SELECT file_id, created_at FROM submissions");
-    while (res.next()) {
-        auto file_id = str2num<uint64_t>(res[0]).value();
-        file_ids.emplace(file_id);
-        file_id_to_submission_creation_time.emplace(file_id, res[1].to_string());
-    }
-
-    res = mysql.query("SELECT id FROM internal_files");
-    while (res.next()) {
-        file_ids.emplace(str2num<uint64_t>(res[0]).value());
-    }
-
-    string min_date = mysql_date();
-    for (auto file_id : file_ids) {
-        auto it = file_id_to_job_creation_time.find(file_id);
-        if (it != file_id_to_job_creation_time.end()) {
+    auto min_date = mysql_date();
+    for (auto contest_problem_id : contest_problems_ids) {
+        auto it = contest_problem_id_to_min_submission_time.find(contest_problem_id);
+        if (it != contest_problem_id_to_min_submission_time.end()) {
             min_date = std::min(min_date, it->second);
         }
-        it = file_id_to_job_creation_time2.find(file_id);
-        if (it != file_id_to_job_creation_time2.end()) {
-            min_date = std::min(min_date, it->second);
-        }
-        it = file_id_to_submission_creation_time.find(file_id);
-        if (it != file_id_to_submission_creation_time.end()) {
+        it = contest_problem_id_to_min_job_creation_time.find(contest_problem_id);
+        if (it != contest_problem_id_to_min_job_creation_time.end()) {
             min_date = std::min(min_date, it->second);
         }
 
-        stdlog(file_id, ' ', min_date);
-        mysql.prepare("UPDATE internal_files SET created_at=? WHERE id=?")
-            .bind_and_execute(min_date, file_id);
+        stdlog(contest_problem_id, ' ', min_date);
+        mysql.prepare("UPDATE contest_problems SET created_at=? WHERE id=?")
+            .bind_and_execute(min_date, contest_problem_id);
     }
 
-    mysql.update("ALTER TABLE internal_files MODIFY COLUMN created_at datetime NOT NULL");
+    mysql.update("ALTER TABLE contest_problems MODIFY COLUMN created_at datetime NOT NULL");
 }
 
 enum class LockKind {

@@ -843,11 +843,12 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Add contest problems to the new contest
-    stmt = mysql.prepare("INSERT contest_problems(contest_round_id, contest_id, problem_id, name,"
+    stmt = mysql.prepare("INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
                          " item, method_of_choosing_final_submission, score_revealing) "
-                         "VALUES(?, ?, ?, ?, ?, ?, ?)");
+                         "VALUES(?,?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
+            mysql_date(),
             cp.contest_round_id,
             cp.contest_id,
             cp.problem_id,
@@ -1116,11 +1117,12 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     // Add contest problems to the new contest round
-    stmt = mysql.prepare("INSERT contest_problems(contest_round_id, contest_id, problem_id, name,"
+    stmt = mysql.prepare("INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
                          " item, method_of_choosing_final_submission, score_revealing) "
-                         "VALUES(?, ?, ?, ?, ?, ?, ?)");
+                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
+            mysql_date(),
             cp.contest_round_id,
             cp.contest_id,
             cp.problem_id,
@@ -1267,10 +1269,10 @@ void Sim::api_contest_problem_add(
     }
 
     // Add contest problem
-    stmt = mysql.prepare("INSERT contest_problems(contest_round_id, contest_id,"
+    stmt = mysql.prepare("INSERT contest_problems(created_at, contest_round_id, contest_id,"
                          " problem_id, name, item, method_of_choosing_final_submission,"
                          " score_revealing) "
-                         "SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
+                         "SELECT ?, ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
                          "FROM contest_problems "
                          "WHERE contest_round_id=?");
     static_assert( // NOLINTNEXTLINE(misc-redundant-expression)
@@ -1278,6 +1280,7 @@ void Sim::api_contest_problem_add(
         "Contest problem name has to be able to hold the attached problem's name"
     );
     stmt.bind_and_execute(
+        mysql_date(),
         contest_round_id,
         contest_id,
         problem_id,

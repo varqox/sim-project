@@ -164,6 +164,7 @@ const DbSchema schema = {
                 .create_table_sql = concat_tostr(
                     "CREATE TABLE `contest_problems` ("
                     "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
+                    "  `created_at` datetime NOT NULL,"
                     "  `contest_round_id` bigint(20) unsigned NOT NULL,"
                     "  `contest_id` bigint(20) unsigned NOT NULL,"
                     "  `problem_id` bigint(20) unsigned NOT NULL,"
