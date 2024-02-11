@@ -130,6 +130,7 @@ const DbSchema schema = {
                 .create_table_sql = concat_tostr(
                     "CREATE TABLE `contests` ("
                     "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
+                    "  `created_at` datetime NOT NULL,"
                     "  `name` varbinary(", decltype(Contest::name)::max_len, ") NOT NULL,"
                     "  `is_public` tinyint(1) NOT NULL DEFAULT 0,"
                     "  PRIMARY KEY (`id`),"

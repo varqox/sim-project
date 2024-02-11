@@ -59,59 +59,58 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "cf78d8088eec10a1ba2fe1e2d82bdb9697642e3d46458ef3d1dc3654bec355bd";
+    "2b15dd16a6768879a0f6489d71a3ef58a7c7179e221bdac6e02f2eb7748985f6";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
 ) {
     // Upgrade here
-    std::set<uint64_t, std::greater<>> contest_rounds_ids;
+    std::set<uint64_t, std::greater<>> contests_ids;
 
-    std::map<uint64_t, std::string> contest_round_id_to_min_contest_problem_creation_time;
+    std::map<uint64_t, std::string> contest_id_to_min_contest_round_creation_time;
     auto res =
-        mysql.query("SELECT contest_round_id, MIN(created_at) FROM contest_problems GROUP BY contest_round_id");
+        mysql.query("SELECT contest_id, MIN(created_at) FROM contest_rounds GROUP BY contest_id");
     while (res.next()) {
-        auto contest_round_id = str2num<uint64_t>(res[0]).value();
-        contest_rounds_ids.emplace(contest_round_id);
-        contest_round_id_to_min_contest_problem_creation_time.emplace(contest_round_id, res[1].to_string());
+        auto contest_id = str2num<uint64_t>(res[0]).value();
+        contests_ids.emplace(contest_id);
+        contest_id_to_min_contest_round_creation_time.emplace(contest_id, res[1].to_string());
     }
 
-    // mysql.update("UNLOCK TABLES"); // Seems like a bug in MariaDB that we need it before the next query
-    std::map<uint64_t, std::string> contest_round_id_to_min_job_creation_time;
-    res = mysql.query("SELECT aux_id, MIN(created_at) FROM jobs WHERE type=11 GROUP BY aux_id");
+    std::map<uint64_t, std::string> contest_id_to_min_job_creation_time;
+    res = mysql.query("SELECT aux_id, MIN(created_at) FROM jobs WHERE type=10 GROUP BY aux_id");
     while (res.next()) {
-        auto contest_round_id = str2num<uint64_t>(res[0]).value();
-        contest_rounds_ids.emplace(contest_round_id);
-        contest_round_id_to_min_job_creation_time.emplace(contest_round_id, res[1].to_string());
+        auto contest_id = str2num<uint64_t>(res[0]).value();
+        contests_ids.emplace(contest_id);
+        contest_id_to_min_job_creation_time.emplace(contest_id, res[1].to_string());
     }
 
-    res = mysql.query("SELECT id from contest_rounds");
+    res = mysql.query("SELECT id from contests");
     while (res.next()) {
-        auto contest_round_id = str2num<uint64_t>(res[0]).value();
-        contest_rounds_ids.emplace(contest_round_id);
+        auto contest_id = str2num<uint64_t>(res[0]).value();
+        contests_ids.emplace(contest_id);
     }
 
     mysql.update(
-        "ALTER TABLE contest_rounds ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id"
+        "ALTER TABLE contests ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id"
     );
 
     auto min_date = mysql_date();
-    for (auto contest_round_id : contest_rounds_ids) {
-        auto it = contest_round_id_to_min_contest_problem_creation_time.find(contest_round_id);
-        if (it != contest_round_id_to_min_contest_problem_creation_time.end()) {
+    for (auto contest_id : contests_ids) {
+        auto it = contest_id_to_min_contest_round_creation_time.find(contest_id);
+        if (it != contest_id_to_min_contest_round_creation_time.end()) {
             min_date = std::min(min_date, it->second);
         }
-        it = contest_round_id_to_min_job_creation_time.find(contest_round_id);
-        if (it != contest_round_id_to_min_job_creation_time.end()) {
+        it = contest_id_to_min_job_creation_time.find(contest_id);
+        if (it != contest_id_to_min_job_creation_time.end()) {
             min_date = std::min(min_date, it->second);
         }
 
-        stdlog(contest_round_id, ' ', min_date);
-        mysql.prepare("UPDATE contest_rounds SET created_at=? WHERE id=?")
-            .bind_and_execute(min_date, contest_round_id);
+        stdlog(contest_id, ' ', min_date);
+        mysql.prepare("UPDATE contests SET created_at=? WHERE id=?")
+            .bind_and_execute(min_date, contest_id);
     }
 
-    mysql.update("ALTER TABLE contest_rounds MODIFY COLUMN created_at datetime NOT NULL");
+    mysql.update("ALTER TABLE contests MODIFY COLUMN created_at datetime NOT NULL");
 }
 
 enum class LockKind {

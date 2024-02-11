@@ -698,8 +698,8 @@ void Sim::api_contest_create(capabilities::Contests caps_contests) {
     auto transaction = mysql.start_transaction();
 
     // Add contest
-    auto stmt = mysql.prepare("INSERT contests(name, is_public) VALUES(?, ?)");
-    stmt.bind_and_execute(name, is_public);
+    auto stmt = mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
+    stmt.bind_and_execute(mysql_date(), name, is_public);
 
     auto contest_id = stmt.insert_id();
     // Add user to owners
@@ -801,8 +801,8 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Add contest
-    auto stmt = mysql.prepare("INSERT contests(name, is_public) VALUES(?, ?)");
-    stmt.bind_and_execute(name, is_public);
+    auto stmt = mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
+    stmt.bind_and_execute(mysql_date(), name, is_public);
     auto new_contest_id = stmt.insert_id();
 
     // Update contest rounds to fit into new contest
