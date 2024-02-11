@@ -9,6 +9,7 @@
 #include <fstream>
 #include <map>
 #include <regex>
+#include <set>
 #include <sim/contest_entry_tokens/contest_entry_token.hh>
 #include <sim/contest_files/contest_file.hh>
 #include <sim/contest_rounds/contest_round.hh>
@@ -58,13 +59,67 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "e12416d77982d84163d5c2089352aa164287abd20ff6b598817d5d9e8231a1be";
+    "fcaef26c1c217e9894d7c4cb692617b38df6a556f864aac35788189f2c45f393";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
 ) {
     // Upgrade here
-    mysql.update("ALTER TABLE jobs CHANGE COLUMN added created_at datetime NOT NULL AFTER id");
+    mysql.update(
+        "ALTER TABLE internal_files ADD COLUMN created_at datetime NULL DEFAULT NULL AFTER id"
+    );
+
+    std::set<uint64_t, std::greater<uint64_t>> file_ids;
+    std::map<uint64_t, std::string> file_id_to_job_creation_time;
+    auto res = mysql.query("SELECT file_id, created_at FROM jobs WHERE file_id IS NOT NULL");
+    while (res.next()) {
+        auto file_id = str2num<uint64_t>(res[0]).value();
+        file_ids.emplace(file_id);
+        file_id_to_job_creation_time.emplace(file_id, res[1].to_string());
+    }
+
+    std::map<uint64_t, std::string> file_id_to_job_creation_time2;
+    res = mysql.query("SELECT tmp_file_id, created_at FROM jobs WHERE tmp_file_id IS NOT NULL");
+    while (res.next()) {
+        auto file_id = str2num<uint64_t>(res[0]).value();
+        file_ids.emplace(file_id);
+        file_id_to_job_creation_time2.emplace(file_id, res[1].to_string());
+    }
+
+    std::map<uint64_t, std::string> file_id_to_submission_creation_time;
+    res = mysql.query("SELECT file_id, created_at FROM submissions");
+    while (res.next()) {
+        auto file_id = str2num<uint64_t>(res[0]).value();
+        file_ids.emplace(file_id);
+        file_id_to_submission_creation_time.emplace(file_id, res[1].to_string());
+    }
+
+    res = mysql.query("SELECT id FROM internal_files");
+    while (res.next()) {
+        file_ids.emplace(str2num<uint64_t>(res[0]).value());
+    }
+
+    string min_date = mysql_date();
+    for (auto file_id : file_ids) {
+        auto it = file_id_to_job_creation_time.find(file_id);
+        if (it != file_id_to_job_creation_time.end()) {
+            min_date = std::min(min_date, it->second);
+        }
+        it = file_id_to_job_creation_time2.find(file_id);
+        if (it != file_id_to_job_creation_time2.end()) {
+            min_date = std::min(min_date, it->second);
+        }
+        it = file_id_to_submission_creation_time.find(file_id);
+        if (it != file_id_to_submission_creation_time.end()) {
+            min_date = std::min(min_date, it->second);
+        }
+
+        stdlog(file_id, ' ', min_date);
+        mysql.prepare("UPDATE internal_files SET created_at=? WHERE id=?")
+            .bind_and_execute(min_date, file_id);
+    }
+
+    mysql.update("ALTER TABLE internal_files MODIFY COLUMN created_at datetime NOT NULL");
 }
 
 enum class LockKind {

@@ -33,7 +33,7 @@ void ChangeProblemStatement::run() {
 
     auto pkg_path = sim::internal_files::path_of(problem_file_id);
 
-    mysql.update("INSERT INTO internal_files VALUES()");
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
     uint64_t new_file_id = mysql.insert_id();
     auto new_pkg_path = sim::internal_files::path_of(new_file_id);
 
