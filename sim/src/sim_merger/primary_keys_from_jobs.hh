@@ -123,13 +123,17 @@ struct PrimaryKeysFromJobs {
                 break;
 
             case Job::Type::JUDGE_SUBMISSION:
-            case Job::Type::REJUDGE_SUBMISSION: submissions.add_id(aux_id.value(), created_at); break;
+            case Job::Type::REJUDGE_SUBMISSION:
+                submissions.add_id(aux_id.value(), created_at);
+                break;
 
             case Job::Type::DELETE_PROBLEM:
             case Job::Type::REUPLOAD_PROBLEM:
             case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-            case Job::Type::CHANGE_PROBLEM_STATEMENT: problems.add_id(aux_id.value(), created_at); break;
+            case Job::Type::CHANGE_PROBLEM_STATEMENT:
+                problems.add_id(aux_id.value(), created_at);
+                break;
 
             case Job::Type::MERGE_PROBLEMS:
                 problems.add_id(aux_id.value(), created_at);

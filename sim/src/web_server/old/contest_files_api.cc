@@ -332,7 +332,8 @@ void Sim::api_contest_file_add() {
 
     auto transaction = mysql.start_transaction();
 
-    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+        .bind_and_execute(mysql_date());
     auto internal_file_id = mysql.insert_id();
 
     CallInDtor internal_file_remover([internal_file_id] {
@@ -438,7 +439,8 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     });
 
     if (reuploading_file) {
-        mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
+        mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+            .bind_and_execute(mysql_date());
         internal_file_id = mysql.insert_id();
 
         // Move file

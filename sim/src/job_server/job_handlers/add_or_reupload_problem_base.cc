@@ -44,7 +44,8 @@ void AddOrReuploadProblemBase::build_package() {
 
     auto source_package = sim::internal_files::path_of(job_file_id_);
 
-    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)").bind_and_execute(mysql_date());
+    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+        .bind_and_execute(mysql_date());
     tmp_file_id_ = mysql.insert_id();
 
     /* Construct Simfile */
