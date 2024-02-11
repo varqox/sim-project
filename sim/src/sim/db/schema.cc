@@ -345,6 +345,15 @@ const DbSchema schema = {
                 ),
                 // clang-format on
             },
+            {
+                // clang-format off
+                .create_table_sql = concat_tostr(
+                    "CREATE TABLE `schema_subversion_0` ("
+                    "  `x` bit(1) NOT NULL"
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
+                ),
+                // clang-format on
+            },
         },
 };
 
