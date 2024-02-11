@@ -816,11 +816,18 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
 
     // Add contest rounds to the new contest
     std::map<decltype(ContestRound::id), decltype(ContestRound::id)> old_round_id_to_new_id;
-    stmt = mysql.prepare("INSERT contest_rounds(contest_id, name, item, begins, ends, "
-                         "full_results, ranking_exposure) VALUES(?, ?, ?, ?, ?, ?, ?)");
+    stmt = mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends, "
+                         "full_results, ranking_exposure) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, r] : contest_rounds) {
         stmt.bind_and_execute(
-            r.contest_id, r.name, r.item, r.begins, r.ends, r.full_results, r.ranking_exposure
+            mysql_date(),
+            r.contest_id,
+            r.name,
+            r.item,
+            r.begins,
+            r.ends,
+            r.full_results,
+            r.ranking_exposure
         );
         old_round_id_to_new_id.emplace(r.id, stmt.insert_id());
     }
@@ -968,12 +975,12 @@ void Sim::api_contest_round_create(StringView contest_id, sim::contests::Permiss
 
     // Add round
     auto curr_date = mysql_date();
-    auto stmt = mysql.prepare("INSERT contest_rounds(contest_id, name, item,"
+    auto stmt = mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item,"
                               " begins, ends, full_results, ranking_exposure) "
-                              "SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?,"
-                              " ? "
+                              "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
                               "FROM contest_rounds WHERE contest_id=?");
     stmt.bind_and_execute(
+        mysql_date(),
         contest_id,
         name,
         inf_timestamp_to_InfDatetime(begins).to_str(),
@@ -1091,11 +1098,12 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     // Add contest round
-    auto stmt = mysql.prepare("INSERT contest_rounds(contest_id, name, item, begins, ends,"
+    auto stmt = mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends,"
                               " full_results, ranking_exposure) "
-                              "SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
+                              "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
                               "FROM contest_rounds WHERE contest_id=?");
     stmt.bind_and_execute(
+        mysql_date(),
         contest_id,
         contest_round.name,
         contest_round.begins,
