@@ -2,6 +2,7 @@
 #include "../supervisor/cgroups/read_cpu_times.hh"
 #include "../tracee/tracee.hh"
 #include "pid1.hh"
+#include "simlib/file_perms.hh"
 
 #include <cerrno>
 #include <cmath>
@@ -144,9 +145,41 @@ void setup_mount_namespace(const sandbox::pid1::Args::LinuxNamespaces::Mount& mo
                             if (!mount_tmpfs.inode_limit) {
                                 return T{0}; // no limit
                             }
+                            // On most systems empty tmpfs uses 1 inode, but at least on Fedora 39,
+                            // it uses 2 inodes :(, so here we check for that.
+                            static uint64_t empty_tmpfs_inodes = [&] {
+                                if (mount(
+                                        nullptr,
+                                        "/",
+                                        "tmpfs",
+                                        MS_NOSUID | MS_SILENT | MS_NOEXEC,
+                                        "size=0,nr_inodes=2,mode=0755"
+                                    ))
+                                {
+                                    die_with_error("probing mount(tmpfs at \"/\")");
+                                }
+                                int res = 1;
+                                if (mkdir("/../test", S_0755)) {
+                                    if (errno == ENOSPC) {
+                                        res = 2;
+                                    } else {
+                                        die_with_error("probing mkdir(\"/../test\")");
+                                    }
+                                }
+
+                                if (umount2("/", MNT_DETACH)) {
+                                    die_with_error("umount2()");
+                                }
+                                return res;
+                            }();
                             // Adjust limit because root dir counts as an inode
-                            return *mount_tmpfs.inode_limit +
-                                1; // overflow is fine, as 0 == no limit
+                            uint64_t res;
+                            if (__builtin_add_overflow(
+                                    *mount_tmpfs.inode_limit, empty_tmpfs_inodes, &res
+                                )) {
+                                res = 0; // 0 == no limit
+                            }
+                            return res;
                         }();
                         uint8_t mode_user = (mount_tmpfs.root_dir_mode >> 6) & 7;
                         uint8_t mode_group = (mount_tmpfs.root_dir_mode >> 3) & 7;

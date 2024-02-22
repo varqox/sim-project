@@ -1,4 +1,5 @@
 #include "compile.hh"
+#include "simlib/utilities.hh"
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -240,9 +241,11 @@ constexpr auto checker_too_long_comment = Bash{R"(printf "OK\n\n%10000s" >&2)"};
 TEST(test_on_interactive_test, checker_too_long_comment) {
     auto report = test_test_on_interactive_test(prog_ok, checker_too_long_comment);
     EXPECT_EQ(report.status, Status::CheckerError);
-    EXPECT_EQ(
-        report.comment, "Checker runtime error: killed by signal XFSZ - File size limit exceeded"
-    );
+    EXPECT_TRUE(is_one_of(
+        report.comment,
+        "Checker runtime error: killed by signal XFSZ - File size limit exceeded",
+        "Checker runtime error: killed and dumped by signal XFSZ - File size limit exceeded"
+    ));
     EXPECT_EQ(report.score, 0);
 }
 

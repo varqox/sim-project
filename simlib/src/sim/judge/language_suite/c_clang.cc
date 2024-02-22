@@ -1,3 +1,5 @@
+#include "simlib/file_info.hh"
+
 #include <cerrno>
 #include <optional>
 #include <simlib/file_path.hh>
@@ -41,98 +43,108 @@ sandbox::Result C_Clang::run_compiler(
     Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops,
     CompileOptions options
 ) {
-    return sc.await_result(
-        sc.send_request(
-            compiler_executable_path,
-            merge(std::vector<std::string_view>{"clang", std_flag, "-O2", "-static"}, extra_args),
-            {
-                .stdout_fd = compilation_errors_fd,
-                .stderr_fd = compilation_errors_fd,
-                .env = {{"PATH=/usr/bin"}},
-                .linux_namespaces =
-                    {
-                        .user =
-                            {
-                                .inside_uid = 1000,
-                                .inside_gid = 1000,
-                            },
-                        .mount =
-                            {
-                                .operations =
-                                    merge(
-                                        std::vector<sandbox::RequestOptions::LinuxNamespaces::
-                                                        Mount::Operation>{
-                                            MountTmpfs{
-                                                .path = "/",
-                                                .max_total_size_of_files_in_bytes =
-                                                    options.max_file_size_in_bytes,
-                                                .inode_limit = 32,
-                                                .read_only = false,
-                                            },
-                                            CreateDir{.path = "/../lib"},
-                                            CreateDir{.path = "/../lib64"},
-                                            CreateDir{.path = "/../tmp"},
-                                            CreateDir{.path = "/../usr"},
-                                            CreateDir{.path = "/../usr/bin"},
-                                            CreateDir{.path = "/../usr/include"},
-                                            CreateDir{.path = "/../usr/lib"},
-                                            CreateDir{.path = "/../usr/lib64"},
-                                            BindMount{
-                                                .source = "/lib",
-                                                .dest = "/../lib",
-                                                .no_exec = false,
-                                            },
-                                            BindMount{
-                                                .source = "/lib64",
-                                                .dest = "/../lib64",
-                                                .no_exec = false,
-                                            },
-                                            BindMount{
-                                                .source = "/usr/bin",
-                                                .dest = "/../usr/bin",
-                                                .no_exec = false,
-                                            },
-                                            BindMount{
-                                                .source = "/usr/include",
-                                                .dest = "/../usr/include",
-                                            },
-                                            BindMount{
-                                                .source = "/usr/lib",
-                                                .dest = "/../usr/lib",
-                                                .no_exec = false,
-                                            },
-                                            BindMount{
-                                                .source = "/usr/lib64",
-                                                .dest = "/../usr/lib64",
-                                                .no_exec = false,
-                                            },
-                                        },
-                                        mount_ops
-                                    ),
-                                .new_root_mount_path = "/..",
-                            },
-                    },
-                .cgroup =
-                    {
-                        .process_num_limit = 32,
-                        .memory_limit_in_bytes = options.memory_limit_in_bytes,
-                        .cpu_max_bandwidth =
-                            sandbox::RequestOptions::Cgroup::CpuMaxBandwidth{
-                                .max_usec = 10000,
-                                .period_usec = 10000,
-                            },
-                    },
-                .prlimit =
-                    {
-                        .max_core_file_size_in_bytes = 0,
-                        .max_file_size_in_bytes = options.max_file_size_in_bytes,
-                    },
-                .time_limit = options.time_limit,
-                .cpu_time_limit = options.cpu_time_limit,
-                .seccomp_bpf_fd = compiler_seccomp_bpf_fd,
-            }
-        )
-    );
+    auto operations = std::vector<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{
+        MountTmpfs{
+            .path = "/",
+            .max_total_size_of_files_in_bytes = options.max_file_size_in_bytes,
+            .inode_limit = 32,
+            .read_only = false,
+        },
+        CreateDir{.path = "/../lib"},
+        CreateDir{.path = "/../lib64"},
+        CreateDir{.path = "/../tmp"},
+        CreateDir{.path = "/../usr"},
+        CreateDir{.path = "/../usr/bin"},
+        CreateDir{.path = "/../usr/include"},
+        CreateDir{.path = "/../usr/lib"},
+        CreateDir{.path = "/../usr/lib64"},
+        BindMount{
+            .source = "/lib",
+            .dest = "/../lib",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/lib64",
+            .dest = "/../lib64",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/usr/bin",
+            .dest = "/../usr/bin",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/usr/include",
+            .dest = "/../usr/include",
+        },
+        BindMount{
+            .source = "/usr/lib",
+            .dest = "/../usr/lib",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/usr/lib64",
+            .dest = "/../usr/lib64",
+            .no_exec = false,
+        },
+    };
+    if (path_exists("/usr/libexec")) {
+        operations.emplace_back(CreateDir{.path = "/../usr/libexec"});
+        operations.emplace_back(BindMount{
+            .source = "/usr/libexec",
+            .dest = "/../usr/libexec",
+            .no_exec = false,
+        });
+    }
+    if (path_exists("/etc/alternatives")) {
+        operations.emplace_back(CreateDir{.path = "/../etc"});
+        operations.emplace_back(CreateDir{.path = "/../etc/alternatives"});
+        operations.emplace_back(BindMount{
+            .source = "/etc/alternatives",
+            .dest = "/../etc/alternatives",
+            .no_exec = false,
+        });
+    }
+    return sc.await_result(sc.send_request(
+        compiler_executable_path,
+        merge(std::vector<std::string_view>{"clang", std_flag, "-O2"}, extra_args),
+        {
+            .stdout_fd = compilation_errors_fd,
+            .stderr_fd = compilation_errors_fd,
+            .env = {{"PATH=/usr/bin"}},
+            .linux_namespaces =
+                {
+                    .user =
+                        {
+                            .inside_uid = 1000,
+                            .inside_gid = 1000,
+                        },
+                    .mount =
+                        {
+                            .operations = merge(operations, mount_ops),
+                            .new_root_mount_path = "/..",
+                        },
+                },
+            .cgroup =
+                {
+                    .process_num_limit = 32,
+                    .memory_limit_in_bytes = options.memory_limit_in_bytes,
+                    .cpu_max_bandwidth =
+                        sandbox::RequestOptions::Cgroup::CpuMaxBandwidth{
+                            .max_usec = 10000,
+                            .period_usec = 10000,
+                        },
+                },
+            .prlimit =
+                {
+                    .max_core_file_size_in_bytes = 0,
+                    .max_file_size_in_bytes = options.max_file_size_in_bytes,
+                },
+            .time_limit = options.time_limit,
+            .cpu_time_limit = options.cpu_time_limit,
+            .seccomp_bpf_fd = compiler_seccomp_bpf_fd,
+        }
+    ));
 }
 
 sandbox::Result C_Clang::is_supported_impl(CompileOptions options) {

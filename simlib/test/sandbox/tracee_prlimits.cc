@@ -158,7 +158,7 @@ TEST(sandbox, max_stack_size_in_bytes) {
                     },
             }
         )),
-        CLD_KILLED,
+        (OneOfSiCodes{CLD_DUMPED, CLD_KILLED}),
         SIGSEGV
     );
     ASSERT_RESULT_OK(

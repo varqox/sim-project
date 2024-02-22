@@ -181,7 +181,13 @@ public:
             JudgeReport::simple_span_status(test_report.status));
 
         if (!test_report.comment.empty()) {
-            log(" (", test_report.comment, ")");
+            auto normalized_comment = test_report.comment;
+            constexpr std::string_view STR_TO_REPLACE = " killed and dumped by signal ";
+            auto pos = normalized_comment.find(STR_TO_REPLACE);
+            if (pos != decltype(normalized_comment)::npos) {
+                normalized_comment.replace(pos, STR_TO_REPLACE.size(), " killed by signal ");
+            }
+            log(" (", normalized_comment, ")");
         }
         if (judge_test_report.checker) {
             log("  Checker: ");
