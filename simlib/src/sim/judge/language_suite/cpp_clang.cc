@@ -135,6 +135,7 @@ sandbox::Result Cpp_Clang::run_compiler(
                 {
                     .process_num_limit = 32,
                     .memory_limit_in_bytes = options.memory_limit_in_bytes,
+                    .swap_limit_in_bytes = 0,
                     .cpu_max_bandwidth =
                         sandbox::RequestOptions::Cgroup::CpuMaxBandwidth{
                             .max_usec = 10000,

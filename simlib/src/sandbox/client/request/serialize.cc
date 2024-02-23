@@ -193,6 +193,7 @@ void serialize(Writer<phase>& writer, const RequestOptions::Cgroup& cg) {
     writer.write_flags({
             {cg.process_num_limit.has_value(), cgroup::mask::process_num_limit},
             {cg.memory_limit_in_bytes.has_value(), cgroup::mask::memory_limit_in_bytes},
+            {cg.swap_limit_in_bytes.has_value(), cgroup::mask::swap_limit_in_bytes},
             {cg.cpu_max_bandwidth.has_value(), cgroup::mask::cpu_max_bandwidth},
         }, as<cgroup::mask_t>);
     if (cg.process_num_limit) {
@@ -200,6 +201,9 @@ void serialize(Writer<phase>& writer, const RequestOptions::Cgroup& cg) {
     }
     if (cg.memory_limit_in_bytes) {
         writer.write(*cg.memory_limit_in_bytes, as<cgroup::memory_limit_in_bytes_t>);
+    }
+    if (cg.swap_limit_in_bytes) {
+        writer.write(*cg.swap_limit_in_bytes, as<cgroup::swap_limit_in_bytes_t>);
     }
     if (cg.cpu_max_bandwidth) {
         serialize(writer, *cg.cpu_max_bandwidth);

@@ -47,14 +47,26 @@ TEST(sandbox, process_num_limit) {
 TEST(sandbox, memory_limit) {
     auto sc = sandbox::spawn_supervisor();
     ASSERT_RESULT_ERROR(
-        sc.await_result(sc.send_request({{"/bin/true"}}, {.cgroup = {.memory_limit_in_bytes = 0}})),
+        sc.await_result(sc.send_request(
+            {{"/bin/true"}},
+            {.cgroup =
+                 {
+                     .memory_limit_in_bytes = 0,
+                     .swap_limit_in_bytes = 0,
+                 }}
+        )),
         "tracee process died unexpectedly before execveat() without an error message: killed by "
         "signal KILL - Killed"
     );
     ASSERT_RESULT_OK(
-        sc.await_result(
-            sc.send_request({{"/bin/true"}}, {.cgroup = {.memory_limit_in_bytes = 2 << 20}})
-        ),
+        sc.await_result(sc.send_request(
+            {{"/bin/true"}},
+            {.cgroup =
+                 {
+                     .memory_limit_in_bytes = 2 << 20,
+                     .swap_limit_in_bytes = 0,
+                 }}
+        )),
         CLD_EXITED,
         0
     );
@@ -63,7 +75,11 @@ TEST(sandbox, memory_limit) {
             {{tester_executable_path, "check_memory_limit"}},
             {
                 .stderr_fd = STDERR_FILENO,
-                .cgroup = {.memory_limit_in_bytes = 2 << 20},
+                .cgroup =
+                    {
+                        .memory_limit_in_bytes = 2 << 20,
+                        .swap_limit_in_bytes = 0
+                    },
             }
         )),
         CLD_KILLED,
@@ -79,7 +95,12 @@ TEST(sandbox, process_num_and_memory_limit) {
             {{tester_executable_path, "pids_limit", "check_memory_limit"}},
             {
                 .stderr_fd = STDERR_FILENO,
-                .cgroup = {.process_num_limit = 1, .memory_limit_in_bytes = 2 << 20},
+                .cgroup =
+                    {
+                        .process_num_limit = 1,
+                        .memory_limit_in_bytes = 2 << 20,
+                        .swap_limit_in_bytes = 0,
+                    },
             }
         )),
         CLD_KILLED,

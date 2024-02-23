@@ -16,6 +16,7 @@ TEST(sandbox, tracee_hacks_limits_by_disabling_cgroup_controllers) {
                     {
                         .process_num_limit = 1,
                         .memory_limit_in_bytes = 10 << 20,
+                        .swap_limit_in_bytes = 0,
                     },
             }
         )),
@@ -46,6 +47,7 @@ TEST(sandbox, prevented_tracee_hacking_limits_by_disabling_cgroup_controllers) {
                     {
                         .process_num_limit = 1,
                         .memory_limit_in_bytes = 10 << 20,
+                        .swap_limit_in_bytes = 0,
                     },
             }
         )),

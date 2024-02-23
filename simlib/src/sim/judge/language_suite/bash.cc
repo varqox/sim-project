@@ -104,6 +104,7 @@ Suite::RunHandle Bash::async_run(
                 {
                     .process_num_limit = options.process_num_limit,
                     .memory_limit_in_bytes = options.memory_limit_in_bytes,
+                    .swap_limit_in_bytes = 0,
                 },
             .prlimit =
                 {

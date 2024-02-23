@@ -170,10 +170,12 @@ void deserialize(Reader& reader, Request::Cgroup& cg) {
     namespace cgroup = communication::client_supervisor::request::cgroup;
     bool has_process_num_limit;
     bool has_memory_limit_in_bytes;
+    bool has_swap_limit_in_bytes;
     bool has_cpu_max_bandwidth;
     reader.read_flags({
         {has_process_num_limit, cgroup::mask::process_num_limit},
         {has_memory_limit_in_bytes, cgroup::mask::memory_limit_in_bytes},
+        {has_swap_limit_in_bytes, cgroup::mask::swap_limit_in_bytes},
         {has_cpu_max_bandwidth, cgroup::mask::cpu_max_bandwidth},
     }, from<cgroup::mask_t>);
     reader.read_optional_if(
@@ -181,6 +183,9 @@ void deserialize(Reader& reader, Request::Cgroup& cg) {
     );
     reader.read_optional_if(
         cg.memory_limit_in_bytes, from<cgroup::memory_limit_in_bytes_t>, has_memory_limit_in_bytes
+    );
+    reader.read_optional_if(
+        cg.swap_limit_in_bytes, from<cgroup::swap_limit_in_bytes_t>, has_swap_limit_in_bytes
     );
     if (has_cpu_max_bandwidth) {
         cg.cpu_max_bandwidth.emplace();

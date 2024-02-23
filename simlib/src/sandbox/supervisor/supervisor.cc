@@ -617,6 +617,7 @@ struct Cgroups {
 
     void write_tracee_cgroup_process_num_limit(optional<uint32_t> process_num_limit) noexcept;
     void write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_in_bytes) noexcept;
+    void write_tracee_cgroup_swap_limit(optional<uint64_t> memory_limit_in_bytes) noexcept;
     void write_tracee_cgroup_cpu_max(
         optional<request::Request::Cgroup::CpuMaxBandwidth> cpu_max_bandwidth
     ) noexcept;
@@ -832,6 +833,15 @@ void Cgroups::write_tracee_cgroup_memory_limit(optional<uint64_t> memory_limit_i
 }
 
 // NOLINTNEXTLINE(readability-make-member-function-const)
+void Cgroups::write_tracee_cgroup_swap_limit(optional<uint64_t> swap_limit_in_bytes) noexcept {
+    write_file_at(
+        tracee_cgroup_fd,
+        "memory.swap.max",
+        swap_limit_in_bytes ? StringView{from_unsafe{to_string(*swap_limit_in_bytes)}} : "max"
+    );
+}
+
+// NOLINTNEXTLINE(readability-make-member-function-const)
 void Cgroups::write_tracee_cgroup_cpu_max(
     optional<request::Request::Cgroup::CpuMaxBandwidth> cpu_max_bandwidth
 ) noexcept {
@@ -863,6 +873,7 @@ void Cgroups::set_tracee_limits(const request::Request::Cgroup& cg) noexcept {
     write_tracee_cgroup_process_num_limit(cg.process_num_limit);
     assert(read_tracee_cgroup_current_memory_usage() == 0 && "Needed to not offset limit by this");
     write_tracee_cgroup_memory_limit(cg.memory_limit_in_bytes);
+    write_tracee_cgroup_swap_limit(cg.swap_limit_in_bytes);
     write_tracee_cgroup_cpu_max(cg.cpu_max_bandwidth);
 }
 
