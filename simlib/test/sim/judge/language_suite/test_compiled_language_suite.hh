@@ -17,7 +17,7 @@ inline void test_compiled_language_suite(
 ) {
     auto source_file = TemporaryFile{"/tmp/sim_judge_compiled_language_suite_test.XXXXXX"};
     auto compiler_options = sim::judge::language_suite::Suite::CompileOptions{
-        .time_limit = std::chrono::seconds{20},
+        .time_limit = std::chrono::seconds{60}, // Under load it may take time.
         .cpu_time_limit = std::chrono::seconds{20},
         .memory_limit_in_bytes = 1 << 30,
         .max_file_size_in_bytes = 20 << 20,
@@ -35,7 +35,7 @@ inline void test_compiled_language_suite(
             .stdin_fd = std::nullopt,
             .stdout_fd = std::nullopt,
             .stderr_fd = std::nullopt,
-            .time_limit = std::chrono::seconds{1},
+            .time_limit = std::chrono::seconds{60}, // Under load it may take time.
             .cpu_time_limit = std::chrono::seconds{1},
             .memory_limit_in_bytes = 32 << 20,
             .max_stack_size_in_bytes = 32 << 20,

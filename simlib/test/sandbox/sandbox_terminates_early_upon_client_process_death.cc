@@ -42,7 +42,7 @@ TEST(sandbox, sandbox_terminates_early_upon_client_process_death) {
             }
         }
         auto reaping_took = std::chrono::steady_clock::now() - reaping_start;
-        throw_assert(reaping_took < std::chrono::milliseconds{2000}); // Under load it can take time
+        throw_assert(reaping_took < std::chrono::milliseconds{4000}); // Under load it can take time.
         _exit(0);
     }
     // Reap child

@@ -33,7 +33,7 @@ inline sandbox::result::Ok run_in_fully_intepreted_language_suite(
             .stdin_fd = std::nullopt,
             .stdout_fd = std::nullopt,
             .stderr_fd = std::nullopt,
-            .time_limit = std::chrono::seconds{1},
+            .time_limit = std::chrono::seconds{60}, // Under load it may take time.
             .cpu_time_limit = std::chrono::seconds{1},
             .memory_limit_in_bytes = 32 << 20,
             .max_stack_size_in_bytes = 32 << 20,

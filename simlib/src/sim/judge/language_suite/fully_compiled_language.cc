@@ -50,7 +50,7 @@ bool FullyCompiledLanguage::is_supported() {
             [](const sandbox::result::Error& /*res_err*/) { return false; },
         },
         is_supported_impl({
-            .time_limit = std::chrono::seconds{1},
+            .time_limit = std::chrono::seconds{60}, // Under load it may take time.
             .cpu_time_limit = std::chrono::seconds{1},
             .memory_limit_in_bytes = 1 << 30,
             .max_file_size_in_bytes = 0,
