@@ -1055,6 +1055,7 @@ static void compile_tex_file(StringView file) {
                     {
                         .process_num_limit = 32,
                         .memory_limit_in_bytes = 1 << 30,
+                        .swap_limit_in_bytes = 0,
                     },
                 .prlimit =
                     {
