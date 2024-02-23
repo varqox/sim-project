@@ -90,7 +90,8 @@ static void do_perform_upgrade(
     }
 
     mysql.update("UNLOCK TABLES");
-    mysql.update("CREATE TABLE `schema_subversion_0` (x bit(1) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin");
+    mysql.update("CREATE TABLE `schema_subversion_0` (x bit(1) NOT NULL) ENGINE=InnoDB DEFAULT "
+                 "CHARSET=utf8mb3 COLLATE=utf8mb3_bin");
 }
 
 enum class LockKind {
@@ -109,7 +110,7 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     auto normalized_schema_after_upgrade = normalized(sim::db::schema);
     auto normalized_schema_hash_after_upgrade = sha3_256(normalized_schema_after_upgrade);
 
-    if (normalized_schema_hash == normalized_schema_hash_after_upgrade) {
+    if (normalized_schema == normalized_schema_after_upgrade) {
         stdlog("\033[1;32mNo upgrade is needed.\033[m");
         return 0;
     }
@@ -120,11 +121,10 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
         stdlog("\033[1;32mSim upgrading is complete.\033[m");
 
         normalized_schema = normalized(sim::db::get_db_schema(mysql));
-        normalized_schema_hash = sha3_256(normalized_schema);
-        stdlog("hash of the normalized schema after upgrade = ", normalized_schema_hash);
-        if (normalized_schema_hash != normalized_schema_hash_after_upgrade) {
-            stdlog("\033[1;31mUpgrade succeeded but the hash of the normalized schema is different "
-                   "than expected\033[m");
+        stdlog("hash of the normalized schema after upgrade = ", sha3_256(normalized_schema));
+        if (normalized_schema != normalized_schema_after_upgrade) {
+            stdlog("\033[1;31mUpgrade succeeded but the normalized schema is different than "
+                   "expected\033[m");
             return 1;
         }
         return 0;
