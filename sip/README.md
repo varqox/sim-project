@@ -31,12 +31,16 @@ Then setup build directory:
 ```sh
 meson setup release-build/ -Dbuildtype=release
 ```
-And finally build:
+And build:
 ```
 ninja -C release-build/ base
 ```
-
 The above command creates a dynamic executable `release-build/sip`.
+
+Finally, check if everything is working by running tests:
+```
+ninja -C release-build/ test
+```
 
 Installing is done via:
 ```sh
