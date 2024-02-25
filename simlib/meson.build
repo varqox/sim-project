@@ -335,6 +335,7 @@ tests = {
     'test/proc_status_file.cc': {},
     'test/process.cc': {},
     'test/random.cc': {},
+    'test/random_bit_vec.cc': {},
     'test/ranges.cc': {},
     'test/read_bytes_as.cc': {},
     'test/read_exact.cc': {},
