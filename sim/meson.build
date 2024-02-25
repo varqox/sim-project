@@ -1,8 +1,8 @@
 project('sim',
     ['c', 'cpp'],
     license: 'MIT',
-    meson_version : '>=0.52.1',
-    default_options : meson.get_cross_property('project_configuration', [
+    meson_version : '>=0.58',
+    default_options : meson.get_external_property('project_configuration', [
         'c_std=gnu17',
         'cpp_std=gnu++17',
         'warning_level=3',
@@ -75,6 +75,7 @@ libsim = library('sim',
         'src/sim/cpp_syntax_highlighter.cc',
         'src/sim/db/schema.cc',
         'src/sim/jobs/utils.cc',
+        'src/sim/merging/merge_ids.cc',
         'src/sim/mysql/mysql.cc',
         'src/sim/problems/permissions.cc',
         'src/sim/random.cc',
@@ -271,22 +272,48 @@ meson.add_install_script('sh', '-c', 'if test -e "$MESON_INSTALL_DESTDIR_PREFIX/
 gtest_main_dep = simlib_proj.get_variable('gtest_main_dep')
 gmock_dep = simlib_proj.get_variable('gmock_dep')
 
-tests = [
-    ['test/sim/cpp_syntax_highlighter.cc', [], {}],
-    ['test/sim/jobs/utils.cc', [], {}],
-    ['test/web_server/http/form_validation.cc', [], {}],
-]
-foreach test : tests
-    name = test[0].underscorify()
-    exe = executable(name,
-        implicit_include_directories : false,
-        sources : test[0],
-        dependencies : [
-            gtest_main_dep,
-            libsim_dep,
-            test[1],
-        ],
-        build_by_default : false,
+tests = {
+    'test/sim/cpp_syntax_highlighter.cc': {},
+    'test/sim/jobs/utils.cc': {},
+    'test/sim/merging/merge_ids.cc': {'priority': 10},
+    'test/web_server/http/form_validation.cc': {},
+}
+
+foreach test_src, args : tests
+    test_executable_deps = ['tester' in args ? gtest_dep : gtest_main_dep]
+    tester_dep = []
+    test_kwargs = {}
+    foreach key, value : args
+        if key == 'dependencies'
+            test_executable_deps = value
+        elif key == 'tester'
+            tester = executable(value.underscorify(),
+                implicit_include_directories : false,
+                sources : value,
+                build_by_default : false,
+                dependencies : simlib_dep,
+            )
+            tester_dep = [tester]
+            test_kwargs += {
+                'args': [tester.full_path()],
+            }
+        else
+            test_kwargs += {key: value}
+        endif
+    endforeach
+    test(test_src.replace('test/', '').replace('.cc', ''),
+        executable(test_src.underscorify(),
+            implicit_include_directories : false,
+            sources : test_src,
+            dependencies : [
+                simlib_dep,
+                libsim_dep,
+                test_executable_deps,
+            ],
+            build_by_default : false,
+        ),
+        depends : tester_dep,
+        timeout : 300,
+        kwargs : test_kwargs,
     )
-    test(name, exe, timeout : 300, kwargs : test[2], workdir : meson.current_source_dir())
 endforeach

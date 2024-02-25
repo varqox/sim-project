@@ -3,7 +3,10 @@
 #include <sim/sql_fields/varbinary.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/string_view.hh>
+#include <simlib/throw_assert.hh>
+#include <simlib/time.hh>
 #include <string>
+#include <utility>
 
 namespace sim::sql_fields {
 
@@ -20,23 +23,25 @@ public:
     template <
         class T,
         std::enable_if_t<
-            std::is_convertible_v<T, StringView> and !std::is_same_v<std::decay_t<T>, Datetime>,
+            is_string_argument<T> and !std::is_same_v<std::decay_t<T>, Datetime>,
             int> = 0>
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
     constexpr explicit Datetime(T&& str)
     : Varbinary([&]() -> decltype(auto) {
-        throw_assert(is_datetime(from_unsafe{concat(str)}));
-        return str;
+        auto s = concat_tostr(str);
+        throw_assert(is_datetime(s));
+        return s;
     }()) {}
 
     template <
         class T,
         std::enable_if_t<
-            std::is_convertible_v<T, StringView> and !std::is_same_v<std::decay_t<T>, Datetime>,
+            is_string_argument<T> and !std::is_same_v<std::decay_t<T>, Datetime>,
             int> = 0>
     Datetime& operator=(T&& str) {
-        throw_assert(is_datetime(from_unsafe{concat(str)}));
-        Varbinary::operator=(std::forward<T>(str));
+        auto s = concat_tostr(str);
+        throw_assert(is_datetime(s));
+        Varbinary::operator=(s);
         return *this;
     }
 
