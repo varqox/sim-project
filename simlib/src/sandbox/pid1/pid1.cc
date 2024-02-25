@@ -111,6 +111,14 @@ void setup_user_namespace(const sandbox::pid1::Args::LinuxNamespaces::User::Pid1
         "/proc/self/gid_map",
         from_unsafe{noexcept_concat(user_ns.inside_gid, ' ', user_ns.outside_gid, " 1")}
     );
+    // Set real, effective and saved user ids all to the same value to prevent privilege escalation
+    if (setresuid(user_ns.inside_uid, user_ns.inside_uid, user_ns.inside_uid) != 0) {
+        die_with_error("setresuid()");
+    }
+    // Set real, effective and saved group ids all to the same value to prevent privilege escalation
+    if (setresgid(user_ns.inside_gid, user_ns.inside_gid, user_ns.inside_gid) != 0) {
+        die_with_error("setresgid()");
+    }
 }
 
 void setup_mount_namespace(const sandbox::pid1::Args::LinuxNamespaces::Mount& mount_ns) noexcept {
