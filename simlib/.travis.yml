@@ -1,0 +1,265 @@
+language: cpp
+
+sudo: false
+
+cache:
+  - apt
+  - ccache
+
+notifications:
+  email: false
+
+_packages:
+  - &default_packages
+    - time # For build
+  - &GCC-5
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - g++-5-multilib
+          - libstdc++-6-dev # The proper version of std library
+          - libc6-dev-i386
+    before_install:
+      - export CC="gcc-5 -fuse-ld=gold"
+      - export CXX="g++-5 -fuse-ld=gold"
+  - &GCC-6
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - g++-6-multilib
+    before_install:
+      - export CC="gcc-6 -fuse-ld=gold"
+      - export CXX="g++-6 -fuse-ld=gold"
+  - &GCC-7
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - g++-7-multilib
+    before_install:
+      - export CC="gcc-7 -fuse-ld=gold"
+      - export CXX="g++-7 -fuse-ld=gold"
+  - &Clang-3_5
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - clang-3.5
+          - libstdc++-6-dev # The proper version of std library
+    before_install:
+      - export CC="clang-3.5"
+      - export CXX="clang++-3.5"
+  - &Clang-3_6
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - clang-3.6
+          - libstdc++-6-dev # The proper version of std library
+    before_install:
+      - export CC="clang-3.6"
+      - export CXX="clang++-3.6"
+  - &Clang-3_7
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.7
+        packages:
+          - *default_packages
+          - clang-3.7
+          - libstdc++-6-dev # The proper version of std library
+    before_install:
+      - export CC="clang-3.7"
+      - export CXX="clang++-3.7"
+  - &Clang-3_8
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - clang-3.8
+          - libstdc++-6-dev # The proper version of std library
+    before_install:
+      - export CC="clang-3.8"
+      - export CXX="clang++-3.8"
+  - &Clang-3_9
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - clang-3.9
+          - libstdc++-6-dev # The proper version of std library
+    before_install:
+      - export CC="clang-3.9"
+      - export CXX="clang++-3.9"
+  - &Clang-4_0
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-4.0
+        packages:
+          - *default_packages
+          - clang-4.0
+          - libstdc++-6-dev # The proper version of std library
+    before_install:
+      - export CC="clang-4.0"
+      - export CXX="clang++-4.0"
+  - &Clang-5_0
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-trusty-5.0
+        packages:
+          - *default_packages
+          - clang-5.0
+          - libstdc++-6-dev # The proper version of std library
+    before_install:
+      - export CC="clang-5.0"
+      - export CXX="clang++-5.0"
+
+matrix:
+  fast_finish: true
+  include:
+    # GCC-5
+    - compiler: gcc
+      <<: *GCC-5
+      env:
+    - compiler: gcc
+      <<: *GCC-5
+      env: DEBUG=1
+    - compiler: gcc
+      <<: *GCC-5
+      env: DEBUG=2
+    # GCC-6
+    - compiler: gcc
+      <<: *GCC-6
+      env:
+    - compiler: gcc
+      <<: *GCC-6
+      env: DEBUG=1
+    - compiler: gcc
+      <<: *GCC-6
+      env: DEBUG=2
+    # Clang-3_5
+    - compiler: clang
+      <<: *Clang-3_5
+      env:
+    - compiler: clang
+      <<: *Clang-3_5
+      env: DEBUG=2
+    # Clang-3_6
+    - compiler: clang
+      <<: *Clang-3_6
+      env:
+    - compiler: clang
+      <<: *Clang-3_6
+      env: DEBUG=1
+    - compiler: clang
+      <<: *Clang-3_6
+      env: DEBUG=2
+    # Clang-3_7
+    - compiler: clang
+      <<: *Clang-3_7
+      env:
+    - compiler: clang
+      <<: *Clang-3_7
+      env: DEBUG=1
+    # Clang-3_8
+    - compiler: clang
+      <<: *Clang-3_8
+      env:
+    - compiler: clang
+      <<: *Clang-3_8
+      env: DEBUG=1
+    - compiler: clang
+      <<: *Clang-3_8
+      env: DEBUG=2
+    # Clang-3_9
+    - compiler: clang
+      <<: *Clang-3_9
+      env:
+    - compiler: clang
+      <<: *Clang-3_9
+      env: DEBUG=1
+    # Clang-4_0
+    - compiler: clang
+      <<: *Clang-4_0
+      env:
+    - compiler: clang
+      <<: *Clang-4_0
+      env: DEBUG=1
+    - compiler: clang
+      <<: *Clang-4_0
+      env: DEBUG=2
+    # Clang-5_0
+    - compiler: clang
+      <<: *Clang-5_0
+      env:
+    - compiler: clang
+      <<: *Clang-5_0
+      env: DEBUG=1
+    - compiler: clang
+      <<: *Clang-5_0
+      env: DEBUG=2
+  allow_failures:
+    # Clang-3_5 DEBUG=1 (debug information for auto is not yet supported)
+    - compiler: clang
+      <<: *Clang-3_5
+      env: DEBUG=1
+    # Clang-3_7 DEBUG=2 (sanitizers' linking errors)
+    - compiler: clang
+      <<: *Clang-3_7
+      env: DEBUG=2
+    # Clang-3_9 DEBUG=2 (sanitizers' linking errors)
+    - compiler: clang
+      <<: *Clang-3_9
+      env: DEBUG=2
+    # GCC-7
+    - compiler: gcc
+      <<: *GCC-7
+      env:
+    - compiler: gcc
+      <<: *GCC-7
+      env: DEBUG=1
+    - compiler: gcc
+      <<: *GCC-7
+      env: DEBUG=2
+
+before_script:
+  - $CC -v
+  - $CXX -v
+  - export CC="$CC -Werror"
+  - export CXX="$CXX -Werror"
+  - wget 'http://de.archive.ubuntu.com/ubuntu/pool/main/m/make-dfsg/make_4.1-6_amd64.deb'
+  - dpkg -x make_4.1-6_amd64.deb make41
+  - export make="$PWD/make41/usr/bin/make"
+  - curl -L 'https://github.com/varqox/test/releases/download/static-files/data.tar.xz' | (mkdir libseccomp; tar xJ -C libseccomp)
+  - export EXTRA_CXX_FLAGS=" -I $PWD/libseccomp/usr/include -D__NR_mlock2=325"
+  - export EXTRA_LD_FLAGS=" -L $PWD/libseccomp/usr/lib/x86_64-linux-gnu"
+  - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PWD/libseccomp/usr/lib/x86_64-linux-gnu"
+  - sed 's/LINUX_VERSION_CODE/266241/' -i src/old_sandbox.cc
+  - sed 's@\t$(PREFIX)test/exec@\t$(PREFIX)test/exec --gtest_filter=-OldSandbox.run@' Makefile -i
+  - sed 's/TEST (OldSandbox,/TEST (DISABLED_OldSandbox,/' test/old_sandbox.cc -i
+  - sed 's/TEST (Conver,/TEST (DISABLED_Conver,/' test/conver.cc -i
+
+script:
+  - $make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
+  - $make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG test

@@ -1,0 +1,9 @@
+Problem's name (specified in options): Some name
+Problem's label (specified in options): some_label
+Missing checker in the package's Simfile - searching for one
+Chosen checker: check/checker.c
+Missing statement specified in the package's Simfile - searching for one
+Chosen statement: foo.txt
+Global memory limit not specified in options - loading it from Simfile
+[1;35mwarning[m: "scoring": ignoring score of the group with id `42` because no test belongs to it
+Auto-scoring: score of the group with id `3` set to 90

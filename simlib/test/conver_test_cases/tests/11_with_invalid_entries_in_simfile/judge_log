@@ -1,0 +1,13 @@
+Judging (initial): {
+}
+Judging (final): {
+  1a        [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker:  [ ML: 262144 KiB ]
+  1d        [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker:  [ ML: 262144 KiB ]
+  1file     [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker:  [ ML: 262144 KiB ]
+Score: 4 / 4 (ratio: 1.0000)
+  3         [ TL: 6.05 s ML: 9216 KiB ]  Status: OK  Checker:  [ ML: 262144 KiB ]
+  3file     [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker:  [ ML: 262144 KiB ]
+Score: 90 / 90 (ratio: 1.0000)
+  5         [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker:  [ ML: 262144 KiB ]
+Score: 6 / 6 (ratio: 1.0000)
+}

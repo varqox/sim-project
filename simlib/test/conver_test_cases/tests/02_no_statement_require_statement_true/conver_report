@@ -1,0 +1,11 @@
+Problem's name is not specified in options - loading it from Simfile
+  name loaded from Simfile: Test
+Problem's label is not specified in options - loading it from Simfile
+  Simfile: missing problem's label -> generating label from the problem's name
+  label generated from name: tes
+Missing checker in the package's Simfile - searching for one
+No checker was found - the default checker will be used
+Missing statement specified in the package's Simfile - searching for one
+
+>>>> Exception caught <<<<
+No statement was found (recognized extensions: pdf, md, txt) (thrown at ...)

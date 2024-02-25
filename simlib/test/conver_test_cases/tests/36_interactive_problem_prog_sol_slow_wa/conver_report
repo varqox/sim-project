@@ -1,0 +1,15 @@
+Problem's name is not specified in options - loading it from Simfile
+  name loaded from Simfile: Interactive test
+Problem's label is not specified in options - loading it from Simfile
+  Simfile: missing problem's label -> generating label from the problem's name
+  label generated from name: int
+Invalid checker specified in the package's Simfile - searching for one
+Chosen checker: checker/checker.cc
+Missing statement specified in the package's Simfile - searching for one
+[1;35mwarning[m: no statement was found (recognized extensions: pdf, md, txt)
+Global memory limit not specified in options - loading it from Simfile
+Auto-scoring: score of the group with id `0` set to 0
+Auto-scoring: score of the group with id `1` set to 25
+Auto-scoring: score of the group with id `2` set to 25
+Auto-scoring: score of the group with id `3` set to 25
+Auto-scoring: score of the group with id `4` set to 25

@@ -1,0 +1,8 @@
+name: Test
+label: tes
+statement: foo.txt
+solutions: [sol.c]
+memory_limit: 32
+limits: []
+tests_files: [
+]

@@ -1,0 +1,15 @@
+name: test
+label: tes
+interactive: true
+checker: check/checker.cc
+solutions: [prog/sol.cc]
+memory_limit: 512
+limits: [
+	1 0.305
+]
+scoring: [
+	1 100
+]
+tests_files: [
+	1 in/1.in
+]

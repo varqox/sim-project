@@ -1,0 +1,15 @@
+package: for_different_conver_options/
+
+name: Test
+label: null
+interactive: false
+memory_limit: 32
+global_time_limit: null
+max_time_limit: 44.444
+reset_time_limits_using_main_solution: true
+ignore_simfile: true
+seek_for_new_tests: false
+reset_scoring: false
+require_statement: true
+min_time_limit: 4.2
+solution_runtime_coefficient: 7.3

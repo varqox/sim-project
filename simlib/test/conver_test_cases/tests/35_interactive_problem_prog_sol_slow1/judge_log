@@ -1,0 +1,17 @@
+Judging (initial): {
+  0         [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 2 queries out of 2)  Checker:  [ ML: 262144 KiB ]
+Score: 0 / 0 (ratio: 1.0000)
+}
+Judging (final): {
+  1         [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 1 queries out of 1)  Checker:  [ ML: 262144 KiB ]
+Score: 25 / 25 (ratio: 1.0000)
+  2a        [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 1 queries out of 2)  Checker:  [ ML: 262144 KiB ]
+  2b        [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 1 queries out of 2)  Checker:  [ ML: 262144 KiB ]
+Score: 25 / 25 (ratio: 1.0000)
+  3a        [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 3 queries out of 2)  Checker:  [ ML: 262144 KiB ]
+  3b        [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 1 queries out of 2)  Checker:  [ ML: 262144 KiB ]
+Score: 13 / 25 (ratio: 0.5000)
+  4a        [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 491 queries out of 10)  Checker:  [ ML: 262144 KiB ]
+  4b        [ TL: 1.25 s ML: 32768 KiB ]  Status: OK (Used 334 queries out of 10)  Checker:  [ ML: 262144 KiB ]
+Score: 0 / 25 (ratio: 0.0000)
+}

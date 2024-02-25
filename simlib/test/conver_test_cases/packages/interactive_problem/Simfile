@@ -1,0 +1,7 @@
+name: Interactive test
+memory_limit: 32
+interactive: true
+solutions: [prog/sol.cc]
+limits: [
+	4a 0.3
+]

@@ -1,0 +1,27 @@
+name: Test
+memory_limit: 32
+
+limits: [
+	3 1 9
+	8888 8
+	aa bb
+	44 cc
+	ttt 4
+]
+
+scoring: [
+	1 4
+	5 6
+	42 7
+	oo 4
+]
+
+
+tests_files: [
+	1file inner outer
+	2file inner nothing
+	3file outer nothing
+	ttt 444 &&& hhh
+	ttt 444 hhh
+]
+

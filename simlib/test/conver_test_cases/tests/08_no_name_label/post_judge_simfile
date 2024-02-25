@@ -1,0 +1,25 @@
+name: Test
+label: some label
+statement: foo.txt
+checker: check/checker.c
+solutions: [sol.c]
+memory_limit: 32
+limits: [
+	1a 4
+	1d 4
+
+	3 4 9
+
+	5 4
+]
+scoring: [
+	1 4
+	3 90
+	5 6
+]
+tests_files: [
+	1a tests/1a.in tests/1a.out
+	1d tests/1d.in tests/1d.out
+	3 tests/3.in tests/3.out
+	5 tests/5.in tests/5.out
+]
