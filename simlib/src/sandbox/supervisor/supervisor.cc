@@ -1180,11 +1180,11 @@ void main(int argc, char** argv) noexcept {
                                 .tracee =
                                     {
                                         .outside_uid = PID1_USER_NS_INSIDE_UID,
-                                        .inside_uid =
-                                            request.linux_namespaces.user.inside_uid.value_or(1000),
+                                        .inside_uid = request.linux_namespaces.user.inside_uid
+                                                          .value_or(supervisor_outside_euid),
                                         .outside_gid = PID1_USER_NS_INSIDE_GID,
-                                        .inside_gid =
-                                            request.linux_namespaces.user.inside_gid.value_or(1000),
+                                        .inside_gid = request.linux_namespaces.user.inside_gid
+                                                          .value_or(supervisor_outside_egid),
                                     },
 
                             },
