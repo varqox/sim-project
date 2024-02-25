@@ -1,8 +1,8 @@
 project('sip',
     ['c', 'cpp'],
     license: 'MIT',
-    meson_version : '>=0.52.1',
-    default_options : meson.get_cross_property('project_configuration', [
+    meson_version : '>=0.58',
+    default_options : meson.get_external_property('project_configuration', [
         'c_std=gnu17',
         'cpp_std=c++17',
         'warning_level=3',
