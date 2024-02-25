@@ -75,6 +75,7 @@ libsim = library('sim',
         'src/sim/cpp_syntax_highlighter.cc',
         'src/sim/db/schema.cc',
         'src/sim/jobs/utils.cc',
+        'src/sim/merging/merge_ids.cc',
         'src/sim/mysql/mysql.cc',
         'src/sim/problems/permissions.cc',
         'src/sim/random.cc',
@@ -274,6 +275,7 @@ gmock_dep = simlib_proj.get_variable('gmock_dep')
 tests = [
     ['test/sim/cpp_syntax_highlighter.cc', [], {}],
     ['test/sim/jobs/utils.cc', [], {}],
+    ['test/sim/merging/merge_ids.cc', [], {'priority': 10}],
     ['test/web_server/http/form_validation.cc', [], {}],
 ]
 foreach test : tests
