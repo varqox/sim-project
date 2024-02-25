@@ -1,0 +1,33 @@
+\documentclass[pl]{sim-statement} % Change pl to en if you won't write in Polish
+
+\problemName{<<<name>>>}
+\memoryLimit{<<<mem>>>}
+\additionalFooterInfo{}
+\contestName{}
+\date{}
+
+\begin{document}
+\begin{statement}
+
+Problem statement.
+
+\sectionInput
+Input description.
+
+\sectionOutput
+Output description.
+
+\begin{samples} % The below three lines are equivalent, choose any:
+    % \readcell{in/0.in} & \readcell{out/0.out} \\ \hline
+    % \testFiles{in/0.in}{out/0.out}
+    % \standardTestFiles{0}
+    \standardTestFiles{0}
+\end{samples}
+
+\begin{grading}
+    \subtask{$n \leq 1000$}{30}
+    \subtask{\noRestrictions}{70}
+\end{grading}
+
+\end{statement}
+\end{document}
