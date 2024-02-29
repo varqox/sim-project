@@ -1,6 +1,6 @@
-# simlib [![Build Status](https://travis-ci.org/varqox/simlib.svg?branch=master)](https://travis-ci.org/varqox/simlib)
+# Simlib
 
-simlib is a C++ utility library for Linux originally created for the [sim project](https://github.com/varqox/sim).
+Simlib is a C++ utility library for Linux originally created for the Sim project.
 
 [Some functionality documentation](doc/README.md)
 

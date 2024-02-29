@@ -1,5 +1,4 @@
-# sip [![Build Status](https://travis-ci.org/varqox/sip.svg)](https://travis-ci.org/varqox/sip)
-
+# Sip
 Sip is a tool for preparing and managing Sim problem packages
 
 ## How to build
