@@ -1,6 +1,3 @@
-#include <simlib/slice.hh>
-#include <simlib/string_traits.hh>
-
 #include <algorithm>
 #include <cstdio>
 #include <dirent.h>
@@ -13,6 +10,8 @@
 #include <simlib/merge.hh>
 #include <simlib/overloaded.hh>
 #include <simlib/sandbox/sandbox.hh>
+#include <simlib/slice.hh>
+#include <simlib/string_traits.hh>
 #include <simlib/throw_assert.hh>
 #include <simlib/to_arg_seq.hh>
 #include <simlib/utilities.hh>
@@ -178,7 +177,9 @@ void filter_entries(
     vector<Entry>& entries,
     const vector<string_view>& excluded_from_going_deeper_paths
 ) {
-    assert(std::is_sorted(excluded_from_going_deeper_paths.begin(), excluded_from_going_deeper_paths.end()));
+    assert(std::is_sorted(
+        excluded_from_going_deeper_paths.begin(), excluded_from_going_deeper_paths.end()
+    ));
     while (!entries.empty()) {
         assert(runs_with(sb, sargv, env, mount_operations, entries));
         size_t entries_len = entries.size();
@@ -190,7 +191,8 @@ void filter_entries(
             k <<= 1;
         }
         while (k > 0) {
-            if (k <= entries_len && runs_with(sb, sargv, env, mount_operations, Slice{entries.data(), entries_len - k}))
+            if (k <= entries_len &&
+                runs_with(sb, sargv, env, mount_operations, Slice{entries.data(), entries_len - k}))
             {
                 entries_len -= k;
             }
@@ -203,57 +205,71 @@ void filter_entries(
         auto found_entry = std::move(entries[entries_len]);
         entries.resize(entries_len);
 
-        std::visit(overloaded{
-            [&](const File& file) {
-                mount_operations.emplace_back(CreateFile{
-                    .path = concat_tostr(NEW_ROOT_PATH, file.path)});
-                mount_operations.emplace_back(BindMount{
-                    .source = file.path,
-                    .dest = concat_tostr(NEW_ROOT_PATH, file.path),
-                    .read_only = true,
-                });
-                if (runs_with(sb, sargv, env, mount_operations, Slice{entries.data(), entries_len})) {
-                    stdlog("RO ", file.path);
-                } else {
-                    std::get<BindMount>(mount_operations.back()).read_only = false;
-                    stdlog("RW ", file.path);
-                }
-            },
-            [&](const Dir& dir) {
-                mount_operations.emplace_back(CreateDir{
-                    .path = concat_tostr(NEW_ROOT_PATH, dir.path)});
-                mount_operations.emplace_back(BindMount{
-                    .source = dir.path,
-                    .dest = concat_tostr(NEW_ROOT_PATH, dir.path),
-                    .read_only = true,
-                });
-
-                bool read_only = runs_with(sb, sargv, env, mount_operations, Slice{entries.data(), entries_len});
-                stdlog(read_only ? "RO" : "RW", ' ', dir.path);
-
-                if (binary_search(excluded_from_going_deeper_paths.begin(), excluded_from_going_deeper_paths.end(), dir.path)) {
-                    std::get<BindMount>(mount_operations.back()).read_only = read_only;
-                } else {
-                    mount_operations.pop_back();
-
-                    // Recurse into directory
-                    for_each_dir_component(dir.path, [&](dirent* file) {
-                        auto path = concat_tostr(dir.path, "/", file->d_name);
-                        struct stat64 st;
-                        throw_assert(fstatat64(AT_FDCWD, path.c_str(), &st, AT_SYMLINK_NOFOLLOW) == 0);
-                        if (S_ISDIR(st.st_mode)) {
-                            entries.emplace_back(Dir{
-                                .path = std::move(path),
-                            });
-                        } else {
-                            entries.emplace_back(File{
-                                .path = std::move(path),
-                            });
-                        }
+        std::visit(
+            overloaded{
+                [&](const File& file) {
+                    mount_operations.emplace_back(CreateFile{
+                        .path = concat_tostr(NEW_ROOT_PATH, file.path)});
+                    mount_operations.emplace_back(BindMount{
+                        .source = file.path,
+                        .dest = concat_tostr(NEW_ROOT_PATH, file.path),
+                        .read_only = true,
                     });
-                }
+                    if (runs_with(
+                            sb, sargv, env, mount_operations, Slice{entries.data(), entries_len}
+                        )) {
+                        stdlog("RO ", file.path);
+                    } else {
+                        std::get<BindMount>(mount_operations.back()).read_only = false;
+                        stdlog("RW ", file.path);
+                    }
+                },
+                [&](const Dir& dir) {
+                    mount_operations.emplace_back(CreateDir{
+                        .path = concat_tostr(NEW_ROOT_PATH, dir.path)});
+                    mount_operations.emplace_back(BindMount{
+                        .source = dir.path,
+                        .dest = concat_tostr(NEW_ROOT_PATH, dir.path),
+                        .read_only = true,
+                    });
+
+                    bool read_only = runs_with(
+                        sb, sargv, env, mount_operations, Slice{entries.data(), entries_len}
+                    );
+                    stdlog(read_only ? "RO" : "RW", ' ', dir.path);
+
+                    if (binary_search(
+                            excluded_from_going_deeper_paths.begin(),
+                            excluded_from_going_deeper_paths.end(),
+                            dir.path
+                        ))
+                    {
+                        std::get<BindMount>(mount_operations.back()).read_only = read_only;
+                    } else {
+                        mount_operations.pop_back();
+
+                        // Recurse into directory
+                        for_each_dir_component(dir.path, [&](dirent* file) {
+                            auto path = concat_tostr(dir.path, "/", file->d_name);
+                            struct stat64 st;
+                            throw_assert(
+                                fstatat64(AT_FDCWD, path.c_str(), &st, AT_SYMLINK_NOFOLLOW) == 0
+                            );
+                            if (S_ISDIR(st.st_mode)) {
+                                entries.emplace_back(Dir{
+                                    .path = std::move(path),
+                                });
+                            } else {
+                                entries.emplace_back(File{
+                                    .path = std::move(path),
+                                });
+                            }
+                        });
+                    }
+                },
             },
-        }, found_entry);
+            found_entry
+        );
     }
 }
 
@@ -307,7 +323,9 @@ int main(int argc, char** argv) {
     stdlog.label(false);
 
     sort(excluded_from_going_deeper_paths.begin(), excluded_from_going_deeper_paths.end());
-    filter_entries(sb, sargv, env, mount_operations, root_dir_entries, excluded_from_going_deeper_paths);
+    filter_entries(
+        sb, sargv, env, mount_operations, root_dir_entries, excluded_from_going_deeper_paths
+    );
 
     return 0;
 }

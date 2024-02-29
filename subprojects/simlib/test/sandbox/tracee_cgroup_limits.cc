@@ -75,11 +75,7 @@ TEST(sandbox, memory_limit) {
             {{tester_executable_path, "check_memory_limit"}},
             {
                 .stderr_fd = STDERR_FILENO,
-                .cgroup =
-                    {
-                        .memory_limit_in_bytes = 2 << 20,
-                        .swap_limit_in_bytes = 0
-                    },
+                .cgroup = {.memory_limit_in_bytes = 2 << 20, .swap_limit_in_bytes = 0},
             }
         )),
         CLD_KILLED,

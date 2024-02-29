@@ -1,4 +1,5 @@
 #include <cctype>
+#include <iostream>
 #include <simlib/file_contents.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
@@ -6,7 +7,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <iostream>
 
 int main(int argc, char** argv) {
     throw_assert(argc == 3);

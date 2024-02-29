@@ -1,10 +1,9 @@
 #pragma once
 
-#include <simlib/random.hh>
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <simlib/random.hh>
 
 class RandomBitVector {
 public:

@@ -1,6 +1,6 @@
-#include <simlib/random_bit_vector.hh>
-#include <simlib/random.hh>
 #include <gtest/gtest.h>
+#include <simlib/random.hh>
+#include <simlib/random_bit_vector.hh>
 
 // NOLINTNEXTLINE
 TEST(RandomBitVector, works) {

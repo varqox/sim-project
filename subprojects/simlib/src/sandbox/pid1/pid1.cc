@@ -2,7 +2,6 @@
 #include "../supervisor/cgroups/read_cpu_times.hh"
 #include "../tracee/tracee.hh"
 #include "pid1.hh"
-#include <simlib/file_perms.hh>
 
 #include <cerrno>
 #include <cmath>
@@ -18,6 +17,7 @@
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_path.hh>
+#include <simlib/file_perms.hh>
 #include <simlib/noexcept_concat.hh>
 #include <simlib/overloaded.hh>
 #include <simlib/string_view.hh>

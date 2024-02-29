@@ -1,5 +1,4 @@
 #include "compile.hh"
-#include <simlib/utilities.hh>
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -12,6 +11,7 @@
 #include <simlib/sim/judge/test_on_interactive_test.hh>
 #include <simlib/string_view.hh>
 #include <simlib/temporary_file.hh>
+#include <simlib/utilities.hh>
 #include <variant>
 
 using sim::judge::TestReport;

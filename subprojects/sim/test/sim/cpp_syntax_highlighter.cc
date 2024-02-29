@@ -72,6 +72,4 @@ int main(int argc, char** argv) {
 }
 
 // NOLINTNEXTLINE
-TEST(cpp_syntax_highlighter, syntax_highlighting) {
-    test_cpp_systax_highlighter(test_cases_dir);
-}
+TEST(cpp_syntax_highlighter, syntax_highlighting) { test_cpp_systax_highlighter(test_cases_dir); }

@@ -1,7 +1,6 @@
-#include <simlib/file_info.hh>
-
 #include <cerrno>
 #include <optional>
+#include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
 #include <simlib/merge.hh>
 #include <simlib/sandbox/sandbox.hh>

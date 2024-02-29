@@ -88,7 +88,7 @@ public:
     )
 
 #define ERRLOG_CATCH(...)                                                       \
-    [&] {                                                                        \
+    [&] {                                                                       \
         auto tmplog = errlog(                                                   \
             __FILE__ ":" STRINGIFY(__LINE__) ": Caught exception",              \
             ::stack_unwinding::detail::is_va_empty(__VA_ARGS__) ? "" : " -> ",  \
