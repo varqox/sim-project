@@ -47,7 +47,7 @@ sudo mysql_secure_installation
 
 2. First of all clone the repository and all its submodules
 ```sh
-git clone --recursive https://github.com/varqox/sim && cd sim
+git clone https://github.com/varqox/sim-project && cd sim-project/subprojects/sim
 ```
 
 3. Then setup build directory:

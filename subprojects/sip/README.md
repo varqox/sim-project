@@ -24,7 +24,7 @@ sudo pacman -S meson gcc libseccomp libzip libcap
 ### Tutorial: release build step by step
 First of all clone the repository and all its submodules:
 ```sh
-git clone --recursive https://github.com/varqox/sip && cd sip
+git clone https://github.com/varqox/sim-project && cd sim-project/subprojects/sip/
 ```
 Then setup build directory:
 ```sh

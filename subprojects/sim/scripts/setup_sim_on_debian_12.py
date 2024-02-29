@@ -91,31 +91,31 @@ def setup_sim():
 
     print('\033[1;32m==>\033[0;1m Set up sim repo\033[m')
     apt_install('git')
-    user_cmd(f"test -e '{args.sim_path}/' || git clone --recursive https://github.com/varqox/sim --branch develop '{args.sim_path}'")
+    user_cmd(f"test -e '{args.sim_path}' || git clone https://github.com/varqox/sim-project --branch develop '{args.sim_path}'")
 
     print('\033[1;32m==>\033[0;1m Build sim\033[m')
     apt_install('meson pkgconf g++ libmariadb-dev libseccomp-dev libcap-dev libzip-dev libssl-dev rustc fpc clang')
-    user_cmd(f"cd '{args.sim_path}' && meson setup build/ -Dbuildtype=release")
-    user_cmd(f"cd '{args.sim_path}' && meson configure build/ --prefix \"$(pwd)/sim\"")
-    user_cmd(f"cd '{args.sim_path}' && meson compile -C build/")
-    user_cmd(f"cd '{args.sim_path}' && meson test -C build/ --print-errorlogs")
+    user_cmd(f"cd '{args.sim_path}/subprojects/sim' && meson setup build/ -Dbuildtype=release")
+    user_cmd(f"cd '{args.sim_path}/subprojects/sim' && meson configure build/ --prefix \"$(pwd)/sim\"")
+    user_cmd(f"cd '{args.sim_path}/subprojects/sim' && meson compile -C build/")
+    user_cmd(f"cd '{args.sim_path}/subprojects/sim' && meson test -C build/ --print-errorlogs")
 
     print('\033[1;32m==>\033[0;1m Configure sim\033[m')
-    user_cmd(f"cd '{args.sim_path}' && mkdir --parents sim/")
-    user_cmd(f"""cd '{args.sim_path}' && cat > sim/.db.config << HEREDOCEND
+    user_cmd(f"cd '{args.sim_path}/subprojects/sim' && mkdir --parents sim/")
+    user_cmd(f"""cd '{args.sim_path}/subprojects/sim' && cat > sim/.db.config << HEREDOCEND
 user: '{args.db_user}'
 password: '{args.db_user_password}'
 db: '{args.db}'
 host: 'localhost'
 HEREDOCEND""")
-    user_cmd(f"cd '{args.sim_path}' && meson install -C build/")
+    user_cmd(f"cd '{args.sim_path}/subprojects/sim' && meson install -C build/")
     # Change sim address
-    user_cmd(f"grep -P '^address:.*$' '{args.sim_path}/sim/sim.conf' -q || (echo \"\033[1;31merror: couldn't find field 'address' in the {args.sim_path}/sim/sim.conf\033[m\" && false)")
-    user_cmd(f"sed 's/^address:.*$/address: {args.sim_local_address}/' -i '{args.sim_path}/sim/sim.conf'")
+    user_cmd(f"grep -P '^address:.*$' '{args.sim_path}/subprojects/sim/sim/sim.conf' -q || (echo \"\033[1;31merror: couldn't find field 'address' in the {args.sim_path}/subprojects/sim/sim/sim.conf\033[m\" && false)")
+    user_cmd(f"sed 's/^address:.*$/address: {args.sim_local_address}/' -i '{args.sim_path}/subprojects/sim/sim/sim.conf'")
 
     print('\033[1;32m==>\033[0;1m Run sim\033[m')
     apt_install('curl')
-    user_cmd(f"'{args.sim_path}/sim/manage' stop")
+    user_cmd(f"'{args.sim_path}/subprojects/sim/sim/manage' stop")
     user_cmd(f"curl --silent '{args.sim_local_address}' > /dev/null; test $? -eq 7 || (echo '\033[1;31merror: address {args.sim_local_address} is already in use\033[m' && false)")
     # user_cmd does not work and we want the job to run in the background
     subprocess.check_call([
@@ -126,7 +126,7 @@ HEREDOCEND""")
         '--quiet',
         'sh',
         '-c',
-        f"'{args.sim_path}/sim/manage' restart",
+        f"'{args.sim_path}/subprojects/sim/sim/manage' restart",
     ])
 
 if args.sim_path is not None:
@@ -148,7 +148,7 @@ def start_sim_at_boot():
 Description=Start Sim instance {args.sim_path}
 
 [Service]
-ExecStart=sh -c "until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; '{args.sim_path}/sim/manage' start"
+ExecStart=sh -c "until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; '{args.sim_path}/subprojects/sim/sim/manage' start"
 
 [Install]
 WantedBy=default.target
