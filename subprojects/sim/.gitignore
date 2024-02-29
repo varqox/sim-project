@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+
+# Build
+/*build/
+
+# Installation
+/sim/
+
+# Development
+/.cache/
+/compile_commands.json
+/*.sublime-workspace

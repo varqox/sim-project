@@ -1,0 +1,15 @@
+option(
+    'static',
+    type : 'boolean',
+    value : false,
+    description : 'Whether to link executables statically',
+    yield : true,
+)
+
+option(
+    'install',
+    type : 'boolean',
+    value : true,
+    description : 'Whether to install this subproject or not',
+    yield : false,
+)

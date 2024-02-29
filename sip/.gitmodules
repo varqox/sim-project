@@ -1,3 +1,0 @@
-[submodule "src/lib/simlib"]
-	path = subprojects/simlib
-	url = https://github.com/varqox/simlib
