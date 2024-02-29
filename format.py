@@ -30,33 +30,6 @@ class Source:
         self.dependency_files = [format_file_path] + dependency_files
         self.pre_format_commands = pre_format_commands
 
-def simlib_sources(src_dir):
-    return [
-        Source(
-            path,
-            os.path.join(os.path.dirname(__file__), '.clang-format'),
-            [__file__],
-            [
-                # Fix includes of form "simlib/*", "gtest/*" "gmock/*" (thanks clangd...) to <...>
-                ["sed", r's@^#include "\(\(simlib/\|gtest\|gmock/\).*\)"$@#include <\1>@', "-i", path],
-            ]
-        )
-        for path in filter_subdirs(
-            src_dir, [
-                'examples/',
-                'include/',
-                'src/',
-                'test/',
-            ],
-            ['c', 'cc', 'h', 'hh'],
-            [
-                'src/sim/default_checker_dump.c',
-                'test/conver_test_cases/.*',
-                'test/old_sandbox_test_cases/.*',
-            ]
-        )
-    ]
-
 def format_sources(sources, cache_dir = Path(os.getenv('MESON_SOURCE_ROOT', '.')) / '.cache'):
     clang_format_path = subprocess.check_output(['which', 'clang-format']).strip()
     newest_dependency_files_mtime = max(map(os.path.getmtime, [clang_format_path, __file__]))
@@ -106,5 +79,85 @@ def format_sources(sources, cache_dir = Path(os.getenv('MESON_SOURCE_ROOT', '.')
     with open(Path(cache_dir) / 'format.json', 'w') as cache_file:
         json.dump(cache, cache_file)
 
+def simlib_sources():
+    src_dir = os.path.join(sys.path[0], 'subprojects/simlib')
+    return [
+        Source(
+            path,
+            os.path.join(os.path.dirname(__file__), '.clang-format'),
+            [__file__],
+            [
+                # Fix includes of form "simlib/*", "gtest/*" "gmock/*" (thanks clangd...) to <...>
+                ["sed", r's@^#include "\(\(simlib/\|gtest\|gmock/\).*\)"$@#include <\1>@', "-i", path],
+            ]
+        )
+        for path in filter_subdirs(
+            src_dir, [
+                'examples/',
+                'include/',
+                'src/',
+                'test/',
+            ],
+            ['c', 'cc', 'h', 'hh'],
+            [
+                'src/sim/default_checker_dump.c',
+                'test/conver_test_cases/.*',
+                'test/old_sandbox_test_cases/.*',
+            ]
+        )
+    ]
+
+def sim_sources():
+    src_dir = os.path.join(sys.path[0], 'subprojects/sim')
+    return [
+        Source(path,
+            os.path.join(os.path.dirname(__file__), '.clang-format'),
+            [__file__],
+            [
+                # Fix includes of form "sim/*", "simlib/*", "gtest/*" "gmock/*" (thanks clangd...) to <...>
+                ["sed", r's@^#include "\(\(sim/\|simlib/\|gtest/\|gmock/\).*\)"$@#include <\1>@', "-i", path]
+            ]
+        )
+        for path in filter_subdirs(
+            src_dir,
+            [
+                'include/',
+                'src/',
+                'test/',
+            ],
+            ['c', 'cc', 'h', 'hh'],
+            [
+                'src/web_server/static/.*',
+                'test/sim/cpp_syntax_highlighter_test_cases/.*',
+            ]
+        )
+    ]
+
+def sip_sources():
+    src_dir = os.path.join(sys.path[0], 'subprojects/sip')
+    return [
+        Source(path,
+            os.path.join(os.path.dirname(__file__), '.clang-format'),
+            [__file__],
+            [
+                # Fix includes of form "simlib/*", "gtest/*" "gmock/*" (thanks clangd...) to <...>
+                ["sed", r's@^#include "\(\(simlib/\|gtest/\|gmock/\).*\)"$@#include <\1>@', "-i", path]
+            ]
+        )
+        for path in filter_subdirs(
+            src_dir,
+            [
+                'src/',
+                'templates/',
+                'test/',
+            ],
+            ['c', 'cc', 'h', 'hh'],
+            [
+                'src/git_commit.hh',
+                'test/sip_test_cases/.*'
+            ]
+        )
+    ]
+
 if __name__ == '__main__':
-    format_sources(simlib_sources(sys.argv[1]))
+    format_sources(simlib_sources() + sim_sources() + sip_sources())

@@ -57,6 +57,8 @@ if get_option('static')
     static_kwargs = {'static': true}
 endif
 
+_install = get_option('install')
+
 dump_file_as_c_array = executable('dump_file_as_c_array',
     implicit_include_directories : false,
     sources : 'src/dump_file_as_c_array.c',
@@ -186,7 +188,7 @@ simlib = library('simlib',
         ),
     ],
     dependencies : simlib_dependencies,
-    install : true,
+    install : _install,
 )
 
 simlib_dep = declare_dependency(
@@ -230,9 +232,6 @@ examples = [
 
 alias_target('base', simlib)
 alias_target('examples', examples)
-
-run_target('format', command : [find_program('format.py'), meson.current_source_dir()])
-run_target('tidy', command : [find_program('tidy')], depends : [simlib, examples])
 
 #################################### Tests ####################################
 

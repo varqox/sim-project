@@ -43,7 +43,14 @@ if get_option('static')
     static_dep = declare_dependency(link_args : '-static')
 endif
 
-simlib_proj = subproject('simlib')
+_install = get_option('install')
+
+simlib_proj = subproject(
+    'simlib',
+    default_options : [
+        'install=' + (_install ? 'true' : 'false'),
+    ],
+)
 simlib_dep = simlib_proj.get_variable('simlib_dep')
 
 dump_file_as_c_array_gen = simlib_proj.get_variable('dump_file_as_c_array_gen')
@@ -116,13 +123,11 @@ sip = executable('sip',
         simlib_dep,
         static_dep,
     ],
-    install : true,
+    install : _install,
 )
 
 base_targets = [sip]
 alias_target('base', base_targets)
-run_target('format', command : [find_program('format.py'), meson.current_source_dir()])
-run_target('tidy', command : [find_program('tidy')], depends : base_targets)
 
 #################################### Tests ####################################
 test('sip_tests', find_program('test/run_sip_tests.py'), args : [sip.full_path()], priority : 10)

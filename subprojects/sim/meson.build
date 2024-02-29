@@ -55,9 +55,16 @@ if get_option('static')
     static_dep = declare_dependency(link_args : '-static')
 endif
 
+_install = get_option('install')
+
 mariadb_dep = dependency('mariadb')
 
-simlib_proj = subproject('simlib')
+simlib_proj = subproject(
+    'simlib',
+    default_options : [
+        'install=' + (_install ? 'true' : 'false'),
+    ],
+)
 simlib_dep = simlib_proj.get_variable('simlib_dep')
 
 libsim_dependencies = [
@@ -83,7 +90,7 @@ libsim = library('sim',
         'src/sim/users/user.cc',
     ],
     dependencies : libsim_dependencies,
-    install : true,
+    install : _install,
 )
 
 libsim_dep = declare_dependency(
@@ -121,7 +128,7 @@ job_server = executable('job-server',
         libsim_dep,
         static_dep,
     ],
-    install : true,
+    install : _install,
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 
@@ -134,7 +141,7 @@ sim_merger = executable('sim-merger',
         libsim_dep,
         static_dep,
     ],
-    install : true,
+    install : _install,
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 
@@ -147,7 +154,7 @@ sim_upgrader = executable('sim-upgrader',
         libsim_dep,
         static_dep,
     ],
-    install : true,
+    install : _install,
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 
@@ -173,7 +180,7 @@ backup = executable('backup',
         libsim_dep,
         static_dep,
     ],
-    install : true,
+    install : _install,
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 
@@ -223,7 +230,7 @@ sim_server = executable('sim-server',
         libsim_dep,
         static_dep,
     ],
-    install : true,
+    install : _install,
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 
@@ -236,7 +243,7 @@ manage = executable('manage',
         simlib_dep,
         static_dep,
     ],
-    install : true,
+    install : _install,
     install_rpath : get_option('prefix') / get_option('libdir'),
     install_dir : '.',
 )
@@ -252,20 +259,20 @@ base_targets = [
     sim_upgrader,
 ]
 alias_target('base', base_targets)
-run_target('format', command : [find_program('format.py'), meson.current_source_dir()])
-run_target('tidy', command : [find_program('tidy')], depends : base_targets)
 
 ################################# Installation #################################
 
-install_subdir('src/web_server/static', install_dir : '.')
+if _install
+    install_subdir('src/web_server/static', install_dir : '.')
 
-mkdir_p = 'mkdir -p "$MESON_INSTALL_DESTDIR_PREFIX/@0@"'
-cp_if_missing = 'test -e "$MESON_INSTALL_DESTDIR_PREFIX/@1@" || cp "$MESON_SOURCE_ROOT/@0@" "$MESON_INSTALL_DESTDIR_PREFIX/@1@"'
-meson.add_install_script('sh', '-c', 'chmod 0700 "$MESON_INSTALL_DESTDIR_PREFIX"')
-meson.add_install_script('sh', '-c', mkdir_p.format('internal_files'))
-meson.add_install_script('sh', '-c', mkdir_p.format('logs'))
-meson.add_install_script('sh', '-c', cp_if_missing.format('src/sim.conf', 'sim.conf'))
-meson.add_install_script('sh', '-c', 'if test -e "$MESON_INSTALL_DESTDIR_PREFIX/.db.config"; then ' + setup_installation.full_path() + ' "$MESON_INSTALL_DESTDIR_PREFIX"; else { printf "To complete installation you need to run:\n%s %s\n" \'' + setup_installation.full_path() + '\' $MESON_INSTALL_DESTDIR_PREFIX; false; } fi')
+    mkdir_p = 'mkdir -p "$MESON_INSTALL_DESTDIR_PREFIX/@0@"'
+    cp_if_missing = 'test -e "$MESON_INSTALL_DESTDIR_PREFIX/@1@" || cp "$MESON_SOURCE_ROOT/@0@" "$MESON_INSTALL_DESTDIR_PREFIX/@1@"'
+    meson.add_install_script('sh', '-c', 'chmod 0700 "$MESON_INSTALL_DESTDIR_PREFIX"')
+    meson.add_install_script('sh', '-c', mkdir_p.format('internal_files'))
+    meson.add_install_script('sh', '-c', mkdir_p.format('logs'))
+    meson.add_install_script('sh', '-c', cp_if_missing.format('src/sim.conf', 'sim.conf'))
+    meson.add_install_script('sh', '-c', 'if test -e "$MESON_INSTALL_DESTDIR_PREFIX/.db.config"; then ' + setup_installation.full_path() + ' "$MESON_INSTALL_DESTDIR_PREFIX"; else { printf "To complete installation you need to run:\n%s %s\n" \'' + setup_installation.full_path() + '\' $MESON_INSTALL_DESTDIR_PREFIX; false; } fi')
+endif
 
 #################################### Tests ####################################
 

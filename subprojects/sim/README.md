@@ -1,4 +1,4 @@
-# Sim [![Build Status](https://travis-ci.org/varqox/sim.svg?branch=master)](https://travis-ci.org/varqox/sim) [![Coverity Scan Build Status](https://scan.coverity.com/projects/6466/badge.svg)](https://scan.coverity.com/projects/varqox-sim) [![Gitter chat](https://badges.gitter.im/varqox/sim.png)](https://gitter.im/varqox/sim)
+# Sim
 
 Sim is an open source platform for carrying out algorithmic contests
 

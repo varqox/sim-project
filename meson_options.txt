@@ -1,0 +1,21 @@
+option(
+    'static',
+    type : 'boolean',
+    value : false,
+    description : 'Whether to link executables statically',
+    yield : true,
+)
+
+option('build',
+    type : 'array',
+    choices : ['all', 'sim', 'sip', 'simlib'],
+    value : ['all'],
+    description : 'Which subprojects to build',
+)
+
+option('install',
+    type : 'array',
+    choices : ['sim', 'sip', 'simlib'],
+    value : [],
+    description : 'Which subprojects to install',
+)
