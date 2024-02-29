@@ -240,7 +240,7 @@ public:
                 conver_.report(),
                 "\n>>>> Exception caught <<<<\n",
                 std::regex_replace(
-                    e.what(), std::regex(R"=(\(thrown at (\w|\.|/)+:\d+\))="), "(thrown at ...)"
+                    e.what(), std::regex(R"=(\(thrown at (\w|-|\.|/)+:\d+\))="), "(thrown at ...)"
                 )
             );
         }
