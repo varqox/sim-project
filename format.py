@@ -32,7 +32,7 @@ class Source:
 
 def format_sources(sources, cache_dir = Path(os.getenv('MESON_SOURCE_ROOT', '.')) / '.cache'):
     clang_format_path = subprocess.check_output(['which', 'clang-format']).strip()
-    newest_dependency_files_mtime = max(map(os.path.getmtime, [clang_format_path, __file__]))
+    newest_dependency_files_mtime = max(map(os.path.getctime, [clang_format_path, __file__]))
     # Make source paths absolute
     for source in sources:
         source.path = os.path.abspath(source.path)
@@ -48,9 +48,9 @@ def format_sources(sources, cache_dir = Path(os.getenv('MESON_SOURCE_ROOT', '.')
         last_reformat = cache.get(source.path)
         if last_reformat is None:
             return True
-        if last_reformat < os.path.getmtime(source.path):
+        if last_reformat < os.path.getctime(source.path):
             return True
-        if last_reformat < max(newest_dependency_files_mtime, *map(os.path.getmtime, source.dependency_files)):
+        if last_reformat < max(newest_dependency_files_mtime, *map(os.path.getctime, source.dependency_files)):
             return True
         return False
 
