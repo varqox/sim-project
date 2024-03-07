@@ -88,12 +88,14 @@ bool runs_with(
                                         std::visit(
                                             overloaded{
                                                 [&](const CreateDir& cd) {
-                                                    ops.emplace_back(Mount::CreateDir{
-                                                        .path = cd.path});
+                                                    ops.emplace_back(
+                                                        Mount::CreateDir{.path = cd.path}
+                                                    );
                                                 },
                                                 [&](const CreateFile& cf) {
-                                                    ops.emplace_back(Mount::CreateFile{
-                                                        .path = cf.path});
+                                                    ops.emplace_back(
+                                                        Mount::CreateFile{.path = cf.path}
+                                                    );
                                                 },
                                                 [&](const BindMount& bm) {
                                                     ops.emplace_back(Mount::BindMount{
@@ -131,8 +133,9 @@ void append_entry(vector<MountOperation>& mount_operations, const Entry& entry, 
     std::visit(
         overloaded{
             [&](const File& file) {
-                mount_operations.emplace_back(CreateFile{
-                    .path = concat_tostr(NEW_ROOT_PATH, file.path)});
+                mount_operations.emplace_back(
+                    CreateFile{.path = concat_tostr(NEW_ROOT_PATH, file.path)}
+                );
                 mount_operations.emplace_back(BindMount{
                     .source = file.path,
                     .dest = concat_tostr(NEW_ROOT_PATH, file.path),
@@ -140,8 +143,9 @@ void append_entry(vector<MountOperation>& mount_operations, const Entry& entry, 
                 });
             },
             [&](const Dir& dir) {
-                mount_operations.emplace_back(CreateDir{
-                    .path = concat_tostr(NEW_ROOT_PATH, dir.path)});
+                mount_operations.emplace_back(
+                    CreateDir{.path = concat_tostr(NEW_ROOT_PATH, dir.path)}
+                );
                 mount_operations.emplace_back(BindMount{
                     .source = dir.path,
                     .dest = concat_tostr(NEW_ROOT_PATH, dir.path),
@@ -208,8 +212,9 @@ void filter_entries(
         std::visit(
             overloaded{
                 [&](const File& file) {
-                    mount_operations.emplace_back(CreateFile{
-                        .path = concat_tostr(NEW_ROOT_PATH, file.path)});
+                    mount_operations.emplace_back(
+                        CreateFile{.path = concat_tostr(NEW_ROOT_PATH, file.path)}
+                    );
                     mount_operations.emplace_back(BindMount{
                         .source = file.path,
                         .dest = concat_tostr(NEW_ROOT_PATH, file.path),
@@ -225,8 +230,9 @@ void filter_entries(
                     }
                 },
                 [&](const Dir& dir) {
-                    mount_operations.emplace_back(CreateDir{
-                        .path = concat_tostr(NEW_ROOT_PATH, dir.path)});
+                    mount_operations.emplace_back(
+                        CreateDir{.path = concat_tostr(NEW_ROOT_PATH, dir.path)}
+                    );
                     mount_operations.emplace_back(BindMount{
                         .source = dir.path,
                         .dest = concat_tostr(NEW_ROOT_PATH, dir.path),

@@ -83,7 +83,8 @@ timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
                 rc = timer_delete(state.timer_id);
                 assert(rc == 0);
                 return old_its.it_value;
-            }},
+            }
+        },
         state_
     );
 }
@@ -173,7 +174,8 @@ std::chrono::nanoseconds Spawner::Timer::deactivate_and_get_runtime() noexcept {
             [&](WithTimeout& state) {
                 assert(state.timer_is_active and "You can call this function only once");
                 return to_nanoseconds(state.time_limit - delete_timer_and_get_remaning_time());
-            }},
+            }
+        },
         state_
     );
 }
@@ -194,7 +196,8 @@ bool Spawner::Timer::timeout_signal_was_sent() const noexcept {
             [&](const WithoutTimeout& /*unused*/) { return false; },
             [&](const WithTimeout& state) -> bool {
                 return state.signal_handler_context.timeout_signal_was_sent;
-            }},
+            }
+        },
         state_
     );
 }
@@ -281,13 +284,8 @@ Spawner::ExitStat Spawner::run(
 
     if (si.si_code != CLD_EXITED or si.si_status != 0) {
         return {
-            runtime,
-            cpu_runtime,
-            si.si_code,
-            si.si_status,
-            ru,
-            0,
-            receive_error_message(si, pfd[0])};
+            runtime, cpu_runtime, si.si_code, si.si_status, ru, 0, receive_error_message(si, pfd[0])
+        };
     }
 
     return {runtime, cpu_runtime, si.si_code, si.si_status, ru, 0};

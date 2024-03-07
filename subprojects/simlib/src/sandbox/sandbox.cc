@@ -111,7 +111,8 @@ namespace sandbox {
         str_arg_quiet,
         executable_path.data(),
         sock_as_str.data(),
-        nullptr};
+        nullptr
+    };
     char* xdg_runtime_dir = nullptr;
     for (auto env = environ; *env; ++env) {
         if (has_prefix(*env, "XDG_RUNTIME_DIR=")) {

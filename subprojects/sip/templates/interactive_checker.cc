@@ -128,7 +128,7 @@ struct character {
     template <class... Opts>
     constexpr explicit character(char& c, Opts... opts) : val(c)
                                                         , options{opts...} {
-        static_assert((std::is_same_v<Opts, char> and ...));
+        static_assert(std::is_same_v<Opts, char> and ...);
     }
 };
 

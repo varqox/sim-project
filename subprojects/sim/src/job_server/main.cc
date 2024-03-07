@@ -1061,7 +1061,8 @@ static void events_loop() noexcept {
                     constexpr uint INFY_IDX = 0;
                     constexpr uint EQ_IDX = 1;
                     pollfd pfd[2] = {
-                        {inotify_fd, POLLIN, 0}, {EventsQueue::get_notifier_fd(), POLLIN, 0}};
+                        {inotify_fd, POLLIN, 0}, {EventsQueue::get_notifier_fd(), POLLIN, 0}
+                    };
 
                     for (;;) {
                         int rc = poll(pfd, 2, -1);

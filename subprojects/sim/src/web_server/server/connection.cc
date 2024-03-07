@@ -219,9 +219,9 @@ void Connection::read_post(http::Request& req) {
                         // Erase boundary: +1 because we did not append the last
                         // character to the boundary
                         field_content.erase(
-                            (field_content.size() < boundary.size()
-                                 ? 0
-                                 : field_content.size() - boundary.size() + 1)
+                            field_content.size() < boundary.size()
+                                ? 0
+                                : field_content.size() - boundary.size() + 1
                         );
                         req.form_fields.add_field(field_name, field_content);
 

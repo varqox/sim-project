@@ -128,7 +128,8 @@ public:
                     std::make_shared<std::function<void(FileEvent)>>(std::forward<Handler>(handler)
                     ),
                     events,
-                    poll_events_.size()}
+                    poll_events_.size()
+                }
             );
             try {
                 poll_events_idx_to_hid_.emplace_back(handler_id);

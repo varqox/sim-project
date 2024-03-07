@@ -72,10 +72,8 @@ public:
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr ApiParam(ApiParam<OtherT> api_param) noexcept
     : ApiParam{
-          std::in_place,
-          api_param.name,
-          api_param.description,
-          api_param.is_blank_str_val_allowed()} {}
+          std::in_place, api_param.name, api_param.description, api_param.is_blank_str_val_allowed()
+      } {}
 
     template <class C>
     constexpr ApiParam(T C::* /*unused*/, CStringView name, CStringView description) noexcept
@@ -255,9 +253,9 @@ auto validate_allowed_only_if(
         return ResT{std::in_place, std::nullopt};
     }
     if (!condition) {
-        return ResT{detail::append_error(
-            errors_str, api_param, "should not be sent in the request at all"
-        )};
+        return ResT{
+            detail::append_error(errors_str, api_param, "should not be sent in the request at all")
+        };
     }
     auto opt = do_validate();
     if (!opt) {
@@ -286,9 +284,9 @@ auto validate_required_and_allowed_only_if(
         return ResT{std::in_place, std::nullopt};
     }
     if (!condition) {
-        return ResT{detail::append_error(
-            errors_str, api_param, "should not be sent in the request at all"
-        )};
+        return ResT{
+            detail::append_error(errors_str, api_param, "should not be sent in the request at all")
+        };
     }
     auto opt = do_validate();
     if (!opt) {
@@ -307,29 +305,32 @@ auto validate_required_and_allowed_only_if(
     )
 #define IMPL_VALIDATE_VAR_NAMES(var_name, ...) (var_name)
 #define IMPL_VALIDATE(...) IMPL_VALIDATE2(__VA_ARGS__)
-#define IMPL_VALIDATE2(                                                                            \
-    form_fields, errors_str_to_return_value_func, validate_variant_var, var_names_seq, seq         \
-)                                                                                                  \
-    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                               \
-    auto validate_variant_var =                                                                    \
-        [&] { /* NOLINT(bugprone-macro-parentheses) */                                             \
-              std::string errors_str;                                                              \
-              IMPL_VALIDATE_DECLARE_VARS(seq, form_fields, errors_str)                             \
-              using TupleType = decltype(std::tuple{                                               \
-                  MAP_DELIM_FUNC(IMPL_VALIDATE_VAR_NAME_TO_STAR_VAR_NAME, COMMA, var_names_seq)}); \
-              if (MAP_DELIM(IMPL_VALIDATE_VAR_NAME_TO_NOT_VAR_NAME, ||, var_names_seq)) {          \
-                  return std::variant<TupleType, std::string>{                                     \
-                      std::in_place_type<std::string>, std::move(errors_str)};                     \
-              }                                                                                    \
-              return std::variant<TupleType, std::string>{                                         \
-                  std::in_place_type<TupleType>,                                                   \
-                  MAP_DELIM_FUNC(IMPL_VALIDATE_VAR_NAME_TO_STAR_VAR_NAME, COMMA, var_names_seq)};  \
-        }();                                                                                       \
-    if (auto* validation_errors_str = std::get_if<1>(&(validate_variant_var)))                     \
-    { /* NOLINT(bugprone-macro-parentheses) */                                                     \
-        return errors_str_to_return_value_func(*validation_errors_str);                            \
-    }                                                                                              \
-    auto& [MAP_DELIM_FUNC(IMPL_VALIDATE_VAR_NAME, COMMA, var_names_seq)] =                         \
+#define IMPL_VALIDATE2(                                                                         \
+    form_fields, errors_str_to_return_value_func, validate_variant_var, var_names_seq, seq      \
+)                                                                                               \
+    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                            \
+    auto validate_variant_var =                                                                 \
+        [&] { /* NOLINT(bugprone-macro-parentheses) */                                          \
+              std::string errors_str;                                                           \
+              IMPL_VALIDATE_DECLARE_VARS(seq, form_fields, errors_str)                          \
+              using TupleType = decltype(std::tuple{                                            \
+                  MAP_DELIM_FUNC(IMPL_VALIDATE_VAR_NAME_TO_STAR_VAR_NAME, COMMA, var_names_seq) \
+              });                                                                               \
+              if (MAP_DELIM(IMPL_VALIDATE_VAR_NAME_TO_NOT_VAR_NAME, ||, var_names_seq)) {       \
+                  return std::variant<TupleType, std::string>{                                  \
+                      std::in_place_type<std::string>, std::move(errors_str)                    \
+                  };                                                                            \
+              }                                                                                 \
+              return std::variant<TupleType, std::string>{                                      \
+                  std::in_place_type<TupleType>,                                                \
+                  MAP_DELIM_FUNC(IMPL_VALIDATE_VAR_NAME_TO_STAR_VAR_NAME, COMMA, var_names_seq) \
+              };                                                                                \
+        }();                                                                                    \
+    if (auto* validation_errors_str = std::get_if<1>(&(validate_variant_var)))                  \
+    { /* NOLINT(bugprone-macro-parentheses) */                                                  \
+        return errors_str_to_return_value_func(*validation_errors_str);                         \
+    }                                                                                           \
+    auto& [MAP_DELIM_FUNC(IMPL_VALIDATE_VAR_NAME, COMMA, var_names_seq)] =                      \
         std::get<0>(validate_variant_var)
 #define IMPL_VALIDATE_VAR_NAME(var_name) var_name
 #define IMPL_VALIDATE_VAR_NAME_TO_STAR_VAR_NAME(var_name) *var_name

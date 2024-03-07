@@ -128,7 +128,8 @@ void EventQueue::remove_handler(handler_id_t handler_id) {
                 poll_events_[handler.poll_event_idx].fd =
                     -1; // Deactivate event. It will be removed
                         // while processing file events.
-            }},
+            }
+        },
         WONT_THROW(handlers_.at(handler_id))
     );
     handlers_.erase(handler_id);

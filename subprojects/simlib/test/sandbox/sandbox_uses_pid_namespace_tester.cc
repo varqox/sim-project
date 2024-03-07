@@ -82,13 +82,15 @@ void check_killing_supervisor_using_pidfd_from_opening_proc_subdir() {
 
     pid_t procfs_grandparent_pid =
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        str2num<pid_t>(from_unsafe{
-                           field_from_proc_status(open_proc_status(procfs_parent_pid), "PPid")})
+        str2num<pid_t>(
+            from_unsafe{field_from_proc_status(open_proc_status(procfs_parent_pid), "PPid")}
+        )
             .value();
     throw_assert(procfs_grandparent_pid != 0);
 
     auto grandparent_pidfd = FileDescriptor{
-        open(noexcept_concat("/proc/", procfs_grandparent_pid).c_str(), O_RDONLY | O_CLOEXEC)};
+        open(noexcept_concat("/proc/", procfs_grandparent_pid).c_str(), O_RDONLY | O_CLOEXEC)
+    };
     // Send signal to the grandparent (aka supervisor)
     throw_assert(
         syscalls::pidfd_send_signal(grandparent_pidfd, SIGKILL, nullptr, 0) == -1 && errno == EINVAL

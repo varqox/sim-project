@@ -76,7 +76,8 @@ TEST(sandbox, new_root_mount_path) {
                                     MountTmpfs{
                                         .path = "/sys/hypervisor",
                                         .inode_limit = nullopt,
-                                        .read_only = false},
+                                        .read_only = false
+                                    },
                                     CreateDir{.path = "/sys/hypervisor/usr"},
                                     BindMount{
                                         .source = "/usr",
@@ -120,7 +121,8 @@ TEST(sandbox, new_root_mount_path_equals_root) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/", .inode_limit = nullopt, .read_only = false},
+                                        .path = "/", .inode_limit = nullopt, .read_only = false
+                                    },
                                     CreateDir{.path = "/../usr"},
                                     BindMount{
                                         .source = "/usr",
@@ -176,7 +178,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                   CreateDir{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
-                                                                              "files_nullopt"},
+                                                                              "files_nullopt"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
@@ -189,7 +192,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                   CreateDir{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
-                                                                              "files_0"},
+                                                                              "files_0"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
@@ -202,7 +206,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                   CreateDir{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
-                                                                              "files_1"},
+                                                                              "files_1"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
@@ -215,7 +220,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                   CreateDir{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
-                                                                              "files_32768"},
+                                                                              "files_32768"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "max_total_size_of_"
@@ -228,7 +234,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                   CreateDir{
                                                                       .path = "/tmp/"
                                                                               "inode_limit_"
-                                                                              "nullopt"},
+                                                                              "nullopt"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "inode_limit_nullopt",
@@ -236,21 +243,24 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/inode_limit_0"},
+                                                                      .path = "/tmp/inode_limit_0"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/inode_limit_0",
                                                                       .inode_limit = 0,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/inode_limit_1"},
+                                                                      .path = "/tmp/inode_limit_1"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/inode_limit_1",
                                                                       .inode_limit = 1,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/inode_limit_2"},
+                                                                      .path = "/tmp/inode_limit_2"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/inode_limit_2",
                                                                       .inode_limit = 2,
@@ -258,7 +268,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                   },
                                                                   CreateDir{
                                                                       .path = "/tmp/"
-                                                                              "root_dir_mode_0000"},
+                                                                              "root_dir_mode_0000"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "root_dir_mode_0000",
@@ -266,7 +277,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                   },
                                                                   CreateDir{
                                                                       .path = "/tmp/"
-                                                                              "root_dir_mode_0123"},
+                                                                              "root_dir_mode_0123"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "root_dir_mode_0123",
@@ -274,14 +286,16 @@ TEST(sandbox, mount_tmpfs) {
                                                                   },
                                                                   CreateDir{
                                                                       .path = "/tmp/"
-                                                                              "read_only_true"},
+                                                                              "read_only_true"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/read_only_true",
                                                                       .read_only = true,
                                                                   },
                                                                   CreateDir{
                                                                       .path = "/tmp/"
-                                                                              "read_only_false"},
+                                                                              "read_only_false"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/"
                                                                               "read_only_false",
@@ -289,7 +303,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/no_exec_true"},
+                                                                      .path = "/tmp/no_exec_true"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/no_exec_true",
                                                                       .max_total_size_of_files_in_bytes =
@@ -299,7 +314,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .no_exec = true,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/no_exec_false"},
+                                                                      .path = "/tmp/no_exec_false"
+                                                                  },
                                                                   MountTmpfs{
                                                                       .path = "/tmp/no_exec_false",
                                                                       .max_total_size_of_files_in_bytes =
@@ -308,7 +324,8 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .read_only = false,
                                                                       .no_exec = false,
                                                                   },
-                                                              }},
+                                                              }
+                                                          },
                                                   },
                                           },
                                   }
@@ -728,12 +745,14 @@ TEST(sandbox, tracee_cannot_umount_mounts) {
                                     MountProc{.path = "/tmp/proc"},
                                     CreateDir{.path = "/tmp/bind"},
                                     BindMount{
-                                        .source = "/tmp", .dest = "/tmp/bind", .recursive = false},
+                                        .source = "/tmp", .dest = "/tmp/bind", .recursive = false
+                                    },
                                     CreateDir{.path = "/tmp/bind_recursive"},
                                     BindMount{
                                         .source = "/tmp",
                                         .dest = "/tmp/bind_recursive",
-                                        .recursive = true},
+                                        .recursive = true
+                                    },
                                 }},
                             },
                     },

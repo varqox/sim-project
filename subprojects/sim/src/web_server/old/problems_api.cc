@@ -202,7 +202,8 @@ void Sim::api_problems() {
 
     while (res.next()) {
         EnumVal<Problem::Type> problem_type{
-            WONT_THROW(str2num<Problem::Type::UnderlyingType>(res[PTYPE]).value())};
+            WONT_THROW(str2num<Problem::Type::UnderlyingType>(res[PTYPE]).value())
+        };
         auto problem_perms = sim::problems::get_permissions(
             (session.has_value() ? std::optional{session->user_id} : std::nullopt),
             (session.has_value() ? std::optional{session->user_type} : std::nullopt),
@@ -520,7 +521,8 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
         ignore_simfile,
         seek_for_new_tests,
         reset_scoring,
-        ptype};
+        ptype
+    };
 
     auto transaction = mysql.start_transaction();
     mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")

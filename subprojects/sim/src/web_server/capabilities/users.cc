@@ -64,7 +64,8 @@ UserCapabilities user(
         .make_normal = make_normal,
         .delete_ = user_id != SIM_ROOT_UID and (is_self_ or is_admin_),
         .merge_into_another_user = user_id != SIM_ROOT_UID and is_admin_,
-        .merge_someone_into_this_user = user_id != SIM_ROOT_UID};
+        .merge_someone_into_this_user = user_id != SIM_ROOT_UID
+    };
 }
 
 } // namespace web_server::capabilities

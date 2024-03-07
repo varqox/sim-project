@@ -158,8 +158,9 @@ static void test_int() {
     }
     VALIDATE_CHECK(t, concat_tostr(nl::max()), Ok{nl::max()});
     VALIDATE_CHECK(t, concat_tostr(nl::max() - 1), Ok{nl::max() - 1});
-    auto err_val_str = Err{
-        concat_tostr("abc: ABC is not an integer from range [", nl::min(), ", ", nl::max(), "]")};
+    auto err_val_str =
+        Err{concat_tostr("abc: ABC is not an integer from range [", nl::min(), ", ", nl::max(), "]")
+        };
     VALIDATE_CHECK(t, "", Err{err_val_str});
     VALIDATE_CHECK(t, "x", Err{err_val_str});
     VALIDATE_CHECK(t, "abc", Err{err_val_str});
@@ -465,7 +466,8 @@ TEST(form_validation, enum_val_with_string_conversions_enum_caps) {
 
                 for (auto [idx, str] : enumerate_view(std::array{"> 1 <", "> 2 <", "> 3 <"})) {
                     constexpr std::array variants = {
-                        TestEnum::FIRST, TestEnum::SECOND, TestEnum::THIRD};
+                        TestEnum::FIRST, TestEnum::SECOND, TestEnum::THIRD
+                    };
                     using RT = Result<TestEnum, const char*>;
                     SCOPED_TRACE(
                         concat_tostr("idx: ", idx, " caps: {", cap0, ", ", cap1, ", ", cap2, "}")

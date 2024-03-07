@@ -12,7 +12,7 @@
 
 #define DECLARE_ENUM_ASSIGN_OPERATOR(enu, oper)                   \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */              \
-    constexpr enu& operator oper(enu& a, enu b) {                 \
+    constexpr enu& operator oper(enu & a, enu b) {                \
         using UT = std::underlying_type<enu>::type;               \
         UT x = static_cast<UT>(a);                                \
         return (a = static_cast<enu>(x oper static_cast<UT>(b))); \

@@ -29,17 +29,17 @@ TEST(humanize, humanize_file_size) {
     EXPECT_EQ(humanize_file_size(14.23 * (1ULL << 60)), "14.2 EiB");
 
     EXPECT_EQ(humanize_file_size((1ULL << 10) - 1), "1023 bytes");
-    EXPECT_EQ(humanize_file_size((1ULL << 10)), "1.0 KiB");
+    EXPECT_EQ(humanize_file_size(1ULL << 10), "1.0 KiB");
     EXPECT_EQ(humanize_file_size((1ULL << 20) - 1), "1024 KiB");
-    EXPECT_EQ(humanize_file_size((1ULL << 20)), "1.0 MiB");
+    EXPECT_EQ(humanize_file_size(1ULL << 20), "1.0 MiB");
     EXPECT_EQ(humanize_file_size((1ULL << 30) - 1), "1024 MiB");
-    EXPECT_EQ(humanize_file_size((1ULL << 30)), "1.0 GiB");
+    EXPECT_EQ(humanize_file_size(1ULL << 30), "1.0 GiB");
     EXPECT_EQ(humanize_file_size((1ULL << 40) - 1), "1024 GiB");
-    EXPECT_EQ(humanize_file_size((1ULL << 40)), "1.0 TiB");
+    EXPECT_EQ(humanize_file_size(1ULL << 40), "1.0 TiB");
     EXPECT_EQ(humanize_file_size((1ULL << 50) - 1), "1024 TiB");
-    EXPECT_EQ(humanize_file_size((1ULL << 50)), "1.0 PiB");
+    EXPECT_EQ(humanize_file_size(1ULL << 50), "1.0 PiB");
     EXPECT_EQ(humanize_file_size((1ULL << 60) - 1), "1024 PiB");
-    EXPECT_EQ(humanize_file_size((1ULL << 60)), "1.0 EiB");
+    EXPECT_EQ(humanize_file_size(1ULL << 60), "1.0 EiB");
 
     EXPECT_EQ(humanize_file_size(102'349ULL - 1), "99.9 KiB");
     EXPECT_EQ(humanize_file_size(102'349ULL), "100 KiB");

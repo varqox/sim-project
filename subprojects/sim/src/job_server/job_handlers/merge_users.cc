@@ -109,8 +109,9 @@ void MergeUsers::run_impl() {
         };
         // clang-format on
         static_assert(
-            is_sorted(std::array{
-                EnumVal(CUM::CONTESTANT), EnumVal(CUM::MODERATOR), EnumVal(CUM::OWNER)}),
+            is_sorted(
+                std::array{EnumVal(CUM::CONTESTANT), EnumVal(CUM::MODERATOR), EnumVal(CUM::OWNER)}
+            ),
             "Needed by below SQL statement (comparison between modes)"
         );
         // Transfer donor's contest permissions to the target user if the donor

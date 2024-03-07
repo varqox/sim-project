@@ -1229,14 +1229,17 @@ void Sim::api_contest_round_delete(
 namespace params {
 
 constexpr http::ApiParam contest_problem_problem_id{
-    &ContestProblem::problem_id, "problem_id", "Problem ID"};
+    &ContestProblem::problem_id, "problem_id", "Problem ID"
+};
 constexpr http::ApiParam contest_problem_name{&ContestProblem::name, "name", "Problem's name"};
 constexpr http::ApiParam contest_problem_method_of_choosing_final_submission{
     &ContestProblem::method_of_choosing_final_submission,
     "method_of_choosing_final_submission",
-    "Method of choosing final submission"};
+    "Method of choosing final submission"
+};
 constexpr http::ApiParam contest_problem_score_revealing{
-    &ContestProblem::score_revealing, "score_revealing", "Score revealing"};
+    &ContestProblem::score_revealing, "score_revealing", "Score revealing"
+};
 
 } // namespace params
 

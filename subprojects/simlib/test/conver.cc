@@ -285,7 +285,8 @@ private:
 
     void compile_checker_and_solution(JudgeWorker& jworker) {
         auto compilation_cache = sim::judge::DiskCompilationCache{
-            compilation_cache_dir.to_string(), std::chrono::hours(7 * 24)};
+            compilation_cache_dir.to_string(), std::chrono::hours(7 * 24)
+        };
         string compilation_errors;
         if (jworker.compile_checker(
                 COMPILATION_TIME_LIMIT,

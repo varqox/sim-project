@@ -73,14 +73,16 @@ Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcep
          // Teacher
          PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
          // Normal
-         PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL},
+         PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL
+        },
         {// Admin
          PERM::VIEW, // Sim root
          PERM::VIEW, // Admin
                      // Teacher
          PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
          // Normal
-         PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL},
+         PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL
+        },
         {
             // Teacher
             PERM::NONE, // Sim root
@@ -94,7 +96,8 @@ Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcep
             PERM::NONE, // Admin
             PERM::NONE, // Teacher
             PERM::NONE // Normal
-        }};
+        }
+    };
     return perm[viewer][user] | users_get_overall_permissions();
 }
 

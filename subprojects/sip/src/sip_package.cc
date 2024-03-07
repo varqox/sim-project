@@ -173,8 +173,9 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
         };
 
         if (has_prefix(test.generator, "sh:")) {
-            set_and_compile_bash_generator(from_unsafe{
-                concat_tostr(substring(test.generator, 3), ' ', test.generator_args)});
+            set_and_compile_bash_generator(
+                from_unsafe{concat_tostr(substring(test.generator, 3), ' ', test.generator_args)}
+            );
             return *generator_suite;
         }
 
@@ -195,8 +196,9 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
                 "generator with sh: in Sipfile - e.g. sh:echo"
             );
 
-            set_and_compile_bash_generator(from_unsafe{
-                concat_tostr(test.generator, ' ', test.generator_args)});
+            set_and_compile_bash_generator(
+                from_unsafe{concat_tostr(test.generator, ' ', test.generator_args)}
+            );
             return *generator_suite;
         }
 
@@ -1077,7 +1079,8 @@ static void compile_tex_file(StringView file) {
                 [](sandbox::result::Ok res_ok) { return res_ok; },
                 [](sandbox::result::Error res_err) -> sandbox::result::Ok {
                     throw SipError("sandbox error: ", res_err.description);
-                }},
+                }
+            },
             std::move(res)
         );
 

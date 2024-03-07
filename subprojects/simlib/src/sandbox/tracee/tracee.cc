@@ -186,7 +186,8 @@ namespace sandbox::tracee {
             },
             [&](char* path) {
                 syscalls::execveat(AT_FDCWD, path, args.argv.data(), args.env.data(), 0);
-            }},
+            }
+        },
         args.executable
     );
     die_with_error("execveat()");

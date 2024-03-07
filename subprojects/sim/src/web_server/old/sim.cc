@@ -168,8 +168,8 @@ void Sim::static_file() {
 
     string file_path = concat_tostr(
         "static",
-        path_absolute(from_unsafe{
-            decode_uri(substring(request.target, 1, request.target.find('?')))})
+        path_absolute(from_unsafe{decode_uri(substring(request.target, 1, request.target.find('?')))
+        })
     );
     // Extract path (ignore query)
     D(stdlog(file_path);)

@@ -496,7 +496,8 @@ Select<Params...>::Select(std::string fields_str, Params&&... params)
 template <class... Params>
 SelectFrom<Params...> Select<Params...>::from(StringView table_name) && {
     return SelectFrom<Params...>{
-        concat_tostr(std::move(sql_str), " FROM ", table_name), std::move(params)};
+        concat_tostr(std::move(sql_str), " FROM ", table_name), std::move(params)
+    };
 }
 
 #define DEFINE_CONSTRUCTOR(ClassName)                                                  \
@@ -505,35 +506,36 @@ SelectFrom<Params...> Select<Params...>::from(StringView table_name) && {
     : sql_str{std::move(sql_str)}                                                      \
     , params{std::move(params)} {}
 
-#define DO_DEFINE_JOIN(ClassName, join_method_name, join_type_str)                          \
-    template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */             \
-    SelectJoin<Params...> ClassName<Params...>::join_method_name(StringView table_name)&& { \
-        return SelectJoin<Params...>{                                                       \
-            concat_tostr(std::move(sql_str), " " join_type_str " ", table_name),            \
-            std::move(params)};                                                             \
-    }                                                                                       \
-                                                                                            \
-    template <class... Params>                                                              \
-    template <                                                                              \
-        template <class...>                                                                 \
-        class T,                                                                            \
-        class... OtherParams,                                                               \
-        std::enable_if_t<                                                                   \
-            std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,          \
-            int>> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                          \
-    SelectJoin<Params..., OtherParams...> ClassName<Params...>::join_method_name(           \
-        T<OtherParams...> select_query, StringView table_name                               \
-    )&& {                                                                                   \
-        auto full_select_query = SelectQuery<OtherParams...>{std::move(select_query)};      \
-        return SelectJoin<Params..., OtherParams...>{                                       \
-            concat_tostr(                                                                   \
-                std::move(sql_str),                                                         \
-                " " join_type_str " (",                                                     \
-                std::move(full_select_query.sql_str),                                       \
-                ") ",                                                                       \
-                table_name                                                                  \
-            ),                                                                              \
-            std::tuple_cat(std::move(params), std::move(full_select_query.params))};        \
+#define DO_DEFINE_JOIN(ClassName, join_method_name, join_type_str)                                 \
+    template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                    \
+    SelectJoin<Params...> ClassName<Params...>::join_method_name(StringView table_name)&& {        \
+        return SelectJoin<Params...>{                                                              \
+            concat_tostr(std::move(sql_str), " " join_type_str " ", table_name), std::move(params) \
+        };                                                                                         \
+    }                                                                                              \
+                                                                                                   \
+    template <class... Params>                                                                     \
+    template <                                                                                     \
+        template <class...>                                                                        \
+        class T,                                                                                   \
+        class... OtherParams,                                                                      \
+        std::enable_if_t<                                                                          \
+            std::is_convertible_v<T<OtherParams...>, SelectQuery<OtherParams...>>,                 \
+            int>> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                 \
+    SelectJoin<Params..., OtherParams...> ClassName<Params...>::join_method_name(                  \
+        T<OtherParams...> select_query, StringView table_name                                      \
+    )&& {                                                                                          \
+        auto full_select_query = SelectQuery<OtherParams...>{std::move(select_query)};             \
+        return SelectJoin<Params..., OtherParams...>{                                              \
+            concat_tostr(                                                                          \
+                std::move(sql_str),                                                                \
+                " " join_type_str " (",                                                            \
+                std::move(full_select_query.sql_str),                                              \
+                ") ",                                                                              \
+                table_name                                                                         \
+            ),                                                                                     \
+            std::tuple_cat(std::move(params), std::move(full_select_query.params))                 \
+        };                                                                                         \
     }
 
 #define DEFINE_JOIN(ClassName) DO_DEFINE_JOIN(ClassName, join, "JOIN")
@@ -548,7 +550,8 @@ SelectFrom<Params...> Select<Params...>::from(StringView table_name) && {
     )&& {                                                                           \
         return SelectWhere<Params..., CondParams...>{                               \
             concat_tostr(std::move(sql_str), " WHERE ", condition.sql_str),         \
-            std::tuple_cat(std::move(params), std::move(condition.params))};        \
+            std::tuple_cat(std::move(params), std::move(condition.params))          \
+        };                                                                          \
     }                                                                               \
                                                                                     \
     template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */     \
@@ -561,15 +564,17 @@ SelectFrom<Params...> Select<Params...>::from(StringView table_name) && {
     SelectWhere<Params..., CondParam> ClassName<Params...>::where(                  \
         StringView condition, CondParam&& cond_param                                \
     )&& {                                                                           \
-        return std::move(*this).where(Condition{                                    \
-            condition.to_string(), std::forward<CondParam>(cond_param)});           \
+        return std::move(*this).where(                                              \
+            Condition{condition.to_string(), std::forward<CondParam>(cond_param)}   \
+        );                                                                          \
     }
 
-#define DEFINE_ORDER_BY(ClassName)                                                             \
-    template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                \
-    SelectOrderBy<Params...> ClassName<Params...>::order_by(StringView order_sql_str)&& {      \
-        return SelectOrderBy<Params...>{                                                       \
-            concat_tostr(std::move(sql_str), " ORDER BY ", order_sql_str), std::move(params)}; \
+#define DEFINE_ORDER_BY(ClassName)                                                           \
+    template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */              \
+    SelectOrderBy<Params...> ClassName<Params...>::order_by(StringView order_sql_str)&& {    \
+        return SelectOrderBy<Params...>{                                                     \
+            concat_tostr(std::move(sql_str), " ORDER BY ", order_sql_str), std::move(params) \
+        };                                                                                   \
     }
 
 #define DEFINE_LIMIT(ClassName)                                                        \
@@ -583,7 +588,8 @@ SelectFrom<Params...> Select<Params...>::from(StringView table_name) && {
             std::tuple_cat(                                                            \
                 std::move(params),                                                     \
                 std::tuple<LimitParams...>{std::forward<LimitParams>(limit_params)...} \
-            )};                                                                        \
+            )                                                                          \
+        };                                                                             \
     }
 
 #define DEFINE_OPERATOR_SELECT_QUERY(ClassName)                                 \
@@ -616,7 +622,8 @@ SelectJoinOn<Params..., CondParams...> SelectJoin<Params...>::on(Condition<CondP
 ) && {
     return SelectJoinOn<Params..., CondParams...>{
         concat_tostr(std::move(sql_str), " ON ", condition.sql_str),
-        std::tuple_cat(std::move(params), std::move(condition.params))};
+        std::tuple_cat(std::move(params), std::move(condition.params))
+    };
 }
 
 template <class... Params> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */

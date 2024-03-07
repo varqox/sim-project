@@ -176,7 +176,7 @@ public:
         if (UNLIKELY(this == &other)) {
             return *this;
         }
-        operator=<T, MAX_SIZE>(other);
+        operator= <T, MAX_SIZE>(other);
         return *this;
     }
 
@@ -185,7 +185,7 @@ public:
         if (UNLIKELY(this == &other)) {
             return *this;
         }
-        operator=<T, MAX_SIZE>(std::move(other));
+        operator= <T, MAX_SIZE>(std::move(other));
         return *this;
     }
 

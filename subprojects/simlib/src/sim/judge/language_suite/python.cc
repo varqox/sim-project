@@ -19,13 +19,14 @@ using CreateFile = sandbox::RequestOptions::LinuxNamespaces::Mount::CreateFile;
 namespace sim::judge::language_suite {
 
 Python::Python()
-: FullyInterpretedLanguage{
-      "/usr/bin/python3", [] {
-          auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
-          sandbox::seccomp::allow_common_safe_syscalls(bpf);
-          bpf.allow_syscall(SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{FIOCLEX});
-          return bpf.export_to_fd();
-      }()} {}
+: FullyInterpretedLanguage{"/usr/bin/python3", [] {
+                               auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
+                               sandbox::seccomp::allow_common_safe_syscalls(bpf);
+                               bpf.allow_syscall(
+                                   SCMP_SYS(ioctl), sandbox::seccomp::ARG1_EQ{FIOCLEX}
+                               );
+                               return bpf.export_to_fd();
+                           }()} {}
 
 Suite::RunHandle Python::async_run(
     Slice<std::string_view> args,

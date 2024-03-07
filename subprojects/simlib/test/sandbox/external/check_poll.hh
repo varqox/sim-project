@@ -25,7 +25,8 @@ inline void check_poll(
             [&pfd](const PollReady& pr) {
                 ASSERT_EQ(poll(&pfd, 1, 10000), 1);
                 ASSERT_EQ(pfd.revents, pr.revents);
-            }},
+            }
+        },
         expected_res
     );
 }

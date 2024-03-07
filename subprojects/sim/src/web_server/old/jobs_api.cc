@@ -226,9 +226,11 @@ void Sim::api_jobs() {
 
     while (res.next()) {
         EnumVal<Job::Type> job_type{
-            WONT_THROW(str2num<Job::Type::UnderlyingType>(res[JTYPE]).value())};
+            WONT_THROW(str2num<Job::Type::UnderlyingType>(res[JTYPE]).value())
+        };
         EnumVal<Job::Status> job_status{
-            WONT_THROW(str2num<Job::Status::UnderlyingType>(res[JSTATUS]).value())};
+            WONT_THROW(str2num<Job::Status::UnderlyingType>(res[JSTATUS]).value())
+        };
 
         // clang-format off
         append(",\n[", res[JID], ","
@@ -595,8 +597,9 @@ void Sim::api_job_download_uploaded_statement(
 
     resp.headers["Content-Disposition"] = concat_tostr(
         "attachment; filename=",
-        encode_uri(from_unsafe{path_filename(from_unsafe{
-            sim::jobs::ChangeProblemStatementInfo(info).new_statement_path})})
+        encode_uri(from_unsafe{path_filename(
+            from_unsafe{sim::jobs::ChangeProblemStatementInfo(info).new_statement_path}
+        )})
     );
     resp.content_type = http::Response::FILE;
     resp.content = sim::internal_files::path_of(file_id.value());

@@ -277,7 +277,8 @@ Simfile::parse_limits_item(StringView item) {
     StringView x{sp.extract_next_non_empty(is_space<char>)};
     if (!is_real(x)) {
         throw std::runtime_error{
-            concat_tostr("Simfile: invalid time limit for the test `", test_name, '`')};
+            concat_tostr("Simfile: invalid time limit for the test `", test_name, '`')
+        };
     }
 
     double tl = stod(x.to_string());
@@ -342,7 +343,8 @@ std::tuple<StringView, int64_t> Simfile::parse_scoring_item(StringView item) {
     auto score = str2num<int64_t>(sp);
     if (not score) {
         throw std::runtime_error{
-            concat_tostr("Simfile: invalid scoring of the group `", gid, "`: ", sp, " ")};
+            concat_tostr("Simfile: invalid scoring of the group `", gid, "`: ", sp, " ")
+        };
     }
 
     return {gid, *score};
@@ -376,7 +378,8 @@ void Simfile::load_tests() {
         if (not memory_limit.has_value()) {
             if (not global_mem_limit.has_value()) {
                 throw std::runtime_error{
-                    concat_tostr("Simfile: missing memory limit for the test `", test_name, '`')};
+                    concat_tostr("Simfile: missing memory limit for the test `", test_name, '`')
+                };
             }
 
             memory_limit = global_mem_limit.value();
@@ -427,7 +430,8 @@ void Simfile::load_tests() {
             auto&& it = gid_to_score.emplace(gid, 0);
             if (!it.second) {
                 throw std::runtime_error{
-                    concat_tostr("Simfile: redefined scoring of the group `", gid, '`')};
+                    concat_tostr("Simfile: redefined scoring of the group `", gid, '`')
+                };
             }
 
             it.first->second = score;
@@ -438,7 +442,8 @@ void Simfile::load_tests() {
             auto it = gid_to_score.find(gid);
             if (it == gid_to_score.end()) {
                 throw std::runtime_error{
-                    concat_tostr("Simfile: missing scoring of the group `", gid, '`')};
+                    concat_tostr("Simfile: missing scoring of the group `", gid, '`')
+                };
             }
 
             group.score = it->second;
@@ -524,7 +529,8 @@ void Simfile::load_tests_files() {
         auto it = files.emplace(test_name, pair<StringView, StringView>(in_file, out_file));
         if (not it.second) {
             throw std::runtime_error{
-                concat_tostr("Simfile: `test_files`: redefinition of the test `", test_name, '`')};
+                concat_tostr("Simfile: `test_files`: redefinition of the test `", test_name, '`')
+            };
         }
     }
 
@@ -534,7 +540,8 @@ void Simfile::load_tests_files() {
             auto it = files.find(test.name);
             if (it == files.end()) {
                 throw std::runtime_error{
-                    concat_tostr("Simfile: no files specified for the test `", test.name, '`')};
+                    concat_tostr("Simfile: no files specified for the test `", test.name, '`')
+                };
             }
 
             // Secure paths, so that it is not going outside the package
@@ -558,13 +565,14 @@ void Simfile::validate_files(StringView package_path) const {
         (checker->empty() or not is_regular_file(concat(package_path, '/', checker.value()))))
     {
         throw std::runtime_error{
-            concat_tostr("Simfile: invalid checker file `", checker.value(), '`')};
+            concat_tostr("Simfile: invalid checker file `", checker.value(), '`')
+        };
     }
 
     // Statement
     if (statement && !is_regular_file(concat(package_path, '/', statement.value()))) {
-        throw std::runtime_error{
-            concat_tostr("Simfile: invalid statement file `", *statement, '`')};
+        throw std::runtime_error{concat_tostr("Simfile: invalid statement file `", *statement, '`')
+        };
     }
 
     // Solutions
@@ -579,13 +587,15 @@ void Simfile::validate_files(StringView package_path) const {
         for (const Test& test : group.tests) {
             if (!is_regular_file(concat(package_path, '/', test.in))) {
                 throw std::runtime_error{
-                    concat_tostr("Simfile: invalid test input file `", test.in, '`')};
+                    concat_tostr("Simfile: invalid test input file `", test.in, '`')
+                };
             }
             if (test.out.has_value() and
                 !is_regular_file(concat(package_path, '/', test.out.value())))
             {
                 throw std::runtime_error{
-                    concat_tostr("Simfile: invalid test output file `", test.out.value(), '`')};
+                    concat_tostr("Simfile: invalid test output file `", test.out.value(), '`')
+                };
             }
         }
     }

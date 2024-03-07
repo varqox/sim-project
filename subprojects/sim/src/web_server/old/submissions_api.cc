@@ -430,7 +430,8 @@ void Sim::api_submissions() {
     auto curr_date = mysql_date();
     while (res.next()) {
         EnumVal<Submission::Type> stype{
-            WONT_THROW(str2num<Submission::Type::UnderlyingType>(res[STYPE]).value())};
+            WONT_THROW(str2num<Submission::Type::UnderlyingType>(res[STYPE]).value())
+        };
         SubmissionPermissions perms = submissions_get_permissions(
             (res.is_null(SOWNER)
                  ? std::nullopt
@@ -444,8 +445,8 @@ void Sim::api_submissions() {
             (res.is_null(CUMODE)
                  ? std::nullopt
                  : std::optional{decltype(ContestUser::mode
-                   ){WONT_THROW(str2num<decltype(ContestUser::mode)::ValType>(res[CUMODE]).value()
-                   )}}),
+                   ){WONT_THROW(str2num<decltype(ContestUser::mode)::ValType>(res[CUMODE]).value())}
+                   }),
             (res.is_null(POWNER_ID)
                  ? std::nullopt
                  : optional<decltype(Problem::owner_id)::value_type>{WONT_THROW(
@@ -992,8 +993,9 @@ void Sim::api_submission_source() {
         return api_error403();
     }
 
-    append(cpp_syntax_highlighter(from_unsafe{
-        get_file_contents(sim::internal_files::path_of(submissions_file_id))}));
+    append(cpp_syntax_highlighter(
+        from_unsafe{get_file_contents(sim::internal_files::path_of(submissions_file_id))}
+    ));
 }
 
 void Sim::api_submission_download() {

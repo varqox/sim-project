@@ -82,7 +82,8 @@ contest_for(
         return std::nullopt;
     }
     return std::pair{
-        contest_for(session, is_public, contest_user_mode), contest_user_mode.to_opt()};
+        contest_for(session, is_public, contest_user_mode), contest_user_mode.to_opt()
+    };
 }
 
 } // namespace web_server::capabilities

@@ -139,7 +139,8 @@ Response do_list(Context& ctx, uint32_t limit, sql::Condition<Params...> where_c
             .left_join("submissions s")
             .on(sql::Condition{"s.problem_id=p.id"} and
                 sql::Condition{
-                    "s.owner=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt} and
+                    "s.owner=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt
+                } and
                 sql::Condition{"s.problem_final IS TRUE"})
             .where(where_cond)
             .order_by("p.id DESC")
@@ -225,7 +226,8 @@ caps_to_condition(ProblemsListCapabilities caps, optional<decltype(Problem::type
     {
         res = res or
             sql::Condition{
-                concat_tostr("p.type=", decltype(Problem::type){Problem::Type::PUBLIC}.to_int())};
+                concat_tostr("p.type=", decltype(Problem::type){Problem::Type::PUBLIC}.to_int())
+            };
     }
     if (caps.view_all_with_type_contest_only and
         (!problem_type or problem_type == Problem::Type::CONTEST_ONLY))
@@ -371,7 +373,8 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
             .left_join("submissions s")
             .on(sql::Condition{"s.problem_id=p.id"} and
                 sql::Condition{
-                    "s.owner=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt} and
+                    "s.owner=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt
+                } and
                 sql::Condition{"s.problem_final IS TRUE"})
             .where("p.id=?", problem_id)
     );

@@ -11,7 +11,8 @@ sandbox::result::Ok Suite::await_result(RunHandle&& run_handle) {
             [](sandbox::result::Ok res_ok) { return res_ok; },
             [](sandbox::result::Error res_err) -> sandbox::result::Ok {
                 THROW("Suite run error: ", res_err.description);
-            }},
+            }
+        },
         sc.await_result(std::move(run_handle.request_handle))
     );
 }

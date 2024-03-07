@@ -215,9 +215,11 @@ TEST(merge_ids, random) {
             }
 
             auto current_id_iter = TestIdIterator{
-                current_min_id, current_max_id_plus_one, current_id_to_datetime, current_ids};
+                current_min_id, current_max_id_plus_one, current_id_to_datetime, current_ids
+            };
             auto other_id_iter = TestIdIterator{
-                other_min_id, other_max_id_plus_one, other_id_to_datetime, other_ids};
+                other_min_id, other_max_id_plus_one, other_id_to_datetime, other_ids
+            };
 
             auto merged_ids = sim::merging::merge_ids(current_id_iter, other_id_iter);
 

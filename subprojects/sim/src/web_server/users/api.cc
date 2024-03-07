@@ -123,13 +123,13 @@ caps_to_condition(UsersListCapabilities caps, optional<decltype(User::type)> use
     }
     if (caps.view_all_with_type_teacher and (!user_type or user_type == User::Type::TEACHER)) {
         res = res or
-            sql::Condition{
-                concat_tostr("type=", decltype(User::type){User::Type::TEACHER}.to_int())};
+            sql::Condition{concat_tostr("type=", decltype(User::type){User::Type::TEACHER}.to_int())
+            };
     }
     if (caps.view_all_with_type_normal and (!user_type or user_type == User::Type::NORMAL)) {
         res = res or
-            sql::Condition{
-                concat_tostr("type=", decltype(User::type){User::Type::NORMAL}.to_int())};
+            sql::Condition{concat_tostr("type=", decltype(User::type){User::Type::NORMAL}.to_int())
+            };
     }
     return res;
 }
@@ -224,7 +224,8 @@ constexpr http::ApiParam<CStringView> password_repeated{"password_repeated", "Pa
 constexpr http::ApiParam<CStringView> old_password{"old_password", "Old password"};
 constexpr http::ApiParam<CStringView> new_password{"new_password", "New password"};
 constexpr http::ApiParam<CStringView> new_password_repeated{
-    "new_password_repeated", "New password (repeat)"};
+    "new_password_repeated", "New password (repeat)"
+};
 constexpr http::ApiParam<bool> remember_for_a_month{"remember_for_a_month", "Remember for a month"};
 constexpr http::ApiParam target_user_id{&User::id, "target_user_id", "Target user ID"};
 

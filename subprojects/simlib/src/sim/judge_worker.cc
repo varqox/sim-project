@@ -167,7 +167,8 @@ int JudgeWorker::compile_checker(
                     }
                     return concat_tostr(get_cwd(), path);
                 }(package_loader->load_as_file(sf.checker.value(), "checker")),
-                filename_to_lang(sf.checker.value())};
+                filename_to_lang(sf.checker.value())
+            };
         }
 
         auto path = concat_tostr(tmp_dir.path(), "default_checker.c");
