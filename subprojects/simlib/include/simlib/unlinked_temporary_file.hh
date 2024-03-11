@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fcntl.h>
 #include <simlib/file_descriptor.hh>
 
 /**
@@ -14,4 +15,4 @@
  * @errors The same that occur for open(2) (if O_TMPFILE is defined) or
  *   mkostemp(3)
  */
-FileDescriptor open_unlinked_tmp_file(int flags = 0) noexcept;
+FileDescriptor open_unlinked_tmp_file(int flags = O_CLOEXEC) noexcept;
