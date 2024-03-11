@@ -4,15 +4,18 @@
 
 #include <cerrno>
 #include <chrono>
+#include <cstdint>
 #include <exception>
 #include <fcntl.h>
 #include <optional>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/file_perms.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/noexcept_concat.hh>
 #include <simlib/pipe.hh>
+#include <simlib/random.hh>
 #include <simlib/read_bytes_as.hh>
 #include <simlib/read_exact.hh>
 #include <simlib/sandbox/sandbox.hh>
@@ -29,10 +32,11 @@
 #include <string_view>
 #include <sys/eventfd.h>
 #include <sys/mman.h>
+#include <sys/mount.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <utility>
-#include <vector>
 
 using std::optional;
 
@@ -40,6 +44,19 @@ extern "C" {
 extern const unsigned char sandbox_supervisor_dump[];
 extern const unsigned int sandbox_supervisor_dump_len;
 } // extern "C"
+
+static void write_file(int error_fd, FilePath file_path, StringView data) noexcept {
+    auto fd = open(file_path, O_WRONLY | O_TRUNC | O_CLOEXEC);
+    if (fd == -1) {
+        sandbox::do_die_with_error(error_fd, "open(", file_path, ")");
+    }
+    if (write_all(fd, data) != data.size()) {
+        sandbox::do_die_with_error(error_fd, "write(", file_path, ")");
+    }
+    if (close(fd)) {
+        sandbox::do_die_with_error(error_fd, "close()");
+    }
+}
 
 namespace sandbox {
 
@@ -92,7 +109,154 @@ namespace sandbox {
         do_die_with_error(error_fd, "write()");
     }
 
-    // Execute the supervisor
+    static constexpr auto cgroup_fs_path = std::string_view{"/sys/fs/cgroup"};
+    auto cgroup_path = [&] {
+        try {
+            std::string str = get_file_contents("/proc/self/cgroup");
+            auto pos = str.find(':');
+            if (pos == std::string::npos) {
+                do_die_with_msg(error_fd, "invalid contents of file: /proc/self/cgorup");
+            }
+            pos = str.find(':', pos + 1);
+            if (pos == std::string::npos) {
+                do_die_with_msg(error_fd, "invalid contents of file: /proc/self/cgorup");
+            }
+            str.erase(0, pos + 1); // Remove prefix
+            str.insert(0, cgroup_fs_path);
+            while (str.back() == '\n' || str.back() == '/') {
+                str.pop_back();
+            }
+            return str;
+        } catch (const std::exception& e) {
+            do_die_with_msg(error_fd, "exception: ", e.what());
+        }
+    }();
+
+    auto get_file_owner = [error_fd](const char* cgroup_path) {
+        struct stat64 st;
+        if (stat64(cgroup_path, &st)) {
+            do_die_with_error(error_fd, "stat64()");
+        }
+        return st.st_uid;
+    };
+
+    auto euid = geteuid();
+    if (get_file_owner(cgroup_path.c_str()) == euid) {
+        // Find top-most cgroup that we are owner of
+        size_t len = cgroup_path.size();
+        while (len > cgroup_fs_path.size()) {
+            size_t saved_len = len;
+            --len;
+            while (cgroup_path[len] != '/') {
+                --len;
+            }
+            cgroup_path[len] = '\0';
+            if (get_file_owner(cgroup_path.c_str()) != euid) {
+                cgroup_path[len] = '/';
+                len = saved_len;
+                break;
+            }
+        }
+        cgroup_path.resize(len);
+
+        constexpr size_t new_cgroup_name_len = 16;
+        try {
+            cgroup_path += '/';
+            cgroup_path.resize(cgroup_path.size() + new_cgroup_name_len);
+        } catch (const std::exception& e) {
+            do_die_with_msg(error_fd, "exception: ", e.what());
+        }
+
+        // Try creating a new cgroup
+        for (;;) {
+            for (size_t i = cgroup_path.size() - new_cgroup_name_len; i < cgroup_path.size(); ++i) {
+                cgroup_path[i] = get_random('0', '9');
+            }
+            if (mkdir(cgroup_path.c_str(), S_0755)) {
+                if (errno == EEXIST) {
+                    continue; // try with different name
+                }
+                if (errno == EACCES) {
+                    break; // run supervisor with systemd-run
+                }
+                do_die_with_error(error_fd, "mkdir()");
+            }
+
+            // Successfully created cgroup, move the current process to the created cgroup
+            try {
+                cgroup_path += "/cgroup.procs";
+            } catch (const std::exception& e) {
+                do_die_with_msg(error_fd, "exception: ", e.what());
+            }
+            write_file(error_fd, cgroup_path.c_str(), "0");
+
+            /* Create and move remaining processes to an other cgroup */
+
+            cgroup_path.resize(
+                cgroup_path.size() - new_cgroup_name_len - std::strlen("/cgroup.procs")
+            );
+            cgroup_path += "cgroup.procs"; // won't throw
+            auto cgroup_procs_fd = open(cgroup_path.c_str(), O_RDONLY | O_CLOEXEC);
+            if (cgroup_procs_fd == -1) {
+                do_die_with_error(error_fd, "open()");
+            }
+
+            // Create "others" cgroup
+            cgroup_path.resize(cgroup_path.size() - std::strlen("cgroup.procs"));
+            cgroup_path += "others"; // won't throw
+            if (mkdir(cgroup_path.c_str(), S_0755) && errno != EEXIST) {
+                do_die_with_error(error_fd, "mkdir()");
+            }
+
+            try {
+                cgroup_path += "/cgroup.procs";
+            } catch (const std::exception& e) {
+                do_die_with_msg(error_fd, "exception: ", e.what());
+            }
+            auto other_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
+            if (other_cgroup_procs_fd == -1) {
+                do_die_with_error(error_fd, "open()");
+            }
+
+            std::array<char, sizeof(pid_t) * 3 /*3 digits for one byte*/ + 1 /*newline*/> buff;
+            for (;;) {
+                auto rc = pread(cgroup_procs_fd, buff.data(), buff.size(), 0);
+                if (rc == 0) {
+                    break; // no more pids
+                }
+                auto str = StringView{buff.data(), static_cast<size_t>(rc)};
+                auto pos = str.find('\n');
+                if (pos != StringView::npos) {
+                    str = str.substring(0, pos);
+                }
+                auto written = write(other_cgroup_procs_fd, str.data(), str.size());
+                if (written == -1) {
+                    if (errno == ESRCH) {
+                        continue; // process died before we changed its cgroup
+                    }
+                    do_die_with_error(error_fd, "write()");
+                }
+                if (static_cast<size_t>(written) != str.size()) {
+                    do_die_with_msg(error_fd, "partial write()");
+                }
+            }
+
+            // Enable needed controllers in the new cgroup (needs to be done after moving out
+            // processes from the cgroup)
+            cgroup_path.resize(cgroup_path.size() - std::strlen("others/cgroup.procs"));
+            cgroup_path += "cgroup.subtree_control"; // won't throw
+            write_file(error_fd, cgroup_path.c_str(), "+pids +memory +cpu");
+            // Execute the supervisor
+            char argv0[] = "";
+            auto sock_as_str = to_string(sock_fd);
+            char* const argv[] = {argv0, sock_as_str.data(), nullptr};
+            char* const env[] = {nullptr};
+            syscalls::execveat(supervisor_exe_fd, "", argv, env, AT_EMPTY_PATH);
+            do_die_with_error(error_fd, "execveat()");
+        }
+    }
+
+    // Execute the supervisor using systemd-run
     char str_systemd_run[] = "/usr/bin/systemd-run";
     char str_arg_user[] = "--user";
     char str_arg_scope[] = "--scope"; // preserve the execution environment
