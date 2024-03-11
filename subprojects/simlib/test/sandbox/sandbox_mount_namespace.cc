@@ -74,30 +74,30 @@ TEST(sandbox, new_root_mount_path) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/sys/hypervisor",
+                                        .path = "/sys",
                                         .inode_limit = nullopt,
-                                        .read_only = false
+                                        .read_only = false,
                                     },
-                                    CreateDir{.path = "/sys/hypervisor/usr"},
+                                    CreateDir{.path = "/sys/usr"},
                                     BindMount{
                                         .source = "/usr",
-                                        .dest = "/sys/hypervisor/usr",
+                                        .dest = "/sys/usr",
                                         .no_exec = false,
                                     },
-                                    CreateDir{.path = "/sys/hypervisor/lib"},
+                                    CreateDir{.path = "/sys/lib"},
                                     BindMount{
                                         .source = "/lib",
-                                        .dest = "/sys/hypervisor/lib",
+                                        .dest = "/sys/lib",
                                         .no_exec = false,
                                     },
-                                    CreateDir{.path = "/sys/hypervisor/lib64"},
+                                    CreateDir{.path = "/sys/lib64"},
                                     BindMount{
                                         .source = "/lib64",
-                                        .dest = "/sys/hypervisor/lib64",
+                                        .dest = "/sys/lib64",
                                         .no_exec = false,
                                     },
                                 }},
-                                .new_root_mount_path = "/sys/hypervisor",
+                                .new_root_mount_path = "/sys",
                             },
                     },
             }
