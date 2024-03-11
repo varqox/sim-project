@@ -2,6 +2,7 @@
 #include "assert_result.hh"
 
 #include <chrono>
+#include <cstdlib>
 #include <fcntl.h>
 #include <optional>
 #include <simlib/file_descriptor.hh>
@@ -80,19 +81,24 @@ TEST(sandbox, cpu_time_limit_in_seconds) {
 // NOLINTNEXTLINE
 TEST(sandbox, max_file_size_in_bytes) {
     auto sc = sandbox::spawn_supervisor();
+
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
             FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "file_size"}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .env =
+                    {
+                        {std::string{"LD_LIBRARY_PATH="} + getenv("LD_LIBRARY_PATH")},
+                    },
                 .linux_namespaces =
                     {
                         .mount =
                             {
                                 .operations = {{
                                     sandbox::RequestOptions::LinuxNamespaces::Mount::MountTmpfs{
-                                        .path = "/tmp",
+                                        .path = "/dev",
                                         .max_total_size_of_files_in_bytes = std::nullopt,
                                         .inode_limit = 2,
                                         .read_only = false,

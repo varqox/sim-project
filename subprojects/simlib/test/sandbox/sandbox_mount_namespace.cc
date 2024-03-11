@@ -163,6 +163,11 @@ TEST(sandbox, mount_tmpfs) {
                                   {{tester_executable_path, "mount_tmpfs"}},
                                   {
                                       .stderr_fd = STDERR_FILENO,
+                                      .env =
+                                          {
+                                              {std::string{"LD_LIBRARY_PATH="} +
+                                               getenv("LD_LIBRARY_PATH")},
+                                          },
                                       .linux_namespaces =
                                           {
                                               .mount =
@@ -171,17 +176,17 @@ TEST(sandbox, mount_tmpfs) {
                                                           {
                                                               {
                                                                   MountTmpfs{
-                                                                      .path = "/tmp",
+                                                                      .path = "/dev",
                                                                       .inode_limit = nullopt,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_nullopt"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_nullopt",
                                                                       .max_total_size_of_files_in_bytes =
@@ -190,12 +195,12 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_0"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_0",
                                                                       .max_total_size_of_files_in_bytes =
@@ -204,12 +209,12 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_1"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_1",
                                                                       .max_total_size_of_files_in_bytes =
@@ -218,12 +223,12 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_32768"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "max_total_size_of_"
                                                                               "files_32768",
                                                                       .max_total_size_of_files_in_bytes =
@@ -232,81 +237,81 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "inode_limit_"
                                                                               "nullopt"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "inode_limit_nullopt",
                                                                       .inode_limit = nullopt,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/inode_limit_0"
+                                                                      .path = "/dev/inode_limit_0"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/inode_limit_0",
+                                                                      .path = "/dev/inode_limit_0",
                                                                       .inode_limit = 0,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/inode_limit_1"
+                                                                      .path = "/dev/inode_limit_1"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/inode_limit_1",
+                                                                      .path = "/dev/inode_limit_1",
                                                                       .inode_limit = 1,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/inode_limit_2"
+                                                                      .path = "/dev/inode_limit_2"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/inode_limit_2",
+                                                                      .path = "/dev/inode_limit_2",
                                                                       .inode_limit = 2,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "root_dir_mode_0000"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "root_dir_mode_0000",
                                                                       .root_dir_mode = 0000,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "root_dir_mode_0123"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "root_dir_mode_0123",
                                                                       .root_dir_mode = 0123,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "read_only_true"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/read_only_true",
+                                                                      .path = "/dev/read_only_true",
                                                                       .read_only = true,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "read_only_false"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/"
+                                                                      .path = "/dev/"
                                                                               "read_only_false",
                                                                       .inode_limit = nullopt,
                                                                       .read_only = false,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/no_exec_true"
+                                                                      .path = "/dev/no_exec_true"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/no_exec_true",
+                                                                      .path = "/dev/no_exec_true",
                                                                       .max_total_size_of_files_in_bytes =
                                                                           nullopt,
                                                                       .inode_limit = nullopt,
@@ -314,10 +319,10 @@ TEST(sandbox, mount_tmpfs) {
                                                                       .no_exec = true,
                                                                   },
                                                                   CreateDir{
-                                                                      .path = "/tmp/no_exec_false"
+                                                                      .path = "/dev/no_exec_false"
                                                                   },
                                                                   MountTmpfs{
-                                                                      .path = "/tmp/no_exec_false",
+                                                                      .path = "/dev/no_exec_false",
                                                                       .max_total_size_of_files_in_bytes =
                                                                           nullopt,
                                                                       .inode_limit = nullopt,
@@ -349,7 +354,7 @@ TEST(sandbox, mount_tmpfs_invalid_root_dir_mode) {
                             .mount =
                                 {
                                     .operations = {{
-                                        MountTmpfs{.path = "/tmp", .root_dir_mode = 01000},
+                                        MountTmpfs{.path = "/dev", .root_dir_mode = 01000},
                                     }},
                                 },
                         },
@@ -377,28 +382,28 @@ TEST(sandbox, mount_proc) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/tmp",
+                                        .path = "/dev",
                                         .inode_limit = nullopt,
                                         .read_only = false,
                                     },
-                                    CreateDir{.path = "/tmp/read_only_true"},
+                                    CreateDir{.path = "/dev/read_only_true"},
                                     MountProc{
-                                        .path = "/tmp/read_only_true",
+                                        .path = "/dev/read_only_true",
                                         .read_only = true,
                                     },
-                                    CreateDir{.path = "/tmp/read_only_false"},
+                                    CreateDir{.path = "/dev/read_only_false"},
                                     MountProc{
-                                        .path = "/tmp/read_only_false",
+                                        .path = "/dev/read_only_false",
                                         .read_only = false,
                                     },
-                                    CreateDir{.path = "/tmp/no_exec_true"},
+                                    CreateDir{.path = "/dev/no_exec_true"},
                                     MountProc{
-                                        .path = "/tmp/no_exec_true",
+                                        .path = "/dev/no_exec_true",
                                         .no_exec = true,
                                     },
-                                    CreateDir{.path = "/tmp/no_exec_false"},
+                                    CreateDir{.path = "/dev/no_exec_false"},
                                     MountProc{
-                                        .path = "/tmp/no_exec_false",
+                                        .path = "/dev/no_exec_false",
                                         .no_exec = false,
                                     },
                                 }},
@@ -418,101 +423,105 @@ TEST(sandbox, bind_mount) {
         {{tester_executable_path, "bind_mount"}},
         {
             .stderr_fd = STDERR_FILENO,
+                .env =
+                    {
+                        {std::string{"LD_LIBRARY_PATH="} + getenv("LD_LIBRARY_PATH")},
+                    },
             .linux_namespaces = {
                 .mount = {
                     .operations = {{
                         MountTmpfs{
-                            .path = "/tmp",
+                            .path = "/dev",
                             .inode_limit = nullopt,
                             .read_only = false,
                         },
-                        CreateDir{.path = "/tmp/tree"},
+                        CreateDir{.path = "/dev/tree"},
                         MountTmpfs{
-                            .path = "/tmp/tree",
+                            .path = "/dev/tree",
                             .max_total_size_of_files_in_bytes = nullopt,
                             .inode_limit = nullopt,
                             .read_only = false,
                             .no_exec = false,
                         },
-                        CreateFile{.path = "/tmp/tree/file"},
-                        CreateDir{.path = "/tmp/tree/dir"},
+                        CreateFile{.path = "/dev/tree/file"},
+                        CreateDir{.path = "/dev/tree/dir"},
                         MountTmpfs{
-                            .path = "/tmp/tree/dir",
+                            .path = "/dev/tree/dir",
                             .max_total_size_of_files_in_bytes = nullopt,
                             .inode_limit = nullopt,
                             .read_only = false,
                             .no_exec = false,
                         },
-                        CreateFile{.path = "/tmp/tree/dir/file"},
-                        CreateDir{.path = "/tmp/tree/dir/dir"},
-                        CreateDir{.path = "/tmp/recursive_true"},
+                        CreateFile{.path = "/dev/tree/dir/file"},
+                        CreateDir{.path = "/dev/tree/dir/dir"},
+                        CreateDir{.path = "/dev/recursive_true"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/recursive_true",
+                            .source = "/dev/tree",
+                            .dest = "/dev/recursive_true",
                             .recursive = true,
                         },
-                        CreateDir{.path = "/tmp/recursive_false"},
+                        CreateDir{.path = "/dev/recursive_false"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/recursive_false",
+                            .source = "/dev/tree",
+                            .dest = "/dev/recursive_false",
                             .recursive = false,
                         },
-                        CreateDir{.path = "/tmp/read_only_true_recursive_true"},
+                        CreateDir{.path = "/dev/read_only_true_recursive_true"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/read_only_true_recursive_true",
+                            .source = "/dev/tree",
+                            .dest = "/dev/read_only_true_recursive_true",
                             .recursive = true,
                             .read_only = true,
                         },
-                        CreateDir{.path = "/tmp/read_only_true_recursive_false"},
+                        CreateDir{.path = "/dev/read_only_true_recursive_false"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/read_only_true_recursive_false",
+                            .source = "/dev/tree",
+                            .dest = "/dev/read_only_true_recursive_false",
                             .recursive = false,
                             .read_only = true,
                         },
-                        CreateDir{.path = "/tmp/read_only_false_recursive_true"},
+                        CreateDir{.path = "/dev/read_only_false_recursive_true"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/read_only_false_recursive_true",
+                            .source = "/dev/tree",
+                            .dest = "/dev/read_only_false_recursive_true",
                             .recursive = true,
                             .read_only = false,
                         },
-                        CreateDir{.path = "/tmp/read_only_false_recursive_false"},
+                        CreateDir{.path = "/dev/read_only_false_recursive_false"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/read_only_false_recursive_false",
+                            .source = "/dev/tree",
+                            .dest = "/dev/read_only_false_recursive_false",
                             .recursive = false,
                             .read_only = false,
                         },
-                        CreateDir{.path = "/tmp/no_exec_true_recursive_true"},
+                        CreateDir{.path = "/dev/no_exec_true_recursive_true"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/no_exec_true_recursive_true",
+                            .source = "/dev/tree",
+                            .dest = "/dev/no_exec_true_recursive_true",
                             .recursive = true,
                             .read_only = false,
                             .no_exec = true,
                         },
-                        CreateDir{.path = "/tmp/no_exec_true_recursive_false"},
+                        CreateDir{.path = "/dev/no_exec_true_recursive_false"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/no_exec_true_recursive_false",
+                            .source = "/dev/tree",
+                            .dest = "/dev/no_exec_true_recursive_false",
                             .recursive = false,
                             .read_only = false,
                             .no_exec = true,
                         },
-                        CreateDir{.path = "/tmp/no_exec_false_recursive_true"},
+                        CreateDir{.path = "/dev/no_exec_false_recursive_true"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/no_exec_false_recursive_true",
+                            .source = "/dev/tree",
+                            .dest = "/dev/no_exec_false_recursive_true",
                             .recursive = true,
                             .read_only = false,
                             .no_exec = false,
                         },
-                        CreateDir{.path = "/tmp/no_exec_false_recursive_false"},
+                        CreateDir{.path = "/dev/no_exec_false_recursive_false"},
                         BindMount{
-                            .source = "/tmp/tree",
-                            .dest = "/tmp/no_exec_false_recursive_false",
+                            .source = "/dev/tree",
+                            .dest = "/dev/no_exec_false_recursive_false",
                             .recursive = false,
                             .read_only = false,
                             .no_exec = false,
@@ -539,16 +548,16 @@ TEST(sandbox, create_dir) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/tmp",
+                                        .path = "/dev",
                                         .inode_limit = nullopt,
                                         .read_only = false,
                                     },
                                     CreateDir{
-                                        .path = "/tmp/dir_mode_0000",
+                                        .path = "/dev/dir_mode_0000",
                                         .mode = 0000,
                                     },
                                     CreateDir{
-                                        .path = "/tmp/dir_mode_0314",
+                                        .path = "/dev/dir_mode_0314",
                                         .mode = 0314,
                                     },
                                 }},
@@ -576,11 +585,11 @@ TEST(sandbox, create_dir_invalid_mode) {
                                 {
                                     .operations = {{
                                         MountTmpfs{
-                                            .path = "/tmp",
+                                            .path = "/dev",
                                             .inode_limit = nullopt,
                                             .read_only = false,
                                         },
-                                        CreateDir{.path = "/tmp/dir", .mode = 01000},
+                                        CreateDir{.path = "/dev/dir", .mode = 01000},
                                     }},
                                 },
                         },
@@ -607,18 +616,18 @@ TEST(sandbox, create_existing_dir_fails) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/tmp",
+                                        .path = "/dev",
                                         .inode_limit = nullopt,
                                         .read_only = false,
                                     },
-                                    CreateDir{.path = "/tmp/dir"},
-                                    CreateDir{.path = "/tmp/dir"},
+                                    CreateDir{.path = "/dev/dir"},
+                                    CreateDir{.path = "/dev/dir"},
                                 }},
                             },
                     },
             }
         )),
-        "pid1: mkdir(\"/tmp/dir\") - File exists (os error 17)"
+        "pid1: mkdir(\"/dev/dir\") - File exists (os error 17)"
     );
 }
 
@@ -637,16 +646,16 @@ TEST(sandbox, create_file) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/tmp",
+                                        .path = "/dev",
                                         .inode_limit = nullopt,
                                         .read_only = false,
                                     },
                                     CreateFile{
-                                        .path = "/tmp/file_mode_0000",
+                                        .path = "/dev/file_mode_0000",
                                         .mode = 0000,
                                     },
                                     CreateFile{
-                                        .path = "/tmp/file_mode_0314",
+                                        .path = "/dev/file_mode_0314",
                                         .mode = 0314,
                                     },
                                 }},
@@ -674,11 +683,11 @@ TEST(sandbox, create_file_invalid_mode) {
                                 {
                                     .operations = {{
                                         MountTmpfs{
-                                            .path = "/tmp",
+                                            .path = "/dev",
                                             .inode_limit = nullopt,
                                             .read_only = false,
                                         },
-                                        CreateFile{.path = "/tmp/file", .mode = 01000},
+                                        CreateFile{.path = "/dev/file", .mode = 01000},
                                     }},
                                 },
                         },
@@ -705,18 +714,18 @@ TEST(sandbox, creating_existing_file_fails) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/tmp",
+                                        .path = "/dev",
                                         .inode_limit = nullopt,
                                         .read_only = false,
                                     },
-                                    CreateFile{.path = "/tmp/file"},
-                                    CreateFile{.path = "/tmp/file"},
+                                    CreateFile{.path = "/dev/file"},
+                                    CreateFile{.path = "/dev/file"},
                                 }},
                             },
                     },
             }
         )),
-        "pid1: open(\"/tmp/file\", O_CREAT | O_EXCL) - File exists (os error 17)"
+        "pid1: open(\"/dev/file\", O_CREAT | O_EXCL) - File exists (os error 17)"
     );
 }
 
@@ -735,22 +744,22 @@ TEST(sandbox, tracee_cannot_umount_mounts) {
                             {
                                 .operations = {{
                                     MountTmpfs{
-                                        .path = "/tmp",
+                                        .path = "/dev",
                                         .inode_limit = nullopt,
                                         .read_only = false,
                                     },
-                                    CreateDir{.path = "/tmp/tmp"},
-                                    MountTmpfs{.path = "/tmp/tmp"},
-                                    CreateDir{.path = "/tmp/proc"},
-                                    MountProc{.path = "/tmp/proc"},
-                                    CreateDir{.path = "/tmp/bind"},
+                                    CreateDir{.path = "/dev/tmp"},
+                                    MountTmpfs{.path = "/dev/tmp"},
+                                    CreateDir{.path = "/dev/proc"},
+                                    MountProc{.path = "/dev/proc"},
+                                    CreateDir{.path = "/dev/bind"},
                                     BindMount{
-                                        .source = "/tmp", .dest = "/tmp/bind", .recursive = false
+                                        .source = "/dev", .dest = "/dev/bind", .recursive = false
                                     },
-                                    CreateDir{.path = "/tmp/bind_recursive"},
+                                    CreateDir{.path = "/dev/bind_recursive"},
                                     BindMount{
-                                        .source = "/tmp",
-                                        .dest = "/tmp/bind_recursive",
+                                        .source = "/dev",
+                                        .dest = "/dev/bind_recursive",
                                         .recursive = true
                                     },
                                 }},
