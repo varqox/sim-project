@@ -83,6 +83,14 @@ sandbox::Result Rust::run_compiler(
             .dest = "/../usr/lib64",
             .no_exec = false,
         },
+        CreateDir{.path = "/../proc"},
+        MountTmpfs{
+            .path = "/../proc",
+            .max_total_size_of_files_in_bytes = 4096,
+            .inode_limit = 2,
+            .read_only = false,
+        },
+        CreateDir{.path = "/../proc/self"},
     };
     if (path_exists("/usr/libexec")) {
         operations.emplace_back(CreateDir{.path = "/../usr/libexec"});
@@ -102,10 +110,13 @@ sandbox::Result Rust::run_compiler(
         });
     }
     return sc.await_result(sc.send_request(
-        compiler_executable_path,
+        "/usr/bin/sh",
         merge(
             std::vector<std::string_view>{
-                "rustc",
+                "sh",
+                "-c",
+                R"(ln -s /usr/bin/rustc /proc/self/exe && exec "$0" "$@")",
+                compiler_executable_path,
                 "--edition",
                 edition_str,
                 "--codegen",
