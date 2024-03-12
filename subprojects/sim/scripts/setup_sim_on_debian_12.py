@@ -59,7 +59,7 @@ def update_apt():
 
 def apt_install(pkgs_str):
     update_apt()
-    root_cmd('apt install -y ' + pkgs_str)
+    root_cmd('env DEBIAN_FRONTEND=noninteractive apt install -y ' + pkgs_str)
 
 def setup_database():
     if setup_database in completed: return
