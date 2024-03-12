@@ -57,7 +57,7 @@ endif
 
 _install = get_option('install')
 
-mariadb_dep = dependency('mariadb')
+mariadb_dep = dependency('libmariadb')
 
 simlib_proj = subproject(
     'simlib',

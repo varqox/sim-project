@@ -25,7 +25,7 @@ You will need `meson` build system to be installed (on most platforms it is in t
 #### Debian
 
 ```sh
-sudo apt install g++ mariadb-server libmariadb-dev libseccomp-dev libzip-dev libssl-dev libcap-dev rustc fpc pkgconf meson
+sudo apt install g++ mariadb-server libmariadb-dev libseccomp-dev libzip-dev libcap-dev rustc fpc pkgconf meson
 ```
 
 Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ versions of some of the above packages are needed to build sim successfully.
