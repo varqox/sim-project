@@ -16,7 +16,7 @@ You will need `meson` build system to be installed (on most platforms it is in t
 ### Dependencies:
 
 - Meson build system
-- gcc/g++ (with 32 bit support &ndash; for compiling submissions) with C++17 support
+- gcc/g++ with C++17 support
 - MariaDB server
 - MariaDB client library
 - libseccomp
