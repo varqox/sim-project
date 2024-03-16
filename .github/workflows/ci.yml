@@ -1,0 +1,97 @@
+name: 'Build and test'
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  debian-12:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+      options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
+    steps:
+      - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
+      - run: useradd tester
+      - run: chown -R tester:tester /sys/fs/cgroup
+      - run: apt-get update
+      - run: env DEBIAN_FRONTEND=noninteractive apt-get install -y git
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: env DEBIAN_FRONTEND=noninteractive apt install -y g++ mariadb-server libmariadb-dev libseccomp-dev libzip-dev libcap-dev rustc fpc pkgconf meson libgtest-dev libgmock-dev
+      - run: chown tester:tester -R .
+      - run: su tester -c 'meson setup release-build/ -Dbuildtype=release -Dbuild=all -Dinstall=sim'
+      - run: su tester -c 'meson compile -C release-build/'
+      - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
+
+  ubuntu-23:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:23.10
+      options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
+    steps:
+      - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
+      - run: useradd tester
+      - run: chown -R tester:tester /sys/fs/cgroup
+      - run: apt-get update
+      - run: env DEBIAN_FRONTEND=noninteractive apt-get install -y git
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: env DEBIAN_FRONTEND=noninteractive apt install -y g++ mariadb-server libmariadb-dev libseccomp-dev libzip-dev libcap-dev rustc fpc pkgconf meson libgtest-dev libgmock-dev
+      - run: chown tester:tester -R .
+      - run: su tester -c 'meson setup release-build/ -Dbuildtype=release -Dbuild=all -Dinstall=sim'
+      - run: su tester -c 'meson compile -C release-build/'
+      - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
+
+  fedora-39:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:39
+      options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
+    steps:
+      - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
+      - run: useradd tester
+      - run: chown -R tester:tester /sys/fs/cgroup
+      - run: dnf install --quiet --assumeyes git
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: dnf install --assumeyes g++ mariadb-server mariadb-connector-c-devel libseccomp-devel libzip-devel libcap-devel rustc fpc pkgconf meson gtest-devel gmock-devel
+      - run: chown tester:tester -R .
+      - run: su tester -c 'meson setup release-build/ -Dbuildtype=release -Dbuild=all -Dinstall=sim'
+      - run: su tester -c 'meson compile -C release-build/'
+      - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
+
+  archlinux:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux
+      options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
+    steps:
+      - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
+      - run: useradd tester
+      - run: chown -R tester:tester /sys/fs/cgroup
+      - run: pacman -Sy --noconfirm git
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: pacman -S --noconfirm gcc mariadb mariadb-libs libseccomp libzip libcap rust fpc pkgconf meson gtest diffutils
+      - run: chown tester:tester -R .
+      - run: su tester -c 'meson setup release-build/ -Dbuildtype=release -Dbuild=all -Dinstall=sim'
+      - run: su tester -c 'meson compile -C release-build/'
+      - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
+
+  on-tmp:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+      options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
+    steps:
+      - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
+      - run: useradd tester
+      - run: chown -R tester:tester /sys/fs/cgroup
+      - run: apt-get update
+      - run: env DEBIAN_FRONTEND=noninteractive apt-get install -y git
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: env DEBIAN_FRONTEND=noninteractive apt install -y g++ mariadb-server libmariadb-dev libseccomp-dev libzip-dev libcap-dev rustc fpc pkgconf meson libgtest-dev libgmock-dev
+      - run: cp -r . /tmp/sim-project
+      - run: chown tester:tester -R /tmp/sim-project
+      - run: su tester -c 'cd /tmp/sim-project && meson setup release-build/ -Dbuildtype=release -Dbuild=all -Dinstall=sim'
+      - run: su tester -c 'cd /tmp/sim-project && meson compile -C release-build/'
+      - run: su tester -c 'cd /tmp/sim-project && meson test -C release-build/ --print-errorlogs'
