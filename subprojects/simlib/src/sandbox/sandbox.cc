@@ -31,6 +31,7 @@
 #include <string>
 #include <string_view>
 #include <sys/eventfd.h>
+#include <sys/file.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/socket.h>
@@ -182,15 +183,18 @@ namespace sandbox {
                 do_die_with_error(error_fd, "mkdir()");
             }
 
-            // Successfully created cgroup, move the current process to the created cgroup
+            /* Successfully created cgroup, move the current process to the created cgroup and
+             * remaining processes to an other cgroup */
+
             try {
                 cgroup_path += "/cgroup.procs";
             } catch (const std::exception& e) {
                 do_die_with_msg(error_fd, "exception: ", e.what());
             }
-            write_file(error_fd, cgroup_path.c_str(), "0");
-
-            /* Create and move remaining processes to an other cgroup */
+            int new_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
+            if (new_cgroup_procs_fd == 1) {
+                do_die_with_error(error_fd, "open()");
+            }
 
             cgroup_path.resize(
                 cgroup_path.size() - new_cgroup_name_len - std::strlen("/cgroup.procs")
@@ -199,6 +203,22 @@ namespace sandbox {
             auto cgroup_procs_fd = open(cgroup_path.c_str(), O_RDONLY | O_CLOEXEC);
             if (cgroup_procs_fd == -1) {
                 do_die_with_error(error_fd, "open()");
+            }
+
+            // Acquire the lock to prevent race conditions
+            for (;;) {
+                if (!flock(cgroup_procs_fd, LOCK_EX)) {
+                    break;
+                }
+                if (errno == EINTR) {
+                    continue;
+                }
+                do_die_with_error(error_fd, "flock()");
+            }
+
+            // Move the current proces to the created cgroup
+            if (write(new_cgroup_procs_fd, "0", 1) != 1) {
+                do_die_with_error(error_fd, "write()");
             }
 
             // Create "others" cgroup
@@ -213,8 +233,8 @@ namespace sandbox {
             } catch (const std::exception& e) {
                 do_die_with_msg(error_fd, "exception: ", e.what());
             }
-            auto other_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
-            if (other_cgroup_procs_fd == -1) {
+            auto others_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
+            if (others_cgroup_procs_fd == -1) {
                 do_die_with_error(error_fd, "open()");
             }
 
@@ -229,7 +249,7 @@ namespace sandbox {
                 if (pos != StringView::npos) {
                     str = str.substring(0, pos);
                 }
-                auto written = write(other_cgroup_procs_fd, str.data(), str.size());
+                auto written = write(others_cgroup_procs_fd, str.data(), str.size());
                 if (written == -1) {
                     if (errno == ESRCH) {
                         continue; // process died before we changed its cgroup
@@ -239,6 +259,10 @@ namespace sandbox {
                 if (static_cast<size_t>(written) != str.size()) {
                     do_die_with_msg(error_fd, "partial write()");
                 }
+            }
+            // Release the lock here (not in execveat()) to minimize the critical section
+            if (close(cgroup_procs_fd)) {
+                do_die_with_error(error_fd, "close()");
             }
 
             // Enable needed controllers in the new cgroup (needs to be done after moving out
