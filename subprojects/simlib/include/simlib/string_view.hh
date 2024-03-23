@@ -2,12 +2,12 @@
 
 #include <cassert>
 #include <cstring>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <simlib/from_unsafe.hh>
 #include <simlib/to_string.hh>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 
 template <class Char>
@@ -461,6 +461,9 @@ public:
 
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr StringView(StringBase&& s) noexcept : StringBase(s) {}
+
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr StringView(std::string_view sv) noexcept : StringBase(sv.data(), sv.size()) {}
 
     template <
         class T,

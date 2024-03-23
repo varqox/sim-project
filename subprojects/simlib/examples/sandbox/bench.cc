@@ -5,6 +5,7 @@
 #include <simlib/time_format_conversions.hh>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <vector>
 
 int main() {
     auto sb = sandbox::spawn_supervisor();

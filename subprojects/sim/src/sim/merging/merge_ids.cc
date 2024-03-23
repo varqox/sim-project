@@ -4,6 +4,7 @@
 #include <sim/merging/merge_ids.h>
 #include <sim/sql_fields/datetime.hh>
 #include <utility>
+#include <vector>
 
 using sim::sql_fields::Datetime;
 

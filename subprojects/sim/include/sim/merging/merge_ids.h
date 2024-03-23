@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
 #include <optional>
 #include <sim/sql_fields/datetime.hh>
+#include <vector>
 
 namespace sim::merging {
 
