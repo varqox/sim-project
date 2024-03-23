@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     }
 
     if (cmd_options.drop_tables) {
-        for (auto&& table : reverse_view(sim::db::tables)) {
+        for (auto&& table : reverse_view(sim::db::get_tables())) {
             try {
                 conn.update("DROP TABLE IF EXISTS `", table, '`');
             } catch (const std::exception& e) {

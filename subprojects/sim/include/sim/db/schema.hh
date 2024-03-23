@@ -15,7 +15,7 @@ struct DbSchema {
     std::vector<TableSchema> table_schemas;
 };
 
-extern const DbSchema schema;
+const DbSchema& get_schema();
 
 std::string normalized(const TableSchema& table_schema);
 

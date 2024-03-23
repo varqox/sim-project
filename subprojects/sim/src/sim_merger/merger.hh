@@ -287,8 +287,9 @@ protected:
         STACK_UNWINDING_MARK;
 
         assert(
-            std::find(sim::db::tables.begin(), sim::db::tables.end(), orig_sql_table_name) !=
-            sim::db::tables.end()
+            std::find(
+                sim::db::get_tables().begin(), sim::db::get_tables().end(), orig_sql_table_name
+            ) != sim::db::get_tables().end()
         );
     }
 

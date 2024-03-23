@@ -107,7 +107,7 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     auto normalized_schema = normalized(sim::db::get_db_schema(mysql));
     auto normalized_schema_hash = sha3_256(normalized_schema);
 
-    auto normalized_schema_after_upgrade = normalized(sim::db::schema);
+    auto normalized_schema_after_upgrade = normalized(sim::db::get_schema());
     auto normalized_schema_hash_after_upgrade = sha3_256(normalized_schema_after_upgrade);
 
     if (normalized_schema == normalized_schema_after_upgrade) {
@@ -131,7 +131,7 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     }
     if (normalized_schema.empty()) {
         stdlog("\033[1;34mDatabase is empty. Started initializing the database.\033[m");
-        for (const auto& table_schema : sim::db::schema.table_schemas) {
+        for (const auto& table_schema : sim::db::get_schema().table_schemas) {
             mysql.update(table_schema.create_table_sql);
         }
         // Create sim root user

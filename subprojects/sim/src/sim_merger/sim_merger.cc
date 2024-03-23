@@ -194,7 +194,7 @@ static int true_main(int argc, char** argv) {
     STACK_UNWINDING_MARK;
     // Rename all current tables
     vector<InplaceBuff<64>> renamed_tables;
-    renamed_tables.reserve(sim::db::tables.size());
+    renamed_tables.reserve(sim::db::get_tables().size());
     bool merge_successful = false;
     Defer table_rename_undoer([&] {
         STACK_UNWINDING_MARK;
@@ -229,7 +229,7 @@ static int true_main(int argc, char** argv) {
     STACK_UNWINDING_MARK;
     stdlog("Renaming tables");
     conn.update("SET FOREIGN_KEY_CHECKS=0");
-    for (auto table_name : sim::db::tables) {
+    for (auto table_name : sim::db::get_tables()) {
         conn.update("DROP TABLE IF EXISTS ", main_sim_table_prefix, table_name);
         conn.update("RENAME TABLE ", table_name, " TO ", main_sim_table_prefix, table_name);
         renamed_tables.emplace_back(table_name);
@@ -355,7 +355,7 @@ static int true_main(int argc, char** argv) {
 
     stdlog("\033[1;33mRemoving old main tables\033[m");
     conn.update("SET FOREIGN_KEY_CHECKS=0");
-    for (auto table_name : sim::db::tables) {
+    for (auto table_name : sim::db::get_tables()) {
         conn.update("DROP TABLE ", main_sim_table_prefix, table_name);
     }
     conn.update("SET FOREIGN_KEY_CHECKS=1");
