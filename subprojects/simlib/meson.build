@@ -326,6 +326,7 @@ tests = {
     'test/member_comparator.cc': {},
     'test/memory.cc': {},
     'test/merge.cc': {},
+    'test/meta/concated_to_cstr.cc': {},
     'test/meta/count.cc': {},
     'test/mysql/mysql.cc': {},
     'test/noexcept_concat.cc': {},
