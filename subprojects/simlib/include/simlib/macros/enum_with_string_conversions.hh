@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdlib>
+#include <exception>
 #include <optional>
 #include <simlib/macros/macros.hh>
 #include <simlib/string_view.hh>
@@ -22,7 +22,7 @@
         /* NOLINTNEXTLINE */                                                             \
         constexpr enum_name(Enum x = {}) : val{x} {}                                     \
                                                                                          \
-        constexpr explicit enum_name(UnderlyingType x) : val{x} {}                       \
+        constexpr explicit enum_name(UnderlyingType x) : val{static_cast<Enum>(x)} {}    \
                                                                                          \
         constexpr operator Enum() const noexcept { return val; }                         \
                                                                                          \
@@ -36,7 +36,7 @@
             switch (val) {                                                               \
                 MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_STR_CASES, seq)                 \
             }                                                                            \
-            std::abort(); /* invalid enum variant */                                     \
+            std::terminate(); /* invalid enum variant */                                 \
         }                                                                                \
                                                                                          \
         friend constexpr CStringView to_str(enum_name x) noexcept { return x.to_str(); } \
@@ -45,11 +45,19 @@
             switch (val) {                                                               \
                 MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES, seq)          \
             }                                                                            \
-            std::abort(); /* invalid enum variant */                                     \
+            std::terminate(); /* invalid enum variant */                                 \
         }                                                                                \
                                                                                          \
         friend constexpr CStringView to_quoted_str(enum_name x) noexcept {               \
             return x.to_quoted_str();                                                    \
+        }                                                                                \
+                                                                                         \
+        constexpr bool has_known_value() const noexcept {                                \
+            switch (val) {                                                               \
+                MAP(IMPL_ENUM_WITH_STRING_CONVERSIONS_HAS_KNOWN_VALUE_CASES, seq)        \
+                return true;                                                             \
+            default: return false;                                                       \
+            }                                                                            \
         }                                                                                \
                                                                                          \
         static constexpr std::optional<enum_name> from_str(StringView str) noexcept {    \
@@ -71,6 +79,8 @@
 
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_TO_QUOTED_STR_CASES(name, val, str_val) \
     case name: return "\"" str_val "\"";
+
+#define IMPL_ENUM_WITH_STRING_CONVERSIONS_HAS_KNOWN_VALUE_CASES(name, val, str_val) case name:
 
 #define IMPL_ENUM_WITH_STRING_CONVERSIONS_FROM_STR_IFS(name, val, str_val) \
     if (str == (str_val))                                                  \
