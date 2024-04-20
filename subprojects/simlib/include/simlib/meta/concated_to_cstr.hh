@@ -29,7 +29,7 @@ constexpr inline auto concated_to_cstr = [] {
     constexpr auto lam = [] {
         std::array<char, (cstr_length(str) + ... + 1)> res{};
         size_t idx = 0;
-        auto append = [&res, &idx](const char* s) {
+        [[maybe_unused]] auto append = [&res, &idx](const char* s) {
             while (*s) {
                 res[idx++] = *s++;
             }

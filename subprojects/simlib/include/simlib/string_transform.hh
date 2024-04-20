@@ -139,8 +139,8 @@ inline std::string html_escape(T&& str) {
     return res;
 }
 
-template <class... Arg, std::enable_if_t<(is_string_argument<Arg> and ...), int> = 0>
-void append_stringified_json(std::string& str, Arg&&... arg) {
+template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+void append_stringified_json(std::string& str, Args&&... args) {
     auto safe_append = [&str](auto&& arg) {
         auto p = ::data(arg);
         for (size_t i = 0, len = string_length(arg); i < len; ++i) {
@@ -162,7 +162,7 @@ void append_stringified_json(std::string& str, Arg&&... arg) {
     };
 
     str += '"';
-    (safe_append(stringify(std::forward<Arg>(arg))), ...);
+    (safe_append(stringify(std::forward<Args>(args))), ...);
     str += '"';
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <exception> // for std::terminate
 #include <optional>
 #include <simlib/always_false.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
