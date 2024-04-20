@@ -99,6 +99,8 @@ public:
 
     ~StringBase() = default;
 
+    explicit constexpr operator std::string_view() const noexcept { return {data(), size()}; }
+
     // Returns whether the StringBase is empty (size() == 0)
     [[nodiscard]] constexpr bool empty() const noexcept { return (len == 0); }
 
@@ -713,6 +715,9 @@ public:
     // construction of CStringView
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr operator StringView() && noexcept { return {data(), size()}; }
+
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr operator std::string_view() const noexcept { return {data(), size()}; }
 
     template <
         class T,

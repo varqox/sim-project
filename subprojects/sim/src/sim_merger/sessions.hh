@@ -4,15 +4,15 @@
 
 #include <set>
 #include <sim/random.hh>
-#include <sim/sessions/session.hh>
+#include <sim/sessions/old_session.hh>
 #include <simlib/defer.hh>
 
 namespace sim_merger {
 
-class SessionsMerger : public Merger<sim::sessions::Session> {
+class SessionsMerger : public Merger<sim::sessions::OldSession> {
     const UsersMerger& users_;
 
-    std::set<decltype(sim::sessions::Session::id)> taken_sessions_ids_;
+    std::set<decltype(sim::sessions::OldSession::id)> taken_sessions_ids_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
@@ -26,8 +26,9 @@ class SessionsMerger : public Merger<sim::sessions::Session> {
             THROW("BUG");
         }();
 
-        sim::sessions::Session ses;
-        auto stmt = conn.prepare(
+        sim::sessions::OldSession ses;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT id, csrf_token, user_id, data, user_agent, expires FROM ",
             record_set.sql_table_name
         );
@@ -44,7 +45,7 @@ class SessionsMerger : public Merger<sim::sessions::Session> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::sessions::Session& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::sessions::OldSession& /*unused*/) { return nullptr; });
     }
 
     PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id
@@ -52,17 +53,18 @@ class SessionsMerger : public Merger<sim::sessions::Session> {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_sessions_ids_.emplace(new_id).second) {
-            new_id = sim::generate_random_token(decltype(sim::sessions::Session::id)::max_len);
+            new_id = sim::generate_random_token(decltype(sim::sessions::OldSession::id)::max_len);
         }
-        return decltype(sim::sessions::Session::id)(new_id);
+        return decltype(sim::sessions::OldSession::id)(new_id);
     }
 
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, csrf_token, user_id, data, user_agent, expires) VALUES(?, ?, ?, ?, ?, "

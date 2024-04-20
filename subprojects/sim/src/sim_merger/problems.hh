@@ -3,7 +3,7 @@
 #include "internal_files.hh"
 #include "users.hh"
 
-#include <sim/problems/problem.hh>
+#include <sim/problems/old_problem.hh>
 #include <simlib/concat.hh>
 #include <simlib/libzip.hh>
 #include <simlib/sim/problem_package.hh>
@@ -31,19 +31,20 @@ static std::pair<std::vector<std::string>, std::string> package_fingerprint(File
     return {entries_list, statement_contents};
 }
 
-class ProblemsMerger : public Merger<sim::problems::Problem> {
+class ProblemsMerger : public Merger<sim::problems::OldProblem> {
     const InternalFilesMerger& internal_files_;
     const UsersMerger& users_;
     bool reset_new_problems_time_limits_;
 
-    std::map<decltype(sim::problems::Problem::id), decltype(sim::problems::Problem::id)>
+    std::map<decltype(sim::problems::OldProblem::id), decltype(sim::problems::OldProblem::id)>
         to_merge_; // (new problem id, new target problem id)
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
-        sim::problems::Problem prob;
-        mysql::Optional<decltype(prob.owner_id)::value_type> m_owner_id;
-        auto stmt = conn.prepare(
+        sim::problems::OldProblem prob;
+        old_mysql::Optional<decltype(prob.owner_id)::value_type> m_owner_id;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT id, file_id, type, name, label, "
             "simfile, owner_id, created_at, updated_at FROM ",
             record_set.sql_table_name
@@ -75,7 +76,7 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::problems::Problem& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::problems::OldProblem& /*unused*/) { return nullptr; });
 
         std::map<size_t, size_t> dsu; // (problem idx, target problem idx)
         // Returns problem index to which problem of index @p idx will be merged
@@ -96,7 +97,7 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
 
         std::map<
             std::invoke_result_t<decltype(package_fingerprint), FilePath>,
-            decltype(sim::problems::Problem::id)>
+            decltype(sim::problems::OldProblem::id)>
             pkg_fingerprint_to_problem_idx;
         for (size_t idx = 0; idx < new_table_.size(); ++idx) {
             dsu.emplace(idx, idx);
@@ -139,9 +140,10 @@ class ProblemsMerger : public Merger<sim::problems::Problem> {
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, file_id, type, name, label, simfile,"
@@ -166,7 +168,7 @@ public:
             );
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 
@@ -186,16 +188,18 @@ public:
 
     void run_after_saving_hooks() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
+        auto transaction = mysql->start_repeatable_read_transaction();
         // Add jobs to merge the problems
         for (auto [src_id, dest_id] : to_merge_) {
             throw_assert(src_id != dest_id);
-            conn.prepare("INSERT jobs (creator, status, priority, type, created_at,"
+            auto old_mysql = old_mysql::ConnectionView{*mysql};
+            old_mysql
+                .prepare("INSERT jobs (creator, status, priority, type, created_at,"
                          " aux_id, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
                 .bind_and_execute(
-                    EnumVal(sim::jobs::Job::Status::PENDING),
-                    default_priority(sim::jobs::Job::Type::MERGE_PROBLEMS),
-                    EnumVal(sim::jobs::Job::Type::MERGE_PROBLEMS),
+                    EnumVal(sim::jobs::OldJob::Status::PENDING),
+                    default_priority(sim::jobs::OldJob::Type::MERGE_PROBLEMS),
+                    EnumVal(sim::jobs::OldJob::Type::MERGE_PROBLEMS),
                     mysql_date(),
                     src_id,
                     sim::jobs::MergeProblemsInfo(dest_id, false).dump()
@@ -204,7 +208,7 @@ public:
 
         if (reset_new_problems_time_limits_) {
             for (auto& new_record : new_table_) {
-                const sim::problems::Problem& p = new_record.data;
+                const sim::problems::OldProblem& p = new_record.data;
                 if (not new_record.other_ids.empty() and to_merge_.count(p.id) == 0) {
                     schedule_reseting_problem_time_limits(p.id);
                 }
@@ -215,17 +219,19 @@ public:
     }
 
 private:
-    static void schedule_reseting_problem_time_limits(decltype(sim::problems::Problem::id
+    static void schedule_reseting_problem_time_limits(decltype(sim::problems::OldProblem::id
     ) problem_new_id) {
-        conn.prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql
+            .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
                      " info, data) "
                      "VALUES(NULL, ?, ?, ?, ?, ?, '', '')")
             .bind_and_execute(
-                EnumVal(sim::jobs::Job::Status::PENDING),
+                EnumVal(sim::jobs::OldJob::Status::PENDING),
                 default_priority(
-                    sim::jobs::Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION
+                    sim::jobs::OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION
                 ),
-                EnumVal(sim::jobs::Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+                EnumVal(sim::jobs::OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
                 mysql_date(),
                 problem_new_id
             );

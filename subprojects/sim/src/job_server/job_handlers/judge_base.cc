@@ -6,7 +6,7 @@
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/throw_assert.hh>
 
-using sim::submissions::Submission;
+using sim::submissions::OldSubmission;
 
 namespace job_server::job_handlers {
 
@@ -17,17 +17,17 @@ JudgeBase::JudgeBase()
       .score_cut_lambda = sim::SCORE_CUT_LAMBDA,
   }} {}
 
-sim::SolutionLanguage JudgeBase::to_sol_lang(Submission::Language lang) {
+sim::SolutionLanguage JudgeBase::to_sol_lang(OldSubmission::Language lang) {
     STACK_UNWINDING_MARK;
 
     switch (lang) {
-    case Submission::Language::C11: return sim::SolutionLanguage::C11;
-    case Submission::Language::CPP11: return sim::SolutionLanguage::CPP11;
-    case Submission::Language::CPP14: return sim::SolutionLanguage::CPP14;
-    case Submission::Language::CPP17: return sim::SolutionLanguage::CPP17;
-    case Submission::Language::PASCAL: return sim::SolutionLanguage::PASCAL;
-    case Submission::Language::PYTHON: return sim::SolutionLanguage::PYTHON;
-    case Submission::Language::RUST: return sim::SolutionLanguage::RUST;
+    case OldSubmission::Language::C11: return sim::SolutionLanguage::C11;
+    case OldSubmission::Language::CPP11: return sim::SolutionLanguage::CPP11;
+    case OldSubmission::Language::CPP14: return sim::SolutionLanguage::CPP14;
+    case OldSubmission::Language::CPP17: return sim::SolutionLanguage::CPP17;
+    case OldSubmission::Language::PASCAL: return sim::SolutionLanguage::PASCAL;
+    case OldSubmission::Language::PYTHON: return sim::SolutionLanguage::PYTHON;
+    case OldSubmission::Language::RUST: return sim::SolutionLanguage::RUST;
     }
 
     THROW("Invalid Language: ", (int)EnumVal(lang).to_int());
@@ -155,7 +155,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr, bool 
     return report;
 }
 
-Submission::Status JudgeBase::calc_status(const sim::JudgeReport& jr) {
+OldSubmission::Status JudgeBase::calc_status(const sim::JudgeReport& jr) {
     STACK_UNWINDING_MARK;
     using sim::JudgeReport;
 
@@ -163,7 +163,7 @@ Submission::Status JudgeBase::calc_status(const sim::JudgeReport& jr) {
     for (auto&& group : jr.groups) {
         for (auto&& test : group.tests) {
             if (test.status == JudgeReport::Test::CHECKER_ERROR) {
-                return Submission::Status::JUDGE_ERROR;
+                return OldSubmission::Status::JUDGE_ERROR;
             }
         }
     }
@@ -173,18 +173,18 @@ Submission::Status JudgeBase::calc_status(const sim::JudgeReport& jr) {
             switch (test.status) {
             case JudgeReport::Test::OK:
             case JudgeReport::Test::SKIPPED: continue;
-            case JudgeReport::Test::WA: return Submission::Status::WA;
-            case JudgeReport::Test::TLE: return Submission::Status::TLE;
-            case JudgeReport::Test::MLE: return Submission::Status::MLE;
-            case JudgeReport::Test::OLE: return Submission::Status::OLE;
-            case JudgeReport::Test::RTE: return Submission::Status::RTE;
+            case JudgeReport::Test::WA: return OldSubmission::Status::WA;
+            case JudgeReport::Test::TLE: return OldSubmission::Status::TLE;
+            case JudgeReport::Test::MLE: return OldSubmission::Status::MLE;
+            case JudgeReport::Test::OLE: return OldSubmission::Status::OLE;
+            case JudgeReport::Test::RTE: return OldSubmission::Status::RTE;
             case JudgeReport::Test::CHECKER_ERROR:
                 throw_assert(false); // This should be handled in the above loops
             }
         }
     }
 
-    return Submission::Status::OK;
+    return OldSubmission::Status::OK;
 }
 
 void JudgeBase::load_problem_package(FilePath problem_pkg_path) {

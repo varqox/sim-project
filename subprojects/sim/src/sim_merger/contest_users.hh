@@ -4,20 +4,21 @@
 #include "merger.hh"
 #include "users.hh"
 
-#include <sim/contest_users/contest_user.hh>
+#include <sim/contest_users/old_contest_user.hh>
 
 namespace sim_merger {
 
-class ContestUsersMerger : public Merger<sim::contest_users::ContestUser> {
+class ContestUsersMerger : public Merger<sim::contest_users::OldContestUser> {
     const UsersMerger& users_;
     const ContestsMerger& contests_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::contest_users::ContestUser cu{};
+        sim::contest_users::OldContestUser cu{};
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt =
-            conn.prepare("SELECT user_id, contest_id, mode FROM ", record_set.sql_table_name);
+            old_mysql.prepare("SELECT user_id, contest_id, mode FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(cu.user_id, cu.contest_id, cu.mode);
         while (stmt.next()) {
@@ -30,7 +31,8 @@ class ContestUsersMerger : public Merger<sim::contest_users::ContestUser> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::contest_users::ContestUser& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contest_users::OldContestUser& /*unused*/) { return nullptr; }
+        );
     }
 
     PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id
@@ -41,9 +43,10 @@ class ContestUsersMerger : public Merger<sim::contest_users::ContestUser> {
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(user_id, contest_id, mode) "

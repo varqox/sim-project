@@ -3,9 +3,8 @@
 #include "contest_entry_token.hh"
 #include "utils.hh"
 
-#include <cstdlib>
+#include <exception>
 #include <sim/contest_users/contest_user.hh>
-#include <sim/users/user.hh>
 
 using sim::contest_users::ContestUser;
 
@@ -26,13 +25,13 @@ ContestEntryToken contest_entry_token_for(
         return ContestEntryToken{
             .view = is_contest_moderator,
             .create = is_contest_moderator,
-            .regen = is_contest_moderator,
+            .regenerate = is_contest_moderator,
             .delete_ = is_contest_moderator,
             .use = true,
             .view_contest_name = true,
         };
     }
-    std::abort();
+    std::terminate();
 }
 
 } // namespace web_server::capabilities

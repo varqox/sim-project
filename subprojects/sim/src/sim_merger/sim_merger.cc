@@ -15,6 +15,8 @@
 
 #include <iostream>
 #include <sim/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
+#include <simlib/concat_tostr.hh>
 #include <simlib/config_file.hh>
 #include <simlib/defer.hh>
 #include <simlib/file_info.hh>
@@ -161,7 +163,12 @@ static int true_main(int argc, char** argv) {
 
     try {
         // Get connection
-        conn = sim::mysql::make_conn_with_credential_file(concat(main_sim_build, ".db.config"));
+        // NOLINTNEXTLINE(modernize-make-unique)
+        mysql = std::unique_ptr<sim::mysql::Connection>{
+            new sim::mysql::Connection{sim::mysql::Connection::from_credential_file(
+                concat_tostr(main_sim_build, ".db.config").c_str()
+            )}
+        };
     } catch (const std::exception& e) {
         errlog("\033[31mFailed to connect to database\033[m - ", e.what());
         return 1;
@@ -202,39 +209,43 @@ static int true_main(int argc, char** argv) {
             return;
         }
 
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
         try {
             stdlog("Restoring tables");
-            conn.update("SET FOREIGN_KEY_CHECKS=0");
+            old_mysql.update("SET FOREIGN_KEY_CHECKS=0");
         } catch (...) {
         }
         for (auto& table_name : renamed_tables) {
             try {
-                conn.update("DROP TABLE IF EXISTS ", table_name);
+                old_mysql.update("DROP TABLE IF EXISTS ", table_name);
             } catch (const std::exception& e) {
                 ERRLOG_CATCH(e);
             }
             try {
-                conn.update("RENAME TABLE ", main_sim_table_prefix, table_name, " TO ", table_name);
+                old_mysql.update(
+                    "RENAME TABLE ", main_sim_table_prefix, table_name, " TO ", table_name
+                );
             } catch (const std::exception& e) {
                 ERRLOG_CATCH(e);
             }
         }
 
         try {
-            conn.update("SET FOREIGN_KEY_CHECKS=1");
+            old_mysql.update("SET FOREIGN_KEY_CHECKS=1");
         } catch (...) {
         }
     });
 
     STACK_UNWINDING_MARK;
     stdlog("Renaming tables");
-    conn.update("SET FOREIGN_KEY_CHECKS=0");
+    auto old_mysql = old_mysql::ConnectionView{*mysql};
+    old_mysql.update("SET FOREIGN_KEY_CHECKS=0");
     for (auto table_name : sim::db::get_tables()) {
-        conn.update("DROP TABLE IF EXISTS ", main_sim_table_prefix, table_name);
-        conn.update("RENAME TABLE ", table_name, " TO ", main_sim_table_prefix, table_name);
+        old_mysql.update("DROP TABLE IF EXISTS ", main_sim_table_prefix, table_name);
+        old_mysql.update("RENAME TABLE ", table_name, " TO ", main_sim_table_prefix, table_name);
         renamed_tables.emplace_back(table_name);
     }
-    conn.update("SET FOREIGN_KEY_CHECKS=1");
+    old_mysql.update("SET FOREIGN_KEY_CHECKS=1");
 
     load_tables_from_other_sim_backup();
 
@@ -329,16 +340,16 @@ static int true_main(int argc, char** argv) {
         }
     });
 
-    conn.update("SET AUTOCOMMIT=0");
+    old_mysql.update("SET AUTOCOMMIT=0");
 
     stdlog("\033[1;36mSaving merged data:\033[m");
-    conn.update("SET FOREIGN_KEY_CHECKS=0");
+    old_mysql.update("SET FOREIGN_KEY_CHECKS=0");
     for (MergerBase* merger : mergers) {
         stdlog("> \033[1;36m", merger->sql_table_name(), "\033[m...");
         merger->save_merged();
         saves_to_rollback.emplace_back(merger);
     }
-    conn.update("SET FOREIGN_KEY_CHECKS=1");
+    old_mysql.update("SET FOREIGN_KEY_CHECKS=1");
 
     stdlog("\033[1;36mRunning after-saving hooks:\033[m");
     for (MergerBase* merger : mergers) {
@@ -346,19 +357,19 @@ static int true_main(int argc, char** argv) {
         merger->run_after_saving_hooks();
     }
 
-    conn.update("COMMIT");
-    conn.update("SET AUTOCOMMIT=1");
+    old_mysql.update("COMMIT");
+    old_mysql.update("SET AUTOCOMMIT=1");
 
     stdlog("\033[1;32mSim merging is complete\033[m");
     saves_to_rollback.clear();
     merge_successful = true;
 
     stdlog("\033[1;33mRemoving old main tables\033[m");
-    conn.update("SET FOREIGN_KEY_CHECKS=0");
+    old_mysql.update("SET FOREIGN_KEY_CHECKS=0");
     for (auto table_name : sim::db::get_tables()) {
-        conn.update("DROP TABLE ", main_sim_table_prefix, table_name);
+        old_mysql.update("DROP TABLE ", main_sim_table_prefix, table_name);
     }
-    conn.update("SET FOREIGN_KEY_CHECKS=1");
+    old_mysql.update("SET FOREIGN_KEY_CHECKS=1");
 
     return 0;
 }

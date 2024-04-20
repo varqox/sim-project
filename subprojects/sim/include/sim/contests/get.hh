@@ -1,17 +1,18 @@
 #pragma once
 
 #include <optional>
-#include <sim/contests/contest.hh>
+#include <sim/contests/old_contest.hh>
 #include <sim/contests/permissions.hh>
-#include <sim/sql_fields/inf_datetime.hh>
+#include <sim/old_sql_fields/inf_datetime.hh>
+#include <simlib/enum_val.hh>
 
 namespace sim::contests {
 
 enum class GetIdKind { CONTEST, CONTEST_ROUND, CONTEST_PROBLEM };
 
 template <class T, class U>
-std::optional<std::pair<Contest, Permissions>>
-get(mysql::Connection& mysql,
+std::optional<std::pair<OldContest, Permissions>>
+get(sim::mysql::Connection& mysql,
     GetIdKind id_kind,
     T&& id,
     std::optional<U> user_id,
@@ -42,15 +43,16 @@ get(mysql::Connection& mysql,
     }
     }
 
-    Contest contest;
-    mysql::Optional<decltype(users::User::type)> user_type;
-    mysql::Optional<decltype(contest_users::ContestUser::mode)> cu_mode;
-    mysql::Optional<sql_fields::InfDatetime> round_begins;
+    OldContest contest;
+    old_mysql::Optional<EnumVal<decltype(users::User::type)>> user_type;
+    old_mysql::Optional<decltype(contest_users::OldContestUser::mode)> cu_mode;
+    old_mysql::Optional<old_sql_fields::InfDatetime> round_begins;
 
-    mysql::Statement stmt;
+    old_mysql::Statement stmt;
+    auto old_mysql = old_mysql::ConnectionView{mysql};
     if (user_id) {
         fields.append(", u.type, cu.mode");
-        stmt = mysql.prepare(
+        stmt = old_mysql.prepare(
             "SELECT ",
             fields,
             " "
@@ -66,7 +68,7 @@ get(mysql::Connection& mysql,
         );
 
     } else {
-        stmt = mysql.prepare("SELECT ", fields, " FROM contests c ", id_part_sql);
+        stmt = old_mysql.prepare("SELECT ", fields, " FROM contests c ", id_part_sql);
         stmt.bind_and_execute(id);
         stmt.res_bind_all(contest.id, contest.name, contest.is_public, round_begins);
     }

@@ -2,11 +2,12 @@
 
 #include <array>
 #include <climits>
-#include <simlib/mysql/mysql.hh>
+#include <memory>
+#include <sim/mysql/mysql.hh>
 
 namespace sim_merger {
 
-inline mysql::Connection conn;
+inline std::unique_ptr<sim::mysql::Connection> mysql;
 
 inline InplaceBuff<PATH_MAX> main_sim_build;
 inline InplaceBuff<PATH_MAX> other_sim_build;

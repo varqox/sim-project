@@ -11,9 +11,8 @@
 
 #include <optional>
 #include <sim/jobs/utils.hh>
-#include <sim/problems/problem.hh>
-#include <sim/users/user.hh>
-#include <simlib/mysql/mysql.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 
@@ -34,25 +33,25 @@ namespace web_server::web_worker {
     (func);        \
     }
 
-WebWorker::WebWorker(mysql::Connection& mysql) : mysql{mysql} {
+WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     // Handlers
     // clang-format off
     GET("/api/contest/{u64}/entry_tokens")(contest_entry_tokens::api::view);
     GET("/api/contest_entry_token/{string}/contest_name")(contest_entry_tokens::api::view_contest_name);
     GET("/api/problem/{u64}")(problems::api::view_problem);
-    GET("/api/problems")(problems::api::list_all_problems);
-    GET("/api/problems/id%3C/{u64}")(problems::api::list_all_problems_below_id);
-    GET("/api/problems/type=/{custom}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_all_problems_with_type);
-    GET("/api/problems/type=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_all_problems_with_type_below_id);
+    GET("/api/problems")(problems::api::list_problems);
+    GET("/api/problems/id%3C/{u64}")(problems::api::list_problems_below_id);
+    GET("/api/problems/type=/{custom}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_problems_with_type);
+    GET("/api/problems/type=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_problems_with_type_below_id);
     GET("/api/user/{u64}")(users::api::view_user);
     GET("/api/user/{u64}/problems")(problems::api::list_user_problems);
     GET("/api/user/{u64}/problems/id%3C/{u64}")(problems::api::list_user_problems_below_id);
     GET("/api/user/{u64}/problems/type=/{custom}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_user_problems_with_type);
     GET("/api/user/{u64}/problems/type=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::type)::from_str)(problems::api::list_user_problems_with_type_below_id);
-    GET("/api/users")(users::api::list_all_users);
-    GET("/api/users/id%3E/{u64}")(users::api::list_all_users_above_id);
-    GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_all_users_with_type);
-    GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_all_users_with_type_above_id);
+    GET("/api/users")(users::api::list_users);
+    GET("/api/users/id%3E/{u64}")(users::api::list_users_above_id);
+    GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type);
+    GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
     GET("/problems")(problems::ui::list_problems);
     GET("/sign_in")(users::ui::sign_in);
@@ -68,8 +67,8 @@ WebWorker::WebWorker(mysql::Connection& mysql) : mysql{mysql} {
     POST("/api/contest/{u64}/entry_tokens/add_short")(contest_entry_tokens::api::add_short);
     POST("/api/contest/{u64}/entry_tokens/delete")(contest_entry_tokens::api::delete_);
     POST("/api/contest/{u64}/entry_tokens/delete_short")(contest_entry_tokens::api::delete_short);
-    POST("/api/contest/{u64}/entry_tokens/regen")(contest_entry_tokens::api::regen);
-    POST("/api/contest/{u64}/entry_tokens/regen_short")(contest_entry_tokens::api::regen_short);
+    POST("/api/contest/{u64}/entry_tokens/regenerate")(contest_entry_tokens::api::regenerate);
+    POST("/api/contest/{u64}/entry_tokens/regenerate_short")(contest_entry_tokens::api::regenerate_short);
     POST("/api/contest_entry_token/{string}/use")(contest_entry_tokens::api::use);
     POST("/api/sign_in")(users::api::sign_in);
     POST("/api/sign_out")(users::api::sign_out);
@@ -110,13 +109,16 @@ std::variant<Response, Request> WebWorker::handle(Request req) {
 template <class ResponseMaker>
 Response WebWorker::handler_impl(ResponseMaker&& response_maker) {
     static_assert(std::is_invocable_r_v<Response, ResponseMaker&&, Context&>);
+    auto transaction = mysql.start_repeatable_read_transaction(
+    ); // Needs to happen before constructing old_mysql::ConnectionView to reconnect in case of
+       // connection failure
     auto ctx = Context{
         .request = request.value(),
         .mysql = mysql,
+        .old_mysql = old_mysql::ConnectionView{mysql},
         .session = std::nullopt,
         .cookie_changes = {},
     };
-    auto transaction = ctx.mysql.start_transaction();
     ctx.open_session();
     auto response = std::forward<ResponseMaker>(response_maker)(ctx);
     assert(

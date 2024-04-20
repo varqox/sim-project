@@ -1,6 +1,7 @@
 #include "sim.hh"
 
-#include <sim/is_username.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/sql/sql.hh>
 #include <sim/users/user.hh>
 #include <simlib/random.hh>
 #include <simlib/sha.hh>
@@ -20,7 +21,7 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 
     switch (session->user_type) {
     case User::Type::ADMIN:
-        if (session->user_id == sim::users::SIM_ROOT_UID) {
+        if (session->user_id == sim::users::SIM_ROOT_ID) {
             return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN | PERM::ADD_TEACHER |
                 PERM::ADD_NORMAL;
         } else {
@@ -45,7 +46,7 @@ Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcep
     }
 
     auto viewer =
-        EnumVal(session->user_type).to_int() + (session->user_id != sim::users::SIM_ROOT_UID);
+        EnumVal(session->user_type).to_int() + (session->user_id != sim::users::SIM_ROOT_ID);
     if (session->user_id == user_id) {
         constexpr UserPermissions perm[4] = {
             // Sim root
@@ -62,7 +63,7 @@ Sim::users_get_permissions(decltype(User::id) user_id, User::Type utype) noexcep
         return perm[viewer] | users_get_overall_permissions();
     }
 
-    auto user = EnumVal(utype).to_int() + (user_id != sim::users::SIM_ROOT_UID);
+    auto user = EnumVal(utype).to_int() + (user_id != sim::users::SIM_ROOT_ID);
     // Permission table [ viewer ][ user ]
     constexpr UserPermissions perm[4][4] = {
         {// Sim root
@@ -105,10 +106,9 @@ Sim::UserPermissions Sim::users_get_permissions(decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
     using PERM = UserPermissions;
 
-    auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
-    stmt.bind_and_execute(user_id);
+    auto stmt = mysql.execute(sim::sql::Select("type").from("users").where("id=?", user_id));
     decltype(User::type) utype;
-    stmt.res_bind_all(utype);
+    stmt.res_bind(utype);
     if (not stmt.next()) {
         return PERM::NONE;
     }
@@ -121,12 +121,13 @@ bool Sim::check_submitted_password(StringView password_field_name) {
         return false;
     }
 
-    auto stmt = mysql.prepare("SELECT password_salt, password_hash FROM users WHERE id=?");
-    stmt.bind_and_execute(session->user_id);
+    auto stmt = mysql.execute(sim::sql::Select("password_salt, password_hash")
+                                  .from("users")
+                                  .where("id=?", session->user_id));
 
     decltype(User::password_salt) password_salt;
     decltype(User::password_hash) passwd_hash;
-    stmt.res_bind_all(password_salt, passwd_hash);
+    stmt.res_bind(password_salt, passwd_hash);
     throw_assert(stmt.next());
 
     return sim::users::password_matches(

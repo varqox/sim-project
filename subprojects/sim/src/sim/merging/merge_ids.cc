@@ -2,11 +2,11 @@
 #include <cstdint>
 #include <exception>
 #include <sim/merging/merge_ids.h>
-#include <sim/sql_fields/datetime.hh>
+#include <sim/sql/fields/datetime.hh>
 #include <utility>
 #include <vector>
 
-using sim::sql_fields::Datetime;
+using sim::sql::fields::Datetime;
 
 namespace sim::merging {
 

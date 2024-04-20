@@ -7,16 +7,17 @@
 #include "../web_worker/web_worker.hh"
 
 #include <sim/contest_files/permissions.hh>
-#include <sim/contest_rounds/contest_round.hh>
-#include <sim/contests/contest.hh>
+#include <sim/contest_rounds/old_contest_round.hh>
+#include <sim/contests/old_contest.hh>
 #include <sim/contests/permissions.hh>
 #include <sim/cpp_syntax_highlighter.hh>
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
 #include <sim/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <sim/problems/permissions.hh>
-#include <sim/sessions/session.hh>
-#include <sim/submissions/submission.hh>
-#include <sim/users/user.hh>
+#include <sim/sessions/old_session.hh>
+#include <sim/submissions/old_submission.hh>
+#include <sim/users/old_user.hh>
 #include <simlib/http/response.hh>
 #include <simlib/request_uri_parser.hh>
 #include <utime.h>
@@ -27,8 +28,7 @@ namespace web_server::old {
 // as long as one is not used by two threads simultaneously
 class Sim final {
     /* ============================== General ============================== */
-
-    mysql::Connection mysql = sim::mysql::make_conn_with_credential_file(".db.config");
+    sim::mysql::Connection mysql = sim::mysql::Connection::from_credential_file(".db.config");
     http::Request request;
     http::Response resp;
     RequestUriParser url_args{""};
@@ -94,18 +94,18 @@ class Sim final {
 
     void api_job();
 
-    void api_job_restart(sim::jobs::Job::Type job_type, StringView job_info);
+    void api_job_restart(sim::jobs::OldJob::Type job_type, StringView job_info);
 
     void api_job_cancel();
 
     void api_job_download_log();
 
     void api_job_download_uploaded_package(
-        std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type
+        std::optional<uint64_t> file_id, sim::jobs::OldJob::Type job_type
     );
 
     void api_job_download_uploaded_statement(
-        std::optional<uint64_t> file_id, sim::jobs::Job::Type job_type, StringView info
+        std::optional<uint64_t> file_id, sim::jobs::OldJob::Type job_type, StringView info
     );
 
     // problems_api.cc
@@ -145,8 +145,8 @@ class Sim final {
 
     // submissions_api.cc
     void append_submission_status(
-        sim::submissions::Submission::Status initial_status,
-        sim::submissions::Submission::Status full_status,
+        sim::submissions::OldSubmission::Status initial_status,
+        sim::submissions::OldSubmission::Status full_status,
         bool show_full_status
     );
 
@@ -188,20 +188,20 @@ class Sim final {
     void api_contest_round_clone(StringView contest_id, sim::contests::Permissions perms);
 
     void api_contest_round_edit(
-        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        decltype(sim::contest_rounds::OldContestRound::id) contest_round_id,
         sim::contests::Permissions perms
     );
 
     void api_contest_round_delete(
-        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        decltype(sim::contest_rounds::OldContestRound::id) contest_round_id,
         sim::contests::Permissions perms
     );
 
     void api_contest_problem_statement(StringView problem_id);
 
     void api_contest_problem_add(
-        decltype(sim::contests::Contest::id) contest_id,
-        decltype(sim::contest_rounds::ContestRound::id) contest_round_id,
+        decltype(sim::contests::OldContest::id) contest_id,
+        decltype(sim::contest_rounds::OldContestRound::id) contest_round_id,
         sim::contests::Permissions perms
     );
 
@@ -530,8 +530,8 @@ private:
     // Session must be open to access the jobs
     JobPermissions jobs_get_permissions(
         std::optional<StringView> creator_id,
-        sim::jobs::Job::Type job_type,
-        sim::jobs::Job::Status job_status
+        sim::jobs::OldJob::Type job_type,
+        sim::jobs::OldJob::Status job_status
     ) noexcept;
 
     // Used to get granted permissions to the problem jobs
@@ -586,23 +586,23 @@ private:
 
     // Returns only the overall permissions
     ContestUserPermissions contest_user_get_overall_permissions(
-        std::optional<sim::contest_users::ContestUser::Mode> viewer_mode
+        std::optional<sim::contest_users::OldContestUser::Mode> viewer_mode
     ) noexcept;
 
     ContestUserPermissions contest_user_get_permissions(
-        std::optional<sim::contest_users::ContestUser::Mode> viewer_mode,
-        std::optional<sim::contest_users::ContestUser::Mode> user_mode
+        std::optional<sim::contest_users::OldContestUser::Mode> viewer_mode,
+        std::optional<sim::contest_users::OldContestUser::Mode> user_mode
     ) noexcept;
 
     // Returns (viewer mode, perms), queries MySQL
-    std::pair<std::optional<sim::contest_users::ContestUser::Mode>, Sim::ContestUserPermissions>
+    std::pair<std::optional<sim::contest_users::OldContestUser::Mode>, Sim::ContestUserPermissions>
     contest_user_get_overall_permissions(StringView contest_id);
 
     // Returns (viewer mode, perms, user's mode), queries MySQL
     std::tuple<
-        std::optional<sim::contest_users::ContestUser::Mode>,
+        std::optional<sim::contest_users::OldContestUser::Mode>,
         Sim::ContestUserPermissions,
-        std::optional<sim::contest_users::ContestUser::Mode>>
+        std::optional<sim::contest_users::OldContestUser::Mode>>
     contest_user_get_permissions(StringView contest_id, StringView user_id);
 
     /* ============================= Submissions =============================
@@ -630,15 +630,15 @@ private:
     SubmissionPermissions submissions_get_overall_permissions() noexcept;
 
     SubmissionPermissions submissions_get_permissions(
-        decltype(sim::submissions::Submission::owner) submission_owner,
-        sim::submissions::Submission::Type stype,
-        std::optional<sim::contest_users::ContestUser::Mode> cu_mode,
-        decltype(sim::problems::Problem::owner_id) problem_owner
+        decltype(sim::submissions::OldSubmission::owner) submission_owner,
+        sim::submissions::OldSubmission::Type stype,
+        std::optional<sim::contest_users::OldContestUser::Mode> cu_mode,
+        decltype(sim::problems::OldProblem::owner_id) problem_owner
     ) noexcept;
 
     StringView submissions_sid;
     uint64_t submissions_file_id{};
-    sim::submissions::Submission::Language submissions_slang{};
+    sim::submissions::OldSubmission::Language submissions_slang{};
     SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
     // Pages

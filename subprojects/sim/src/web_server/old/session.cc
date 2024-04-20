@@ -1,12 +1,12 @@
 #include "sim.hh"
 
-#include <chrono>
 #include <optional>
+#include <sim/mysql/mysql.hh>
 #include <sim/random.hh>
-#include <sim/sessions/session.hh>
+#include <sim/sessions/old_session.hh>
+#include <sim/sql/sql.hh>
 #include <simlib/time.hh>
 
-using sim::sessions::Session;
 using std::string;
 
 namespace web_server::old {
@@ -19,18 +19,17 @@ bool Sim::session_open() {
     }
 
     decltype(session)::value_type ses;
-    ses.id = request.get_cookie("session");
+    ses.id = request.get_cookie("session").to_string();
     // Cookie does not exist (or has no value)
-    if (ses.id.size == 0) {
+    if (ses.id.empty()) {
         return false;
     }
+    auto stmt =
+        mysql.execute(sim::sql::Select("csrf_token, user_id, data, type, username")
+                          .from("sessions s, users u")
+                          .where("s.id=? AND expires>=? AND u.id=s.user_id", ses.id, mysql_date()));
 
-    auto stmt = mysql.prepare("SELECT csrf_token, user_id, data, type, username "
-                              "FROM sessions s, users u "
-                              "WHERE s.id=? AND expires>=? AND u.id=s.user_id");
-    stmt.bind_and_execute(ses.id, mysql_date());
-
-    stmt.res_bind_all(ses.csrf_token, ses.user_id, ses.data, ses.user_type, ses.username);
+    stmt.res_bind(ses.csrf_token, ses.user_id, ses.data, ses.user_type, ses.username);
 
     if (stmt.next()) {
         ses.orig_data = ses.data;
@@ -49,7 +48,8 @@ void Sim::session_close() {
         return;
     }
     if (session->data != session->orig_data) {
-        auto stmt = mysql.prepare("UPDATE sessions SET data=? WHERE id=?");
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        auto stmt = old_mysql.prepare("UPDATE sessions SET data=? WHERE id=?");
         stmt.bind_and_execute(session->data, session->id);
     }
     session = std::nullopt;

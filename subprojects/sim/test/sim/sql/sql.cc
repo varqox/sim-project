@@ -1,22 +1,22 @@
 #include <gtest/gtest.h>
-#include <sim/sqlv2/sqlv2.hh>
+#include <sim/sql/sql.hh>
 #include <stdexcept>
 #include <string_view>
 
-using sim::sqlv2::Condition;
-using sim::sqlv2::DeleteFrom;
-using sim::sqlv2::InsertIgnoreInto;
-using sim::sqlv2::InsertInto;
-using sim::sqlv2::Select;
-using sim::sqlv2::SqlWithParams;
-using sim::sqlv2::Update;
+using sim::sql::Condition;
+using sim::sql::DeleteFrom;
+using sim::sql::InsertIgnoreInto;
+using sim::sql::InsertInto;
+using sim::sql::Select;
+using sim::sql::SqlWithParams;
+using sim::sql::Update;
 
 #define SQL_EQ(sql_expr, sql_str) \
     EXPECT_EQ(SqlWithParams{sql_expr}.get_sql(), std::string_view{sql_str});
 
 // NOLINTNEXTLINE
 TEST(sql, constructing_sqls_SqlWithParams) {
-    SQL_EQ(sim::sqlv2::SqlWithParams("SELECT ?", 1), "SELECT ?");
+    SQL_EQ(sim::sql::SqlWithParams("SELECT ?", 1), "SELECT ?");
 }
 
 TEST(sql, constructing_sqls_Select) {

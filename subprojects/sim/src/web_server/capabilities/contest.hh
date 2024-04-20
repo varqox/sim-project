@@ -5,7 +5,7 @@
 #include <optional>
 #include <sim/contest_users/contest_user.hh>
 #include <sim/contests/contest.hh>
-#include <simlib/mysql/mysql.hh>
+#include <sim/mysql/mysql.hh>
 
 namespace web_server::capabilities {
 
@@ -58,7 +58,7 @@ Contest contest_for(
 // Returns std::nullopt if such contest does not exist
 std::optional<std::pair<Contest, std::optional<decltype(sim::contest_users::ContestUser::mode)>>>
 contest_for(
-    mysql::Connection& mysql,
+    sim::mysql::Connection& mysql,
     const decltype(web_worker::Context::session)& session,
     decltype(sim::contests::Contest::id) contest_id
 );

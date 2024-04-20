@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <optional>
-#include <simlib/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
 
 namespace sim::submissions {
 
@@ -13,7 +13,7 @@ void update_final_lock(
 );
 
 void update_final(
-    mysql::Connection& mysql,
+    sim::mysql::Connection& mysql,
     std::optional<uint64_t> submission_owner,
     uint64_t problem_id,
     std::optional<uint64_t> contest_problem_id,

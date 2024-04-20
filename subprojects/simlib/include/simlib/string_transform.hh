@@ -47,7 +47,7 @@ InplaceBuff<N> to_hex(const StringView& str) {
 template <size_t N = 256>
 InplaceBuff<N> encode_uri(const StringView& str) {
     using std::array;
-    constexpr auto is_safe = [] {
+    static constexpr auto is_safe = [] {
         array<bool, 256> res = {};
         for (auto [beg, end] : array{array{'a', 'z'}, array{'A', 'Z'}, array{'0', '9'}}) {
             for (unsigned char i = beg; i <= end; ++i) {
@@ -133,7 +133,7 @@ inline void append_as_html_escaped(std::string& str, const StringView& s) {
 
 // Escapes HTML unsafe character sequences
 template <class T>
-inline std::string html_escape(T&& str) {
+inline std::string html_escape(const T& str) {
     std::string res;
     append_as_html_escaped(res, str);
     return res;

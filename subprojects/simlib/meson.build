@@ -329,7 +329,6 @@ tests = {
     'test/merge.cc': {},
     'test/meta/concated_to_cstr.cc': {},
     'test/meta/count.cc': {},
-    'test/mysql/mysql.cc': {},
     'test/noexcept_concat.cc': {},
     'test/opened_temporary_file.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
     'test/path.cc': {},

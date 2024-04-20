@@ -2,20 +2,21 @@
 
 #include "contests.hh"
 
-#include <sim/contest_rounds/contest_round.hh>
-#include <sim/sql_fields/datetime.hh>
+#include <sim/contest_rounds/old_contest_round.hh>
+#include <sim/old_sql_fields/datetime.hh>
 
 namespace sim_merger {
 
-class ContestRoundsMerger : public Merger<sim::contest_rounds::ContestRound> {
+class ContestRoundsMerger : public Merger<sim::contest_rounds::OldContestRound> {
     const ContestsMerger& contests_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::contest_rounds::ContestRound cr;
-        mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
-        auto stmt = conn.prepare(
+        sim::contest_rounds::OldContestRound cr;
+        old_mysql::Optional<sim::old_sql_fields::Datetime> earliest_submit_time;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT cr.id, cr.contest_id, cr.name, cr.item,"
             " cr.begins, cr.ends, cr.full_results,"
             " cr.ranking_exposure, MIN(s.created_at) "
@@ -52,15 +53,19 @@ class ContestRoundsMerger : public Merger<sim::contest_rounds::ContestRound> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::contest_rounds::ContestRound& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contest_rounds::OldContestRound& /*unused*/) {
+            return nullptr;
+        });
     }
 
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, contest_id, name, item, begins, ends,"
@@ -84,7 +89,7 @@ public:
             );
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 

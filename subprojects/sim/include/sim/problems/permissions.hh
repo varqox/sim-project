@@ -1,9 +1,9 @@
 #pragma once
 
-#include <sim/problems/problem.hh>
+#include <sim/old_mysql/old_mysql.hh>
+#include <sim/problems/old_problem.hh>
 #include <sim/users/user.hh>
 #include <simlib/macros/enum_operator_macros.hh>
-#include <simlib/mysql/mysql.hh>
 
 namespace sim::problems {
 
@@ -55,8 +55,8 @@ DECLARE_ENUM_OPERATOR(Permissions, &)
 Permissions get_permissions(
     std::optional<decltype(users::User::id)> user_id,
     std::optional<users::User::Type> user_type,
-    decltype(Problem::owner_id) problem_owner_id,
-    decltype(Problem::type) problem_type
+    decltype(OldProblem::owner_id) problem_owner_id,
+    decltype(OldProblem::type) problem_type
 ) noexcept;
 
 template <class T>
@@ -66,11 +66,13 @@ std::optional<Permissions> get_permissions(
     std::optional<decltype(users::User::id)> user_id,
     std::optional<users::User::Type> user_type
 ) {
-    auto stmt = mysql.prepare("SELECT owner_id, type FROM problems WHERE id=?");
+
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("SELECT owner_id, type FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 
-    mysql::Optional<decltype(Problem::owner_id)::value_type> problem_owner_id;
-    decltype(Problem::type) problem_type;
+    old_mysql::Optional<decltype(OldProblem::owner_id)::value_type> problem_owner_id;
+    decltype(OldProblem::type) problem_type;
     stmt.res_bind_all(problem_owner_id, problem_type);
 
     if (not stmt.next()) {

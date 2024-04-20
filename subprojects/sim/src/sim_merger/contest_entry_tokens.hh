@@ -3,7 +3,7 @@
 #include "contests.hh"
 
 #include <set>
-#include <sim/contest_entry_tokens/contest_entry_token.hh>
+#include <sim/contest_entry_tokens/old_contest_entry_token.hh>
 #include <sim/random.hh>
 
 namespace sim_merger {
@@ -15,25 +15,26 @@ struct ContestEntryTokenIdGetter {
     }
 };
 
-class ContestEntryTokensMerger : public Merger<sim::contest_entry_tokens::ContestEntryToken> {
+class ContestEntryTokensMerger : public Merger<sim::contest_entry_tokens::OldContestEntryToken> {
     const ContestsMerger& contests_;
 
-    std::set<decltype(sim::contest_entry_tokens::ContestEntryToken::token)> taken_tokens_;
-    std::set<decltype(sim::contest_entry_tokens::ContestEntryToken::short_token)::value_type>
+    std::set<decltype(sim::contest_entry_tokens::OldContestEntryToken::token)> taken_tokens_;
+    std::set<decltype(sim::contest_entry_tokens::OldContestEntryToken::short_token)::value_type>
         taken_short_tokens_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::contest_entry_tokens::ContestEntryToken cet;
-        mysql::Optional<decltype(sim::contest_entry_tokens::ContestEntryToken::short_token
+        sim::contest_entry_tokens::OldContestEntryToken cet;
+        old_mysql::Optional<decltype(sim::contest_entry_tokens::OldContestEntryToken::short_token
         )::value_type>
             m_short_token;
-        mysql::Optional<
-            decltype(sim::contest_entry_tokens::ContestEntryToken::short_token_expiration
+        old_mysql::Optional<
+            decltype(sim::contest_entry_tokens::OldContestEntryToken::short_token_expiration
             )::value_type>
             m_short_token_expiration;
-        auto stmt = conn.prepare(
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT token, contest_id, short_token,"
             " short_token_expiration "
             "FROM ",
@@ -52,7 +53,7 @@ class ContestEntryTokensMerger : public Merger<sim::contest_entry_tokens::Contes
                 std::string new_short_token = cet.short_token->to_string();
                 while (not taken_short_tokens_.emplace(new_short_token).second) {
                     new_short_token = sim::generate_random_token(
-                        decltype(sim::contest_entry_tokens::ContestEntryToken::short_token
+                        decltype(sim::contest_entry_tokens::OldContestEntryToken::short_token
                         )::value_type::max_len
                     );
                 }
@@ -66,7 +67,7 @@ class ContestEntryTokensMerger : public Merger<sim::contest_entry_tokens::Contes
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::contest_entry_tokens::ContestEntryToken& /*unused*/) {
+        Merger::merge([&](const sim::contest_entry_tokens::OldContestEntryToken& /*unused*/) {
             return nullptr;
         });
     }
@@ -77,7 +78,7 @@ class ContestEntryTokensMerger : public Merger<sim::contest_entry_tokens::Contes
         std::string new_id = record_id.to_string();
         while (not taken_tokens_.emplace(new_id).second) {
             new_id = sim::generate_random_token(
-                decltype(sim::contest_entry_tokens::ContestEntryToken::token)::max_len
+                decltype(sim::contest_entry_tokens::OldContestEntryToken::token)::max_len
             );
         }
         return PrimaryKeyType{new_id};
@@ -86,9 +87,10 @@ class ContestEntryTokensMerger : public Merger<sim::contest_entry_tokens::Contes
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(token, contest_id, short_token,"

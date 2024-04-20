@@ -1,7 +1,7 @@
-#include <sim/contest_users/contest_user.hh>
+#include <sim/contest_users/old_contest_user.hh>
 #include <sim/contests/permissions.hh>
 
-using sim::contest_users::ContestUser;
+using sim::contest_users::OldContestUser;
 using sim::users::User;
 
 namespace sim::contests {
@@ -9,11 +9,11 @@ namespace sim::contests {
 Permissions get_permissions(
     std::optional<User::Type> user_type,
     bool contest_is_public,
-    std::optional<ContestUser::Mode> cu_mode
+    std::optional<OldContestUser::Mode> cu_mode
 ) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = Permissions;
-    using CUM = ContestUser::Mode;
+    using CUM = OldContestUser::Mode;
 
     if (not user_type) {
         return (contest_is_public ? PERM::VIEW : PERM::NONE);

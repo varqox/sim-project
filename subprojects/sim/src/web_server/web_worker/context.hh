@@ -5,6 +5,7 @@
 #include "../http/response.hh"
 
 #include <sim/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <sim/sessions/session.hh>
 #include <sim/users/user.hh>
 #include <simlib/string_view.hh>
@@ -14,7 +15,8 @@ namespace web_server::web_worker {
 
 struct Context {
     const http::Request& request;
-    mysql::Connection& mysql;
+    sim::mysql::Connection& mysql;
+    old_mysql::ConnectionView old_mysql;
     bool notify_job_server_after_commit = false;
 
     struct Session {
@@ -56,7 +58,7 @@ struct Context {
         std::enable_if_t<
             !std::is_convertible_v<T&&, StringView> and std::is_convertible_v<T&, StringView>,
             int> = 0>
-    http::Response response_json(T&& content) {
+    http::Response response_json(T&& content) { // NOLINT(cppcoreguidelines-missing-std-forward)
         return response_json(StringView{content});
     }
 

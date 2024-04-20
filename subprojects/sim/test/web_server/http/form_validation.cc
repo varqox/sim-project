@@ -8,10 +8,9 @@
 #include <initializer_list>
 #include <limits>
 #include <optional>
-#include <sim/sql_fields/blob.hh>
-#include <sim/sql_fields/bool.hh>
-#include <sim/sql_fields/satisfying_predicate.hh>
-#include <sim/sql_fields/varbinary.hh>
+#include <sim/sql/fields/blob.hh>
+#include <sim/sql/fields/satisfying_predicate.hh>
+#include <sim/sql/fields/varbinary.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
@@ -140,10 +139,7 @@ static void test_bool() {
 }
 
 // NOLINTNEXTLINE
-TEST(form_validation, bools) {
-    test_bool<bool>();
-    test_bool<sim::sql_fields::Bool>();
-}
+TEST(form_validation, bool) { test_bool<bool>(); }
 
 template <class Int>
 static void test_int() {
@@ -234,11 +230,11 @@ static void test_str(std::optional<size_t> max_len = std::nullopt) {
 TEST(form_validation, cstring_view) { test_str<CStringView>(); }
 
 // NOLINTNEXTLINE
-TEST(form_validation, sql_blob) { test_str<sim::sql_fields::Blob<>>(); }
+TEST(form_validation, sql_blob) { test_str<sim::sql::fields::Blob>(); }
 
 template <size_t max_len>
 static void varbinary_test() {
-    test_str<sim::sql_fields::Varbinary<max_len>>(max_len);
+    test_str<sim::sql::fields::Varbinary<max_len>>(max_len);
 }
 
 // NOLINTNEXTLINE
@@ -266,20 +262,6 @@ static constexpr bool always_true(T&& /*unused*/) {
     return true;
 }
 
-static constexpr bool is_false(const sim::sql_fields::Bool& x) { return !x; }
-
-// NOLINTNEXTLINE
-TEST(form_validation, satisfying_predicate_bool) {
-    static constexpr char predicate_description[] = "false";
-    using sim::sql_fields::Bool;
-    using sim::sql_fields::SatisfyingPredicate;
-    test_bool<sim::sql_fields::SatisfyingPredicate<Bool, always_true, predicate_description>>();
-
-    ValidationTest t{api_param<SatisfyingPredicate<Bool, is_false, predicate_description>>};
-    VALIDATE_CHECK(t, "false", Ok{false});
-    VALIDATE_CHECK(t, "true", Err{"abc: ABC has to be false"});
-}
-
 template <class T>
 static constexpr bool ends_with_xd(const T& str) {
     return has_suffix(str, "xd");
@@ -287,21 +269,20 @@ static constexpr bool ends_with_xd(const T& str) {
 
 // NOLINTNEXTLINE
 TEST(form_validation, satisfying_predicate_string) {
-    using sim::sql_fields::SatisfyingPredicate;
+    using sim::sql::fields::SatisfyingPredicate;
     static constexpr char predicate_description[] = "a string ending with \"xd\"";
     constexpr size_t varbinary_max_len = 14;
-    test_str<sim::sql_fields::SatisfyingPredicate<
-        sim::sql_fields::Varbinary<varbinary_max_len>,
+    test_str<sim::sql::fields::SatisfyingPredicate<
+        sim::sql::fields::Varbinary<varbinary_max_len>,
         always_true,
         predicate_description>>(varbinary_max_len);
-    test_str<sim::sql_fields::SatisfyingPredicate<CStringView, always_true, predicate_description>>(
-    );
-    test_str<sim::sql_fields::
-                 SatisfyingPredicate<sim::sql_fields::Blob<>, always_true, predicate_description>>(
-    );
+    test_str<
+        sim::sql::fields::SatisfyingPredicate<CStringView, always_true, predicate_description>>();
+    test_str<sim::sql::fields::
+                 SatisfyingPredicate<sim::sql::fields::Blob, always_true, predicate_description>>();
 
     auto api_param_val = api_param<SatisfyingPredicate<
-        sim::sql_fields::Varbinary<varbinary_max_len>,
+        sim::sql::fields::Varbinary<varbinary_max_len>,
         ends_with_xd,
         predicate_description>>;
     for (auto api_param : {api_param_val, allow_blank(api_param_val)}) {
@@ -325,7 +306,7 @@ ENUM_WITH_STRING_CONVERSIONS(TestEnum, uint16_t,
 
 // NOLINTNEXTLINE
 TEST(form_validation, enum_val_with_string_conversions) {
-    ValidationTest t{api_param<EnumVal<TestEnum>>};
+    ValidationTest t{api_param<TestEnum>};
     VALIDATE_CHECK(t, "> 1 <", Ok{TestEnum::FIRST});
     VALIDATE_CHECK(t, "> 2 <", Ok{TestEnum::SECOND});
     VALIDATE_CHECK(t, "> 3 <", Ok{TestEnum::THIRD});
@@ -336,7 +317,7 @@ TEST(form_validation, enum_val_with_string_conversions) {
 }
 
 class EnumCapsValidationTest {
-    using FieldType = EnumVal<TestEnum>;
+    using FieldType = TestEnum;
     ApiParam<FieldType> api_param = ::api_param<FieldType>;
     FormFields ff; // Needed here to ensure long-enough lifetime, if validate_*() returns
                    // Ok<CStringView>

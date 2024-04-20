@@ -6,19 +6,14 @@
 #include "capabilities/users.hh"
 #include "http/response.hh"
 #include "ui_template.hh"
-#include "web_worker/web_worker.hh"
 
 #include <chrono>
-#include <sim/sessions/session.hh>
-#include <sim/users/user.hh>
-#include <simlib/concat_tostr.hh>
 #include <simlib/file_info.hh>
 #include <simlib/json_str/json_str.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <simlib/time.hh>
 
-using sim::users::User;
 using web_server::http::Response;
 
 namespace {
@@ -119,6 +114,9 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             const auto caps = capabilities::problems(session);
             obj.prop("ui_view", caps.web_ui_view);
             obj.prop("add_problem", caps.add_problem);
+            obj.prop("add_problem_with_type_private", caps.add_problem_with_type_private);
+            obj.prop("add_problem_with_type_contest_only", caps.add_problem_with_type_contest_only);
+            obj.prop("add_problem_with_type_public", caps.add_problem_with_type_public);
             auto fill_with_list_caps = [&](auto& obj,
                                            const capabilities::ProblemsListCapabilities caps) {
                 obj.prop("query_all", caps.query_all);
@@ -129,7 +127,7 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
                 obj.prop("ui_show_updated_at_column", caps.web_ui_show_updated_at_column);
             };
             obj.prop_obj("list_all", [&](auto& obj) {
-                fill_with_list_caps(obj, capabilities::list_all_problems(session));
+                fill_with_list_caps(obj, capabilities::list_problems(session));
             });
             if (session) {
                 obj.prop_obj("list_my", [&](auto& obj) {
@@ -150,7 +148,7 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             obj.prop("add_teacher", caps.add_teacher);
             obj.prop("add_normal_user", caps.add_normal_user);
             obj.prop_obj("list_all", [&](auto& obj) {
-                const auto caps = capabilities::list_all_users(session);
+                const auto caps = capabilities::list_users(session);
                 obj.prop("query_all", caps.query_all);
                 obj.prop("query_with_type_admin", caps.query_with_type_admin);
                 obj.prop("query_with_type_teacher", caps.query_with_type_teacher);

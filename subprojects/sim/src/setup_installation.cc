@@ -1,18 +1,7 @@
-#include "web_server/users/api.hh"
-
 #include <fcntl.h>
 #include <iostream>
-#include <sim/contest_entry_tokens/contest_entry_token.hh>
-#include <sim/contest_files/contest_file.hh>
-#include <sim/contest_problems/contest_problem.hh>
-#include <sim/contest_rounds/contest_round.hh>
-#include <sim/contest_users/contest_user.hh>
-#include <sim/contests/contest.hh>
 #include <sim/db/tables.hh>
-#include <sim/mysql/mysql.hh>
-#include <sim/problem_tags/problem_tag.hh>
-#include <sim/sessions/session.hh>
-#include <sim/users/user.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/concat.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/config_file.hh>
@@ -21,13 +10,9 @@
 #include <simlib/file_info.hh>
 #include <simlib/file_path.hh>
 #include <simlib/file_perms.hh>
-#include <simlib/inplace_buff.hh>
-#include <simlib/random.hh>
 #include <simlib/ranges.hh>
-#include <simlib/sha.hh>
 #include <simlib/string_view.hh>
 
-using std::array;
 using std::string;
 
 /**
@@ -140,11 +125,14 @@ int main(int argc, char** argv) {
         create_db_config(db_config_path);
     }
 
-    mysql::Connection conn;
+    std::unique_ptr<sim::mysql::Connection> mysql;
     try {
-        // Get connection
-        conn = sim::mysql::make_conn_with_credential_file(db_config_path);
-        conn.update("SET foreign_key_checks=1"); // Just for sure
+        // Get database connection
+        // NOLINTNEXTLINE(modernize-make-unique)
+        mysql = std::unique_ptr<sim::mysql::Connection>{new sim::mysql::Connection(
+            sim::mysql::Connection::from_credential_file(db_config_path.to_cstr().c_str())
+        )};
+        mysql->update("SET foreign_key_checks=1"); // Just for sure
 
     } catch (const std::exception& e) {
         errlog(
@@ -159,7 +147,7 @@ int main(int argc, char** argv) {
     if (cmd_options.drop_tables) {
         for (auto&& table : reverse_view(sim::db::get_tables())) {
             try {
-                conn.update("DROP TABLE IF EXISTS `", table, '`');
+                mysql->update(concat_tostr("DROP TABLE IF EXISTS `", table, '`'));
             } catch (const std::exception& e) {
                 errlog("\033[31mFailed to drop table '", table, "'\033[m - ", e.what());
                 return 5;

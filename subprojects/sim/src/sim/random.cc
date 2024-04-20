@@ -1,23 +1,16 @@
 #include <sim/random.hh>
-#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/random.hh>
-
-using std::string;
+#include <string_view>
 
 namespace sim {
 
-string generate_random_token(size_t length) {
-    STACK_UNWINDING_MARK;
-
-    constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    constexpr size_t len = sizeof(t) - 1;
-
-    // Generate random id of length SESSION_ID_LENGTH
-    string res(length, '0');
+std::string generate_random_token(size_t length) {
+    static constexpr auto chars =
+        std::string_view{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"};
+    std::string res(length, '0');
     for (char& c : res) {
-        c = t[get_random<int>(0, len - 1)];
+        c = chars[get_random<size_t>(0, chars.size() - 1)];
     }
-
     return res;
 }
 

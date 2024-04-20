@@ -3,8 +3,8 @@
 #include "sim.hh"
 
 #include <memory>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/macros/debug.hh>
-#include <simlib/mysql/mysql.hh>
 #include <simlib/path.hh>
 #include <simlib/random.hh>
 #include <simlib/time.hh>

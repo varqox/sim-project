@@ -2,6 +2,8 @@
 
 #include "../web_worker/context.hh"
 
+#include <sim/users/user.hh>
+
 namespace web_server::capabilities {
 
 struct UsersCapabilities {
@@ -27,8 +29,7 @@ struct UsersListCapabilities {
     bool view_all_with_type_normal : 1;
 };
 
-UsersListCapabilities list_all_users(const decltype(web_worker::Context::session)& session
-) noexcept;
+UsersListCapabilities list_users(const decltype(web_worker::Context::session)& session) noexcept;
 
 struct UserCapabilities {
     bool view : 1;

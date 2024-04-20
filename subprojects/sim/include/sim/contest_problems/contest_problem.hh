@@ -3,12 +3,9 @@
 #include <cstdint>
 #include <sim/contest_rounds/contest_round.hh>
 #include <sim/contests/contest.hh>
-#include <sim/primary_key.hh>
 #include <sim/problems/problem.hh>
-#include <sim/sql_fields/varbinary.hh>
-#include <simlib/enum_val.hh>
+#include <sim/sql/fields/varbinary.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
-#include <simlib/string_view.hh>
 
 namespace sim::contest_problems {
 
@@ -28,12 +25,10 @@ struct ContestProblem {
     decltype(contest_rounds::ContestRound::id) contest_round_id;
     decltype(contests::Contest::id) contest_id;
     decltype(problems::Problem::id) problem_id;
-    sql_fields::Varbinary<128> name;
+    sql::fields::Varbinary<128> name;
     uint64_t item;
-    EnumVal<MethodOfChoosingFinalSubmission> method_of_choosing_final_submission;
-    EnumVal<ScoreRevealing> score_revealing;
-
-    static constexpr auto primary_key = PrimaryKey{&ContestProblem::id};
+    MethodOfChoosingFinalSubmission method_of_choosing_final_submission;
+    ScoreRevealing score_revealing;
 };
 
 } // namespace sim::contest_problems

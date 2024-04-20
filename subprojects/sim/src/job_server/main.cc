@@ -2,16 +2,17 @@
 #include "logs.hh"
 #include "notify_file.hh"
 
-#include <climits>
 #include <cstdint>
 #include <future>
 #include <map>
 #include <poll.h>
 #include <queue>
 #include <set>
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
 #include <sim/jobs/utils.hh>
 #include <sim/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
+#include <sim/sql/sql.hh>
 #include <sim/submissions/update_final.hh>
 #include <simlib/config_file.hh>
 #include <simlib/file_info.hh>
@@ -39,13 +40,6 @@ using std::mutex;
 using std::string;
 using std::thread;
 using std::vector;
-
-namespace job_server {
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-thread_local mysql::Connection mysql;
-
-} // namespace job_server
 
 namespace {
 
@@ -134,26 +128,28 @@ private:
     }
 
 public:
-    void sync_with_db() {
+    void sync_with_db(sim::mysql::Connection& mysql) {
         STACK_UNWINDING_MARK;
 
         uint64_t jid = 0;
-        EnumVal<sim::jobs::Job::Type> jtype{};
-        mysql::Optional<decltype(sim::jobs::Job::aux_id)::value_type> aux_id;
+        EnumVal<sim::jobs::OldJob::Type> jtype{};
+        old_mysql::Optional<decltype(sim::jobs::OldJob::aux_id)::value_type> aux_id;
         uint priority = 0;
         InplaceBuff<512> info;
         // Select jobs
-        auto stmt = job_server::mysql.prepare("SELECT id, type, priority, aux_id, info "
-                                              "FROM jobs "
-                                              "WHERE status=? "
-                                              "ORDER BY priority DESC, id ASC LIMIT 4");
+        mysql.execute(sim::sql::SqlWithParams("SELECT 1")); // Reconnect to database if disconnected
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        auto stmt = old_mysql.prepare("SELECT id, type, priority, aux_id, info "
+                                      "FROM jobs "
+                                      "WHERE status=? "
+                                      "ORDER BY priority DESC, id ASC LIMIT 4");
         stmt.res_bind_all(jid, jtype, priority, aux_id, info);
         // Sets job's status to NOTICED_PENDING
-        auto mark_stmt = job_server::mysql.prepare("UPDATE jobs SET status=? WHERE id=?");
+        auto mark_stmt = old_mysql.prepare("UPDATE jobs SET status=? WHERE id=?");
         // Add jobs to internal queue
-        using JT = sim::jobs::Job::Type;
+        using JT = sim::jobs::OldJob::Type;
         for (;;) {
-            stmt.bind_and_execute(EnumVal(sim::jobs::Job::Status::PENDING));
+            stmt.bind_and_execute(EnumVal(sim::jobs::OldJob::Status::PENDING));
             if (not stmt.next()) {
                 break;
             }
@@ -236,7 +232,9 @@ public:
                 case JT::DELETE_CONTEST_PROBLEM:
                 case JT::DELETE_FILE: other_jobs.insert({jid, priority, false}); break;
                 }
-                mark_stmt.bind_and_execute(EnumVal(sim::jobs::Job::Status::NOTICED_PENDING), jid);
+                mark_stmt.bind_and_execute(
+                    EnumVal(sim::jobs::OldJob::Status::NOTICED_PENDING), jid
+                );
             } while (stmt.next());
         }
 
@@ -525,15 +523,16 @@ private:
     vector<thread::id> idle_workers;
     map<thread::id, WorkerInfo> workers; // AVLDict cannot be used as addresses must not change
 
-    function<void(NextJob)> job_handler_;
-    function<void()> worker_becomes_idle_callback_;
-    function<void(WorkerInfo)> worker_dies_callback_;
+    function<void(sim::mysql::Connection&, NextJob)> job_handler_;
+    function<void(sim::mysql::Connection&)> worker_becomes_idle_callback_;
+    function<void(sim::mysql::Connection&, WorkerInfo)> worker_dies_callback_;
 
     class Worker {
         WorkersPool& wp_;
+        sim::mysql::Connection& mysql_;
 
     public:
-        explicit Worker(WorkersPool& wp) : wp_(wp) {
+        explicit Worker(sim::mysql::Connection& mysql, WorkersPool& wp) : wp_(wp), mysql_(mysql) {
             STACK_UNWINDING_MARK;
             auto tid = std::this_thread::get_id();
             lock_guard<mutex> lock(wp_.mtx_);
@@ -564,10 +563,10 @@ private:
             }
 
             if (wp_.worker_dies_callback_) {
-                EventsQueue::register_event(shared_function([&callback = wp_.worker_dies_callback_,
-                                                             winfo = std::move(wi)]() mutable {
-                    callback(std::move(winfo));
-                }));
+                EventsQueue::register_event(shared_function(
+                    [&callback = wp_.worker_dies_callback_, winfo = std::move(wi), &mysql = mysql_](
+                    ) mutable { callback(mysql, std::move(winfo)); }
+                ));
             }
         }
 
@@ -585,7 +584,10 @@ private:
             }
 
             if (wp_.worker_becomes_idle_callback_) {
-                EventsQueue::register_event(wp_.worker_becomes_idle_callback_);
+                EventsQueue::register_event([&mysql = mysql_,
+                                             callback = wp_.worker_becomes_idle_callback_] {
+                    callback(mysql);
+                });
             }
 
             // Wait for a job to be assigned to us (current worker)
@@ -608,9 +610,9 @@ public:
      * @param idle_callback a function to call when a worker becomes idle
      */
     WorkersPool(
-        function<void(NextJob)> job_handler,
-        function<void()> idle_callback,
-        function<void(WorkerInfo)> dead_callback
+        function<void(sim::mysql::Connection&, NextJob)> job_handler,
+        function<void(sim::mysql::Connection&)> idle_callback,
+        function<void(sim::mysql::Connection&, WorkerInfo)> dead_callback
     )
     : job_handler_(std::move(job_handler))
     , worker_becomes_idle_callback_(std::move(idle_callback))
@@ -623,12 +625,13 @@ public:
 
         std::thread foo([this] {
             try {
-                thread_local Worker w(*this);
-                // Connect to databases
-                job_server::mysql = sim::mysql::make_conn_with_credential_file(".db.config");
+                // Connect to the database
+                thread_local auto mysql =
+                    sim::mysql::Connection::from_credential_file(".db.config");
+                thread_local Worker w(mysql, *this);
 
                 for (;;) {
-                    job_handler_(w.wait_for_next_job_id());
+                    job_handler_(mysql, w.wait_for_next_job_id());
                 }
 
             } catch (const std::exception& e) {
@@ -680,7 +683,7 @@ static void spawn_worker(WorkersPool& wp) noexcept {
     }
 }
 
-static void process_job(const WorkersPool::NextJob& job) {
+static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJob& job) {
     STACK_UNWINDING_MARK;
 
     auto exit_procedures = [&job] {
@@ -691,20 +694,22 @@ static void process_job(const WorkersPool::NextJob& job) {
         });
     };
 
-    EnumVal<sim::jobs::Job::Type> jtype{};
-    mysql::Optional<uint64_t> file_id;
-    mysql::Optional<uint64_t> tmp_file_id;
-    mysql::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
+    EnumVal<sim::jobs::OldJob::Type> jtype{};
+    old_mysql::Optional<uint64_t> file_id;
+    old_mysql::Optional<uint64_t> tmp_file_id;
+    old_mysql::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
     InplaceBuff<32> created_at;
-    mysql::Optional<uint64_t> aux_id; // TODO: normalize this column...
+    old_mysql::Optional<uint64_t> aux_id; // TODO: normalize this column...
     InplaceBuff<512> info;
 
+    mysql.execute(sim::sql::SqlWithParams("SELECT 1")); // Reconnect to database if disconnected
+    auto old_mysql = old_mysql::ConnectionView{mysql};
     {
-        auto stmt = job_server::mysql.prepare(
+        auto stmt = old_mysql.prepare(
             "SELECT file_id, tmp_file_id, creator, created_at, type, aux_id, info "
             "FROM jobs WHERE id=? AND status!=?"
         );
-        stmt.bind_and_execute(job.id, EnumVal(sim::jobs::Job::Status::CANCELED));
+        stmt.bind_and_execute(job.id, EnumVal(sim::jobs::OldJob::Status::CANCELED));
         stmt.res_bind_all(file_id, tmp_file_id, creator, created_at, jtype, aux_id, info);
 
         if (not stmt.next()) { // Job has been probably canceled
@@ -713,8 +718,8 @@ static void process_job(const WorkersPool::NextJob& job) {
     }
 
     // Mark as in progress
-    job_server::mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-        .bind_and_execute(EnumVal(sim::jobs::Job::Status::IN_PROGRESS), job.id);
+    old_mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
+        .bind_and_execute(EnumVal(sim::jobs::OldJob::Status::IN_PROGRESS), job.id);
 
     stdlog("Processing job ", job.id, "...");
 
@@ -723,13 +728,13 @@ static void process_job(const WorkersPool::NextJob& job) {
         creat = creator.value();
     }
     job_server::job_dispatcher(
-        job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, created_at
+        mysql, job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, created_at
     );
 
     exit_procedures();
 }
 
-static void process_local_job(const WorkersPool::NextJob& job) {
+static void process_local_job(sim::mysql::Connection& mysql, const WorkersPool::NextJob& job) {
     STACK_UNWINDING_MARK;
 
     stdlog(
@@ -743,10 +748,10 @@ static void process_local_job(const WorkersPool::NextJob& job) {
         '}'
     );
 
-    process_job(job);
+    process_job(mysql, job);
 }
 
-static void process_judge_job(const WorkersPool::NextJob& job) {
+static void process_judge_job(sim::mysql::Connection& mysql, const WorkersPool::NextJob& job) {
     STACK_UNWINDING_MARK;
 
     stdlog(
@@ -760,51 +765,55 @@ static void process_judge_job(const WorkersPool::NextJob& job) {
         '}'
     );
 
-    process_job(job);
+    process_job(mysql, job);
 }
 
-static void sync_and_assign_jobs();
+static void sync_and_assign_jobs(sim::mysql::Connection& mysql);
 
 static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-    local_workers(process_local_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
-        STACK_UNWINDING_MARK;
+    local_workers(
+        process_local_job,
+        sync_and_assign_jobs,
+        [](sim::mysql::Connection& mysql, WorkersPool::WorkerInfo winfo) {
+            STACK_UNWINDING_MARK;
 
-        // Job has to be reset and cleanup to be done
-        if (not winfo.is_idle) {
-            if (winfo.next_job.locked_its_problem) {
-                jobs_queue.unlock_problem(winfo.next_job.problem_id);
+            // Job has to be reset and cleanup to be done
+            if (not winfo.is_idle) {
+                if (winfo.next_job.locked_its_problem) {
+                    jobs_queue.unlock_problem(winfo.next_job.problem_id);
+                }
+
+                sim::jobs::restart_job(mysql, from_unsafe{to_string(winfo.next_job.id)}, false);
             }
 
-            sim::jobs::restart_job(
-                job_server::mysql, from_unsafe{to_string(winfo.next_job.id)}, false
-            );
+            EventsQueue::register_event([] { spawn_worker(local_workers); });
         }
-
-        EventsQueue::register_event([] { spawn_worker(local_workers); });
-    });
+    );
 
 static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-    judge_workers(process_judge_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
-        STACK_UNWINDING_MARK;
+    judge_workers(
+        process_judge_job,
+        sync_and_assign_jobs,
+        [](sim::mysql::Connection& mysql, WorkersPool::WorkerInfo winfo) {
+            STACK_UNWINDING_MARK;
 
-        // Job has to be reset and cleanup to be done
-        if (not winfo.is_idle) {
-            if (winfo.next_job.locked_its_problem) {
-                jobs_queue.unlock_problem(winfo.next_job.problem_id);
+            // Job has to be reset and cleanup to be done
+            if (not winfo.is_idle) {
+                if (winfo.next_job.locked_its_problem) {
+                    jobs_queue.unlock_problem(winfo.next_job.problem_id);
+                }
+
+                sim::jobs::restart_job(mysql, from_unsafe{to_string(winfo.next_job.id)}, false);
             }
 
-            sim::jobs::restart_job(
-                job_server::mysql, from_unsafe{to_string(winfo.next_job.id)}, false
-            );
+            EventsQueue::register_event([] { spawn_worker(judge_workers); });
         }
+    );
 
-        EventsQueue::register_event([] { spawn_worker(judge_workers); });
-    });
-
-static void sync_and_assign_jobs() {
+static void sync_and_assign_jobs(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
-    jobs_queue.sync_with_db(); // sync before assigning
+    jobs_queue.sync_with_db(mysql); // sync before assigning
 
     auto problem_job = jobs_queue.best_problem_job();
     auto other_job = jobs_queue.best_other_job();
@@ -886,7 +895,7 @@ static void sync_and_assign_jobs() {
     }
 }
 
-static void events_loop() noexcept {
+static void events_loop(sim::mysql::Connection& mysql) noexcept {
     int inotify_fd = -1;
     int inotify_wd = -1;
 
@@ -907,7 +916,7 @@ static void events_loop() noexcept {
             }
 
             // Update jobs queue and distribute new jobs
-            sync_and_assign_jobs();
+            sync_and_assign_jobs(mysql);
 
             auto* event = reinterpret_cast<struct inotify_event*>(inotify_buff);
             if (event->mask & IN_MOVE_SELF) {
@@ -934,7 +943,7 @@ static void events_loop() noexcept {
             constexpr uint SLEEP_INTERVAL = 30; // in milliseconds
 
             // Update jobs queue
-            sync_and_assign_jobs();
+            sync_and_assign_jobs(mysql);
 
             // Inotify is broken
             if (inotify_wd == -1) {
@@ -986,7 +995,7 @@ static void events_loop() noexcept {
                             break;
                         }
 
-                        jobs_queue.sync_with_db();
+                        jobs_queue.sync_with_db(mysql);
                         while (EventsQueue::process_next_event()) {
                         }
 
@@ -1006,7 +1015,7 @@ static void events_loop() noexcept {
                         }
 
                         // Update queue - sth may have changed
-                        sync_and_assign_jobs();
+                        sync_and_assign_jobs(mysql);
 
                         int rc = poll(&pfd, 1, SLEEP_INTERVAL);
                         if (rc == -1 and errno != EINTR) {
@@ -1104,33 +1113,35 @@ static void events_loop() noexcept {
 }
 
 // Clean up database
-static void clean_up_db() {
+static void clean_up_db(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
     try {
         // Do it in a transaction to speed things up
-        auto transaction = job_server::mysql.start_transaction();
+        auto transaction = mysql.start_repeatable_read_transaction();
+
+        auto old_mysql = old_mysql::ConnectionView{mysql};
 
         // Fix jobs that are in progress after the job-server died
-        auto stmt = job_server::mysql.prepare("SELECT id, type, info FROM jobs WHERE "
-                                              "status=?");
-        stmt.bind_and_execute(EnumVal(sim::jobs::Job::Status::IN_PROGRESS));
+        auto stmt = old_mysql.prepare("SELECT id, type, info FROM jobs WHERE "
+                                      "status=?");
+        stmt.bind_and_execute(EnumVal(sim::jobs::OldJob::Status::IN_PROGRESS));
 
-        decltype(sim::jobs::Job::id) job_id = 0;
-        EnumVal<sim::jobs::Job::Type> job_type{};
+        decltype(sim::jobs::OldJob::id) job_id = 0;
+        EnumVal<sim::jobs::OldJob::Type> job_type{};
         InplaceBuff<128> job_info;
         stmt.res_bind_all(job_id, job_type, job_info);
         while (stmt.next()) {
             sim::jobs::restart_job(
-                job_server::mysql, from_unsafe{to_string(job_id)}, job_type, job_info, false
+                mysql, from_unsafe{to_string(job_id)}, job_type, job_info, false
             );
         }
 
         // Fix jobs that are noticed [ending] after the job-server died
-        job_server::mysql.prepare("UPDATE jobs SET status=? WHERE status=?")
+        old_mysql.prepare("UPDATE jobs SET status=? WHERE status=?")
             .bind_and_execute(
-                EnumVal(sim::jobs::Job::Status::PENDING),
-                EnumVal(sim::jobs::Job::Status::NOTICED_PENDING)
+                EnumVal(sim::jobs::OldJob::Status::PENDING),
+                EnumVal(sim::jobs::OldJob::Status::NOTICED_PENDING)
             );
         transaction.commit();
 
@@ -1179,9 +1190,9 @@ int main() {
 
     // Connect to the databases
     try {
-        job_server::mysql = sim::mysql::make_conn_with_credential_file(".db.config");
+        auto mysql = sim::mysql::Connection::from_credential_file(".db.config");
 
-        clean_up_db();
+        clean_up_db(mysql);
 
         ConfigFile cf;
         cf.add_vars("js_local_workers", "js_judge_workers");
@@ -1213,13 +1224,12 @@ int main() {
         for (size_t i = 0; i < jworkers_no; ++i) {
             spawn_worker(judge_workers);
         }
+        events_loop(mysql);
 
     } catch (const std::exception& e) {
         ERRLOG_CATCH(e);
         return 1;
     }
-
-    events_loop();
 
     return 0;
 }

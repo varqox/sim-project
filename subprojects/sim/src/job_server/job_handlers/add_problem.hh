@@ -2,13 +2,14 @@
 
 #include "add_or_reupload_problem_base.hh"
 
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
 
 namespace job_server::job_handlers {
 
 class AddProblem final : public AddOrReuploadProblemBase {
 public:
     AddProblem(
+        sim::mysql::Connection& mysql,
         uint64_t job_id,
         StringView job_creator,
         const sim::jobs::AddProblemInfo& info,
@@ -17,7 +18,8 @@ public:
     )
     : JobHandler(job_id)
     , AddOrReuploadProblemBase(
-          sim::jobs::Job::Type::ADD_PROBLEM,
+          mysql,
+          sim::jobs::OldJob::Type::ADD_PROBLEM,
           job_creator,
           info,
           job_file_id,
@@ -25,7 +27,7 @@ public:
           std::nullopt
       ) {}
 
-    void run() override;
+    void run(sim::mysql::Connection& mysql) override;
 };
 
 } // namespace job_server::job_handlers

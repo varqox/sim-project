@@ -4,22 +4,22 @@
 
 #include <chrono>
 #include <map>
-#include <sim/contest_entry_tokens/contest_entry_token.hh>
-#include <sim/contest_files/contest_file.hh>
-#include <sim/contest_problems/contest_problem.hh>
-#include <sim/contest_rounds/contest_round.hh>
-#include <sim/contest_users/contest_user.hh>
-#include <sim/contests/contest.hh>
-#include <sim/internal_files/internal_file.hh>
-#include <sim/jobs/job.hh>
+#include <sim/contest_entry_tokens/old_contest_entry_token.hh>
+#include <sim/contest_files/old_contest_file.hh>
+#include <sim/contest_problems/old_contest_problem.hh>
+#include <sim/contest_rounds/old_contest_round.hh>
+#include <sim/contest_users/old_contest_user.hh>
+#include <sim/contests/old_contest.hh>
+#include <sim/internal_files/old_internal_file.hh>
+#include <sim/jobs/old_job.hh>
 #include <sim/jobs/utils.hh>
-#include <sim/problem_tags/problem_tag.hh>
-#include <sim/problems/problem.hh>
-#include <sim/sessions/session.hh>
-#include <sim/sql_fields/blob.hh>
-#include <sim/sql_fields/datetime.hh>
-#include <sim/submissions/submission.hh>
-#include <sim/users/user.hh>
+#include <sim/old_sql_fields/blob.hh>
+#include <sim/old_sql_fields/datetime.hh>
+#include <sim/problem_tags/old_problem_tag.hh>
+#include <sim/problems/old_problem.hh>
+#include <sim/sessions/old_session.hh>
+#include <sim/submissions/old_submission.hh>
+#include <sim/users/old_user.hh>
 #include <simlib/from_unsafe.hh>
 #include <simlib/ranges.hh>
 #include <simlib/time.hh>
@@ -62,38 +62,41 @@ struct PrimaryKeysWithTime {
 
 // Loads all information about ids from jobs
 struct PrimaryKeysFromJobs {
-    PrimaryKeysWithTime<decltype(sim::internal_files::InternalFile::primary_key)::Type>
+    PrimaryKeysWithTime<decltype(sim::internal_files::OldInternalFile::primary_key)::Type>
         internal_files;
-    PrimaryKeysWithTime<decltype(sim::users::User::primary_key)::Type> users;
-    PrimaryKeysWithTime<decltype(sim::sessions::Session::primary_key)::Type> sessions;
-    PrimaryKeysWithTime<decltype(sim::problems::Problem::primary_key)::Type> problems;
-    PrimaryKeysWithTime<decltype(sim::problem_tags::ProblemTag::primary_key)::Type> problem_tags;
-    PrimaryKeysWithTime<decltype(sim::contests::Contest::primary_key)::Type> contests;
-    PrimaryKeysWithTime<decltype(sim::contest_rounds::ContestRound::primary_key)::Type>
+    PrimaryKeysWithTime<decltype(sim::users::OldUser::primary_key)::Type> users;
+    PrimaryKeysWithTime<decltype(sim::sessions::OldSession::primary_key)::Type> sessions;
+    PrimaryKeysWithTime<decltype(sim::problems::OldProblem::primary_key)::Type> problems;
+    PrimaryKeysWithTime<decltype(sim::problem_tags::OldProblemTag::primary_key)::Type> problem_tags;
+    PrimaryKeysWithTime<decltype(sim::contests::OldContest::primary_key)::Type> contests;
+    PrimaryKeysWithTime<decltype(sim::contest_rounds::OldContestRound::primary_key)::Type>
         contest_rounds;
-    PrimaryKeysWithTime<decltype(sim::contest_problems::ContestProblem::primary_key)::Type>
+    PrimaryKeysWithTime<decltype(sim::contest_problems::OldContestProblem::primary_key)::Type>
         contest_problems;
-    PrimaryKeysWithTime<decltype(sim::contest_users::ContestUser::primary_key)::Type> contest_users;
-    PrimaryKeysWithTime<decltype(sim::contest_files::ContestFile::primary_key)::Type> contest_files;
-    PrimaryKeysWithTime<decltype(sim::contest_entry_tokens::ContestEntryToken::primary_key)::Type>
+    PrimaryKeysWithTime<decltype(sim::contest_users::OldContestUser::primary_key)::Type>
+        contest_users;
+    PrimaryKeysWithTime<decltype(sim::contest_files::OldContestFile::primary_key)::Type>
+        contest_files;
+    PrimaryKeysWithTime<decltype(sim::contest_entry_tokens::OldContestEntryToken::primary_key
+    )::Type>
         contest_entry_tokens;
-    PrimaryKeysWithTime<decltype(sim::submissions::Submission::primary_key)::Type> submissions;
-    PrimaryKeysWithTime<decltype(sim::jobs::Job::primary_key)::Type> jobs;
+    PrimaryKeysWithTime<decltype(sim::submissions::OldSubmission::primary_key)::Type> submissions;
+    PrimaryKeysWithTime<decltype(sim::jobs::OldJob::primary_key)::Type> jobs;
 
     void initialize(StringView job_table_name) {
         STACK_UNWINDING_MARK;
-        using sim::jobs::Job;
+        using sim::jobs::OldJob;
 
-        decltype(Job::id) id = 0;
-        mysql::Optional<decltype(Job::creator)::value_type> creator;
-        EnumVal<Job::Type> type{};
-        mysql::Optional<decltype(Job::file_id)::value_type> file_id;
-        mysql::Optional<decltype(Job::tmp_file_id)::value_type> tmp_file_id;
-        sim::sql_fields::Datetime added_str;
-        mysql::Optional<decltype(Job::aux_id)::value_type> aux_id;
-        sim::sql_fields::Blob<32> info;
-
-        auto stmt = conn.prepare(
+        decltype(OldJob::id) id = 0;
+        old_mysql::Optional<decltype(OldJob::creator)::value_type> creator;
+        EnumVal<OldJob::Type> type{};
+        old_mysql::Optional<decltype(OldJob::file_id)::value_type> file_id;
+        old_mysql::Optional<decltype(OldJob::tmp_file_id)::value_type> tmp_file_id;
+        sim::old_sql_fields::Datetime added_str;
+        old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
+        sim::old_sql_fields::Blob<32> info;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT id, creator, type, file_id, "
             "tmp_file_id, created_at, aux_id, info FROM ",
             job_table_name,
@@ -118,54 +121,54 @@ struct PrimaryKeysFromJobs {
 
             // Process type-specific ids
             switch (type) {
-            case Job::Type::DELETE_FILE:
+            case OldJob::Type::DELETE_FILE:
                 // Id is already processed
                 break;
 
-            case Job::Type::JUDGE_SUBMISSION:
-            case Job::Type::REJUDGE_SUBMISSION:
+            case OldJob::Type::JUDGE_SUBMISSION:
+            case OldJob::Type::REJUDGE_SUBMISSION:
                 submissions.add_id(aux_id.value(), created_at);
                 break;
 
-            case Job::Type::DELETE_PROBLEM:
-            case Job::Type::REUPLOAD_PROBLEM:
-            case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-            case Job::Type::CHANGE_PROBLEM_STATEMENT:
+            case OldJob::Type::DELETE_PROBLEM:
+            case OldJob::Type::REUPLOAD_PROBLEM:
+            case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            case OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+            case OldJob::Type::CHANGE_PROBLEM_STATEMENT:
                 problems.add_id(aux_id.value(), created_at);
                 break;
 
-            case Job::Type::MERGE_PROBLEMS:
+            case OldJob::Type::MERGE_PROBLEMS:
                 problems.add_id(aux_id.value(), created_at);
                 problems.add_id(sim::jobs::MergeProblemsInfo(info).target_problem_id, created_at);
                 break;
 
-            case Job::Type::DELETE_USER: users.add_id(aux_id.value(), created_at); break;
+            case OldJob::Type::DELETE_USER: users.add_id(aux_id.value(), created_at); break;
 
-            case Job::Type::MERGE_USERS:
+            case OldJob::Type::MERGE_USERS:
                 users.add_id(aux_id.value(), created_at);
                 users.add_id(sim::jobs::MergeUsersInfo(info).target_user_id, created_at);
                 break;
 
-            case Job::Type::DELETE_CONTEST: contests.add_id(aux_id.value(), created_at); break;
+            case OldJob::Type::DELETE_CONTEST: contests.add_id(aux_id.value(), created_at); break;
 
-            case Job::Type::DELETE_CONTEST_ROUND:
+            case OldJob::Type::DELETE_CONTEST_ROUND:
                 contest_rounds.add_id(aux_id.value(), created_at);
                 break;
 
-            case Job::Type::DELETE_CONTEST_PROBLEM:
-            case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+            case OldJob::Type::DELETE_CONTEST_PROBLEM:
+            case OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
                 contest_problems.add_id(aux_id.value(), created_at);
                 break;
 
-            case Job::Type::ADD_PROBLEM:
-            case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            case OldJob::Type::ADD_PROBLEM:
+            case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
                 if (aux_id.has_value()) {
                     problems.add_id(aux_id.value(), created_at);
                 }
                 break;
 
-            case Job::Type::EDIT_PROBLEM: THROW("TODO");
+            case OldJob::Type::EDIT_PROBLEM: THROW("TODO");
             }
         }
     }

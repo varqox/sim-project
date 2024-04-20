@@ -1,11 +1,11 @@
 #include "add_or_reupload_problem__judge_main_solution_base.hh"
 
-#include <sim/internal_files/internal_file.hh>
+#include <sim/internal_files/old_internal_file.hh>
 #include <simlib/sim/problem_package.hh>
 
 namespace job_server::job_handlers {
 
-void AddOrReuploadProblemJudgeModelSolutionBase::run() {
+void AddOrReuploadProblemJudgeModelSolutionBase::run(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
     auto package_path = sim::internal_files::path_of(tmp_file_id_.value());
@@ -24,7 +24,7 @@ void AddOrReuploadProblemJudgeModelSolutionBase::run() {
     zip.close();
 
     bool canceled = false;
-    job_done(canceled);
+    job_done(mysql, canceled);
 }
 
 } // namespace job_server::job_handlers

@@ -10,7 +10,7 @@ class DeleteUser final : public JobHandler {
 public:
     DeleteUser(uint64_t job_id, uint64_t user_id) : JobHandler(job_id), user_id_(user_id) {}
 
-    void run() final;
+    void run(sim::mysql::Connection& mysql) final;
 };
 
 } // namespace job_server::job_handlers

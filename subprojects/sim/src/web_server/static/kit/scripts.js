@@ -111,8 +111,8 @@ function url_api_contest_entry_tokens_add(contest_id) { return '/api/contest/' +
 function url_api_contest_entry_tokens_add_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add_short'; }
 function url_api_contest_entry_tokens_delete(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete'; }
 function url_api_contest_entry_tokens_delete_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete_short'; }
-function url_api_contest_entry_tokens_regen(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regen'; }
-function url_api_contest_entry_tokens_regen_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regen_short'; }
+function url_api_contest_entry_tokens_regenerate(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regenerate'; }
+function url_api_contest_entry_tokens_regenerate_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regenerate_short'; }
 function url_api_contest_entry_tokens_view(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens'; }
 function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/contest_name'; }
 function url_api_problems() { return '/api/problems'; }
@@ -1206,8 +1206,8 @@ function handle_session_change(params) {
 		const error_counter_elem = elem_link_with_class_to_modal('error_counter', '', () => {
 			const modal = new Modal();
 			modal.content_elem.appendChild(elem_with_text('h2', 'You are seeing this because something went wrong...'));
-			const issues_link = elem_with_text('a', 'https://github.com/varqox/sim/issues');
-			issues_link.href = 'https://github.com/varqox/sim/issues';
+			const issues_link = elem_with_text('a', 'https://github.com/varqox/sim-project/issues');
+			issues_link.href = 'https://github.com/varqox/sim-project/issues';
 			issues_link.target = '_blank';
 			issues_link.rel = 'noopener noreferrer';
 			modal.content_elem.appendChild(elem_of('p', 'Please report a bug by going to ', issues_link, ' and creating an issue with the following log:'));
@@ -2124,10 +2124,10 @@ function countdown_clock(target_date) {
 		};
 
 		if (diff >= 3600)
-			diff_text += make_diff_text(Math.floor(diff / 3600), ' hour', ' hours');
+			diff_text += make_diff_text(Math.floor(diff / 3600), ' hour ', ' hours ');
 		if (diff >= 60)
-			diff_text += make_diff_text(Math.floor((diff % 3600) / 60), ' minute', ' minutes');
-		diff_text += ' and ' + make_diff_text(diff % 60, ' second', ' seconds');
+			diff_text += make_diff_text(Math.floor((diff % 3600) / 60), ' minute and ', ' minutes and ');
+		diff_text += make_diff_text(diff % 60, ' second', ' seconds');
 		span.text(diff_text);
 	}
 
@@ -5970,129 +5970,142 @@ function view_contest_impl(as_oldmodal, id_for_api, opt_hash /*= ''*/) {
 		if (actions.indexOf('A') !== -1)
 			tabs.push('Users', function() {
 				var entry_link_elem = $('<div>').appendTo(elem);
-				var render_entry_link_panel = function() {
-					var this_ = this;
-					entry_link_elem.empty();
-
-					API_get(url_api_contest_entry_tokens_view(contest.id), function(data) {
-						if (data.token != null) {
-							if (data.token.value === null) {
-								if (data.token.capabilities.create) {
-									entry_link_elem.append(a_view_button(undefined,
-										'Add entry link', 'btn', oldmodal_request.bind(null,
-											'Add entry link', $('<form>'),
-											url_api_contest_entry_tokens_add(contest.id), function(resp, oldloader_parent) {
-												show_success_via_oldloader(oldloader_parent[0], 'Added');
-												render_entry_link_panel.call(this_);
-											})));
-								}
-							} else {
-								entry_link_elem.append(copy_to_clipboard_btn(false, 'Copy link', function() {
-									return window.location.origin + url_enter_contest(data.token.value);
-								}));
-								if (data.token.capabilities.regen) {
-									entry_link_elem.append(a_view_button(undefined,
-										'Regenerate link', 'btn blue', dialogue_oldmodal_request.bind(null,
-											'Regenerate link', $('<center>', {
-												html: [
-												'Are you sure to regenerate the entry link: ',
-												$('<br>'),
-												a_view_button(url_enter_contest(data.token.value), window.location.origin + url_enter_contest(data.token.value), undefined, enter_contest_using_token.bind(null, true, data.token.value)),
-												$('<br>'),
-												'?'
-												]
-											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen(contest.id),
-											function(resp, oldloader_parent) {
-												show_success_via_oldloader(oldloader_parent[0], 'Regenerated');
-												render_entry_link_panel.call(this_);
-											}, 'No, take me back', true)));
-								}
-								if (data.token.capabilities.delete) {
-									entry_link_elem.append(a_view_button(undefined,
-										'Delete link', 'btn red', dialogue_oldmodal_request.bind(null,
-											'Delete link', $('<center>', {
-												html: [
-												'Are you sure to delete the entry link: ',
-												$('<br>'),
-												a_view_button(url_enter_contest(data.token.value), window.location.origin + url_enter_contest(data.token.value), undefined, enter_contest_using_token.bind(null, true, data.token.value)),
-												$('<br>'),
-												'?'
-												]
-											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete(contest.id),
-											function(resp, oldloader_parent) {
-												show_success_via_oldloader(oldloader_parent[0], 'Deleted');
-												render_entry_link_panel.call(this_);
-											}, 'No, take me back', true)));
-								}
-								entry_link_elem.append($('<pre>', {
-									text: window.location.origin + url_enter_contest(data.token.value)
-								}));
+				var entry_token_elem = $('<div>').appendTo(entry_link_elem);
+				var entry_short_token_elem = $('<div>').appendTo(entry_link_elem);
+				API_get(url_api_contest_entry_tokens_view(contest.id), function(data) {
+					let show_no_short_token;
+					if (data.token != null) {
+						let show_token;
+						const show_no_token = (token) => {
+							remove_children(entry_token_elem[0]);
+							if (token.capabilities.create) {
+								entry_token_elem.append(a_view_button(undefined, 'Add entry link', 'btn', oldmodal_request.bind(null,
+									'Add entry link', $('<form>'), url_api_contest_entry_tokens_add(contest.id),
+									function(resp, oldloader_parent) {
+										show_token(resp.token);
+										show_no_short_token(data.short_token);
+										show_success_via_oldloader(oldloader_parent[0], 'Added');
+									})))
 							}
+						};
+						show_token = (token) => {
+							remove_children(entry_token_elem[0]);
+							entry_token_elem.append(copy_to_clipboard_btn(false, 'Copy link', function() {
+								return window.location.origin + url_enter_contest(token.value);
+							}));
+							if (token.capabilities.regenerate) {
+								entry_token_elem.append(a_view_button(undefined, 'Regenerate link', 'btn blue', dialogue_oldmodal_request.bind(null,
+									'Regenerate link', $('<center>', {
+										html: [
+											'Are you sure to regenerate the entry link: ',
+											$('<br>'),
+											a_view_button(url_enter_contest(token.value), window.location.origin + url_enter_contest(token.value), undefined, enter_contest_using_token.bind(null, true, token.value)),
+											$('<br>'),
+											'?'
+										],
+									}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regenerate(contest.id),
+									function (resp, oldloader_parent) {
+										show_token(resp.token);
+										show_success_via_oldloader(oldloader_parent[0], 'Regenerated');
+									}, 'No, take me back', true)));
+							}
+							if (token.capabilities.delete) {
+								entry_token_elem.append(a_view_button(undefined, 'Delete link', 'btn red', dialogue_oldmodal_request.bind(null,
+									'Delete link', $('<center>', {
+										html: [
+											'Are you sure to delete the entry link: ',
+											$('<br>'),
+											a_view_button(url_enter_contest(token.value), window.location.origin + url_enter_contest(token.value), undefined, enter_contest_using_token.bind(null, true, token.value)),
+											$('<br>'),
+											'?'
+										],
+									}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete(contest.id),
+									function (resp, oldloader_parent) {
+										show_no_token(token);
+										remove_children(entry_short_token_elem[0]);
+										show_success_via_oldloader(oldloader_parent[0], 'Deleted');
+									}, 'No, take me back', true)));
+							}
+
+							entry_token_elem.append($('<pre>', {
+								text: window.location.origin + url_enter_contest(token.value),
+							}));
+						};
+
+						if (data.token.value === null) {
+							show_no_token(data.token);
+						} else {
+							show_token(data.token);
 						}
-						if (data.short_token != null) {
+					}
+					if (data.short_token != null) {
+						let show_short_token;
+						show_no_short_token = (short_token) => {
+							remove_children(entry_short_token_elem[0]);
+							entry_short_token_elem.append(a_view_button(undefined, 'Add short entry link', 'btn', oldmodal_request.bind(null,
+								'Add short entry link', $('<form>'), url_api_contest_entry_tokens_add_short(contest.id),
+								function(resp, oldloader_parent) {
+									show_short_token(resp.short_token);
+									show_success_via_oldloader(oldloader_parent[0], 'Added');
+								})));
+						};
+						show_short_token = (short_token) => {
+							remove_children(entry_short_token_elem[0]);
+							entry_short_token_elem.append(copy_to_clipboard_btn(false, 'Copy short link', function() {
+								return window.location.origin + url_enter_contest(short_token.value);
+							}));
+							if (short_token.capabilities.regenerate) {
+								entry_short_token_elem.append(a_view_button(undefined, 'Regenerate short link', 'btn blue', dialogue_oldmodal_request.bind(null,
+									'Regenerate short link', $('<center>', {
+										html: [
+											'Are you sure to regenerate the entry short link: ',
+											$('<br>'),
+											a_view_button(url_enter_contest(short_token.value), window.location.origin + url_enter_contest(short_token.value), undefined, enter_contest_using_token.bind(null, true, short_token.value)),
+											$('<br>'),
+											'?'
+										]
+									}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regenerate_short(contest.id),
+									function(resp, oldloader_parent) {
+										show_short_token(resp.short_token);
+										show_success_via_oldloader(oldloader_parent[0], 'Regenerated');
+									}, 'No, take me back', true)));
+							}
+							if (short_token.capabilities.delete) {
+								entry_short_token_elem.append(a_view_button(undefined, 'Delete short link', 'btn red', dialogue_oldmodal_request.bind(null,
+									'Delete short link', $('<center>', {
+										html: [
+											'Are you sure to delete the entry short link: ',
+											$('<br>'),
+											a_view_button(url_enter_contest(short_token.value), window.location.origin + url_enter_contest(short_token.value), undefined, enter_contest_using_token.bind(null, true, short_token.value)),
+											$('<br>'),
+											'?'
+										]
+									}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete_short(contest.id),
+									function(resp, oldloader_parent) {
+										show_no_short_token(short_token);
+										show_success_via_oldloader(oldloader_parent[0], 'Deleted');
+									}, 'No, take me back', true)));
+							}
+
+							const exp_date = new Date(short_token.expires_at);
+							entry_short_token_elem.append($('<span>', {
+								style: 'margin-left: 10px; font-size: 12px; color: #777;',
+								html: ['Short token will expire in ', countdown_clock(exp_date)],
+							}));
+							entry_short_token_elem.append($('<pre>', {
+								text: window.location.origin + url_enter_contest(short_token.value),
+							}));
+						};
+						if (data.token.value != null) {
 							if (data.short_token.value === null) {
-								if (data.short_token.capabilities.create && data.token.value != null) {
-									entry_link_elem.append(a_view_button(undefined,
-										'Add short entry link', 'btn', oldmodal_request.bind(null,
-											'Add short entry link', $('<form>'),
-											url_api_contest_entry_tokens_add_short(contest.id), function(resp, oldloader_parent) {
-												show_success_via_oldloader(oldloader_parent[0], 'Added');
-												render_entry_link_panel.call(this_);
-											})));
-								}
+								show_no_short_token(data.short_token);
 							} else {
-								entry_link_elem.append(copy_to_clipboard_btn(false, 'Copy short link', function() {
-									return window.location.origin + url_enter_contest(data.short_token.value);
-								}));
-								if (data.short_token.capabilities.regen) {
-									entry_link_elem.append(a_view_button(undefined,
-										'Regenerate short link', 'btn blue', dialogue_oldmodal_request.bind(null,
-											'Regenerate short link', $('<center>', {
-												html: [
-												'Are you sure to regenerate the entry short link: ',
-												$('<br>'),
-												a_view_button(url_enter_contest(data.short_token.value), window.location.origin + url_enter_contest(data.short_token.value), undefined, enter_contest_using_token.bind(null, true, data.short_token.value)),
-												$('<br>'),
-												'?'
-												]
-											}), 'Yes, regenerate it', 'btn-small blue', url_api_contest_entry_tokens_regen_short(contest.id),
-											function(resp, oldloader_parent) {
-												show_success_via_oldloader(oldloader_parent[0], 'Regenerated');
-												render_entry_link_panel.call(this_);
-											}, 'No, take me back', true)));
-								}
-								if (data.short_token.capabilities.delete) {
-									entry_link_elem.append(a_view_button(undefined,
-										'Delete short link', 'btn red', dialogue_oldmodal_request.bind(null,
-											'Delete short link', $('<center>', {
-												html: [
-												'Are you sure to delete the entry short link: ',
-												$('<br>'),
-												a_view_button(url_enter_contest(data.short_token.value), window.location.origin + url_enter_contest(data.short_token.value), undefined, enter_contest_using_token.bind(null, true, data.short_token.value)),
-												$('<br>'),
-												'?'
-												]
-											}), 'Yes, I am sure', 'btn-small red', url_api_contest_entry_tokens_delete_short(contest.id),
-											function(resp, oldloader_parent) {
-												show_success_via_oldloader(oldloader_parent[0], 'Deleted');
-												render_entry_link_panel.call(this_);
-											}, 'No, take me back', true)));
-								}
-								var exp_date = utcdt_or_tm_to_Date(data.short_token.expires_at);
-								entry_link_elem.append($('<span>', {
-									style: 'margin-left: 10px; font-size: 12px; color: #777',
-									html: ['Short token will expire in ', countdown_clock(exp_date)]
-								}));
-
-								entry_link_elem.append($('<pre>', {
-									text: window.location.origin + url_enter_contest(data.short_token.value)
-								}));
+								show_short_token(data.short_token);
 							}
 						}
-					}, entry_link_elem);
-				};
+					}
+				}, entry_link_elem);
 
-				render_entry_link_panel();
 				tab_contest_users_lister($('<div>').appendTo(elem), '/c' + contest.id);
 			});
 

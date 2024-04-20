@@ -2,19 +2,20 @@
 
 #include "merger.hh"
 
-#include <sim/contests/contest.hh>
-#include <sim/sql_fields/datetime.hh>
+#include <sim/contests/old_contest.hh>
+#include <sim/old_sql_fields/datetime.hh>
 #include <simlib/defer.hh>
 
 namespace sim_merger {
 
-class ContestsMerger : public Merger<sim::contests::Contest> {
+class ContestsMerger : public Merger<sim::contests::OldContest> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::contests::Contest c;
-        mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
-        auto stmt = conn.prepare(
+        sim::contests::OldContest c;
+        old_mysql::Optional<sim::old_sql_fields::Datetime> earliest_submit_time;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT c.id, c.name, c.is_public, MIN(s.created_at) "
             "FROM ",
             record_set.sql_table_name,
@@ -38,16 +39,18 @@ class ContestsMerger : public Merger<sim::contests::Contest> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::contests::Contest& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contests::OldContest& /*unused*/) { return nullptr; });
     }
 
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt =
-            conn.prepare("INSERT INTO ", sql_table_name(), "(id, name, is_public) VALUES(?, ?, ?)");
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
+            "INSERT INTO ", sql_table_name(), "(id, name, is_public) VALUES(?, ?, ?)"
+        );
 
         ProgressBar progress_bar("Contests saved:", new_table_.size(), 128);
         for (const NewRecord& new_record : new_table_) {
@@ -56,7 +59,7 @@ public:
             stmt.bind_and_execute(x.id, x.name, x.is_public);
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 

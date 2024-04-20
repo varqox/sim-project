@@ -1,11 +1,10 @@
 #pragma once
 
-#include <optional>
 #include <simlib/constructor_traits.hh>
 #include <type_traits>
 #include <utility>
 
-namespace sim::sql_fields {
+namespace sim::old_sql_fields {
 
 // Warning: this wrapper does not validate against predicate
 template <class SqlField, bool (*predicate_func)(const SqlField&), const char* description_str>
@@ -13,7 +12,7 @@ class SatisfyingPredicate : public SqlField {
 public:
     using underlying_type = SqlField;
     static constexpr auto predicate = predicate_func;
-    static constexpr auto description = description_str;
+    static constexpr const char* description = description_str;
 
     SatisfyingPredicate() = default;
 
@@ -47,4 +46,4 @@ template <class SqlField, bool (*predicate_func)(const SqlField&), const char* d
 constexpr inline bool
     is_satisfying_predicate<SatisfyingPredicate<SqlField, predicate_func, description_str>> = true;
 
-} // namespace sim::sql_fields
+} // namespace sim::old_sql_fields

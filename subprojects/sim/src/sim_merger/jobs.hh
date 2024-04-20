@@ -8,7 +8,7 @@
 
 namespace sim_merger {
 
-class JobsMerger : public Merger<sim::jobs::Job> {
+class JobsMerger : public Merger<sim::jobs::OldJob> {
     const InternalFilesMerger& internal_files_;
     const UsersMerger& users_;
     const SubmissionsMerger& submissions_;
@@ -19,14 +19,15 @@ class JobsMerger : public Merger<sim::jobs::Job> {
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
-        using sim::jobs::Job;
+        using sim::jobs::OldJob;
 
-        Job job;
-        mysql::Optional<decltype(job.file_id)::value_type> m_file_id;
-        mysql::Optional<decltype(job.tmp_file_id)::value_type> m_tmp_file_id;
-        mysql::Optional<decltype(job.creator)::value_type> m_creator;
-        mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id;
-        auto stmt = conn.prepare(
+        OldJob job;
+        old_mysql::Optional<decltype(job.file_id)::value_type> m_file_id;
+        old_mysql::Optional<decltype(job.tmp_file_id)::value_type> m_tmp_file_id;
+        old_mysql::Optional<decltype(job.creator)::value_type> m_creator;
+        old_mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT id, file_id, tmp_file_id, creator, type,"
             " priority, status, created_at, aux_id, info, data "
             "FROM ",
@@ -64,24 +65,24 @@ class JobsMerger : public Merger<sim::jobs::Job> {
 
             // Process type-specific ids
             switch (job.type) {
-            case Job::Type::DELETE_FILE:
+            case OldJob::Type::DELETE_FILE:
                 // Id is already processed
                 break;
 
-            case Job::Type::JUDGE_SUBMISSION:
-            case Job::Type::REJUDGE_SUBMISSION:
+            case OldJob::Type::JUDGE_SUBMISSION:
+            case OldJob::Type::REJUDGE_SUBMISSION:
                 job.aux_id = submissions_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 
-            case Job::Type::DELETE_PROBLEM:
-            case Job::Type::REUPLOAD_PROBLEM:
-            case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-            case Job::Type::CHANGE_PROBLEM_STATEMENT:
+            case OldJob::Type::DELETE_PROBLEM:
+            case OldJob::Type::REUPLOAD_PROBLEM:
+            case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            case OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+            case OldJob::Type::CHANGE_PROBLEM_STATEMENT:
                 job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 
-            case Job::Type::MERGE_PROBLEMS: {
+            case OldJob::Type::MERGE_PROBLEMS: {
                 job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
                 auto info = sim::jobs::MergeProblemsInfo(job.info);
                 info.target_problem_id = problems_.new_id(info.target_problem_id, record_set.kind);
@@ -89,7 +90,7 @@ class JobsMerger : public Merger<sim::jobs::Job> {
                 break;
             }
 
-            case Job::Type::MERGE_USERS: {
+            case OldJob::Type::MERGE_USERS: {
                 job.aux_id = users_.new_id(job.aux_id.value(), record_set.kind);
                 auto info = sim::jobs::MergeUsersInfo(job.info);
                 info.target_user_id = users_.new_id(info.target_user_id, record_set.kind);
@@ -97,31 +98,31 @@ class JobsMerger : public Merger<sim::jobs::Job> {
                 break;
             }
 
-            case Job::Type::DELETE_USER:
+            case OldJob::Type::DELETE_USER:
                 job.aux_id = users_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 
-            case Job::Type::DELETE_CONTEST:
+            case OldJob::Type::DELETE_CONTEST:
                 job.aux_id = contests_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 
-            case Job::Type::DELETE_CONTEST_ROUND:
+            case OldJob::Type::DELETE_CONTEST_ROUND:
                 job.aux_id = contest_rounds_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 
-            case Job::Type::DELETE_CONTEST_PROBLEM:
-            case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+            case OldJob::Type::DELETE_CONTEST_PROBLEM:
+            case OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
                 job.aux_id = contest_problems_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 
-            case Job::Type::ADD_PROBLEM:
-            case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+            case OldJob::Type::ADD_PROBLEM:
+            case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
                 if (job.aux_id) {
                     job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
                 }
                 break;
 
-            case Job::Type::EDIT_PROBLEM: THROW("TODO");
+            case OldJob::Type::EDIT_PROBLEM: THROW("TODO");
             }
 
             record_set.add_record(job, str_to_time_point(from_unsafe{job.created_at.to_string()}));
@@ -130,15 +131,16 @@ class JobsMerger : public Merger<sim::jobs::Job> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::jobs::Job& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::jobs::OldJob& /*unused*/) { return nullptr; });
     }
 
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, file_id, tmp_file_id, creator, type, priority,"
@@ -165,7 +167,7 @@ public:
             );
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 

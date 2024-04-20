@@ -6,7 +6,7 @@
 
 namespace sim_merger {
 
-class SubmissionsMerger : public Merger<sim::submissions::Submission> {
+class SubmissionsMerger : public Merger<sim::submissions::OldSubmission> {
     const InternalFilesMerger& internal_files_;
     const UsersMerger& users_;
     const ProblemsMerger& problems_;
@@ -17,13 +17,14 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::submissions::Submission s;
-        mysql::Optional<decltype(s.owner)::value_type> m_owner;
-        mysql::Optional<decltype(s.contest_problem_id)::value_type> m_contest_problem_id;
-        mysql::Optional<decltype(s.contest_round_id)::value_type> m_contest_round_id;
-        mysql::Optional<decltype(s.contest_id)::value_type> m_contest_id;
-        mysql::Optional<decltype(s.score)::value_type> m_score;
-        auto stmt = conn.prepare(
+        sim::submissions::OldSubmission s;
+        old_mysql::Optional<decltype(s.owner)::value_type> m_owner;
+        old_mysql::Optional<decltype(s.contest_problem_id)::value_type> m_contest_problem_id;
+        old_mysql::Optional<decltype(s.contest_round_id)::value_type> m_contest_round_id;
+        old_mysql::Optional<decltype(s.contest_id)::value_type> m_contest_id;
+        old_mysql::Optional<decltype(s.score)::value_type> m_score;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT id, file_id, owner, problem_id,"
             " contest_problem_id, contest_round_id, contest_id,"
             " type, language, final_candidate, problem_final,"
@@ -86,15 +87,16 @@ class SubmissionsMerger : public Merger<sim::submissions::Submission> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::submissions::Submission& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::submissions::OldSubmission& /*unused*/) { return nullptr; });
     }
 
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, file_id, owner, problem_id, contest_problem_id,"
@@ -135,7 +137,7 @@ public:
             );
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 

@@ -2,14 +2,14 @@
 
 #include <cstdint>
 #include <optional>
-#include <sim/sql_fields/datetime.hh>
+#include <sim/sql/fields/datetime.hh>
 #include <vector>
 
 namespace sim::merging {
 
 struct IdCreatedAt {
     uint64_t id;
-    sql_fields::Datetime created_at;
+    sql::fields::Datetime created_at;
 };
 
 class IdIterator {
@@ -33,7 +33,7 @@ public:
     // Returns upper bound on the create_at time for the specified id. For consecutive ids, the
     // upper bound on create_at of the smaller id may be greater than upper bound of create_at on
     // the bigger one.
-    [[nodiscard]] virtual std::optional<sql_fields::Datetime>
+    [[nodiscard]] virtual std::optional<sql::fields::Datetime>
     created_at_upper_bound_of_id(uint64_t id) = 0;
 };
 

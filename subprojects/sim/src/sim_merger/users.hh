@@ -2,16 +2,16 @@
 
 #include "merger.hh"
 
-#include <sim/submissions/submission.hh>
+#include <sim/submissions/old_submission.hh>
 #include <sim/submissions/update_final.hh>
-#include <sim/users/user.hh>
+#include <sim/users/old_user.hh>
 #include <simlib/defer.hh>
 
 namespace sim_merger {
 
 // Merges users by username
-class UsersMerger : public Merger<sim::users::User> {
-    std::map<decltype(sim::users::User::username), size_t> username_to_new_table_idx_;
+class UsersMerger : public Merger<sim::users::OldUser> {
+    std::map<decltype(sim::users::OldUser::username), size_t> username_to_new_table_idx_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
@@ -27,8 +27,9 @@ class UsersMerger : public Merger<sim::users::User> {
 
         THROW("TODO: use created_at");
 
-        sim::users::User user;
-        auto stmt = conn.prepare(
+        sim::users::OldUser user;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT id, type, username, first_name, last_name, "
             "email, password_salt, password_hash FROM ",
             record_set.sql_table_name
@@ -52,7 +53,7 @@ class UsersMerger : public Merger<sim::users::User> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::users::User& x, IdKind kind) -> NewRecord* {
+        Merger::merge([&](const sim::users::OldUser& x, IdKind kind) -> NewRecord* {
             auto it = username_to_new_table_idx_.find(x.username);
             if (it != username_to_new_table_idx_.end()) {
                 NewRecord& res = new_table_[it->second];
@@ -89,9 +90,10 @@ class UsersMerger : public Merger<sim::users::User> {
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, type, username, first_name, last_name, email,"
@@ -115,7 +117,7 @@ public:
             );
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 
@@ -128,23 +130,24 @@ public:
     void run_after_saving_hooks() override {
         // Reselect final submissions for merged users originating from single
         // source
-        auto transaction = conn.start_transaction();
+        auto transaction = mysql->start_repeatable_read_transaction();
         for (const auto& user : new_table_) {
             if (user.main_ids.size() > 1 or user.other_ids.size() > 1) {
-                decltype(sim::submissions::Submission::problem_id) problem_id = 0;
-                mysql::Optional<decltype(sim::submissions::Submission::contest_problem_id
+                decltype(sim::submissions::OldSubmission::problem_id) problem_id = 0;
+                old_mysql::Optional<decltype(sim::submissions::OldSubmission::contest_problem_id
                 )::value_type>
                     contest_problem_id;
 
-                auto stmt = conn.prepare("SELECT problem_id, contest_problem_id "
-                                         "FROM submissions "
-                                         "WHERE owner=? "
-                                         "GROUP BY problem_id, contest_problem_id");
+                auto old_mysql = old_mysql::ConnectionView{*mysql};
+                auto stmt = old_mysql.prepare("SELECT problem_id, contest_problem_id "
+                                              "FROM submissions "
+                                              "WHERE owner=? "
+                                              "GROUP BY problem_id, contest_problem_id");
                 stmt.bind_and_execute(user.data.id);
                 stmt.res_bind_all(problem_id, contest_problem_id);
                 while (stmt.next()) {
                     sim::submissions::update_final(
-                        conn, user.data.id, problem_id, contest_problem_id, false
+                        *mysql, user.data.id, problem_id, contest_problem_id, false
                     );
                 }
             }

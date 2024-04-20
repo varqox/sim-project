@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace sim::sqlv2 {
+namespace sim::sql {
 
 template <class... Params>
 class SqlWithParams {
@@ -1437,4 +1437,4 @@ DEFINE_CONVERSION_TO_SQL_WITH_PARAMS(InsertSelectOrderBy)
 #undef DEFINE_VALUES
 #undef DEFINE_SELECT
 
-} // namespace sim::sqlv2
+} // namespace sim::sql

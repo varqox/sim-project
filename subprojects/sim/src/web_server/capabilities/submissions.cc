@@ -1,7 +1,7 @@
 #include "submissions.hh"
 #include "utils.hh"
 
-#include <sim/users/user.hh>
+#include <sim/users/old_user.hh>
 
 namespace web_server::capabilities {
 

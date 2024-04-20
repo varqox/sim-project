@@ -1,26 +1,26 @@
 #pragma once
 
-#include <sim/contest_problems/contest_problem.hh>
+#include <sim/contest_problems/old_contest_problem.hh>
 #include <sim/contests/permissions.hh>
+#include <sim/problems/old_problem.hh>
 #include <sim/problems/permissions.hh>
-#include <sim/problems/problem.hh>
-#include <sim/submissions/submission.hh>
+#include <sim/submissions/old_submission.hh>
 
 namespace sim::contest_problems {
 
 enum class IterateIdKind { CONTEST, CONTEST_ROUND, CONTEST_PROBLEM };
 
 struct ExtraIterateData {
-    decltype(problems::Problem::label) problem_label;
-    std::optional<EnumVal<sim::submissions::Submission::Status>>
+    decltype(problems::OldProblem::label) problem_label;
+    std::optional<EnumVal<sim::submissions::OldSubmission::Status>>
         initial_final_submission_initial_status;
-    std::optional<EnumVal<sim::submissions::Submission::Status>> final_submission_full_status;
+    std::optional<EnumVal<sim::submissions::OldSubmission::Status>> final_submission_full_status;
     problems::Permissions problem_perms;
 };
 
 template <class T, class U, class Func>
 void iterate(
-    mysql::Connection& mysql,
+    sim::mysql::Connection& mysql,
     IterateIdKind id_kind,
     T&& id,
     contests::Permissions contest_perms,
@@ -30,7 +30,7 @@ void iterate(
     Func&& contest_problem_processor
 ) {
     STACK_UNWINDING_MARK;
-    static_assert(std::is_invocable_v<Func, const ContestProblem&, const ExtraIterateData&>);
+    static_assert(std::is_invocable_v<Func, const OldContestProblem&, const ExtraIterateData&>);
 
     throw_assert(user_id.has_value() == user_type.has_value());
 
@@ -45,7 +45,8 @@ void iterate(
 
     bool show_all_rounds = uint(contest_perms & contests::Permissions::ADMIN);
 
-    auto stmt = mysql.prepare(
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare(
         "SELECT cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id,"
         " cp.name, cp.item, cp.method_of_choosing_final_submission, cp.score_revealing,"
         " p.label, si.initial_status, sf.full_status, p.owner_id, p.type "
@@ -69,12 +70,12 @@ void iterate(
         stmt.bind_and_execute(curr_date, user_id, user_id, id);
     }
 
-    ContestProblem cp;
+    OldContestProblem cp;
     ExtraIterateData extra_data;
-    mysql::Optional<EnumVal<sim::submissions::Submission::Status>> m_initial_final_status;
-    mysql::Optional<EnumVal<sim::submissions::Submission::Status>> m_final_status;
-    mysql::Optional<decltype(problems::Problem::owner_id)::value_type> m_problem_owner_id;
-    decltype(problems::Problem::type) m_problem_type;
+    old_mysql::Optional<EnumVal<sim::submissions::OldSubmission::Status>> m_initial_final_status;
+    old_mysql::Optional<EnumVal<sim::submissions::OldSubmission::Status>> m_final_status;
+    old_mysql::Optional<decltype(problems::OldProblem::owner_id)::value_type> m_problem_owner_id;
+    decltype(problems::OldProblem::type) m_problem_type;
     stmt.res_bind_all(
         cp.id,
         cp.contest_round_id,
@@ -97,7 +98,8 @@ void iterate(
         extra_data.problem_perms =
             problems::get_permissions(user_id, user_type, m_problem_owner_id, m_problem_type);
         contest_problem_processor(
-            static_cast<const ContestProblem&>(cp), static_cast<const ExtraIterateData&>(extra_data)
+            static_cast<const OldContestProblem&>(cp),
+            static_cast<const ExtraIterateData&>(extra_data)
         );
     }
 }

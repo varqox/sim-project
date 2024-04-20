@@ -2,7 +2,7 @@
 
 #include "merger.hh"
 
-#include <sim/internal_files/internal_file.hh>
+#include <sim/internal_files/old_internal_file.hh>
 #include <simlib/defer.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
@@ -10,11 +10,12 @@
 
 namespace sim_merger {
 
-class InternalFilesMerger : public Merger<sim::internal_files::InternalFile> {
+class InternalFilesMerger : public Merger<sim::internal_files::OldInternalFile> {
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
-        sim::internal_files::InternalFile file{};
-        auto stmt = conn.prepare("SELECT id FROM ", record_set.sql_table_name);
+        sim::internal_files::OldInternalFile file{};
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare("SELECT id FROM ", record_set.sql_table_name);
         stmt.bind_and_execute();
         stmt.res_bind_all(file.id);
         while (stmt.next()) {
@@ -26,7 +27,7 @@ class InternalFilesMerger : public Merger<sim::internal_files::InternalFile> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::internal_files::InternalFile& /*unused*/) -> NewRecord* {
+        Merger::merge([&](const sim::internal_files::OldInternalFile& /*unused*/) -> NewRecord* {
             return nullptr;
         });
     }
@@ -42,9 +43,10 @@ class InternalFilesMerger : public Merger<sim::internal_files::InternalFile> {
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id) "
@@ -85,7 +87,7 @@ public:
             THROW("mkdir()", errmsg());
         }
 
-        decltype(sim::internal_files::InternalFile::id) id = 0;
+        decltype(sim::internal_files::OldInternalFile::id) id = 0;
         stmt.bind_all(id);
 
         ProgressBar progress_bar("Internal files saved:", new_table_.size(), 128);
@@ -113,7 +115,7 @@ public:
             }
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
         saving_successful = true;
     }
@@ -141,7 +143,7 @@ public:
         initialize();
     }
 
-    auto path_to_file(decltype(sim::internal_files::InternalFile::id) new_id) const {
+    auto path_to_file(decltype(sim::internal_files::OldInternalFile::id) new_id) const {
         STACK_UNWINDING_MARK;
         if (new_table_.empty()) {
             THROW("Invalid new_id");

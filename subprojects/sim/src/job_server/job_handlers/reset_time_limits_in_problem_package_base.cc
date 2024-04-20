@@ -1,7 +1,7 @@
-#include "../main.hh"
 #include "reset_time_limits_in_problem_package_base.hh"
 
 #include <sim/judging_config.hh>
+#include <simlib/sim/conver.hh>
 #include <simlib/sim/problem_package.hh>
 
 namespace job_server::job_handlers {

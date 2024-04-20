@@ -1,8 +1,8 @@
 #pragma once
 
-#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contest_rounds/old_contest_round.hh>
 #include <sim/contests/permissions.hh>
-#include <sim/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
 
 namespace sim::contest_rounds {
 
@@ -10,7 +10,7 @@ enum class IterateIdKind { CONTEST, CONTEST_ROUND, CONTEST_PROBLEM };
 
 template <class T, class Func>
 void iterate(
-    ::mysql::Connection& mysql,
+    sim::mysql::Connection& mysql,
     IterateIdKind id_kind,
     T&& id,
     contests::Permissions contest_perms,
@@ -18,7 +18,7 @@ void iterate(
     Func&& contest_round_processor
 ) {
     STACK_UNWINDING_MARK;
-    static_assert(std::is_invocable_v<Func, const ContestRound&>);
+    static_assert(std::is_invocable_v<Func, const OldContestRound&>);
 
     StringView id_part_sql = [&]() -> StringView {
         switch (id_kind) {
@@ -32,8 +32,8 @@ void iterate(
     }();
 
     bool show_all = uint(contest_perms & contests::Permissions::ADMIN);
-
-    auto stmt = mysql.prepare(
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare(
         "SELECT cr.id, cr.contest_id, cr.name, cr.item, cr.begins, cr.ends,"
         " cr.full_results, cr.ranking_exposure "
         "FROM contest_rounds cr ",
@@ -47,7 +47,7 @@ void iterate(
         stmt.bind_and_execute(id, curr_date);
     }
 
-    ContestRound cr;
+    OldContestRound cr;
     stmt.res_bind_all(
         cr.id,
         cr.contest_id,
@@ -60,7 +60,7 @@ void iterate(
     );
 
     while (stmt.next()) {
-        contest_round_processor(static_cast<const ContestRound&>(cr));
+        contest_round_processor(static_cast<const OldContestRound&>(cr));
     }
 }
 

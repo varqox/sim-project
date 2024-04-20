@@ -3,7 +3,7 @@
 #include "utils.hh"
 
 #include <sim/problems/problem.hh>
-#include <sim/users/user.hh>
+#include <sim/users/old_user.hh>
 
 using sim::problems::Problem;
 using sim::users::User;
@@ -15,13 +15,13 @@ ProblemsCapabilities problems(const decltype(Context::session)& session) noexcep
     return {
         .web_ui_view = true,
         .add_problem = is_admin(session) or is_teacher(session),
-        .add_with_type_private = is_admin(session) or is_teacher(session),
-        .add_with_type_contest_only = is_admin(session) or is_teacher(session),
-        .add_with_type_public = is_admin(session),
+        .add_problem_with_type_private = is_admin(session) or is_teacher(session),
+        .add_problem_with_type_contest_only = is_admin(session) or is_teacher(session),
+        .add_problem_with_type_public = is_admin(session),
     };
 }
 
-ProblemsListCapabilities list_all_problems(const decltype(Context::session)& session) noexcept {
+ProblemsListCapabilities list_problems(const decltype(Context::session)& session) noexcept {
     return {
         .query_all = true,
         .query_with_type_public = true,

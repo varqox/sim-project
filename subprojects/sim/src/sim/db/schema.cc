@@ -4,14 +4,14 @@
 #include <sim/contest_files/contest_file.hh>
 #include <sim/contest_problems/contest_problem.hh>
 #include <sim/contest_rounds/contest_round.hh>
-#include <sim/contest_users/contest_user.hh>
 #include <sim/contests/contest.hh>
 #include <sim/db/schema.hh>
 #include <sim/db/tables.hh>
+#include <sim/mysql/mysql.hh>
 #include <sim/problem_tags/problem_tag.hh>
 #include <sim/problems/problem.hh>
 #include <sim/sessions/session.hh>
-#include <sim/users/user.hh>
+#include <sim/sql/sql.hh>
 #include <simlib/ranges.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
@@ -23,7 +23,6 @@ using sim::contest_entry_tokens::ContestEntryToken;
 using sim::contest_files::ContestFile;
 using sim::contest_problems::ContestProblem;
 using sim::contest_rounds::ContestRound;
-using sim::contest_users::ContestUser;
 using sim::contests::Contest;
 using sim::problem_tags::ProblemTag;
 using sim::problems::Problem;
@@ -61,8 +60,8 @@ const DbSchema& get_schema() {
                         "  `first_name` varbinary(", decltype(User::first_name)::max_len, ") NOT NULL,"
                         "  `last_name` varbinary(", decltype(User::last_name)::max_len, ") NOT NULL,"
                         "  `email` varbinary(", decltype(User::email)::max_len, ") NOT NULL,"
-                        "  `password_salt` binary(", decltype(User::password_salt)::max_len, ") NOT NULL,"
-                        "  `password_hash` binary(", decltype(User::password_hash)::max_len, ") NOT NULL,"
+                        "  `password_salt` binary(", decltype(User::password_salt)::len, ") NOT NULL,"
+                        "  `password_hash` binary(", decltype(User::password_hash)::len, ") NOT NULL,"
                         "  PRIMARY KEY (`id`),"
                         "  UNIQUE KEY `username` (`username`),"
                         "  KEY `type` (`type`,`id` DESC)"
@@ -74,8 +73,8 @@ const DbSchema& get_schema() {
                     // clang-format off
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `sessions` ("
-                        "  `id` binary(", decltype(Session::id)::max_len, ") NOT NULL,"
-                        "  `csrf_token` binary(", decltype(Session::csrf_token)::max_len, ") NOT NULL,"
+                        "  `id` binary(", decltype(Session::id)::len, ") NOT NULL,"
+                        "  `csrf_token` binary(", decltype(Session::csrf_token)::len, ") NOT NULL,"
                         "  `user_id` bigint(20) unsigned NOT NULL,"
                         "  `data` blob NOT NULL,"
                         "  `user_agent` blob NOT NULL,"
@@ -192,7 +191,7 @@ const DbSchema& get_schema() {
                         "CREATE TABLE `contest_users` ("
                         "  `user_id` bigint(20) unsigned NOT NULL,"
                         "  `contest_id` bigint(20) unsigned NOT NULL,"
-                        "  `mode` tinyint(3) unsigned NOT NULL DEFAULT ", EnumVal(ContestUser::Mode::CONTESTANT).to_int(), ","
+                        "  `mode` tinyint(3) unsigned NOT NULL,"
                         "  PRIMARY KEY (`user_id`,`contest_id`),"
                         "  KEY `contest_id` (`contest_id`,`user_id`),"
                         "  KEY `contest_id_2` (`contest_id`,`mode`,`user_id`),"
@@ -206,7 +205,7 @@ const DbSchema& get_schema() {
                     // clang-format off
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `contest_files` ("
-                        "  `id` binary(", decltype(ContestFile::id)::max_len, ") NOT NULL,"
+                        "  `id` binary(", decltype(ContestFile::id)::len, ") NOT NULL,"
                         "  `file_id` bigint(20) unsigned NOT NULL,"
                         "  `contest_id` bigint(20) unsigned NOT NULL,"
                         "  `name` varbinary(", decltype(ContestFile::name)::max_len, ") NOT NULL,"
@@ -229,9 +228,9 @@ const DbSchema& get_schema() {
                     // clang-format off
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `contest_entry_tokens` ("
-                        "  `token` binary(", decltype(ContestEntryToken::token)::max_len, ") NOT NULL,"
+                        "  `token` binary(", decltype(ContestEntryToken::token)::len, ") NOT NULL,"
                         "  `contest_id` bigint(20) unsigned NOT NULL,"
-                        "  `short_token` binary(", decltype(ContestEntryToken::short_token)::value_type::max_len, ") DEFAULT NULL,"
+                        "  `short_token` binary(", decltype(ContestEntryToken::short_token)::value_type::len, ") DEFAULT NULL,"
                         "  `short_token_expiration` datetime DEFAULT NULL,"
                         "  PRIMARY KEY (`token`),"
                         "  UNIQUE KEY `contest_id` (`contest_id`),"
@@ -469,9 +468,11 @@ string normalized(const DbSchema& db_schema) {
 
 vector<string> get_all_table_names(mysql::Connection& mysql) {
     vector<string> table_names;
-    auto res = mysql.query("SHOW TABLES");
-    while (res.next()) {
-        table_names.emplace_back(res[0].to_string());
+    auto stmt = mysql.execute("SHOW TABLES");
+    string table_name;
+    stmt.res_bind(table_name);
+    while (stmt.next()) {
+        table_names.emplace_back(table_name);
     }
     return table_names;
 }
@@ -482,9 +483,12 @@ DbSchema get_db_schema(mysql::Connection& mysql) {
     db_schema.table_schemas.reserve(table_names.size());
 
     for (const auto& table_name : table_names) {
-        auto res = mysql.query("SHOW CREATE TABLE `", table_name, '`');
-        throw_assert(res.next());
-        auto create_table_sql = res[1].to_string();
+        auto stmt =
+            mysql.execute(sql::SqlWithParams{concat_tostr("SHOW CREATE TABLE `", table_name, '`')});
+        std::string tmp;
+        std::string create_table_sql;
+        stmt.res_bind(tmp, create_table_sql);
+        throw_assert(stmt.next());
         // Remove AUTOINCREMENT=
         create_table_sql = std::regex_replace(
             create_table_sql, std::regex{R"((\n\).*) AUTO_INCREMENT=\w+)"}, "$1"

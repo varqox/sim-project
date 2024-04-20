@@ -3,12 +3,12 @@
 #include "contest_rounds.hh"
 #include "problems.hh"
 
-#include <sim/contest_problems/contest_problem.hh>
-#include <sim/sql_fields/datetime.hh>
+#include <sim/contest_problems/old_contest_problem.hh>
+#include <sim/old_sql_fields/datetime.hh>
 
 namespace sim_merger {
 
-class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProblem> {
+class ContestProblemsMerger : public Merger<sim::contest_problems::OldContestProblem> {
     const ContestRoundsMerger& contest_rounds_;
     const ContestsMerger& contests_;
     const ProblemsMerger& problems_;
@@ -16,9 +16,10 @@ class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProble
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::contest_problems::ContestProblem cp;
-        mysql::Optional<sim::sql_fields::Datetime> earliest_submit_time;
-        auto stmt = conn.prepare(
+        sim::contest_problems::OldContestProblem cp;
+        old_mysql::Optional<sim::old_sql_fields::Datetime> earliest_submit_time;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT cp.id, cp.contest_round_id, cp.contest_id,"
             " cp.problem_id, cp.name, cp.item,"
             " cp.method_of_choosing_final_submission, cp.score_revealing,"
@@ -59,7 +60,7 @@ class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProble
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::contest_problems::ContestProblem& /*unused*/) {
+        Merger::merge([&](const sim::contest_problems::OldContestProblem& /*unused*/) {
             return nullptr;
         });
     }
@@ -67,9 +68,10 @@ class ContestProblemsMerger : public Merger<sim::contest_problems::ContestProble
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, contest_round_id, contest_id,"
@@ -94,7 +96,7 @@ public:
             );
         }
 
-        conn.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
+        old_mysql.update("ALTER TABLE ", sql_table_name(), " AUTO_INCREMENT=", last_new_id_ + 1);
         transaction.commit();
     }
 

@@ -2,14 +2,16 @@
 
 #include <cstdint>
 #include <optional>
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
+#include <sim/mysql/mysql.hh>
 #include <simlib/string_view.hh>
 
 namespace job_server {
 
 void job_dispatcher(
+    sim::mysql::Connection& mysql,
     uint64_t job_id,
-    sim::jobs::Job::Type jtype,
+    sim::jobs::OldJob::Type jtype,
     std::optional<uint64_t> file_id,
     std::optional<uint64_t> tmp_file_id,
     std::optional<StringView> creator,

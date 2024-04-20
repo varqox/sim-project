@@ -2,7 +2,7 @@
 
 #include "job_handler.hh"
 
-#include <sim/submissions/submission.hh>
+#include <sim/submissions/old_submission.hh>
 #include <simlib/sim/judge_worker.hh>
 
 namespace job_server::job_handlers {
@@ -13,13 +13,13 @@ protected:
 
     JudgeBase();
 
-    static sim::SolutionLanguage to_sol_lang(sim::submissions::Submission::Language lang);
+    static sim::SolutionLanguage to_sol_lang(sim::submissions::OldSubmission::Language lang);
 
     // Creates an xml report from JudgeReport
     static InplaceBuff<65536> construct_report(const sim::JudgeReport& jr, bool final);
 
     // Returns OK or the first encountered error status
-    static sim::submissions::Submission::Status calc_status(const sim::JudgeReport& jr);
+    static sim::submissions::OldSubmission::Status calc_status(const sim::JudgeReport& jr);
 
     void load_problem_package(FilePath problem_pkg_path);
 

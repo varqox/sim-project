@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sim/contests/permissions.hh>
+#include <simlib/enum_val.hh>
 
 namespace sim::contest_files {
 
@@ -36,10 +37,11 @@ get_permissions(mysql::Connection& mysql, T&& contest_file_id, std::optional<U> 
     STACK_UNWINDING_MARK;
 
     uint8_t is_public = false;
-    mysql::Optional<decltype(users::User::type)> user_type;
-    mysql::Optional<decltype(contest_users::ContestUser::mode)> cu_mode;
+    old_mysql::Optional<EnumVal<decltype(users::User::type)>> user_type;
+    old_mysql::Optional<decltype(contest_users::OldContestUser::mode)> cu_mode;
 
-    auto stmt = mysql.prepare(
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare(
         "SELECT c.is_public",
         (user_id ? ", cu.mode, u.type " : " "),
         "FROM contest_files cf "

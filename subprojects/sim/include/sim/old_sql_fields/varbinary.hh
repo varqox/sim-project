@@ -2,7 +2,7 @@
 
 #include <simlib/inplace_buff.hh>
 
-namespace sim::sql_fields {
+namespace sim::old_sql_fields {
 
 template <size_t MAX_LEN>
 class Varbinary : public InplaceBuff<MAX_LEN + 1> { // +1 for a potential null byte
@@ -25,4 +25,4 @@ constexpr inline bool is_varbinary = false;
 template <size_t N>
 constexpr inline bool is_varbinary<Varbinary<N>> = true;
 
-} // namespace sim::sql_fields
+} // namespace sim::old_sql_fields

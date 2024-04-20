@@ -9,18 +9,18 @@
 namespace sim::users {
 
 std::pair<decltype(User::password_salt), decltype(User::password_hash)>
-salt_and_hash_password(StringView password) {
-    constexpr auto salt_len = decltype(User::password_salt)::max_len;
+salt_and_hash_password(std::string_view password) {
+    constexpr auto salt_len = decltype(User::password_salt)::len;
     InplaceBuff<salt_len / 2> salt_bin(salt_len / 2);
     fill_randomly(salt_bin.data(), salt_bin.size);
-    decltype(User::password_salt) salt{to_hex<salt_len>(salt_bin)};
+    decltype(User::password_salt) salt{to_hex<salt_len>(salt_bin).to_string()};
     auto salted_password = concat(salt, password);
-    decltype(User::password_hash) hash{sha3_512(salted_password)};
+    decltype(User::password_hash) hash{sha3_512(salted_password).to_string()};
     return {std::move(salt), std::move(hash)};
 }
 
 bool password_matches(
-    StringView password, StringView password_salt, StringView password_hash
+    std::string_view password, std::string_view password_salt, std::string_view password_hash
 ) noexcept {
     auto salted_password = concat(password_salt, password);
     return slow_equal(from_unsafe{sha3_512(salted_password)}, password_hash);
