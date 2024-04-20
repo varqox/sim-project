@@ -40,6 +40,11 @@ Specifying subpojects to install is also adds them to the list of subprojects to
 
 For detailed option description you can inspect [meson_options.txt](meson_options.txt) file.
 
+#### Example development setup
+```sh
+CC='sccache clang' CXX='sccache clang++' CC_LD=mold CXX_LD=mold meson setup build -Dc_args=-DDEBUG -Dcpp_args='-DDEBUG -D_GLIBCXX_DEBUG' -Db_sanitize=undefined -Db_lundef=false -Dinstall=sim --wipe && meson configure build --prefix $PWD/sim
+```
+
 ### Building
 Just run
 ```sh
