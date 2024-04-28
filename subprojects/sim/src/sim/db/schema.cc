@@ -82,7 +82,7 @@ const DbSchema& get_schema() {
                         "  PRIMARY KEY (`id`),"
                         "  KEY `expires` (`expires`),"
                         "  KEY `user_id` (`user_id`),"
-                        "  CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE"
+                        "  CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -105,8 +105,8 @@ const DbSchema& get_schema() {
                         "  KEY `owner_id_2` (`owner_id`,`type`,`id`),"
                         "  KEY `owner_id` (`owner_id`,`id`),"
                         "  KEY `type` (`type`,`id`),"
-                        "  CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `problems_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE SET NULL"
+                        "  CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `problems_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -120,7 +120,7 @@ const DbSchema& get_schema() {
                         "  `is_hidden` tinyint(1) NOT NULL,"
                         "  PRIMARY KEY (`problem_id`,`is_hidden`,`name`),"
                         "  KEY `name` (`name`,`problem_id`),"
-                        "  CONSTRAINT `problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE"
+                        "  CONSTRAINT `problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -156,7 +156,7 @@ const DbSchema& get_schema() {
                         "  UNIQUE KEY `contest_id_3` (`contest_id`,`item`),"
                         "  KEY `contest_id_2` (`contest_id`,`begins`),"
                         "  KEY `contest_id` (`contest_id`,`ranking_exposure`),"
-                        "  CONSTRAINT `contest_rounds_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE"
+                        "  CONSTRAINT `contest_rounds_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -178,9 +178,9 @@ const DbSchema& get_schema() {
                         "  UNIQUE KEY `contest_round_id` (`contest_round_id`,`item`),"
                         "  KEY `contest_id` (`contest_id`),"
                         "  KEY `problem_id` (`problem_id`,`id`),"
-                        "  CONSTRAINT `contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `contest_problems_ibfk_2` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `contest_problems_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`)"
+                        "  CONSTRAINT `contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `contest_problems_ibfk_2` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `contest_problems_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -195,8 +195,8 @@ const DbSchema& get_schema() {
                         "  PRIMARY KEY (`user_id`,`contest_id`),"
                         "  KEY `contest_id` (`contest_id`,`user_id`),"
                         "  KEY `contest_id_2` (`contest_id`,`mode`,`user_id`),"
-                        "  CONSTRAINT `contest_users_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `contest_users_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE"
+                        "  CONSTRAINT `contest_users_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `contest_users_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -217,9 +217,9 @@ const DbSchema& get_schema() {
                         "  KEY `contest_id` (`contest_id`,`modified`),"
                         "  KEY `file_id` (`file_id`),"
                         "  KEY `creator` (`creator`),"
-                        "  CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `contest_files_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `contest_files_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE SET NULL"
+                        "  CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `contest_files_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `contest_files_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -235,7 +235,7 @@ const DbSchema& get_schema() {
                         "  PRIMARY KEY (`token`),"
                         "  UNIQUE KEY `contest_id` (`contest_id`),"
                         "  UNIQUE KEY `short_token` (`short_token`),"
-                        "  CONSTRAINT `contest_entry_tokens_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE"
+                        "  CONSTRAINT `contest_entry_tokens_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on
@@ -307,12 +307,12 @@ const DbSchema& get_schema() {
                         "  KEY `initial_final3` (`final_candidate`,`owner`,`contest_problem_id`,`score`,`initial_status`,`id`),"
                         // For foreign keys
                         "  KEY `file_id` (`file_id`),"
-                        "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`owner`) REFERENCES `users` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `submissions_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `submissions_ibfk_4` FOREIGN KEY (`contest_problem_id`) REFERENCES `contest_problems` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `submissions_ibfk_5` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE,"
-                        "  CONSTRAINT `submissions_ibfk_6` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE"
+                        "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`owner`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `submissions_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `submissions_ibfk_4` FOREIGN KEY (`contest_problem_id`) REFERENCES `contest_problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `submissions_ibfk_5` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `submissions_ibfk_6` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on

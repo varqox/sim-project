@@ -31,14 +31,62 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "9f4d6594716073cd5655d0dab35d444214c734c7b4c9f9380c48d15fb027c9c2";
+    "8c9559f12e40f31daf086f868539b0eaa383db19e24c211444e789ed19956751";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
 ) {
     // Upgrade here
     mysql.update("UNLOCK TABLES");
-    mysql.update("ALTER TABLE contest_users CHANGE mode mode tinyint(3) unsigned NOT NULL");
+    mysql.update("ALTER TABLE sessions DROP CONSTRAINT sessions_ibfk_1");
+    mysql.update("ALTER TABLE sessions ADD CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`user_id`) "
+                 "REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE problems DROP CONSTRAINT problems_ibfk_1");
+    mysql.update("ALTER TABLE problems DROP CONSTRAINT problems_ibfk_2");
+    mysql.update("ALTER TABLE problems ADD CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE problems ADD CONSTRAINT `problems_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE problem_tags DROP CONSTRAINT problem_tags_ibfk_1");
+    mysql.update("ALTER TABLE problem_tags ADD CONSTRAINT `problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE contest_rounds DROP CONSTRAINT contest_rounds_ibfk_1");
+    mysql.update("ALTER TABLE contest_rounds ADD CONSTRAINT `contest_rounds_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE contest_problems DROP CONSTRAINT contest_problems_ibfk_1");
+    mysql.update("ALTER TABLE contest_problems DROP CONSTRAINT contest_problems_ibfk_2");
+    mysql.update("ALTER TABLE contest_problems DROP CONSTRAINT contest_problems_ibfk_3");
+    mysql.update("ALTER TABLE contest_problems ADD CONSTRAINT `contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE contest_problems ADD CONSTRAINT `contest_problems_ibfk_2` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE contest_problems ADD CONSTRAINT `contest_problems_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE contest_users DROP CONSTRAINT contest_users_ibfk_1");
+    mysql.update("ALTER TABLE contest_users DROP CONSTRAINT contest_users_ibfk_2");
+    mysql.update("ALTER TABLE contest_users ADD CONSTRAINT `contest_users_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE contest_users ADD CONSTRAINT `contest_users_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_1");
+    mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_2");
+    mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_3");
+    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE contest_entry_tokens DROP CONSTRAINT contest_entry_tokens_ibfk_1");
+    mysql.update("ALTER TABLE contest_entry_tokens ADD CONSTRAINT `contest_entry_tokens_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_1");
+    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_2");
+    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_3");
+    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_4");
+    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_5");
+    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_6");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`owner`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_4` FOREIGN KEY (`contest_problem_id`) REFERENCES `contest_problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_5` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_6` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
 }
 
 enum class LockKind {
