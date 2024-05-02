@@ -34,12 +34,12 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
         simfile.load_all();
     }
 
-    auto pkg_path = sim::internal_files::path_of(problem_file_id);
+    auto pkg_path = sim::internal_files::old_path_of(problem_file_id);
 
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     uint64_t new_file_id = old_mysql.insert_id();
-    auto new_pkg_path = sim::internal_files::path_of(new_file_id);
+    auto new_pkg_path = sim::internal_files::old_path_of(new_file_id);
 
     // Replace old statement with new statement
 
@@ -77,7 +77,7 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
 
     // Add new statement file entry
     dest_zip.file_add(
-        new_statement_path, dest_zip.source_file(sim::internal_files::path_of(job_file_id_))
+        new_statement_path, dest_zip.source_file(sim::internal_files::old_path_of(job_file_id_))
     );
 
     dest_zip.close(); // Write all data to the dest_zip

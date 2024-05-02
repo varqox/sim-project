@@ -16,12 +16,11 @@ void restart_job(
     STACK_UNWINDING_MARK;
     using JT = OldJob::Type;
 
-    // Restart adding / reuploading problem
-    bool adding = is_one_of(job_type, JT::ADD_PROBLEM, JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION);
+    // Restart reuploading problem
     bool reupload =
         is_one_of(job_type, JT::REUPLOAD_PROBLEM, JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION);
 
-    if (adding or reupload) {
+    if (reupload) {
         AddProblemInfo info{job_info};
         info.stage = AddProblemInfo::FIRST;
 
@@ -48,10 +47,7 @@ void restart_job(
             .prepare("UPDATE jobs SET type=?, status=?, tmp_file_id=NULL, info=? "
                      "WHERE id=?")
             .bind_and_execute(
-                EnumVal(adding ? JT::ADD_PROBLEM : JT::REUPLOAD_PROBLEM),
-                EnumVal(OldJob::Status::PENDING),
-                info.dump(),
-                job_id
+                EnumVal(JT::REUPLOAD_PROBLEM), EnumVal(OldJob::Status::PENDING), info.dump(), job_id
             );
 
     } else {

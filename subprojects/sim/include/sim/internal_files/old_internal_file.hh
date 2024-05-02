@@ -19,8 +19,10 @@ struct OldInternalFile {
 
 constexpr CStringView dir = "internal_files/";
 
-inline auto path_of(decltype(OldInternalFile::id) id) { return concat<64>(dir, id); }
+inline auto old_path_of(decltype(OldInternalFile::id) id) { return concat<64>(dir, id); }
 
-inline auto path_of(const OldInternalFile& internal_file) { return path_of(internal_file.id); }
+inline auto old_path_of(const OldInternalFile& internal_file) {
+    return old_path_of(internal_file.id);
+}
 
 } // namespace sim::internal_files

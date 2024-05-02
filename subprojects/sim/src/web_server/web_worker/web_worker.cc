@@ -54,6 +54,7 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
     GET("/problems")(problems::ui::list_problems);
+    GET("/problems/add")(problems::ui::add);
     GET("/sign_in")(users::ui::sign_in);
     GET("/sign_out")(users::ui::sign_out);
     GET("/sign_up")(users::ui::sign_up);
@@ -70,6 +71,7 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     POST("/api/contest/{u64}/entry_tokens/regenerate")(contest_entry_tokens::api::regenerate);
     POST("/api/contest/{u64}/entry_tokens/regenerate_short")(contest_entry_tokens::api::regenerate_short);
     POST("/api/contest_entry_token/{string}/use")(contest_entry_tokens::api::use);
+    POST("/api/problems/add")(problems::api::add);
     POST("/api/sign_in")(users::api::sign_in);
     POST("/api/sign_out")(users::api::sign_out);
     POST("/api/sign_up")(users::api::sign_up);
@@ -129,6 +131,9 @@ Response WebWorker::handler_impl(ResponseMaker&& response_maker) {
         ctx.close_session();
     }
     transaction.commit();
+    for (auto& file_remover : ctx.uncommited_files_removers) {
+        file_remover.cancel();
+    }
     if (ctx.notify_job_server_after_commit) {
         sim::jobs::notify_job_server();
     }

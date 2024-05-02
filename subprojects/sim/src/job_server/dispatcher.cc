@@ -1,5 +1,4 @@
 #include "job_handlers/add_problem.hh"
-#include "job_handlers/add_problem__judge_main_solution.hh"
 #include "job_handlers/change_problem_statement.hh"
 #include "job_handlers/delete_contest.hh"
 #include "job_handlers/delete_contest_problem.hh"
@@ -43,11 +42,7 @@ void job_dispatcher(
         using JT = OldJob::Type;
 
         switch (jtype) {
-        case JT::ADD_PROBLEM:
-            job_handler = make_unique<AddProblem>(
-                mysql, job_id, creator.value(), info, file_id.value(), tmp_file_id
-            );
-            break;
+        case JT::ADD_PROBLEM: job_handler = make_unique<AddProblem>(job_id); break;
 
         case JT::REUPLOAD_PROBLEM:
             job_handler = make_unique<ReuploadProblem>(
@@ -111,12 +106,6 @@ void job_dispatcher(
         case JT::JUDGE_SUBMISSION:
         case JT::REJUDGE_SUBMISSION:
             job_handler = make_unique<JudgeOrRejudge>(job_id, aux_id.value(), created_at);
-            break;
-
-        case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            job_handler = make_unique<AddProblemJudgeModelSolution>(
-                mysql, job_id, creator.value(), info, file_id.value(), tmp_file_id
-            );
             break;
 
         case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:

@@ -20,7 +20,6 @@ struct OldJob {
         (JUDGE_SUBMISSION, 1, "judge_submission")
         (ADD_PROBLEM, 2, "add_problem")
         (REUPLOAD_PROBLEM, 3, "reupload_problem")
-        (ADD_PROBLEM__JUDGE_MODEL_SOLUTION, 4, "add_problem__judge_model_solution")
         (REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION, 5,
          "reupload_problem__judge_model_solution")
         (EDIT_PROBLEM, 6, "edit_problem")
@@ -81,7 +80,6 @@ constexpr decltype(OldJob::priority) default_priority(OldJob::Type type) {
     case OldJob::Type::EDIT_PROBLEM:
     case OldJob::Type::CHANGE_PROBLEM_STATEMENT: return 25;
     case OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
-    case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
     case OldJob::Type::ADD_PROBLEM:
     case OldJob::Type::REUPLOAD_PROBLEM: return 10;
@@ -97,7 +95,6 @@ constexpr const char* to_string(OldJob::Type x) {
     case JT::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
     case JT::ADD_PROBLEM: return "ADD_PROBLEM";
     case JT::REUPLOAD_PROBLEM: return "REUPLOAD_PROBLEM";
-    case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return "ADD_PROBLEM__JUDGE_MODEL_SOLUTION";
     case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
         return "REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION";
     case JT::EDIT_PROBLEM: return "EDIT_PROBLEM";
@@ -123,7 +120,6 @@ constexpr bool is_problem_management_job(OldJob::Type x) {
     using JT = OldJob::Type;
     switch (x) {
     case JT::ADD_PROBLEM:
-    case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case JT::REUPLOAD_PROBLEM:
     case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case JT::EDIT_PROBLEM:
@@ -150,7 +146,6 @@ constexpr bool is_submission_job(OldJob::Type x) {
     case JT::JUDGE_SUBMISSION:
     case JT::REJUDGE_SUBMISSION: return true;
     case JT::ADD_PROBLEM:
-    case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case JT::REUPLOAD_PROBLEM:
     case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case JT::EDIT_PROBLEM:

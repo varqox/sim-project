@@ -49,7 +49,6 @@ Sim::JobPermissions Sim::jobs_get_permissions(
         switch (job_type) {
         case JT::ADD_PROBLEM:
         case JT::REUPLOAD_PROBLEM:
-        case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
         case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             return PERM::DOWNLOAD_LOG | PERM::DOWNLOAD_UPLOADED_PACKAGE;
 

@@ -12,6 +12,7 @@
 #include <sim/jobs/utils.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/old_mysql/old_mysql.hh>
+#include <sim/problems/problem.hh>
 #include <sim/sql/sql.hh>
 #include <sim/submissions/update_final.hh>
 #include <simlib/config_file.hh>
@@ -196,17 +197,15 @@ public:
                 switch (jtype) {
                 case JT::JUDGE_SUBMISSION:
                 case JT::REJUDGE_SUBMISSION: {
-                    auto opt =
-                        str2num<uint64_t>(from_unsafe{sim::jobs::extract_dumped_string(info)});
-                    if (not opt) {
-                        THROW("Corrupted job's info field");
-                    }
-
-                    queue_job(judge_jobs, opt.value(), false);
+                    auto problem_id_stmt = mysql.execute(sim::sql::Select("problem_id")
+                                                             .from("submissions")
+                                                             .where("id=?", aux_id.value()));
+                    decltype(sim::problems::Problem::id) problem_id;
+                    problem_id_stmt.res_bind(problem_id);
+                    throw_assert(problem_id_stmt.next());
+                    queue_job(judge_jobs, problem_id, false);
                     break;
                 }
-
-                case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: queue_job(judge_jobs, 0, false); break;
 
                 case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
                     queue_job(judge_jobs, aux_id.value(), true);

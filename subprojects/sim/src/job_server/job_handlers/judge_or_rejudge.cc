@@ -63,7 +63,7 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
     std::string judging_began = mysql_date();
 
     job_log("Judging submission ", submission_id_, " (problem: ", problem_id, ')');
-    load_problem_package(sim::internal_files::path_of(problem_file_id));
+    load_problem_package(sim::internal_files::old_path_of(problem_file_id));
 
     auto update_submission = [&](decltype(OldSubmission::initial_status) initial_status,
                                  decltype(OldSubmission::full_status) full_status,
@@ -123,7 +123,7 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
     };
 
     auto compilation_errors =
-        compile_solution(sim::internal_files::path_of(submission_file_id), to_sol_lang(lang));
+        compile_solution(sim::internal_files::old_path_of(submission_file_id), to_sol_lang(lang));
     if (compilation_errors.has_value()) {
         update_submission(
             OldSubmission::Status::COMPILATION_ERROR,

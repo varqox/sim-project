@@ -5,7 +5,7 @@
 #include <simlib/file_remover.hh>
 #include <simlib/sim/problem_package.hh>
 
-using sim::internal_files::path_of;
+using sim::internal_files::old_path_of;
 using sim::jobs::OldJob;
 
 namespace job_server::job_handlers {
@@ -24,7 +24,7 @@ void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
         }
     }
 
-    auto pkg_path = sim::internal_files::path_of(problem_file_id);
+    auto pkg_path = sim::internal_files::old_path_of(problem_file_id);
     reset_package_time_limits(pkg_path);
     if (failed()) {
         return;
@@ -36,7 +36,7 @@ void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     uint64_t new_file_id = old_mysql.insert_id();
-    auto new_pkg_path = sim::internal_files::path_of(new_file_id);
+    auto new_pkg_path = sim::internal_files::old_path_of(new_file_id);
 
     // Save Simfile to new package file
 

@@ -116,7 +116,6 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
                 break;
 
             case OldJob::Type::ADD_PROBLEM:
-            case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
                 if (job.aux_id) {
                     job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
                 }

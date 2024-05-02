@@ -119,14 +119,13 @@ void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
         old_mysql
             .prepare("INSERT INTO jobs(creator, status, priority, type, created_at,"
                      " aux_id, info, data) "
-                     "SELECT NULL, ?, ?, ?, ?, id, ?, '' "
+                     "SELECT NULL, ?, ?, ?, ?, id, '', '' "
                      "FROM submissions WHERE problem_id=? ORDER BY id")
             .bind_and_execute(
                 EnumVal(OldJob::Status::PENDING),
                 default_priority(OldJob::Type::REJUDGE_SUBMISSION),
                 EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
                 mysql_date(),
-                sim::jobs::dump_string(from_unsafe{to_string(info_.target_problem_id)}),
                 donor_problem_id_
             );
     }

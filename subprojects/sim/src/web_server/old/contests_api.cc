@@ -639,9 +639,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
     }
     if (next_arg == "rejudge_all_submissions") {
         transaction.rollback(); // We only read data...
-        return api_contest_problem_rejudge_all_submissions(
-            contest_problem_id, contest_perms, problem_id_str
-        );
+        return api_contest_problem_rejudge_all_submissions(contest_problem_id, contest_perms);
     }
     if (next_arg == "edit") {
         transaction.rollback(); // We only read data...
@@ -1328,7 +1326,7 @@ void Sim::api_contest_problem_add(
 }
 
 void Sim::api_contest_problem_rejudge_all_submissions(
-    StringView contest_problem_id, sim::contests::Permissions perms, StringView problem_id
+    StringView contest_problem_id, sim::contests::Permissions perms
 ) {
     STACK_UNWINDING_MARK;
 
@@ -1340,7 +1338,7 @@ void Sim::api_contest_problem_rejudge_all_submissions(
     old_mysql
         .prepare("INSERT jobs (creator, status, priority, type,"
                  " created_at, aux_id, info, data) "
-                 "SELECT ?, ?, ?, ?, ?, id, ?, '' "
+                 "SELECT ?, ?, ?, ?, ?, id, '', '' "
                  "FROM submissions WHERE contest_problem_id=? ORDER BY id")
         .bind_and_execute(
             session->user_id,
@@ -1348,7 +1346,6 @@ void Sim::api_contest_problem_rejudge_all_submissions(
             default_priority(OldJob::Type::REJUDGE_SUBMISSION),
             EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
             mysql_date(),
-            sim::jobs::dump_string(problem_id),
             contest_problem_id
         );
 

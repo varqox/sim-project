@@ -1,11 +1,8 @@
 #include "../../../src/web_server/http/form_fields.hh"
 #include "../../../src/web_server/http/form_validation.hh"
 
-#include <cassert>
 #include <cstdint>
-#include <functional>
 #include <gtest/gtest.h>
-#include <initializer_list>
 #include <limits>
 #include <optional>
 #include <sim/sql/fields/blob.hh>
@@ -51,7 +48,7 @@ class ValidationTest {
 
     Result<FieldType, string> validate_required(optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, REQUIRED)
         );
         static_assert(std::is_same_v<decltype(abc), FieldType>);
@@ -60,7 +57,7 @@ class ValidationTest {
 
     Result<optional<FieldType>, string> validate_optional(optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, OPTIONAL)
         );
         static_assert(std::is_same_v<decltype(abc), optional<FieldType>>);
@@ -70,7 +67,7 @@ class ValidationTest {
     Result<optional<FieldType>, string>
     validate_allowed_only_if(bool condition, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, ALLOWED_ONLY_IF(condition))
         );
         static_assert(std::is_same_v<decltype(abc), optional<FieldType>>);
@@ -80,7 +77,7 @@ class ValidationTest {
     Result<optional<FieldType>, string>
     validate_required_and_allowed_only_if(bool condition, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, REQUIRED_AND_ALLOWED_ONLY_IF(condition))
         );
         static_assert(std::is_same_v<decltype(abc), optional<FieldType>>);
@@ -99,7 +96,7 @@ public:
     }
 
     template <class T>
-    void check(string form_field_value, T&& expected_validation_result) {
+    void check(string form_field_value, const T& expected_validation_result) {
         SCOPED_TRACE(__PRETTY_FUNCTION__);
         EXPECT_EQ(validate_required(form_field_value), expected_validation_result);
         EXPECT_EQ(validate_optional(form_field_value), expected_validation_result);
@@ -224,6 +221,16 @@ static void test_str(std::optional<size_t> max_len = std::nullopt) {
         test_str_common(t, max_len);
         VALIDATE_CHECK(t, "", Ok{""})
     }
+    {
+        ValidationTest t{allow_blank_if(api_param<StrType>, false)};
+        test_str_common(t, max_len);
+        VALIDATE_CHECK(t, "", Err{"abc: ABC cannot be blank"})
+    }
+    {
+        ValidationTest t{allow_blank_if(api_param<StrType>, true)};
+        test_str_common(t, max_len);
+        VALIDATE_CHECK(t, "", Ok{""})
+    }
 }
 
 // NOLINTNEXTLINE
@@ -258,7 +265,7 @@ TEST(form_validation, sql_varbinary) {
 }
 
 template <class T>
-static constexpr bool always_true(T&& /*unused*/) {
+static constexpr bool always_true(const T& /*unused*/) noexcept {
     return true;
 }
 
@@ -285,7 +292,12 @@ TEST(form_validation, satisfying_predicate_string) {
         sim::sql::fields::Varbinary<varbinary_max_len>,
         ends_with_xd,
         predicate_description>>;
-    for (auto api_param : {api_param_val, allow_blank(api_param_val)}) {
+    for (auto api_param :
+         {api_param_val,
+          allow_blank(api_param_val),
+          allow_blank_if(api_param_val, false),
+          allow_blank_if(api_param_val, true)})
+    {
         ValidationTest t{api_param};
         VALIDATE_CHECK(t, "xd", Ok{"xd"});
         VALIDATE_CHECK(t, "aoenhusxd", Ok{"aoenhusxd"});
@@ -332,7 +344,7 @@ class EnumCapsValidationTest {
     Result<FieldType, string>
     validate_required(array<bool, 3> caps, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, REQUIRED_ENUM_CAPS(
                 (FIRST, caps[0])
                 (SECOND, caps[1])
@@ -346,7 +358,7 @@ class EnumCapsValidationTest {
     Result<optional<FieldType>, string>
     validate_optional(array<bool, 3> caps, optional<string> form_field_value) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, OPTIONAL_ENUM_CAPS(
                 (FIRST, caps[0])
                 (SECOND, caps[1])
@@ -361,7 +373,7 @@ class EnumCapsValidationTest {
         bool condition, array<bool, 3> caps, optional<string> form_field_value
     ) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, ALLOWED_ONLY_IF_ENUM_CAPS(condition,
                 (FIRST, caps[0])
                 (SECOND, caps[1])
@@ -376,7 +388,7 @@ class EnumCapsValidationTest {
         bool condition, array<bool, 3> caps, optional<string> form_field_value
     ) {
         set_form_fields(std::move(form_field_value));
-        VALIDATE(ff, [&](auto&& errors) { return Err{errors}; },
+        VALIDATE(ff, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
             (abc, api_param, REQUIRED_AND_ALLOWED_ONLY_IF_ENUM_CAPS(condition,
                 (FIRST, caps[0])
                 (SECOND, caps[1])
@@ -411,7 +423,7 @@ public:
     }
 
     template <class T>
-    void check(array<bool, 3> caps, string form_field_value, T&& expected_validation_result) {
+    void check(array<bool, 3> caps, string form_field_value, const T& expected_validation_result) {
         SCOPED_TRACE(__PRETTY_FUNCTION__);
         EXPECT_EQ(validate_required(caps, form_field_value), expected_validation_result);
         EXPECT_EQ(validate_optional(caps, form_field_value), expected_validation_result);
@@ -465,5 +477,87 @@ TEST(form_validation, enum_val_with_string_conversions_enum_caps) {
                 }
             }
         }
+    }
+}
+
+// NOLINTNEXTLINE
+TEST(form_validation, validate_file_required) {
+    auto do_validate = [](FormFields& form_fields
+                       ) -> Result<web_server::http::SubmittedFile, string> {
+        VALIDATE(form_fields, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
+            (abc, api_param<web_server::http::SubmittedFile>, FILE_REQUIRED)
+        );
+        static_assert(std::is_same_v<decltype(abc), web_server::http::SubmittedFile>);
+        return Ok{abc};
+    };
+    {
+        auto form_fields = FormFields{};
+        EXPECT_EQ(do_validate(form_fields), Err{"abc: ABC file is missing"});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "some filename");
+        EXPECT_EQ(do_validate(form_fields), Err{"abc: ABC should be a file"});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "");
+        EXPECT_EQ(do_validate(form_fields), Err{"abc: ABC should be a file"});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "", "/some/path");
+        EXPECT_EQ(do_validate(form_fields), Err{"abc: ABC file is missing (empty filename)"});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "some filename", "/some/path");
+        auto res = do_validate(form_fields);
+        ASSERT_TRUE(res.is_ok());
+        auto submitted_file = std::move(res).unwrap();
+        EXPECT_EQ(submitted_file.filename, "some filename");
+        EXPECT_EQ(submitted_file.path, "/some/path");
+    }
+}
+
+// NOLINTNEXTLINE
+TEST(form_validation, validate_file_optional) {
+    auto do_validate = [](FormFields& form_fields
+                       ) -> Result<optional<web_server::http::SubmittedFile>, string> {
+        VALIDATE(form_fields, [&](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
+            (abc, api_param<web_server::http::SubmittedFile>, FILE_OPTIONAL)
+        );
+        static_assert(std::
+                          is_same_v<decltype(abc), std::optional<web_server::http::SubmittedFile>>);
+        return Ok{abc};
+    };
+    {
+        auto form_fields = FormFields{};
+        EXPECT_EQ(do_validate(form_fields), Ok{nullopt});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "some filename");
+        EXPECT_EQ(do_validate(form_fields), Err{"abc: ABC should be a file"});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "");
+        EXPECT_EQ(do_validate(form_fields), Err{"abc: ABC should be a file"});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "", "/some/path");
+        EXPECT_EQ(do_validate(form_fields), Err{"abc: ABC file is missing (empty filename)"});
+    }
+    {
+        auto form_fields = FormFields{};
+        form_fields.add_field("abc", "some filename", "/some/path");
+        auto res = do_validate(form_fields);
+        ASSERT_TRUE(res.is_ok());
+        auto submitted_file = std::move(res).unwrap();
+        ASSERT_TRUE(submitted_file.has_value());
+        EXPECT_EQ(submitted_file->filename, "some filename");
+        EXPECT_EQ(submitted_file->path, "/some/path");
     }
 }

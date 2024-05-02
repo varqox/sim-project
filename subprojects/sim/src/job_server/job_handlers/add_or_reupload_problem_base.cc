@@ -46,7 +46,7 @@ void AddOrReuploadProblemBase::build_package(
 
     replace_db_job_log_ = true;
 
-    auto source_package = sim::internal_files::path_of(job_file_id_);
+    auto source_package = sim::internal_files::old_path_of(job_file_id_);
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
@@ -105,7 +105,7 @@ void AddOrReuploadProblemBase::build_package(
     // Update job record
     old_mysql.prepare("UPDATE jobs SET tmp_file_id=? WHERE id=?")
         .bind_and_execute(tmp_file_id_.value(), job_id_);
-    auto tmp_package = sim::internal_files::path_of(tmp_file_id_.value());
+    auto tmp_package = sim::internal_files::old_path_of(tmp_file_id_.value());
     // Copy source_package to tmp_package, substituting Simfile in the fly
     {
         ZipFile src_zip(source_package, ZIP_RDONLY);
@@ -147,10 +147,6 @@ void AddOrReuploadProblemBase::job_done(sim::mysql::Connection& mysql, bool& job
     if (need_main_solution_judge_report_) {
         status = OldJob::Status::PENDING;
         switch (job_type_) {
-        case OldJob::Type::ADD_PROBLEM:
-            type = OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION;
-            break;
-
         case OldJob::Type::REUPLOAD_PROBLEM:
             type = OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION;
             break;
@@ -162,11 +158,6 @@ void AddOrReuploadProblemBase::job_done(sim::mysql::Connection& mysql, bool& job
         switch (job_type_) {
         case OldJob::Type::ADD_PROBLEM:
         case OldJob::Type::REUPLOAD_PROBLEM: break;
-
-        case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
-            status = OldJob::Status::PENDING;
-            type = OldJob::Type::ADD_PROBLEM;
-            break;
 
         case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             status = OldJob::Status::PENDING;
@@ -222,7 +213,7 @@ void AddOrReuploadProblemBase::open_package(sim::mysql::Connection& mysql) {
 
     assert_transaction_is_open(mysql);
 
-    zip_ = ZipFile(sim::internal_files::path_of(tmp_file_id_.value()), ZIP_RDONLY);
+    zip_ = ZipFile(sim::internal_files::old_path_of(tmp_file_id_.value()), ZIP_RDONLY);
     main_dir_ = sim::zip_package_main_dir(zip_);
     simfile_str_ = zip_.extract_to_str(zip_.get_index(concat(main_dir_, "Simfile")));
 
@@ -364,7 +355,7 @@ void AddOrReuploadProblemBase::submit_solutions(sim::mysql::Connection& mysql) {
         // Save the submission source code
         zip_.extract_to_file(
             zip_.get_index(concat(main_dir_, solution)),
-            sim::internal_files::path_of(file_id),
+            sim::internal_files::old_path_of(file_id),
             S_0600
         );
     }
@@ -373,7 +364,7 @@ void AddOrReuploadProblemBase::submit_solutions(sim::mysql::Connection& mysql) {
     old_mysql
         .prepare("INSERT INTO jobs(creator, type, priority, status, created_at,"
                  " aux_id, info, data) "
-                 "SELECT NULL, ?, ?, ?, ?, id, ?, '' "
+                 "SELECT NULL, ?, ?, ?, ?, id, '', '' "
                  "FROM submissions "
                  "WHERE problem_id=? AND type=? ORDER BY id")
         // Problem's solutions are more important than the ordinary submissions
@@ -382,7 +373,6 @@ void AddOrReuploadProblemBase::submit_solutions(sim::mysql::Connection& mysql) {
             default_priority(OldJob::Type::JUDGE_SUBMISSION) + 1,
             EnumVal(OldJob::Status::PENDING),
             current_date_,
-            sim::jobs::dump_string(from_unsafe{to_string(problem_id_.value())}),
             problem_id_.value(),
             EnumVal(OldSubmission::Type::PROBLEM_SOLUTION)
         );

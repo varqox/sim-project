@@ -1,5 +1,6 @@
 #include <map>
 #include <regex>
+#include <sim/add_problem_jobs/add_problem_job.hh>
 #include <sim/contest_entry_tokens/contest_entry_token.hh>
 #include <sim/contest_files/contest_file.hh>
 #include <sim/contest_problems/contest_problem.hh>
@@ -19,6 +20,7 @@
 #include <string_view>
 #include <vector>
 
+using sim::add_problem_jobs::AddProblemJob;
 using sim::contest_entry_tokens::ContestEntryToken;
 using sim::contest_files::ContestFile;
 using sim::contest_problems::ContestProblem;
@@ -94,11 +96,11 @@ const DbSchema& get_schema() {
                         "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
                         "  `created_at` datetime NOT NULL,"
                         "  `file_id` bigint(20) unsigned NOT NULL,"
-                        "  `type` tinyint(3) unsigned NOT NULL,"
+                        "  `type` tinyint(3) unsigned NOT NULL," // TODO: rename to visibility
                         "  `name` varbinary(", decltype(Problem::name)::max_len, ") NOT NULL,"
                         "  `label` varbinary(", decltype(Problem::label)::max_len, ") NOT NULL,"
                         "  `simfile` mediumblob NOT NULL,"
-                        "  `owner_id` bigint(20) unsigned DEFAULT NULL,"
+                        "  `owner_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove and add problem_users
                         "  `updated_at` datetime NOT NULL,"
                         "  PRIMARY KEY (`id`),"
                         "  KEY `file_id` (`file_id`),"
@@ -262,9 +264,9 @@ const DbSchema& get_schema() {
                         "  `initial_status` tinyint(3) unsigned NOT NULL,"
                         "  `full_status` tinyint(3) unsigned NOT NULL,"
                         "  `score` bigint(20) DEFAULT NULL,"
-                        "  `last_judgment` datetime NOT NULL,"
-                        "  `initial_report` mediumblob NOT NULL,"
-                        "  `final_report` mediumblob NOT NULL,"
+                        "  `last_judgment` datetime NOT NULL," // TODO: NULL
+                        "  `initial_report` mediumblob NOT NULL," // TODO: NULL
+                        "  `final_report` mediumblob NOT NULL," // TODO: NULL
                         "  PRIMARY KEY (`id`),"
                         // Submissions API: with owner
                         "  KEY `owner` (`owner`,`id`),"
@@ -323,15 +325,15 @@ const DbSchema& get_schema() {
                         "CREATE TABLE `jobs` ("
                         "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
                         "  `created_at` datetime NOT NULL,"
-                        "  `file_id` bigint(20) unsigned DEFAULT NULL,"
-                        "  `tmp_file_id` bigint(20) unsigned DEFAULT NULL,"
+                        "  `file_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove when becomes unneeded
+                        "  `tmp_file_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove when becomes unneeded
                         "  `creator` bigint(20) unsigned DEFAULT NULL,"
                         "  `type` tinyint(3) unsigned NOT NULL,"
                         "  `priority` tinyint(3) unsigned NOT NULL,"
                         "  `status` tinyint(3) unsigned NOT NULL,"
-                        "  `aux_id` bigint(20) unsigned DEFAULT NULL,"
-                        "  `info` blob NOT NULL,"
-                        "  `data` mediumblob NOT NULL,"
+                        "  `aux_id` bigint(20) unsigned DEFAULT NULL," // TODO: add aux_id2
+                        "  `info` blob NOT NULL," // TODO: remove when becomes unneeded
+                        "  `data` mediumblob NOT NULL," // TODO: rename to log
                         "  PRIMARY KEY (`id`),"
                         "  KEY `status` (`status`,`priority` DESC,`id`),"
                         "  KEY `type` (`type`,`aux_id`,`id` DESC),"
@@ -341,6 +343,30 @@ const DbSchema& get_schema() {
                         "  KEY `creator_3` (`creator`,`aux_id`,`id` DESC)"
                         // Foreign keys cannot be used as we want to preserve information about who
                         // created the job and what the job was doing specifically
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
+                    ),
+                    // clang-format on
+                },
+                {
+                    // clang-format off
+                    .create_table_sql = concat_tostr(
+                        "CREATE TABLE `add_problem_jobs` ("
+                        "  `id` bigint(20) unsigned NOT NULL,"
+                        "  `file_id` bigint(20) unsigned NOT NULL,"
+                        "  `visibility` tinyint(1) unsigned NOT NULL,"
+                        "  `force_time_limits_reset` tinyint(1) NOT NULL,"
+                        "  `ignore_simfile` tinyint(1) NOT NULL,"
+                        "  `name` varbinary(", decltype(AddProblemJob::name)::max_len, ") NOT NULL,"
+                        "  `label` varbinary(", decltype(AddProblemJob::label)::max_len, ") NOT NULL,"
+                        "  `memory_limit_in_mib` bigint(20) unsigned DEFAULT NULL,"
+                        "  `fixed_time_limit_in_ns` bigint(20) unsigned DEFAULT NULL,"
+                        "  `reset_scoring` tinyint(1) NOT NULL,"
+                        "  `look_for_new_tests` tinyint(1) NOT NULL,"
+                        "  `added_problem_id` bigint(20) unsigned DEFAULT NULL,"
+                        "  PRIMARY KEY (`id`),"
+                        "  KEY `file_id` (`file_id`),"
+                        "  CONSTRAINT `add_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `add_problem_jobs_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on

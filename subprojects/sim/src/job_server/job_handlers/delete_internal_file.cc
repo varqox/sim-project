@@ -11,7 +11,7 @@ void DeleteInternalFile::run(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
     job_log("Internal file ID: ", internal_file_id_);
-    (void)unlink(sim::internal_files::path_of(internal_file_id_));
+    (void)unlink(sim::internal_files::old_path_of(internal_file_id_));
 
     auto transaction = mysql.start_repeatable_read_transaction();
     // The internal_file may already be deleted
