@@ -133,32 +133,6 @@ public:
     SelectFrom& operator=(const SelectFrom&) = delete;
     SelectFrom& operator=(SelectFrom&&) = delete;
 
-    SelectJoin<Params...> join(const std::string_view& sql_str) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
-
     SelectJoin<Params...> left_join(const std::string_view& sql_str) &&;
 
     template <class... SelectParams>
@@ -309,32 +283,6 @@ public:
     SelectJoinOn(SelectJoinOn&&) = delete;
     SelectJoinOn& operator=(const SelectJoinOn&) = delete;
     SelectJoinOn& operator=(SelectJoinOn&&) = delete;
-
-    SelectJoin<Params...> join(const std::string_view& sql_str) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
-
-    template <class... SelectParams>
-    SelectJoin<Params..., SelectParams...>
-    join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
 
     SelectJoin<Params...> left_join(const std::string_view& sql_str) &&;
 
@@ -996,14 +944,6 @@ DEFINE_FROM(SelectFrom, Select)
         };                                                                              \
     }
 
-DEFINE_JOIN(SelectJoin, SelectFrom, join, "JOIN")
-DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, join, "JOIN", SelectFrom)
-DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, join, "JOIN", SelectJoinOn)
-DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, join, "JOIN", SelectWhere)
-DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, join, "JOIN", SelectGroupBy)
-DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, join, "JOIN", SelectOrderBy)
-DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, join, "JOIN", SelectLimit)
-
 DEFINE_JOIN(SelectJoin, SelectFrom, left_join, "LEFT JOIN")
 DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, left_join, "LEFT JOIN", SelectFrom)
 DEFINE_JOIN_SELECT(SelectJoin, SelectFrom, left_join, "LEFT JOIN", SelectJoinOn)
@@ -1147,14 +1087,6 @@ SelectJoin<Params...>::on(Condition<CondParams...>&& condition) && {
 }
 
 // SelectJoinOn
-
-DEFINE_JOIN(SelectJoin, SelectJoinOn, join, "JOIN")
-DEFINE_JOIN_SELECT(SelectJoin, SelectJoinOn, join, "JOIN", SelectFrom)
-DEFINE_JOIN_SELECT(SelectJoin, SelectJoinOn, join, "JOIN", SelectJoinOn)
-DEFINE_JOIN_SELECT(SelectJoin, SelectJoinOn, join, "JOIN", SelectWhere)
-DEFINE_JOIN_SELECT(SelectJoin, SelectJoinOn, join, "JOIN", SelectGroupBy)
-DEFINE_JOIN_SELECT(SelectJoin, SelectJoinOn, join, "JOIN", SelectOrderBy)
-DEFINE_JOIN_SELECT(SelectJoin, SelectJoinOn, join, "JOIN", SelectLimit)
 
 DEFINE_JOIN(SelectJoin, SelectJoinOn, left_join, "LEFT JOIN")
 DEFINE_JOIN_SELECT(SelectJoin, SelectJoinOn, left_join, "LEFT JOIN", SelectFrom)

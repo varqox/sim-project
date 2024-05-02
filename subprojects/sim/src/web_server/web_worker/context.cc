@@ -32,7 +32,7 @@ void Context::open_session() {
     Session s;
     auto stmt = mysql.execute(Select("s.csrf_token, s.user_id, u.type, u.username, s.data")
                                   .from("sessions s")
-                                  .join("users u")
+                                  .inner_join("users u")
                                   .on("u.id=s.user_id")
                                   .where("s.id=? AND expires>=?", session_id, mysql_date()));
     stmt.res_bind(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
