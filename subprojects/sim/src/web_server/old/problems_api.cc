@@ -15,6 +15,7 @@
 #include <simlib/humanize.hh>
 #include <simlib/libzip.hh>
 #include <simlib/sim/problem_package.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 
@@ -532,7 +533,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     auto job_file_id = old_mysql.insert_id();
-    FileRemover job_file_remover(sim::internal_files::path_of(job_file_id));
+    FileRemover job_file_remover(sim::internal_files::path_of(job_file_id).to_string());
 
     // Make the uploaded package file the job's file
     if (move(package_file, sim::internal_files::path_of(job_file_id))) {
@@ -945,7 +946,7 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     auto job_file_id = old_mysql.insert_id();
-    FileRemover job_file_remover(sim::internal_files::path_of(job_file_id));
+    FileRemover job_file_remover(sim::internal_files::path_of(job_file_id).to_string());
 
     // Make uploaded statement file the job's file
     if (move(statement_file, sim::internal_files::path_of(job_file_id))) {

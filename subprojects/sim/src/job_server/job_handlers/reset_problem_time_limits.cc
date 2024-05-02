@@ -2,6 +2,7 @@
 
 #include <sim/jobs/old_job.hh>
 #include <sim/old_mysql/old_mysql.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/sim/problem_package.hh>
 
 using sim::internal_files::path_of;
@@ -42,7 +43,7 @@ void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
     ZipFile src_zip(pkg_path, ZIP_RDONLY);
     auto simfile_path = concat(sim::zip_package_main_dir(src_zip), "Simfile");
 
-    FileRemover new_pkg_remover(new_pkg_path);
+    FileRemover new_pkg_remover(new_pkg_path.to_string());
     ZipFile dest_zip(new_pkg_path, ZIP_CREATE | ZIP_TRUNCATE);
 
     auto eno = src_zip.entries_no();

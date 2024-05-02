@@ -34,7 +34,9 @@ void AddOrReuploadProblemBase::assert_transaction_is_open(sim::mysql::Connection
     throw_assert(stmt.next() and in_transaction);
 }
 
-void AddOrReuploadProblemBase::build_package(sim::mysql::Connection& mysql) {
+void AddOrReuploadProblemBase::build_package(
+    sim::mysql::Connection& mysql, FileRemover& package_file_remover
+) {
     STACK_UNWINDING_MARK;
     if (failed()) {
         return;
@@ -110,7 +112,7 @@ void AddOrReuploadProblemBase::build_package(sim::mysql::Connection& mysql) {
         simfile_str_ = cr.simfile.dump();
         auto simfile_path = concat(cr.pkg_main_dir, "Simfile");
 
-        package_file_remover_.reset(tmp_package);
+        package_file_remover = FileRemover{tmp_package.to_string()};
         ZipFile dest_zip(tmp_package, ZIP_CREATE | ZIP_TRUNCATE);
 
         auto eno = src_zip.entries_no();

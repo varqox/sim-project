@@ -1,6 +1,7 @@
 #include "change_problem_statement.hh"
 
 #include <simlib/file_manip.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/macros/wont_throw.hh>
 #include <simlib/path.hh>
 #include <simlib/sim/problem_package.hh>
@@ -61,7 +62,7 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
     simfile.statement = info_.new_statement_path;
     auto simfile_str = simfile.dump();
 
-    FileRemover new_pkg_remover(new_pkg_path);
+    FileRemover new_pkg_remover(new_pkg_path.to_string());
     ZipFile dest_zip(new_pkg_path, ZIP_CREATE | ZIP_TRUNCATE);
 
     auto eno = src_zip.entries_no();

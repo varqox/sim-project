@@ -6,6 +6,7 @@
 #include <sim/jobs/utils.hh>
 #include <sim/mysql/mysql.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/libzip.hh>
 #include <simlib/sim/simfile.hh>
 #include <utility>
@@ -17,7 +18,6 @@ protected:
     decltype(sim::jobs::OldJob::type) job_type_;
     StringView job_creator_;
     sim::jobs::AddProblemInfo info_;
-    FileRemover package_file_remover_;
     uint64_t job_file_id_;
     std::optional<uint64_t> tmp_file_id_;
     std::optional<uint64_t> problem_id_;
@@ -59,7 +59,7 @@ protected:
 
     // Runs conver and places package into a temporary internal file. Sets
     // need_main_solution_judge_report
-    void build_package(sim::mysql::Connection& mysql);
+    void build_package(sim::mysql::Connection& mysql, FileRemover& package_file_remover);
 
 private:
     // Initializes internal variables for use by the next functions

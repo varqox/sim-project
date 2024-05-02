@@ -5,6 +5,7 @@
 #include <simlib/concat_tostr.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/sim/problem_package.hh>
 #include <simlib/spawner.hh>
 #include <simlib/time.hh>
@@ -44,7 +45,7 @@ int main2(int argc, char** argv) {
         return 1;
     }
 
-    mysql_cnf_guard.reset(MYSQL_CNF);
+    mysql_cnf_guard = FileRemover{MYSQL_CNF};
     {
         auto old_mysql = old_mysql::ConnectionView{mysql};
         write_all_throw(

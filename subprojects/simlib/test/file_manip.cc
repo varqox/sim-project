@@ -386,11 +386,3 @@ TEST(DISABLED_file_manip, move) { // TODO:
 // NOLINTNEXTLINE
 TEST(DISABLED_file_manip, create_file) { // TODO:
 }
-
-// NOLINTNEXTLINE
-TEST(DISABLED_file_manip, FileRemover) { // TODO:
-}
-
-// NOLINTNEXTLINE
-TEST(DISABLED_file_manip, DirectoryRemover) { // TODO:
-}

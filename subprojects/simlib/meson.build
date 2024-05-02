@@ -308,6 +308,7 @@ tests = {
     'test/file_info.cc': {},
     'test/file_manip.cc': {},
     'test/file_path.cc': {},
+    'test/file_remover.cc': {},
     'test/from_unsafe.cc': {},
     'test/http/response.cc': {},
     'test/http/url_dispatcher.cc': {},
