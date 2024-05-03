@@ -51,6 +51,8 @@ void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
 
         stmt = old_mysql.prepare("SELECT 1 FROM problems WHERE id=?");
         stmt.bind_and_execute(info_.target_problem_id);
+        int x;
+        stmt.res_bind_all(x);
         if (not stmt.next()) {
             return set_failure("Target problem does not exist");
         }
