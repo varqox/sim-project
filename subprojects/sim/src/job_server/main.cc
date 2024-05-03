@@ -437,7 +437,7 @@ public:
 
 class EventsQueue {
     mutex events_lock;
-    std::queue<function<void()>> events;
+    std::queue<function<void(sim::mysql::Connection&)>> events;
     volatile int notifier_fd_ = -1;
 
     int set_notifier_fd_impl() {
@@ -479,10 +479,10 @@ public:
     }
 
     /// Return value - a bool denoting whether the event processing took place
-    static bool process_next_event() {
+    static bool process_next_event(sim::mysql::Connection& mysql) {
         STACK_UNWINDING_MARK;
 
-        function<void()> ev;
+        function<void(sim::mysql::Connection&)> ev;
         {
             lock_guard<mutex> lock(events_queue.events_lock);
             if (events_queue.events.empty()) {
@@ -493,7 +493,7 @@ public:
             events_queue.events.pop();
         }
 
-        ev();
+        ev(mysql);
         return true;
     }
 };
@@ -528,10 +528,9 @@ private:
 
     class Worker {
         WorkersPool& wp_;
-        sim::mysql::Connection& mysql_;
 
     public:
-        explicit Worker(sim::mysql::Connection& mysql, WorkersPool& wp) : wp_(wp), mysql_(mysql) {
+        explicit Worker(WorkersPool& wp) : wp_(wp) {
             STACK_UNWINDING_MARK;
             auto tid = std::this_thread::get_id();
             lock_guard<mutex> lock(wp_.mtx_);
@@ -562,10 +561,12 @@ private:
             }
 
             if (wp_.worker_dies_callback_) {
-                EventsQueue::register_event(shared_function(
-                    [&callback = wp_.worker_dies_callback_, winfo = std::move(wi), &mysql = mysql_](
-                    ) mutable { callback(mysql, std::move(winfo)); }
-                ));
+                EventsQueue::register_event(
+                    shared_function([&callback = wp_.worker_dies_callback_,
+                                     winfo = std::move(wi)](sim::mysql::Connection& mysql) mutable {
+                        callback(mysql, std::move(winfo));
+                    })
+                );
             }
         }
 
@@ -583,10 +584,9 @@ private:
             }
 
             if (wp_.worker_becomes_idle_callback_) {
-                EventsQueue::register_event([&mysql = mysql_,
-                                             callback = wp_.worker_becomes_idle_callback_] {
-                    callback(mysql);
-                });
+                EventsQueue::register_event([callback = wp_.worker_becomes_idle_callback_](
+                                                sim::mysql::Connection& mysql
+                                            ) { callback(mysql); });
             }
 
             // Wait for a job to be assigned to us (current worker)
@@ -627,7 +627,7 @@ public:
                 // Connect to the database
                 thread_local auto mysql =
                     sim::mysql::Connection::from_credential_file(".db.config");
-                thread_local Worker w(mysql, *this);
+                thread_local Worker w(*this);
 
                 for (;;) {
                     job_handler_(mysql, w.wait_for_next_job_id());
@@ -678,7 +678,7 @@ static void spawn_worker(WorkersPool& wp) noexcept {
         // Give the system some time (yes I know it will block the whole thread,
         // but currently EventsQueue does not support delaying events)
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        EventsQueue::register_event([&] { spawn_worker(wp); });
+        EventsQueue::register_event([&](sim::mysql::Connection&) { spawn_worker(wp); });
     }
 }
 
@@ -686,7 +686,7 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
     STACK_UNWINDING_MARK;
 
     auto exit_procedures = [&job] {
-        EventsQueue::register_event([job] {
+        EventsQueue::register_event([job](sim::mysql::Connection&) {
             if (job.locked_its_problem) {
                 jobs_queue.unlock_problem(job.problem_id);
             }
@@ -785,7 +785,8 @@ static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-va
                 sim::jobs::restart_job(mysql, from_unsafe{to_string(winfo.next_job.id)}, false);
             }
 
-            EventsQueue::register_event([] { spawn_worker(local_workers); });
+            EventsQueue::register_event([](sim::mysql::Connection&) { spawn_worker(local_workers); }
+            );
         }
     );
 
@@ -805,7 +806,8 @@ static WorkersPool // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-va
                 sim::jobs::restart_job(mysql, from_unsafe{to_string(winfo.next_job.id)}, false);
             }
 
-            EventsQueue::register_event([] { spawn_worker(judge_workers); });
+            EventsQueue::register_event([](sim::mysql::Connection&) { spawn_worker(judge_workers); }
+            );
         }
     );
 
@@ -995,7 +997,7 @@ static void events_loop(sim::mysql::Connection& mysql) noexcept {
                         }
 
                         jobs_queue.sync_with_db(mysql);
-                        while (EventsQueue::process_next_event()) {
+                        while (EventsQueue::process_next_event(mysql)) {
                         }
 
                         std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_INTERVAL));
@@ -1022,7 +1024,7 @@ static void events_loop(sim::mysql::Connection& mysql) noexcept {
                         }
 
                         EventsQueue::reset_notifier();
-                        while (EventsQueue::process_next_event()) {
+                        while (EventsQueue::process_next_event(mysql)) {
                         }
                     }
                 }
@@ -1058,7 +1060,7 @@ static void events_loop(sim::mysql::Connection& mysql) noexcept {
                             continue; // inotify has just broken
                         }
 
-                        while (EventsQueue::process_next_event()) {
+                        while (EventsQueue::process_next_event(mysql)) {
                         }
                     }
 
@@ -1092,7 +1094,7 @@ static void events_loop(sim::mysql::Connection& mysql) noexcept {
 
                         if (pfd[EQ_IDX].revents != 0) {
                             EventsQueue::reset_notifier();
-                            while (EventsQueue::process_next_event()) {
+                            while (EventsQueue::process_next_event(mysql)) {
                             }
                         }
                     }
