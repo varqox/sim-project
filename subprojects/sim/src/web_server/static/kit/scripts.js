@@ -107,46 +107,46 @@ async function copy_to_clipboard(make_text_to_copy) {
 
 /* ============================ URLs ============================ */
 
-function url_api_contest_entry_tokens_add(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add'; }
-function url_api_contest_entry_tokens_add_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add_short'; }
-function url_api_contest_entry_tokens_delete(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete'; }
-function url_api_contest_entry_tokens_delete_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete_short'; }
-function url_api_contest_entry_tokens_regenerate(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regenerate'; }
-function url_api_contest_entry_tokens_regenerate_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regenerate_short'; }
-function url_api_contest_entry_tokens_view(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens'; }
-function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/contest_name'; }
+function url_api_contest_entry_tokens_add(contest_id) { return `/api/contest/${contest_id}/entry_tokens/add`; }
+function url_api_contest_entry_tokens_add_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/add_short`; }
+function url_api_contest_entry_tokens_delete(contest_id) { return `/api/contest/${contest_id}/entry_tokens/delete`; }
+function url_api_contest_entry_tokens_delete_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/delete_short`; }
+function url_api_contest_entry_tokens_regenerate(contest_id) { return `/api/contest/${contest_id}/entry_tokens/regenerate`; }
+function url_api_contest_entry_tokens_regenerate_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/regenerate_short`; }
+function url_api_contest_entry_tokens_view(contest_id) { return `/api/contest/${contest_id}/entry_tokens`; }
+function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/contest_name`; }
 function url_api_problems() { return '/api/problems'; }
 function url_api_problems_add() { return '/api/problems/add'; }
-function url_api_problems_with_type(problem_type) { return '/api/problems/type=/' + problem_type; }
+function url_api_problems_with_type(problem_type) { return `/api/problems/type=/${problem_type}`; }
 function url_api_sign_in() { return '/api/sign_in'; }
 function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
-function url_api_use_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/use'; }
-function url_api_user(user_id) { return '/api/user/' + user_id; }
-function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change_password'; }
-function url_api_user_delete(user_id) { return '/api/user/' + user_id + '/delete'; }
-function url_api_user_edit(user_id) { return '/api/user/' + user_id + '/edit'; }
-function url_api_user_merge_into_another(user_id) { return '/api/user/' + user_id + '/merge_into_another'; }
-function url_api_user_problems(user_id) { return '/api/user/' + user_id + '/problems'; }
-function url_api_user_problems_with_type(user_id, problem_type) { return '/api/user/' + user_id + '/problems/type=/' + problem_type; }
+function url_api_use_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/use`; }
+function url_api_user(user_id) { return `/api/user/${user_id}`; }
+function url_api_user_change_password(user_id) { return `/api/user/${user_id}/change_password`; }
+function url_api_user_delete(user_id) { return `/api/user/${user_id}/delete`; }
+function url_api_user_edit(user_id) { return `/api/user/${user_id}/edit`; }
+function url_api_user_merge_into_another(user_id) { return `/api/user/${user_id}/merge_into_another`; }
+function url_api_user_problems(user_id) { return `/api/user/${user_id}/problems`; }
+function url_api_user_problems_with_type(user_id, problem_type) { return `/api/user/${user_id}/problems/type=/${problem_type}`; }
 function url_api_users() { return '/api/users'; }
 function url_api_users_add() { return '/api/users/add'; }
-function url_api_users_with_type(user_type) { return '/api/users/type=/' + user_type; }
-function url_change_user_password(user_id) { return '/user/' + user_id + '/change_password'; }
+function url_api_users_with_type(user_type) { return `/api/users/type=/${user_type}`; }
+function url_change_user_password(user_id) { return `/user/${user_id}/change_password`; }
 function url_contests() { return '/c'; }
-function url_enter_contest(contest_entry_token) { return '/enter_contest/' + contest_entry_token; }
+function url_enter_contest(contest_entry_token) { return `/enter_contest/${contest_entry_token}`; }
 function url_jobs() { return '/jobs'; }
 function url_logs() { return '/logs'; }
 function url_main_page() { return '/'; }
-function url_problem(problem_id) { return '/p/' + problem_id; }
-function url_problem_create_submission(problem_id) { return '/p/' + problem_id + '/submit'; }
-function url_problem_delete(problem_id) { return '/p/' + problem_id + '/delete'; }
-function url_problem_download(problem_id) { return '/api/download/problem/' + problem_id; }
-function url_problem_edit(problem_id) { return '/p/' + problem_id + '/edit'; }
-function url_problem_merge(problem_id) { return '/p/' + problem_id + '/merge'; }
-function url_problem_reset_time_limits(problem_id) { return '/p/' + problem_id + '/reset_time_limits'; }
-function url_problem_solutions(problem_id) { return '/p/' + problem_id + '#all_submissions#solutions'; }
-function url_problem_statement(problem_id, problem_name) { return '/api/download/statement/problem/' + problem_id + '/' + encodeURIComponent(problem_name); }
+function url_problem(problem_id) { return `/p/${problem_id}`; }
+function url_problem_create_submission(problem_id) { return `/p/${problem_id}/submit`; }
+function url_problem_delete(problem_id) { return `/p/${problem_id}/delete`; }
+function url_problem_download(problem_id) { return `/api/download/problem/${problem_id}`; }
+function url_problem_edit(problem_id) { return `/p/${problem_id}/edit`; }
+function url_problem_merge(problem_id) { return `/p/${problem_id}/merge`; }
+function url_problem_reset_time_limits(problem_id) { return `/p/${problem_id}/reset_time_limits`; }
+function url_problem_solutions(problem_id) { return `/p/${problem_id}#all_submissions#solutions`; }
+function url_problem_statement(problem_id, problem_name) { return `/api/download/statement/problem/${problem_id}/${encodeURIComponent(problem_name)}`; }
 function url_problems() { return '/problems'; }
 function url_problems_add() { return '/problems/add'; }
 function url_sign_in() { return '/sign_in'; }
@@ -154,10 +154,10 @@ function url_sign_out() { return '/sign_out'; }
 function url_sign_up() { return '/sign_up'; }
 function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
 function url_submissions() { return '/s'; }
-function url_user(user_id) { return '/u/' + user_id; }
-function url_user_delete(user_id) { return '/user/' + user_id + '/delete'; }
-function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
-function url_user_merge_into_another(user_id) { return '/user/' + user_id + '/merge_into_another'; }
+function url_user(user_id) { return `/u/${user_id}`; }
+function url_user_delete(user_id) { return `/user/${user_id}/delete`; }
+function url_user_edit(user_id) { return `/user/${user_id}/edit`; }
+function url_user_merge_into_another(user_id) { return `/user/${user_id}/merge_into_another`; }
 function url_users() { return '/users'; }
 function url_users_add() { return '/users/add'; }
 
