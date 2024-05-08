@@ -107,55 +107,57 @@ async function copy_to_clipboard(make_text_to_copy) {
 
 /* ============================ URLs ============================ */
 
-function url_api_contest_entry_tokens_add(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add'; }
-function url_api_contest_entry_tokens_add_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/add_short'; }
-function url_api_contest_entry_tokens_delete(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete'; }
-function url_api_contest_entry_tokens_delete_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/delete_short'; }
-function url_api_contest_entry_tokens_regenerate(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regenerate'; }
-function url_api_contest_entry_tokens_regenerate_short(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens/regenerate_short'; }
-function url_api_contest_entry_tokens_view(contest_id) { return '/api/contest/' + contest_id + '/entry_tokens'; }
-function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/contest_name'; }
+function url_api_contest_entry_tokens_add(contest_id) { return `/api/contest/${contest_id}/entry_tokens/add`; }
+function url_api_contest_entry_tokens_add_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/add_short`; }
+function url_api_contest_entry_tokens_delete(contest_id) { return `/api/contest/${contest_id}/entry_tokens/delete`; }
+function url_api_contest_entry_tokens_delete_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/delete_short`; }
+function url_api_contest_entry_tokens_regenerate(contest_id) { return `/api/contest/${contest_id}/entry_tokens/regenerate`; }
+function url_api_contest_entry_tokens_regenerate_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/regenerate_short`; }
+function url_api_contest_entry_tokens_view(contest_id) { return `/api/contest/${contest_id}/entry_tokens`; }
+function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/contest_name`; }
 function url_api_problems() { return '/api/problems'; }
-function url_api_problems_with_type(problem_type) { return '/api/problems/type=/' + problem_type; }
+function url_api_problems_add() { return '/api/problems/add'; }
+function url_api_problems_with_type(problem_type) { return `/api/problems/type=/${problem_type}`; }
 function url_api_sign_in() { return '/api/sign_in'; }
 function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
-function url_api_use_contest_entry_token(contest_entry_token) { return '/api/contest_entry_token/' + contest_entry_token + '/use'; }
-function url_api_user(user_id) { return '/api/user/' + user_id; }
-function url_api_user_change_password(user_id) { return '/api/user/' + user_id + '/change_password'; }
-function url_api_user_delete(user_id) { return '/api/user/' + user_id + '/delete'; }
-function url_api_user_edit(user_id) { return '/api/user/' + user_id + '/edit'; }
-function url_api_user_merge_into_another(user_id) { return '/api/user/' + user_id + '/merge_into_another'; }
-function url_api_user_problems(user_id) { return '/api/user/' + user_id + '/problems'; }
-function url_api_user_problems_with_type(user_id, problem_type) { return '/api/user/' + user_id + '/problems/type=/' + problem_type; }
+function url_api_use_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/use`; }
+function url_api_user(user_id) { return `/api/user/${user_id}`; }
+function url_api_user_change_password(user_id) { return `/api/user/${user_id}/change_password`; }
+function url_api_user_delete(user_id) { return `/api/user/${user_id}/delete`; }
+function url_api_user_edit(user_id) { return `/api/user/${user_id}/edit`; }
+function url_api_user_merge_into_another(user_id) { return `/api/user/${user_id}/merge_into_another`; }
+function url_api_user_problems(user_id) { return `/api/user/${user_id}/problems`; }
+function url_api_user_problems_with_type(user_id, problem_type) { return `/api/user/${user_id}/problems/type=/${problem_type}`; }
 function url_api_users() { return '/api/users'; }
 function url_api_users_add() { return '/api/users/add'; }
-function url_api_users_with_type(user_type) { return '/api/users/type=/' + user_type; }
-function url_change_user_password(user_id) { return '/user/' + user_id + '/change_password'; }
+function url_api_users_with_type(user_type) { return `/api/users/type=/${user_type}`; }
+function url_change_user_password(user_id) { return `/user/${user_id}/change_password`; }
 function url_contests() { return '/c'; }
-function url_enter_contest(contest_entry_token) { return '/enter_contest/' + contest_entry_token; }
+function url_enter_contest(contest_entry_token) { return `/enter_contest/${contest_entry_token}`; }
 function url_jobs() { return '/jobs'; }
 function url_logs() { return '/logs'; }
 function url_main_page() { return '/'; }
-function url_problem(problem_id) { return '/p/' + problem_id; }
-function url_problem_create_submission(problem_id) { return '/p/' + problem_id + '/submit'; }
-function url_problem_delete(problem_id) { return '/p/' + problem_id + '/delete'; }
-function url_problem_download(problem_id) { return '/api/download/problem/' + problem_id; }
-function url_problem_edit(problem_id) { return '/p/' + problem_id + '/edit'; }
-function url_problem_merge(problem_id) { return '/p/' + problem_id + '/merge'; }
-function url_problem_reset_time_limits(problem_id) { return '/p/' + problem_id + '/reset_time_limits'; }
-function url_problem_solutions(problem_id) { return '/p/' + problem_id + '#all_submissions#solutions'; }
-function url_problem_statement(problem_id, problem_name) { return '/api/download/statement/problem/' + problem_id + '/' + encodeURIComponent(problem_name); }
+function url_problem(problem_id) { return `/p/${problem_id}`; }
+function url_problem_create_submission(problem_id) { return `/p/${problem_id}/submit`; }
+function url_problem_delete(problem_id) { return `/p/${problem_id}/delete`; }
+function url_problem_download(problem_id) { return `/api/download/problem/${problem_id}`; }
+function url_problem_edit(problem_id) { return `/p/${problem_id}/edit`; }
+function url_problem_merge(problem_id) { return `/p/${problem_id}/merge`; }
+function url_problem_reset_time_limits(problem_id) { return `/p/${problem_id}/reset_time_limits`; }
+function url_problem_solutions(problem_id) { return `/p/${problem_id}#all_submissions#solutions`; }
+function url_problem_statement(problem_id, problem_name) { return `/api/download/statement/problem/${problem_id}/${encodeURIComponent(problem_name)}`; }
 function url_problems() { return '/problems'; }
+function url_problems_add() { return '/problems/add'; }
 function url_sign_in() { return '/sign_in'; }
 function url_sign_out() { return '/sign_out'; }
 function url_sign_up() { return '/sign_up'; }
 function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
 function url_submissions() { return '/s'; }
-function url_user(user_id) { return '/u/' + user_id; }
-function url_user_delete(user_id) { return '/user/' + user_id + '/delete'; }
-function url_user_edit(user_id) { return '/user/' + user_id + '/edit'; }
-function url_user_merge_into_another(user_id) { return '/user/' + user_id + '/merge_into_another'; }
+function url_user(user_id) { return `/u/${user_id}`; }
+function url_user_delete(user_id) { return `/user/${user_id}/delete`; }
+function url_user_edit(user_id) { return `/user/${user_id}/edit`; }
+function url_user_merge_into_another(user_id) { return `/user/${user_id}/merge_into_another`; }
 function url_users() { return '/users'; }
 function url_users_add() { return '/users/add'; }
 
@@ -1780,6 +1782,92 @@ function datetime_to_string(date) {
 		' ', hour < 10 ? '0' : '', hour, ':', minute < 10 ? '0' : '', minute, ':', second < 10 ? '0' : '', second);
 }
 
+async function add_problem() {
+	const view = new View(url_problems_add());
+	const form = new Form('Add problem', url_api_problems_add());
+	const type_select = form.append_select('visibility', 'Visibility');
+	if (global_capabilities.problems.add_problem_with_type_private) {
+		type_select.append_option('private', 'Private', {selected: true});
+	}
+	if (global_capabilities.problems.add_problem_with_type_contest_only) {
+		type_select.append_option('contest_only', 'Contest only');
+	}
+	if (global_capabilities.problems.add_problem_with_type_public) {
+		type_select.append_option('public', 'Public');
+	}
+	const ignore_simfile_select = form.append_select('ignore_simfile', 'Ignore simfile');
+	const name_input = form.append_input_text('name', 'Name', '', 24, {
+		required: false,
+		trim: true,
+		placeholder: 'Take from Simfile',
+	});
+	const label_input = form.append_input_text('label', 'Label', '', 24, {
+		required: false,
+		trim: true,
+		placeholder: 'Take from Simfile',
+	});
+
+	const memory_limit_input = form.append_input_text('memory_limit_in_mib', 'Memory limit', '', 9, {
+		required: false,
+		trim: true,
+		placeholder: 'Take from Simfile',
+	});
+	memory_limit_input.parentNode.appendChild(elem_with_text('span', '[MiB]'));
+
+	const time_limits_select = form.append_select('time_limits', 'Time limits');
+	time_limits_select.append_fieldset_option('keep_if_possible', 'Take from Simfile', {}, (fieldset) => {
+		const p = elem_with_text('p', 'If some test (possibly found due to "Search for new tests") does not have the limit specified, all time limits will be reset using the model solution.');
+		p.style.maxWidth = '340px';
+		fieldset.append(p);
+	});
+	time_limits_select.append_option('reset', 'Reset using model solution', {selected: true});
+	time_limits_select.append_fieldset_option('fixed', 'Fixed time limit', {}, (fieldset) => {
+		const time_limit_ns_input = fieldset.append_input_hidden('fixed_time_limit_in_nsec', '');
+		const time_limit_input = fieldset.append_input_text('', 'Fixed time limit (for each test)', '', 9, {
+			required: true,
+			trim: true,
+		});
+		time_limit_input.addEventListener('change', (event) => {
+			// * will automatically convert to float
+			const nanoseconds = Math.floor(time_limit_input.value.trim() * 1e9);
+			// Convert float to decimal string
+			time_limit_ns_input.value = new Intl.NumberFormat('iso', {useGrouping: false}).format(nanoseconds);
+		}, {passive: true});
+		time_limit_input.parentNode.appendChild(elem_with_text('span', '[s]'));
+	});
+
+	ignore_simfile_select.append_option('true', 'Yes', {
+		on_activation: () => {
+			for (const input of [name_input, label_input, memory_limit_input]) {
+				input.required = true;
+				input.placeholder = '';
+			}
+			time_limits_select.disable_option('keep_if_possible');
+		},
+	});
+	ignore_simfile_select.append_fieldset_option('false', 'No', {
+		selected: true,
+		on_activation: () => {
+			for (const input of [name_input, label_input, memory_limit_input]) {
+				input.required = false;
+				input.placeholder = 'Take from Simfile';
+			}
+			time_limits_select.enable_option('keep_if_possible');
+		},
+	}, (fieldset) => {
+		fieldset.append_checkbox('reset_scoring', 'Reset scoring', false);
+		fieldset.append_checkbox('look_for_new_tests', 'Look for new tests', true);
+	});
+
+	form.append_input_file('package', 'Zipped package');
+	form.append_submit_button('Add problem', {css_classes: 'blue'});
+	form.success_handler = (response, {show_success}) => {
+		view_job(true, response.job.id);
+		show_success('Success');
+	};
+	form.attach_to(view.content_elem);
+}
+
 function ProblemsLister(elem, query_url, list_capabilties) {
 	if (this === window) {
 		throw new Error('Call as "new ProblemsLister()", not "ProblemsLister()"');
@@ -1873,7 +1961,7 @@ function list_problems() {
 	const view = new View(url_problems());
 	view.content_elem.appendChild(elem_with_text('h1', 'Problems'));
 	if (global_capabilities.problems.add_problem) {
-		$(view.content_elem).append(a_view_button('/p/add', 'Add problem', 'btn', add_problem.bind(null, true))); // TODO: refactor
+		view.content_elem.appendChild(elem_link_with_class_to_view('btn', 'Add problem', add_problem, url_problems_add));
 	}
 
 	const retab = (url_all_func, url_by_type_func, list_capabilities, elem) => {
@@ -4416,87 +4504,6 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 }
 
 /* ================================ Problems ================================ */
-function add_problem(as_oldmodal) {
-	view_base(as_oldmodal, '/p/add', function() {
-		this.append(ajax_form('Add problem', '/api/problem/add',
-			OldForm.field_group("Problem's name", {
-				type: 'text',
-				name: 'name',
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'Take from Simfile',
-			}).add(OldForm.field_group("Problem's label", {
-				type: 'text',
-				name: 'label',
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'Take from Simfile or make from name',
-			})).add(OldForm.field_group("Problem's type",
-				$('<select>', {
-					name: 'type',
-					required: true,
-					html: $('<option>', {
-						value: 'PUB',
-						text: 'Public',
-					}).add('<option>', {
-						value: 'PRI',
-						text: 'Private',
-						selected: true
-					}).add('<option>', {
-						value: 'CON',
-						text: 'Contest only',
-					})
-				})
-			)).add(OldForm.field_group('Memory limit [MiB]', {
-				type: 'text',
-				name: 'mem_limit',
-				size: 25,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				placeholder: 'Take from Simfile',
-			})).add(OldForm.field_group('Global time limit [s] (for each test)', {
-				type: 'text',
-				name: 'global_time_limit',
-				size: 25,
-				// maxlength: 'TODO...',
-				trim_before_send: true,
-				placeholder: 'No global time limit',
-			})).add(OldForm.field_group('Reset time limits using model solution', {
-				type: 'checkbox',
-				name: 'reset_time_limits',
-				checked: true
-			})).add(OldForm.field_group('Seek for new tests', {
-				type: 'checkbox',
-				name: 'seek_for_new_tests',
-				checked: true
-			})).add(OldForm.field_group('Reset scoring', {
-				type: 'checkbox',
-				name: 'reset_scoring'
-			})).add(OldForm.field_group('Ignore Simfile', {
-				type: 'checkbox',
-				name: 'ignore_simfile',
-			})).add(OldForm.field_group('Zipped package', {
-				type: 'file',
-				name: 'package',
-				required: true
-			})).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Submit'
-				})
-			}), function(resp) {
-				if (as_oldmodal) {
-					show_success_via_oldloader($(this)[0], 'Added');
-					view_job(true, resp);
-				} else {
-					this.parent().remove();
-					window.location.href = '/jobs/' + resp;
-				}
-			}, 'add-problem')
-		);
-	});
-}
 function append_reupload_problem(elem, as_oldmodal, problem) {
 	elem.append(ajax_form('Reupload problem', '/api/problem/' + problem.id + '/reupload',
 		OldForm.field_group("Problem's name", {

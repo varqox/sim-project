@@ -3,8 +3,11 @@
 #include <fcntl.h>
 #include <memory>
 #include <sim/db/schema.hh>
+#include <sim/jobs/job.hh>
+#include <sim/jobs/utils.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/old_mysql/old_mysql.hh>
+#include <sim/sql/sql.hh>
 #include <sim/users/user.hh>
 #include <simlib/concat.hh>
 #include <simlib/concat_tostr.hh>
@@ -31,62 +34,76 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "8c9559f12e40f31daf086f868539b0eaa383db19e24c211444e789ed19956751";
+    "9cea9c860bf5c16e03d914a50647277f24cab5185a3ae0f0b275ab5413ec2f2b";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
 ) {
     // Upgrade here
     mysql.update("UNLOCK TABLES");
-    mysql.update("ALTER TABLE sessions DROP CONSTRAINT sessions_ibfk_1");
-    mysql.update("ALTER TABLE sessions ADD CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`user_id`) "
-                 "REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE problems DROP CONSTRAINT problems_ibfk_1");
-    mysql.update("ALTER TABLE problems DROP CONSTRAINT problems_ibfk_2");
-    mysql.update("ALTER TABLE problems ADD CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE problems ADD CONSTRAINT `problems_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE problem_tags DROP CONSTRAINT problem_tags_ibfk_1");
-    mysql.update("ALTER TABLE problem_tags ADD CONSTRAINT `problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE contest_rounds DROP CONSTRAINT contest_rounds_ibfk_1");
-    mysql.update("ALTER TABLE contest_rounds ADD CONSTRAINT `contest_rounds_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE contest_problems DROP CONSTRAINT contest_problems_ibfk_1");
-    mysql.update("ALTER TABLE contest_problems DROP CONSTRAINT contest_problems_ibfk_2");
-    mysql.update("ALTER TABLE contest_problems DROP CONSTRAINT contest_problems_ibfk_3");
-    mysql.update("ALTER TABLE contest_problems ADD CONSTRAINT `contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE contest_problems ADD CONSTRAINT `contest_problems_ibfk_2` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE contest_problems ADD CONSTRAINT `contest_problems_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE contest_users DROP CONSTRAINT contest_users_ibfk_1");
-    mysql.update("ALTER TABLE contest_users DROP CONSTRAINT contest_users_ibfk_2");
-    mysql.update("ALTER TABLE contest_users ADD CONSTRAINT `contest_users_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE contest_users ADD CONSTRAINT `contest_users_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_1");
-    mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_2");
-    mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_3");
-    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE contest_entry_tokens DROP CONSTRAINT contest_entry_tokens_ibfk_1");
-    mysql.update("ALTER TABLE contest_entry_tokens ADD CONSTRAINT `contest_entry_tokens_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-
-    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_1");
-    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_2");
-    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_3");
-    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_4");
-    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_5");
-    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_6");
-    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`owner`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_4` FOREIGN KEY (`contest_problem_id`) REFERENCES `contest_problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_5` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_6` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
+    // clang-format off
+    mysql.update("CREATE TABLE `add_problem_jobs` ("
+                 "  `id` bigint(20) unsigned NOT NULL,"
+                 "  `file_id` bigint(20) unsigned NOT NULL,"
+                 "  `visibility` tinyint(1) unsigned NOT NULL,"
+                 "  `force_time_limits_reset` tinyint(1) NOT NULL,"
+                 "  `ignore_simfile` tinyint(1) NOT NULL,"
+                 "  `name` varbinary(128) NOT NULL,"
+                 "  `label` varbinary(64) NOT NULL,"
+                 "  `memory_limit_in_mib` bigint(20) unsigned DEFAULT NULL,"
+                 "  `fixed_time_limit_in_ns` bigint(20) unsigned DEFAULT NULL,"
+                 "  `reset_scoring` tinyint(1) NOT NULL,"
+                 "  `look_for_new_tests` tinyint(1) NOT NULL,"
+                 "  `added_problem_id` bigint(20) unsigned DEFAULT NULL,"
+                 "  PRIMARY KEY (`id`),"
+                 "  KEY `file_id` (`file_id`),"
+                 "  CONSTRAINT `add_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                 "  CONSTRAINT `add_problem_jobs_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE"
+                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
+    );
+    // clang-format on
+    using sim::jobs::Job;
+    mysql.execute(sim::sql::Update("jobs").set("info=''").where(
+        "type IN (?, ?)", Job::Type::JUDGE_SUBMISSION, Job::Type::REJUDGE_SUBMISSION
+    ));
+    // Convert old AddProblemInfo into
+    auto stmt = mysql.execute(sim::sql::Select("id, file_id, aux_id, info")
+                                  .from("jobs")
+                                  .where("type IN (?, ?)", Job::Type::ADD_PROBLEM, 4));
+    decltype(Job::id) id;
+    decltype(Job::file_id) file_id;
+    decltype(Job::aux_id) aux_id;
+    decltype(Job::info) info;
+    stmt.res_bind(id, file_id, aux_id, info);
+    while (stmt.next()) {
+        auto api = sim::jobs::AddProblemInfo{info};
+        mysql.execute(
+            sim::sql::InsertInto(
+                "add_problem_jobs (id, file_id, visibility, force_time_limits_reset, "
+                "ignore_simfile, name, label, memory_limit_in_mib, fixed_time_limit_in_ns, "
+                "reset_scoring, look_for_new_tests, added_problem_id)"
+            )
+                .values(
+                    "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
+                    id,
+                    file_id,
+                    api.problem_type,
+                    api.reset_time_limits,
+                    api.ignore_simfile,
+                    api.name,
+                    api.label,
+                    api.memory_limit,
+                    api.global_time_limit ? std::optional{api.global_time_limit->count()}
+                                          : std::nullopt,
+                    api.reset_scoring,
+                    api.seek_for_new_tests,
+                    aux_id
+                )
+        );
+    }
+    mysql.execute(sim::sql::Update("jobs")
+                      .set("type=?, info=''", Job::Type::ADD_PROBLEM)
+                      .where("type IN (?, ?)", Job::Type::ADD_PROBLEM, 4));
 }
 
 enum class LockKind {

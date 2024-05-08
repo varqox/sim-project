@@ -115,8 +115,6 @@ class Sim final {
 
     void api_problem_add_or_reupload_impl(bool reuploading);
 
-    void api_problem_add(sim::problems::OverallPermissions overall_perms);
-
     void api_statement_impl(uint64_t problem_file_id, StringView problem_label, StringView simfile);
 
     void api_problem_statement(
@@ -206,7 +204,7 @@ class Sim final {
     );
 
     void api_contest_problem_rejudge_all_submissions(
-        StringView contest_problem_id, sim::contests::Permissions perms, StringView problem_id
+        StringView contest_problem_id, sim::contests::Permissions perms
     );
 
     void api_contest_problem_edit(StringView contest_problem_id, sim::contests::Permissions perms);

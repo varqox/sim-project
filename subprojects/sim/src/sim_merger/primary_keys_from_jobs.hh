@@ -162,7 +162,6 @@ struct PrimaryKeysFromJobs {
                 break;
 
             case OldJob::Type::ADD_PROBLEM:
-            case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
                 if (aux_id.has_value()) {
                     problems.add_id(aux_id.value(), created_at);
                 }

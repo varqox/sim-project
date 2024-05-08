@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ostream>
 #include <simlib/is_printable.hh>
 #include <type_traits>
 #include <utility>
@@ -9,7 +10,9 @@ template <class T>
 struct Ok {
     T val;
 
-    constexpr explicit Ok(T val_) noexcept : val{std::move(val_)} {}
+    constexpr explicit Ok(const T& val_) noexcept : val{val_} {}
+
+    constexpr explicit Ok(T&& val_) noexcept : val{std::move(val_)} {}
 
     Ok(const Ok&) = default;
     Ok(Ok&&) noexcept = default;
@@ -34,6 +37,12 @@ struct Ok<void> {
 };
 
 Ok() -> Ok<void>;
+
+template <class T, size_t N>
+Ok(T (&)[N]) -> Ok<T*>;
+
+template <class T, size_t N>
+Ok(const T (&)[N]) -> Ok<const T*>;
 
 inline std::ostream& operator<<(std::ostream& os, const Ok<void>& /*ok*/) { return os << "Ok{}"; }
 
@@ -62,7 +71,9 @@ template <class T>
 struct Err {
     T err;
 
-    constexpr explicit Err(T err_) noexcept : err{std::move(err_)} {}
+    constexpr explicit Err(const T& err_) noexcept : err{err_} {}
+
+    constexpr explicit Err(T&& err_) noexcept : err{std::move(err_)} {}
 
     Err(const Err&) = default;
     Err(Err&&) noexcept = default;
@@ -87,6 +98,12 @@ struct Err<void> {
 };
 
 Err() -> Err<void>;
+
+template <class T, size_t N>
+Err(T (&)[N]) -> Err<T*>;
+
+template <class T, size_t N>
+Err(const T (&)[N]) -> Err<const T*>;
 
 inline std::ostream& operator<<(std::ostream& os, const Err<void>& /*err*/) {
     return os << "Err{}";
@@ -145,6 +162,11 @@ struct Result : std::variant<Ok<T>, Err<E>> {
         }
     }
 };
+
+template <class T, class E, std::enable_if_t<is_printable<Ok<T>> && is_printable<Err<E>>, int> = 0>
+std::ostream& operator<<(std::ostream& os, const Result<T, E>& res) {
+    return std::visit([&os](const auto& x) -> std::ostream& { return os << x; }, res);
+}
 
 template <
     class TA,

@@ -937,12 +937,12 @@ void Sim::api_submission_add() {
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     auto file_id = old_mysql.insert_id();
-    CallInDtor file_remover([file_id] { (void)unlink(sim::internal_files::path_of(file_id)); });
+    CallInDtor file_remover([file_id] { (void)unlink(sim::internal_files::old_path_of(file_id)); });
 
     // Save source file
     if (not code.empty()) {
-        put_file_contents(sim::internal_files::path_of(file_id), code);
-    } else if (move(*solution_tmp_path_opt, sim::internal_files::path_of(file_id))) {
+        put_file_contents(sim::internal_files::old_path_of(file_id), code);
+    } else if (move(*solution_tmp_path_opt, sim::internal_files::old_path_of(file_id))) {
         THROW("move()", errmsg());
     }
 
@@ -974,15 +974,14 @@ void Sim::api_submission_add() {
     old_mysql
         .prepare("INSERT jobs (file_id, creator, status, priority, type, created_at,"
                  " aux_id, info, data) "
-                 "VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, '')")
+                 "VALUES(NULL, ?, ?, ?, ?, ?, ?, '', '')")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::JUDGE_SUBMISSION),
             EnumVal(OldJob::Type::JUDGE_SUBMISSION),
             mysql_date(),
-            submission_id,
-            sim::jobs::dump_string(problem_id)
+            submission_id
         );
 
     transaction.commit();
@@ -1000,7 +999,7 @@ void Sim::api_submission_source() {
     }
 
     append(cpp_syntax_highlighter(
-        from_unsafe{get_file_contents(sim::internal_files::path_of(submissions_file_id))}
+        from_unsafe{get_file_contents(sim::internal_files::old_path_of(submissions_file_id))}
     ));
 }
 
@@ -1015,7 +1014,7 @@ void Sim::api_submission_download() {
     resp.headers["Content-Disposition"] =
         concat_tostr("attachment; filename=", submissions_sid, to_extension(submissions_slang));
 
-    resp.content = sim::internal_files::path_of(submissions_file_id);
+    resp.content = sim::internal_files::old_path_of(submissions_file_id);
     resp.content_type = http::Response::FILE;
 }
 
@@ -1035,15 +1034,14 @@ void Sim::api_submission_rejudge() {
 
     stmt = old_mysql.prepare("INSERT jobs (file_id, creator, status, priority,"
                              " type, created_at, aux_id, info, data) "
-                             "VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, '')");
+                             "VALUES(NULL, ?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
         session->user_id,
         EnumVal(OldJob::Status::PENDING),
         default_priority(OldJob::Type::REJUDGE_SUBMISSION),
         EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
         mysql_date(),
-        submissions_sid,
-        sim::jobs::dump_string(problem_id)
+        submissions_sid
     );
 
     sim::jobs::notify_job_server();

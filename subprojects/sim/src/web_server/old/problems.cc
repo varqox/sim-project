@@ -13,12 +13,7 @@ void Sim::problems_handle() {
         return problems_problem();
     }
 
-    if (next_arg == "add") { // Add problem
-        page_template("Add problem");
-        append("add_problem(false);");
-    } else {
-        return error404();
-    }
+    return error404();
 }
 
 void Sim::problems_problem() {

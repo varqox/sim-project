@@ -4,6 +4,7 @@
 #include <poll.h>
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/logger.hh>
 #include <simlib/macros/debug.hh>
 #include <unistd.h>
@@ -749,7 +750,9 @@ void Connection::send_response(const http::Response& res) {
         filename_s.append(res.content, '\0');
         CStringView filename(filename_s.data(), filename_s.size - 1);
 
-        FileRemover remover(res.content_type == http::Response::FILE_TO_REMOVE ? filename : "");
+        FileRemover remover(
+            res.content_type == http::Response::FILE_TO_REMOVE ? filename.to_string() : ""
+        );
         FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
         if (fd == -1) {
             return error404();

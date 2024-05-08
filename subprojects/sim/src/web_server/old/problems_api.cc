@@ -377,14 +377,7 @@ void Sim::api_problems() {
 void Sim::api_problem() {
     STACK_UNWINDING_MARK;
 
-    auto overall_perms = sim::problems::get_overall_permissions(
-        session.has_value() ? std::optional{session->user_type} : std::nullopt
-    );
-
     StringView next_arg = url_args.extract_next_arg();
-    if (next_arg == "add") {
-        return api_problem_add(overall_perms);
-    }
     if (not is_digit(next_arg)) {
         return api_error400();
     }
@@ -532,10 +525,10 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     auto job_file_id = old_mysql.insert_id();
-    FileRemover job_file_remover(sim::internal_files::path_of(job_file_id));
+    FileRemover job_file_remover(sim::internal_files::old_path_of(job_file_id).to_string());
 
     // Make the uploaded package file the job's file
-    if (move(package_file, sim::internal_files::path_of(job_file_id))) {
+    if (move(package_file, sim::internal_files::old_path_of(job_file_id))) {
         THROW("move()", errmsg());
     }
 
@@ -565,16 +558,6 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
     append(job_id);
 }
 
-void Sim::api_problem_add(sim::problems::OverallPermissions overall_perms) {
-    STACK_UNWINDING_MARK;
-
-    if (uint(~overall_perms & sim::problems::OverallPermissions::ADD)) {
-        return api_error403();
-    }
-
-    api_problem_add_or_reupload_impl(false);
-}
-
 void Sim::api_statement_impl(
     uint64_t problem_file_id, StringView problem_label, StringView simfile
 ) {
@@ -598,7 +581,7 @@ void Sim::api_statement_impl(
         concat_tostr("inline; filename=", ::http::quote(from_unsafe{concat(problem_label, ext)}));
 
     // TODO: maybe add some cache system for the statements?
-    ZipFile zip(sim::internal_files::path_of(problem_file_id), ZIP_RDONLY);
+    ZipFile zip(sim::internal_files::old_path_of(problem_file_id), ZIP_RDONLY);
     resp.content =
         zip.extract_to_str(zip.get_index(concat(sim::zip_package_main_dir(zip), statement)));
 }
@@ -625,7 +608,7 @@ void Sim::api_problem_download(StringView problem_label, sim::problems::Permissi
     resp.headers["Content-Disposition"] =
         concat_tostr("attachment; filename=", problem_label, ".zip");
     resp.content_type = http::Response::FILE;
-    resp.content = sim::internal_files::path_of(problems_file_id);
+    resp.content = sim::internal_files::old_path_of(problems_file_id);
 }
 
 void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) {
@@ -639,7 +622,7 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
     old_mysql
         .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
                  " info, data) "
-                 "SELECT ?, ?, ?, ?, ?, id, ?, '' "
+                 "SELECT ?, ?, ?, ?, ?, id, '', '' "
                  "FROM submissions WHERE problem_id=? ORDER BY id")
         .bind_and_execute(
             session->user_id,
@@ -647,7 +630,6 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
             default_priority(OldJob::Type::REJUDGE_SUBMISSION),
             EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
             mysql_date(),
-            sim::jobs::dump_string(problems_pid),
             problems_pid
         );
 
@@ -945,10 +927,10 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     auto job_file_id = old_mysql.insert_id();
-    FileRemover job_file_remover(sim::internal_files::path_of(job_file_id));
+    FileRemover job_file_remover(sim::internal_files::old_path_of(job_file_id).to_string());
 
     // Make uploaded statement file the job's file
-    if (move(statement_file, sim::internal_files::path_of(job_file_id))) {
+    if (move(statement_file, sim::internal_files::old_path_of(job_file_id))) {
         THROW("move()", errmsg());
     }
 

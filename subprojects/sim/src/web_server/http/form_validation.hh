@@ -83,12 +83,16 @@ public:
         return allow_blank_str_val;
     }
 
-    friend ApiParam allow_blank(ApiParam api_param) {
+    friend ApiParam allow_blank_if(ApiParam api_param, bool cond) {
         static_assert(
             detail::is_str_type<T>, "Allowing blank only makes sense on API params that are strings"
         );
-        api_param.allow_blank_str_val = true;
+        api_param.allow_blank_str_val = cond;
         return api_param;
+    }
+
+    friend ApiParam allow_blank(ApiParam api_param) {
+        return allow_blank_if(std::move(api_param), true);
     }
 };
 
@@ -292,6 +296,58 @@ auto validate_required_and_allowed_only_if(
     return ResT{std::move(opt)};
 }
 
+struct SubmittedFile {
+    CStringView filename;
+    CStringView path;
+};
+
+// Returns:
+// - file path and filename set and valid -> Some(SubmittedFile)
+// - file path not set or invalid -> None
+inline std::optional<SubmittedFile> validate_file_required(
+    ApiParam<SubmittedFile> api_param, const FormFields& form_fields, std::string& errors_str
+) {
+    const auto filename_val_opt = form_fields.get(api_param.name);
+    const auto file_path_opt = form_fields.file_path(api_param.name);
+    if (!filename_val_opt) {
+        return detail::append_error(errors_str, api_param, "file is missing");
+    }
+    if (!file_path_opt) {
+        return detail::append_error(errors_str, api_param, "should be a file");
+    }
+    if (filename_val_opt->empty()) {
+        return detail::append_error(errors_str, api_param, "file is missing (empty filename)");
+    }
+    return SubmittedFile{
+        .filename = *filename_val_opt,
+        .path = *file_path_opt,
+    };
+}
+
+// Returns:
+// - file path and filename set and valid -> Some(Some(SubmittedFile))
+// - file not set -> Some(None)
+// - otherwise -> None
+inline std::optional<std::optional<SubmittedFile>> validate_file_optional(
+    ApiParam<SubmittedFile> api_param, const FormFields& form_fields, std::string& errors_str
+) {
+    const auto filename_val_opt = form_fields.get(api_param.name);
+    const auto file_path_opt = form_fields.file_path(api_param.name);
+    if (!filename_val_opt) {
+        return std::optional<std::optional<SubmittedFile>>{std::in_place, std::nullopt};
+    }
+    if (!file_path_opt) {
+        return detail::append_error(errors_str, api_param, "should be a file");
+    }
+    if (filename_val_opt->empty()) {
+        return detail::append_error(errors_str, api_param, "file is missing (empty filename)");
+    }
+    return std::optional{SubmittedFile{
+        .filename = *filename_val_opt,
+        .path = *file_path_opt,
+    }};
+}
+
 #define VALIDATE(form_fields, errors_str_to_return_value_func, seq) \
     IMPL_VALIDATE(                                                  \
         form_fields,                                                \
@@ -373,6 +429,10 @@ auto validate_required_and_allowed_only_if(
 #define IMPL_VALIDATE_DECLARE_VAR_KIND_REQUIRED_AND_ALLOWED_ONLY_IF_ENUM_CAPS(condition, caps_seq) \
     IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS, caps_seq, IMPL_VALIDATE_INITIALIZE_VAR_WITH_COND,      \
         validate_required_and_allowed_only_if, condition
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_FILE_REQUIRED \
+    IMPL_VALIDATE_INITIALIZE_VAR, validate_file_required
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_FILE_OPTIONAL \
+    IMPL_VALIDATE_INITIALIZE_VAR, validate_file_optional
 
 #define IMPL_VALIDATE_DECLARE_VAR5(form_fields, errors_str, var_name, api_param, macro, ...) \
     /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                         \

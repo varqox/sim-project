@@ -229,8 +229,8 @@ public:
     Statement(const Statement&) = delete;
     Statement& operator=(const Statement&) = delete;
 
-    // Prevents client retrieving the whole result from the server. This disallows executing other
-    // queries in parallel. If called, must be called before res_bind(). It may be advantageous for
+    // If called, must be called before res_bind(). Prevents client retrieving the whole result from
+    // the server. This disallows executing other queries in parallel. It may be advantageous for
     // very big queries or even required if the result does not fit in memory.
     void do_not_store_result() noexcept;
 

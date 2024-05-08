@@ -23,61 +23,10 @@ TEST(sql, constructing_sqls_Select) {
     SQL_EQ(Select("a, b, c").from("abc"), "SELECT a, b, c FROM abc");
 }
 
-TEST(sql, constructing_sqls_SelectFrom_SelectJoin) {
-
+TEST(sql, constructing_sqls_SelectFrom) {
     SQL_EQ(
-        Select("a, b, c").from("abc").join("xyz").on("x=a"),
-        "SELECT a, b, c FROM abc JOIN xyz ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c").from("abc").join("xx").on("x=a").join("yy").on("y=b"),
-        "SELECT a, b, c FROM abc JOIN xx ON x=a JOIN yy ON y=b"
-    );
-
-    SQL_EQ(
-        Select("a, b, c").from("abc").join(Select("x, y").from("xyz"), "xy").on("x=a"),
-        "SELECT a, b, c FROM abc JOIN (SELECT x, y FROM xyz) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN (SELECT x, y FROM xyz JOIN aaa ON aaa.a=x) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join(Select("x, y").from("xyz").where("z=42"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN (SELECT x, y FROM xyz WHERE z=42) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join(Select("x, y").from("xyz").group_by("x, y"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN (SELECT x, y FROM xyz GROUP BY x, y) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join(Select("x, y").from("xyz").order_by("x, y"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join(Select("x, y").from("xyz").limit("?", 10), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN (SELECT x, y FROM xyz LIMIT ?) xy ON x=a"
+        Select("a, b, c").from("abc").left_join("xyz").on("x=?", 1),
+        "SELECT a, b, c FROM abc LEFT JOIN xyz ON x=?"
     );
 
     SQL_EQ(
@@ -86,16 +35,12 @@ TEST(sql, constructing_sqls_SelectFrom_SelectJoin) {
     );
 
     SQL_EQ(
-        Select("a, b, c").from("abc").left_join("xyz").on("x=?", 1),
-        "SELECT a, b, c FROM abc LEFT JOIN xyz ON x=?"
-    );
-
-    SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .left_join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
+            .left_join(Select("x, y").from("xyz").inner_join("aaa").on("aaa.a=x"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc LEFT JOIN (SELECT x, y FROM xyz JOIN aaa ON aaa.a=x) xy ON x=a"
+        "SELECT a, b, c FROM abc LEFT JOIN (SELECT x, y FROM xyz INNER JOIN aaa ON aaa.a=x) xy ON "
+        "x=a"
     );
 
     SQL_EQ(
@@ -143,9 +88,10 @@ TEST(sql, constructing_sqls_SelectFrom_SelectJoin) {
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .right_join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
+            .right_join(Select("x, y").from("xyz").inner_join("aaa").on("aaa.a=x"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc RIGHT JOIN (SELECT x, y FROM xyz JOIN aaa ON aaa.a=x) xy ON x=a"
+        "SELECT a, b, c FROM abc RIGHT JOIN (SELECT x, y FROM xyz INNER JOIN aaa ON aaa.a=x) xy ON "
+        "x=a"
     );
 
     SQL_EQ(
@@ -193,9 +139,10 @@ TEST(sql, constructing_sqls_SelectFrom_SelectJoin) {
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .inner_join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
+            .inner_join(Select("x, y").from("xyz").inner_join("aaa").on("aaa.a=x"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc INNER JOIN (SELECT x, y FROM xyz JOIN aaa ON aaa.a=x) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN (SELECT x, y FROM xyz INNER JOIN aaa ON aaa.a=x) xy ON "
+        "x=a"
     );
 
     SQL_EQ(
@@ -320,302 +267,243 @@ TEST(sql, constructing_sqls_Condition) {
 
 TEST(sql, constructing_sqls_SelectJoinOn) {
     SQL_EQ(
-        Select("a, b, c").from("abc").join("ooo").on("ooo.a=a").join("xyz").on("xyz.x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a JOIN xyz ON xyz.x=a"
+        Select("a, b, c").from("abc").inner_join("ooo").on("ooo.a=a").left_join("xyz").on("xyz.x=a"
+        ),
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a LEFT JOIN xyz ON xyz.x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
-            .join(Select("x, y").from("xyz"), "xy")
+            .left_join(Select("x, y").from("xyz"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a JOIN (SELECT x, y FROM xyz) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join("ooo")
-            .on("ooo.a=a")
-            .join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a JOIN (SELECT x, y FROM xyz JOIN aaa ON "
-        "aaa.a=x) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join("ooo")
-            .on("ooo.a=a")
-            .join(Select("x, y").from("xyz").where("z=42"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a JOIN (SELECT x, y FROM xyz WHERE z=42) xy ON "
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz) xy ON "
         "x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
-            .join(Select("x, y").from("xyz").group_by("x, y"), "xy")
+            .left_join(Select("x, y").from("xyz").inner_join("aaa").on("aaa.a=x"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a JOIN (SELECT x, y FROM xyz GROUP BY x, y) xy "
-        "ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz INNER "
+        "JOIN aaa ON aaa.a=x) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
-            .on("ooo.a=a")
-            .join(Select("x, y").from("xyz").order_by("x, y"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy "
-        "ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join("ooo")
-            .on("ooo.a=a")
-            .join(Select("x, y").from("xyz").limit("?", 10), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a JOIN (SELECT x, y FROM xyz LIMIT ?) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c").from("abc").join("ooo").on("ooo.a=a").left_join("xyz").on("xyz.x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a LEFT JOIN xyz ON xyz.x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join("ooo")
-            .on("ooo.a=a")
-            .left_join(Select("x, y").from("xyz"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join("ooo")
-            .on("ooo.a=a")
-            .left_join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
-            .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz JOIN aaa ON "
-        "aaa.a=x) xy ON x=a"
-    );
-
-    SQL_EQ(
-        Select("a, b, c")
-            .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .left_join(Select("x, y").from("xyz").where("z=42"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz WHERE z=42) "
-        "xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz WHERE "
+        "z=42) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .left_join(Select("x, y").from("xyz").group_by("x, y"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz GROUP BY x, "
-        "y) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz GROUP "
+        "BY x, y) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .left_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz ORDER BY x, "
-        "y) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz ORDER "
+        "BY x, y) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .left_join(Select("x, y").from("xyz").limit("?", 10), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz LIMIT ?) xy "
-        "ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a LEFT JOIN (SELECT x, y FROM xyz LIMIT "
+        "?) xy ON x=a"
     );
 
     SQL_EQ(
-        Select("a, b, c").from("abc").join("ooo").on("ooo.a=a").right_join("xyz").on("xyz.x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a RIGHT JOIN xyz ON xyz.x=a"
+        Select("a, b, c").from("abc").inner_join("ooo").on("ooo.a=a").right_join("xyz").on("xyz.x=a"
+        ),
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a RIGHT JOIN xyz ON xyz.x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .right_join(Select("x, y").from("xyz"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz) xy ON "
+        "x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
-            .right_join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
+            .right_join(Select("x, y").from("xyz").inner_join("aaa").on("aaa.a=x"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz JOIN aaa ON "
-        "aaa.a=x) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz INNER "
+        "JOIN aaa ON aaa.a=x) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .right_join(Select("x, y").from("xyz").where("z=42"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz WHERE z=42) "
-        "xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz WHERE "
+        "z=42) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .right_join(Select("x, y").from("xyz").group_by("x, y"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz GROUP BY x, "
-        "y) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz GROUP "
+        "BY x, y) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .right_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz ORDER BY x, "
-        "y) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz ORDER "
+        "BY x, y) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .right_join(Select("x, y").from("xyz").limit("?", 10), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz LIMIT ?) xy "
-        "ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a RIGHT JOIN (SELECT x, y FROM xyz LIMIT "
+        "?) xy ON x=a"
     );
 
     SQL_EQ(
-        Select("a, b, c").from("abc").join("ooo").on("ooo.a=a").inner_join("xyz").on("xyz.x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a INNER JOIN xyz ON xyz.x=a"
+        Select("a, b, c").from("abc").inner_join("ooo").on("ooo.a=a").inner_join("xyz").on("xyz.x=a"
+        ),
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a INNER JOIN xyz ON xyz.x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .inner_join(Select("x, y").from("xyz"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz) xy ON "
+        "x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
-            .inner_join(Select("x, y").from("xyz").join("aaa").on("aaa.a=x"), "xy")
+            .inner_join(Select("x, y").from("xyz").inner_join("aaa").on("aaa.a=x"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz JOIN aaa ON "
-        "aaa.a=x) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz INNER "
+        "JOIN aaa ON aaa.a=x) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .inner_join(Select("x, y").from("xyz").where("z=42"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz WHERE z=42) "
-        "xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz WHERE "
+        "z=42) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .inner_join(Select("x, y").from("xyz").group_by("x, y"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz GROUP BY x, "
-        "y) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz GROUP "
+        "BY x, y) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .inner_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz ORDER BY x, "
-        "y) xy ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz ORDER "
+        "BY x, y) xy ON x=a"
     );
 
     SQL_EQ(
         Select("a, b, c")
             .from("abc")
-            .join("ooo")
+            .inner_join("ooo")
             .on("ooo.a=a")
             .inner_join(Select("x, y").from("xyz").limit("?", 10), "xy")
             .on("x=a"),
-        "SELECT a, b, c FROM abc JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz LIMIT ?) xy "
-        "ON x=a"
+        "SELECT a, b, c FROM abc INNER JOIN ooo ON ooo.a=a INNER JOIN (SELECT x, y FROM xyz LIMIT "
+        "?) xy ON x=a"
     );
 
     SQL_EQ(
-        Select("a, b, c").from("abc").join("xyz").on(Condition("x=a")).where(Condition("b=42")),
-        "SELECT a, b, c FROM abc JOIN xyz ON x=a WHERE b=42"
+        Select("a, b, c")
+            .from("abc")
+            .inner_join("xyz")
+            .on(Condition("x=a"))
+            .where(Condition("b=42")),
+        "SELECT a, b, c FROM abc INNER JOIN xyz ON x=a WHERE b=42"
     );
 
     SQL_EQ(
-        Select("a, b, c").from("abc").join("xyz").on("x=a").group_by("y"),
-        "SELECT a, b, c FROM abc JOIN xyz ON x=a GROUP BY y"
+        Select("a, b, c").from("abc").inner_join("xyz").on("x=a").group_by("y"),
+        "SELECT a, b, c FROM abc INNER JOIN xyz ON x=a GROUP BY y"
     );
 
     SQL_EQ(
-        Select("a, b, c").from("abc").join("xyz").on("x=a").order_by("x"),
-        "SELECT a, b, c FROM abc JOIN xyz ON x=a ORDER BY x"
+        Select("a, b, c").from("abc").inner_join("xyz").on("x=a").order_by("x"),
+        "SELECT a, b, c FROM abc INNER JOIN xyz ON x=a ORDER BY x"
     );
 
     SQL_EQ(
-        Select("a, b, c").from("abc").join("xyz").on("x=a").limit("10"),
-        "SELECT a, b, c FROM abc JOIN xyz ON x=a LIMIT 10"
+        Select("a, b, c").from("abc").inner_join("xyz").on("x=a").limit("10"),
+        "SELECT a, b, c FROM abc INNER JOIN xyz ON x=a LIMIT 10"
     );
 }
 
@@ -741,20 +629,6 @@ TEST(sql, counting_parameters_Select) {
 }
 
 TEST(sql, counting_parameters_SelectFrom) {
-    EXPECT_THROW(Select("a").from("b").join("?"), std::runtime_error);
-    EXPECT_THROW(Select("a").from("b").join(Select("c").from("d"), "?"), std::runtime_error);
-    EXPECT_THROW(
-        Select("a").from("b").join(Select("c").from("d").where("e"), "?"), std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join(Select("c").from("d").group_by("e"), "?"), std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join(Select("c").from("d").order_by("e"), "?"), std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join(Select("c").from("d").limit("e"), "?"), std::runtime_error
-    );
     EXPECT_THROW(Select("a").from("b").left_join("?"), std::runtime_error);
     EXPECT_THROW(Select("a").from("b").left_join(Select("c").from("d"), "?"), std::runtime_error);
     EXPECT_THROW(
@@ -810,105 +684,101 @@ TEST(sql, counting_parameters_SelectFrom) {
 }
 
 TEST(sql, counting_parameters_SelectJoin) {
-    EXPECT_THROW(Select("a").from("b").join("c").on("?"), std::runtime_error);
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("?"), std::runtime_error);
 }
 
 TEST(sql, counting_parameters_SelectJoinOn) {
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").join("?"), std::runtime_error);
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("d").left_join("?"), std::runtime_error);
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").join(Select("e").from("f"), "?"), std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").join(Select("e").from("f").where("g"), "?"),
+        Select("a").from("b").inner_join("c").on("d").left_join(Select("e").from("f"), "?"),
         std::runtime_error
     );
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").join(Select("e").from("f").group_by("g"), "?"),
+        Select("a").from("b").inner_join("c").on("d").left_join(
+            Select("e").from("f").where("g"), "?"
+        ),
         std::runtime_error
     );
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").join(Select("e").from("f").order_by("g"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").join(Select("e").from("f").limit("g"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").left_join("?"), std::runtime_error);
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").left_join(Select("e").from("f"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").left_join(Select("e").from("f").where("g"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").left_join(Select("e").from("f").group_by("g"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").left_join(Select("e").from("f").order_by("g"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").left_join(Select("e").from("f").limit("g"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").right_join("?"), std::runtime_error);
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").right_join(Select("e").from("f"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").right_join(Select("e").from("f").where("g"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").right_join(
+        Select("a").from("b").inner_join("c").on("d").left_join(
             Select("e").from("f").group_by("g"), "?"
         ),
         std::runtime_error
     );
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").right_join(
+        Select("a").from("b").inner_join("c").on("d").left_join(
             Select("e").from("f").order_by("g"), "?"
         ),
         std::runtime_error
     );
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").right_join(Select("e").from("f").limit("g"), "?"),
+        Select("a").from("b").inner_join("c").on("d").left_join(
+            Select("e").from("f").limit("g"), "?"
+        ),
         std::runtime_error
     );
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").inner_join("?"), std::runtime_error);
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("d").right_join("?"), std::runtime_error);
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").inner_join(Select("e").from("f"), "?"),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").inner_join(Select("e").from("f").where("g"), "?"),
+        Select("a").from("b").inner_join("c").on("d").right_join(Select("e").from("f"), "?"),
         std::runtime_error
     );
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").inner_join(
+        Select("a").from("b").inner_join("c").on("d").right_join(
+            Select("e").from("f").where("g"), "?"
+        ),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Select("a").from("b").inner_join("c").on("d").right_join(
             Select("e").from("f").group_by("g"), "?"
         ),
         std::runtime_error
     );
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").inner_join(
+        Select("a").from("b").inner_join("c").on("d").right_join(
             Select("e").from("f").order_by("g"), "?"
         ),
         std::runtime_error
     );
     EXPECT_THROW(
-        Select("a").from("b").join("c").on("d").inner_join(Select("e").from("f").limit("g"), "?"),
+        Select("a").from("b").inner_join("c").on("d").right_join(
+            Select("e").from("f").limit("g"), "?"
+        ),
         std::runtime_error
     );
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").where("?"), std::runtime_error);
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").group_by("?"), std::runtime_error);
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").order_by("?"), std::runtime_error);
-    EXPECT_THROW(Select("a").from("b").join("c").on("d").limit("?"), std::runtime_error);
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("d").inner_join("?"), std::runtime_error);
+    EXPECT_THROW(
+        Select("a").from("b").inner_join("c").on("d").inner_join(Select("e").from("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Select("a").from("b").inner_join("c").on("d").inner_join(
+            Select("e").from("f").where("g"), "?"
+        ),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Select("a").from("b").inner_join("c").on("d").inner_join(
+            Select("e").from("f").group_by("g"), "?"
+        ),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Select("a").from("b").inner_join("c").on("d").inner_join(
+            Select("e").from("f").order_by("g"), "?"
+        ),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Select("a").from("b").inner_join("c").on("d").inner_join(
+            Select("e").from("f").limit("g"), "?"
+        ),
+        std::runtime_error
+    );
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("d").where("?"), std::runtime_error);
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("d").group_by("?"), std::runtime_error);
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("d").order_by("?"), std::runtime_error);
+    EXPECT_THROW(Select("a").from("b").inner_join("c").on("d").limit("?"), std::runtime_error);
 }
 
 TEST(sql, counting_parameters_SelectWhere) {

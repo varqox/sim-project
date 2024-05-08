@@ -8,6 +8,7 @@
 #include <sim/old_mysql/old_mysql.hh>
 #include <sim/sessions/session.hh>
 #include <sim/users/user.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 
@@ -18,6 +19,7 @@ struct Context {
     sim::mysql::Connection& mysql;
     old_mysql::ConnectionView old_mysql;
     bool notify_job_server_after_commit = false;
+    std::vector<FileRemover> uncommited_files_removers;
 
     struct Session {
         decltype(sim::sessions::Session::id) id;

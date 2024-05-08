@@ -5,6 +5,7 @@
 #include <simlib/concat_tostr.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/sim/problem_package.hh>
 #include <simlib/spawner.hh>
 #include <simlib/time.hh>
@@ -44,7 +45,7 @@ int main2(int argc, char** argv) {
         return 1;
     }
 
-    mysql_cnf_guard.reset(MYSQL_CNF);
+    mysql_cnf_guard = FileRemover{MYSQL_CNF};
     {
         auto old_mysql = old_mysql::ConnectionView{mysql};
         write_all_throw(
@@ -89,7 +90,7 @@ int main2(int argc, char** argv) {
         auto deleter = old_mysql.prepare("DELETE FROM internal_files WHERE id=?");
         // Remove jobs temporary internal files
         while (stmt.next()) {
-            auto file_path = sim::internal_files::path_of(tmp_file_id);
+            auto file_path = sim::internal_files::old_path_of(tmp_file_id);
             if (access(file_path, F_OK) == 0 and
                 system_clock::now() - get_modification_time(file_path) > 2h)
             {

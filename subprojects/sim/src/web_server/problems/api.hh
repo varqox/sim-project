@@ -48,4 +48,6 @@ http::Response list_user_problems_with_type_below_id(
 http::Response
 view_problem(web_server::web_worker::Context& ctx, decltype(sim::problems::Problem::id) problem_id);
 
+http::Response add(web_worker::Context& ctx);
+
 } // namespace web_server::problems::api

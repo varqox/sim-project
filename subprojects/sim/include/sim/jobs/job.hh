@@ -15,19 +15,17 @@ struct Job {
         (JUDGE_SUBMISSION, 1, "judge_submission")
         (ADD_PROBLEM, 2, "add_problem")
         (REUPLOAD_PROBLEM, 3, "reupload_problem")
-        (ADD_PROBLEM__JUDGE_MODEL_SOLUTION, 4, "add_problem__judge_model_solution")
-        (REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION, 5,
-         "reupload_problem__judge_model_solution")
+        (REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION, 5, "reupload_problem__judge_model_solution")
         (EDIT_PROBLEM, 6, "edit_problem")
         (DELETE_PROBLEM, 7, "delete_problem")
         (RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM, 8,
-         "reselect_final_submissions_in_contest_problem")
+            "reselect_final_submissions_in_contest_problem")
         (DELETE_USER, 9, "delete_user")
         (DELETE_CONTEST, 10, "delete_contest")
         (DELETE_CONTEST_ROUND, 11, "delete_contest_round")
         (DELETE_CONTEST_PROBLEM, 12, "delete_contest_problem")
         (RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION, 13,
-         "reset_problem_time_limits_using_model_solution")
+            "reset_problem_time_limits_using_model_solution")
         (MERGE_PROBLEMS, 14, "merge_problems")
         (REJUDGE_SUBMISSION, 15, "rejudge_submission")
         (DELETE_FILE, 16, "delete_file")
@@ -73,7 +71,6 @@ constexpr decltype(Job::priority) default_priority(Job::Type type) {
     case Job::Type::EDIT_PROBLEM:
     case Job::Type::CHANGE_PROBLEM_STATEMENT: return 25;
     case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
-    case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
     case Job::Type::ADD_PROBLEM:
     case Job::Type::REUPLOAD_PROBLEM: return 10;
@@ -87,7 +84,6 @@ constexpr bool is_problem_management_job(Job::Type type) {
     // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
     switch (type) {
     case Job::Type::ADD_PROBLEM:
-    case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case Job::Type::REUPLOAD_PROBLEM:
     case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case Job::Type::EDIT_PROBLEM:
@@ -114,7 +110,6 @@ constexpr bool is_submission_job(Job::Type type) {
     case Job::Type::JUDGE_SUBMISSION:
     case Job::Type::REJUDGE_SUBMISSION: return true;
     case Job::Type::ADD_PROBLEM:
-    case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case Job::Type::REUPLOAD_PROBLEM:
     case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case Job::Type::EDIT_PROBLEM:

@@ -8,7 +8,7 @@ namespace job_server::job_handlers {
 void AddOrReuploadProblemJudgeModelSolutionBase::run(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
-    auto package_path = sim::internal_files::path_of(tmp_file_id_.value());
+    auto package_path = sim::internal_files::old_path_of(tmp_file_id_.value());
     reset_package_time_limits(package_path);
     if (failed()) {
         return;

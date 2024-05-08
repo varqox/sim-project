@@ -2,9 +2,10 @@
 
 #include <sim/jobs/old_job.hh>
 #include <sim/old_mysql/old_mysql.hh>
+#include <simlib/file_remover.hh>
 #include <simlib/sim/problem_package.hh>
 
-using sim::internal_files::path_of;
+using sim::internal_files::old_path_of;
 using sim::jobs::OldJob;
 
 namespace job_server::job_handlers {
@@ -23,7 +24,7 @@ void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
         }
     }
 
-    auto pkg_path = sim::internal_files::path_of(problem_file_id);
+    auto pkg_path = sim::internal_files::old_path_of(problem_file_id);
     reset_package_time_limits(pkg_path);
     if (failed()) {
         return;
@@ -35,14 +36,14 @@ void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
     uint64_t new_file_id = old_mysql.insert_id();
-    auto new_pkg_path = sim::internal_files::path_of(new_file_id);
+    auto new_pkg_path = sim::internal_files::old_path_of(new_file_id);
 
     // Save Simfile to new package file
 
     ZipFile src_zip(pkg_path, ZIP_RDONLY);
     auto simfile_path = concat(sim::zip_package_main_dir(src_zip), "Simfile");
 
-    FileRemover new_pkg_remover(new_pkg_path);
+    FileRemover new_pkg_remover(new_pkg_path.to_string());
     ZipFile dest_zip(new_pkg_path, ZIP_CREATE | ZIP_TRUNCATE);
 
     auto eno = src_zip.entries_no();

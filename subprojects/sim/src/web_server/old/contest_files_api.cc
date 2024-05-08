@@ -266,7 +266,7 @@ void Sim::api_contest_file_download(
     resp.headers["Content-Disposition"] =
         concat_tostr("attachment; filename=", ::http::quote(filename));
     resp.content_type = http::Response::FILE;
-    resp.content = sim::internal_files::path_of(internal_file_id);
+    resp.content = sim::internal_files::old_path_of(internal_file_id);
 }
 
 void Sim::api_contest_file_add() {
@@ -340,7 +340,7 @@ void Sim::api_contest_file_add() {
     auto internal_file_id = old_mysql.insert_id();
 
     CallInDtor internal_file_remover([internal_file_id] {
-        (void)unlink(sim::internal_files::path_of(internal_file_id));
+        (void)unlink(sim::internal_files::old_path_of(internal_file_id));
     });
 
     // Insert file
@@ -368,7 +368,7 @@ void Sim::api_contest_file_add() {
     } while (stmt.affected_rows() == 0);
 
     // Move file
-    if (move(file_tmp_path, sim::internal_files::path_of(internal_file_id))) {
+    if (move(file_tmp_path, sim::internal_files::old_path_of(internal_file_id))) {
         THROW("move()", errmsg());
     }
 
@@ -437,7 +437,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     uint64_t internal_file_id = 0;
     CallInDtor internal_file_remover([internal_file_id] {
         if (internal_file_id > 0) {
-            (void)unlink(sim::internal_files::path_of(internal_file_id));
+            (void)unlink(sim::internal_files::old_path_of(internal_file_id));
         }
     });
 
@@ -448,7 +448,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
         internal_file_id = old_mysql.insert_id();
 
         // Move file
-        if (move(file_tmp_path, sim::internal_files::path_of(internal_file_id))) {
+        if (move(file_tmp_path, sim::internal_files::old_path_of(internal_file_id))) {
             THROW("move()", errmsg());
         }
 

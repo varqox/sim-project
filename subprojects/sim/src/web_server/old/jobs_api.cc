@@ -19,7 +19,6 @@ static constexpr const char* job_type_str(OldJob::Type type) noexcept {
     case JT::REJUDGE_SUBMISSION: return "Rejudge submission";
     case JT::ADD_PROBLEM: return "Add problem";
     case JT::REUPLOAD_PROBLEM: return "Reupload problem";
-    case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return "Add problem - set time limits";
     case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return "Reupload problem - set time limits";
     case JT::EDIT_PROBLEM: return "Edit problem";
     case JT::DELETE_PROBLEM: return "Delete problem";
@@ -171,8 +170,6 @@ void Sim::api_jobs() {
                 " AND j.type IN(",
                 EnumVal(OldJob::Type::ADD_PROBLEM).to_int(),
                 ',',
-                EnumVal(OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(),
-                ',',
                 EnumVal(OldJob::Type::REUPLOAD_PROBLEM).to_int(),
                 ',',
                 EnumVal(OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(),
@@ -273,52 +270,15 @@ void Sim::api_jobs() {
         switch (job_type) {
         case OldJob::Type::JUDGE_SUBMISSION:
         case OldJob::Type::REJUDGE_SUBMISSION: {
-            append("\"problem\":", sim::jobs::extract_dumped_string(res[JINFO]));
-            append(",\"submission\":", res[AUX_ID]);
+            append("\"submission\":", res[AUX_ID]);
             break;
         }
 
         case OldJob::Type::ADD_PROBLEM:
         case OldJob::Type::REUPLOAD_PROBLEM:
-        case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
         case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: {
-            auto ptype_to_str = [](OldProblem::Type& ptype) {
-                switch (ptype) {
-                case OldProblem::Type::PUBLIC: return "public";
-                case OldProblem::Type::PRIVATE: return "private";
-                case OldProblem::Type::CONTEST_ONLY: return "contest only";
-                }
-                return "unknown";
-            };
-            sim::jobs::AddProblemInfo info{res[JINFO]};
-            append(R"("problem type":")", ptype_to_str(info.problem_type), '"');
-
-            if (!info.name.empty()) {
-                append(",\"name\":", json_stringify(info.name));
-            }
-            if (!info.label.empty()) {
-                append(",\"label\":", json_stringify(info.label));
-            }
-            if (info.memory_limit.has_value()) {
-                append(R"(,"memory limit":")", info.memory_limit.value(), " MiB\"");
-            }
-            if (info.global_time_limit.has_value()) {
-                append(",\"global time limit\":", to_string(info.global_time_limit.value()));
-            }
-
-            append(
-                ",\"reset time limits\":",
-                info.reset_time_limits ? "\"yes\"" : "\"no\"",
-                ",\"ignore simfile\":",
-                info.ignore_simfile ? "\"yes\"" : "\"no\"",
-                ",\"seek for new tests\":",
-                info.seek_for_new_tests ? "\"yes\"" : "\"no\"",
-                ",\"reset scoring\":",
-                info.reset_scoring ? "\"yes\"" : "\"no\""
-            );
-
             if (not res.is_null(AUX_ID)) {
-                append(",\"problem\":", res[AUX_ID]);
+                append("\"problem\":", res[AUX_ID]);
                 actions.append('p'); // View problem
             }
 
@@ -407,7 +367,6 @@ void Sim::api_jobs() {
                 job_type,
                 JT::ADD_PROBLEM,
                 JT::REUPLOAD_PROBLEM,
-                JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
                 JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION
             ))
         {
@@ -577,7 +536,6 @@ void Sim::api_job_download_uploaded_package(
             job_type,
             JT::ADD_PROBLEM,
             JT::REUPLOAD_PROBLEM,
-            JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
             JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION
         ))
     {
@@ -586,7 +544,7 @@ void Sim::api_job_download_uploaded_package(
 
     resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=", jobs_jid, ".zip");
     resp.content_type = http::Response::FILE;
-    resp.content = sim::internal_files::path_of(file_id.value());
+    resp.content = sim::internal_files::old_path_of(file_id.value());
 }
 
 void Sim::api_job_download_uploaded_statement(
@@ -609,7 +567,7 @@ void Sim::api_job_download_uploaded_statement(
         )})
     );
     resp.content_type = http::Response::FILE;
-    resp.content = sim::internal_files::path_of(file_id.value());
+    resp.content = sim::internal_files::old_path_of(file_id.value());
 }
 
 } // namespace web_server::old
