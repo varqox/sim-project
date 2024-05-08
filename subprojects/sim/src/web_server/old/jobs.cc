@@ -1,12 +1,12 @@
 #include "sim.hh"
 
-#include <sim/contests/contest.hh>
+#include <sim/contests/old_contest.hh>
 #include <sim/jobs/utils.hh>
 #include <sim/problems/permissions.hh>
 
-using sim::jobs::Job;
-using sim::problems::Problem;
-using sim::submissions::Submission;
+using sim::jobs::OldJob;
+using sim::problems::OldProblem;
+using sim::submissions::OldSubmission;
 using sim::users::User;
 using std::optional;
 using std::string;
@@ -31,12 +31,12 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 }
 
 Sim::JobPermissions Sim::jobs_get_permissions(
-    std::optional<StringView> creator_id, Job::Type job_type, Job::Status job_status
+    std::optional<StringView> creator_id, OldJob::Type job_type, OldJob::Status job_status
 ) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
-    using JT = Job::Type;
-    using JS = Job::Status;
+    using JT = OldJob::Type;
+    using JS = OldJob::Status;
 
     JobPermissions overall_perms = jobs_get_overall_permissions();
 
@@ -133,22 +133,22 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(StringView submissi
     if (not session.has_value()) {
         return PERM::NONE;
     }
-
-    auto stmt = mysql.prepare("SELECT s.type, p.owner_id, p.type, cu.mode,"
-                              " c.is_public "
-                              "FROM submissions s "
-                              "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
-                              "LEFT JOIN contests c ON c.id=s.contest_id "
-                              "LEFT JOIN contest_users cu ON cu.user_id=?"
-                              " AND cu.contest_id=s.contest_id "
-                              "WHERE s.id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("SELECT s.type, p.owner_id, p.type, cu.mode,"
+                                  " c.is_public "
+                                  "FROM submissions s "
+                                  "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
+                                  "LEFT JOIN contests c ON c.id=s.contest_id "
+                                  "LEFT JOIN contest_users cu ON cu.user_id=?"
+                                  " AND cu.contest_id=s.contest_id "
+                                  "WHERE s.id=?");
     stmt.bind_and_execute(session->user_id, submission_id);
 
-    EnumVal<Submission::Type> stype{};
-    mysql::Optional<decltype(Problem::owner_id)::value_type> problem_owner_id;
-    decltype(Problem::type) problem_type;
-    mysql::Optional<decltype(sim::contest_users::ContestUser::mode)> cu_mode;
-    mysql::Optional<decltype(sim::contests::Contest::is_public)> is_public;
+    EnumVal<OldSubmission::Type> stype{};
+    old_mysql::Optional<decltype(OldProblem::owner_id)::value_type> problem_owner_id;
+    decltype(OldProblem::type) problem_type;
+    old_mysql::Optional<decltype(sim::contest_users::OldContestUser::mode)> cu_mode;
+    old_mysql::Optional<decltype(sim::contests::OldContest::is_public)> is_public;
     stmt.res_bind_all(stype, problem_owner_id, problem_type, cu_mode, is_public);
     if (stmt.next()) {
         if (is_public.has_value() and // <-- contest exists

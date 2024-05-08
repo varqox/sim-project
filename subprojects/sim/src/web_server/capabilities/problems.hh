@@ -10,9 +10,9 @@ namespace web_server::capabilities {
 struct ProblemsCapabilities {
     bool web_ui_view : 1;
     bool add_problem : 1;
-    bool add_with_type_private : 1;
-    bool add_with_type_contest_only : 1;
-    bool add_with_type_public : 1;
+    bool add_problem_with_type_private : 1;
+    bool add_problem_with_type_contest_only : 1;
+    bool add_problem_with_type_public : 1;
 };
 
 ProblemsCapabilities problems(const decltype(web_worker::Context::session)& session) noexcept;
@@ -29,7 +29,7 @@ struct ProblemsListCapabilities {
     bool web_ui_show_updated_at_column : 1;
 };
 
-ProblemsListCapabilities list_all_problems(const decltype(web_worker::Context::session)& session
+ProblemsListCapabilities list_problems(const decltype(web_worker::Context::session)& session
 ) noexcept;
 
 ProblemsListCapabilities list_user_problems(

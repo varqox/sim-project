@@ -31,7 +31,7 @@ class Source:
         self.pre_format_commands = pre_format_commands
 
 def format_sources(sources, cache_dir = Path(os.getenv('MESON_SOURCE_ROOT', '.')) / '.cache'):
-    clang_format_path = subprocess.check_output(['which', 'clang-format']).strip()
+    clang_format_path = subprocess.check_output(['sh', '-c', 'command -v clang-format']).strip()
     newest_dependency_files_mtime = max(map(os.path.getctime, [clang_format_path, __file__]))
     # Make source paths absolute
     for source in sources:

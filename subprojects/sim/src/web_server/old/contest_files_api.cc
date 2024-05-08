@@ -1,6 +1,6 @@
 #include "sim.hh"
 
-#include <sim/contest_files/contest_file.hh>
+#include <sim/contest_files/old_contest_file.hh>
 #include <sim/jobs/utils.hh>
 #include <sim/random.hh>
 #include <simlib/call_in_destructor.hh>
@@ -8,8 +8,8 @@
 #include <simlib/file_manip.hh>
 #include <simlib/humanize.hh>
 
-using sim::contest_files::ContestFile;
-using sim::jobs::Job;
+using sim::contest_files::OldContestFile;
+using sim::jobs::OldJob;
 
 namespace web_server::old {
 
@@ -21,7 +21,7 @@ void Sim::api_contest_files() {
 
     // We may read data several times (permission checking), so transaction is
     // used to ensure data consistency
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     bool allow_access = false; // Either contest or specific id condition must occur
 
@@ -143,7 +143,8 @@ void Sim::api_contest_files() {
     }
 
     // Execute query
-    auto res = mysql.query(query, " ORDER BY cf.id DESC LIMIT ", rows_limit);
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto res = old_mysql.query(query, " ORDER BY cf.id DESC LIMIT ", rows_limit);
 
     append_column_names();
 
@@ -252,9 +253,10 @@ void Sim::api_contest_file_download(
     }
 
     uint64_t internal_file_id = 0;
-    decltype(ContestFile::name) filename;
-    auto stmt = mysql.prepare("SELECT file_id, name FROM contest_files "
-                              "WHERE id=?");
+    decltype(OldContestFile::name) filename;
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("SELECT file_id, name FROM contest_files "
+                                  "WHERE id=?");
     stmt.bind_and_execute(contest_file_id);
     stmt.res_bind_all(internal_file_id, filename);
     if (not stmt.next()) {
@@ -292,19 +294,19 @@ void Sim::api_contest_file_add() {
     CStringView description;
     CStringView file_tmp_path;
     CStringView user_filename;
-    form_validate(name, "name", "File name", decltype(ContestFile::id)::max_len);
+    form_validate(name, "name", "File name", decltype(OldContestFile::id)::max_len);
     form_validate(
-        description, "description", "Description", decltype(ContestFile::description)::max_len
+        description, "description", "Description", decltype(OldContestFile::description)::max_len
     );
     bool file_exists = form_validate_file_path_not_blank(file_tmp_path, "file", "File");
     form_validate_not_blank(user_filename, "file", "Filename of the selected file");
 
     if (name.empty()) {
-        if (user_filename.size() > decltype(ContestFile::id)::max_len) {
+        if (user_filename.size() > decltype(OldContestFile::id)::max_len) {
             add_notification(
                 "error",
                 "Filename of the provided file is longer than ",
-                decltype(ContestFile::id)::max_len,
+                decltype(OldContestFile::id)::max_len,
                 ". You have to provide a shorter name."
             );
         } else {
@@ -314,13 +316,13 @@ void Sim::api_contest_file_add() {
 
     // Check the file size
     auto file_size = (file_exists ? get_file_size(file_tmp_path) : 0);
-    if (file_size > ContestFile::max_size) {
+    if (file_size > OldContestFile::max_size) {
         add_notification(
             "error",
             "File is too big (maximum allowed size: ",
-            ContestFile::max_size,
+            OldContestFile::max_size,
             " bytes = ",
-            humanize_file_size(ContestFile::max_size),
+            humanize_file_size(OldContestFile::max_size),
             ')'
         );
         return api_error400(notifications);
@@ -330,28 +332,29 @@ void Sim::api_contest_file_add() {
         return api_error400(notifications);
     }
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
-    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
-    auto internal_file_id = mysql.insert_id();
+    auto internal_file_id = old_mysql.insert_id();
 
     CallInDtor internal_file_remover([internal_file_id] {
         (void)unlink(sim::internal_files::path_of(internal_file_id));
     });
 
     // Insert file
-    auto stmt = mysql.prepare("INSERT IGNORE contest_files (id, file_id,"
-                              " contest_id, name, description, file_size,"
-                              " modified, creator) "
-                              "VALUES(?,?,?,?,?,?,?,?)");
+    auto stmt = old_mysql.prepare("INSERT IGNORE contest_files (id, file_id,"
+                                  " contest_id, name, description, file_size,"
+                                  " modified, creator) "
+                                  "VALUES(?,?,?,?,?,?,?,?)");
 
-    decltype(ContestFile::id) file_id;
+    decltype(OldContestFile::id) file_id;
     auto curr_date = mysql_date();
     throw_assert(session.has_value());
 
     do {
-        file_id = sim::generate_random_token(decltype(ContestFile::id)::max_len);
+        file_id = sim::generate_random_token(decltype(OldContestFile::id)::max_len);
         stmt.bind_and_execute(
             file_id,
             internal_file_id,
@@ -383,9 +386,9 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     CStringView name;
     CStringView description;
     CStringView file_tmp_path;
-    form_validate(name, "name", "File name", decltype(ContestFile::id)::max_len);
+    form_validate(name, "name", "File name", decltype(OldContestFile::id)::max_len);
     form_validate(
-        description, "description", "Description", decltype(ContestFile::description)::max_len
+        description, "description", "Description", decltype(OldContestFile::description)::max_len
     );
     bool reuploading_file = form_validate_file_path_not_blank(file_tmp_path, "file", "File");
 
@@ -393,11 +396,11 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     reuploading_file &= not user_filename.empty();
 
     if (name.empty()) {
-        if (user_filename.size() > decltype(ContestFile::id)::max_len) {
+        if (user_filename.size() > decltype(OldContestFile::id)::max_len) {
             add_notification(
                 "error",
                 "Filename of the provided file is longer than ",
-                decltype(ContestFile::id)::max_len,
+                decltype(OldContestFile::id)::max_len,
                 ". You have to provide a shorter name."
             );
         } else if (user_filename.empty()) {
@@ -413,13 +416,13 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
 
     // Check the file size
     auto file_size = (reuploading_file ? get_file_size(file_tmp_path) : 0);
-    if (file_size > ContestFile::max_size) {
+    if (file_size > OldContestFile::max_size) {
         add_notification(
             "error",
             "File is too big (maximum allowed size: ",
-            ContestFile::max_size,
+            OldContestFile::max_size,
             " bytes = ",
-            humanize_file_size(ContestFile::max_size),
+            humanize_file_size(OldContestFile::max_size),
             ')'
         );
         return api_error400(notifications);
@@ -429,7 +432,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
         return api_error400(notifications);
     }
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     uint64_t internal_file_id = 0;
     CallInDtor internal_file_remover([internal_file_id] {
@@ -439,35 +442,37 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     });
 
     if (reuploading_file) {
-        mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
             .bind_and_execute(mysql_date());
-        internal_file_id = mysql.insert_id();
+        internal_file_id = old_mysql.insert_id();
 
         // Move file
         if (move(file_tmp_path, sim::internal_files::path_of(internal_file_id))) {
             THROW("move()", errmsg());
         }
 
-        mysql
+        old_mysql
             .prepare("INSERT INTO jobs(file_id, creator, type, priority,"
                      " status, created_at, aux_id, info, data) "
                      "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                      "FROM contest_files WHERE id=?")
             .bind_and_execute(
-                EnumVal(Job::Type::DELETE_FILE),
-                default_priority(Job::Type::DELETE_FILE),
-                EnumVal(Job::Status::PENDING),
+                EnumVal(OldJob::Type::DELETE_FILE),
+                default_priority(OldJob::Type::DELETE_FILE),
+                EnumVal(OldJob::Status::PENDING),
                 mysql_date(),
                 contest_file_id
             );
     }
 
     // Update file
-    auto stmt = mysql.prepare("UPDATE contest_files "
-                              "SET file_id=IF(?, ?, file_id), name=?,"
-                              " description=?, file_size=IF(?, ?, file_size),"
-                              " modified=? "
-                              "WHERE id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("UPDATE contest_files "
+                                  "SET file_id=IF(?, ?, file_id), name=?,"
+                                  " description=?, file_size=IF(?, ?, file_size),"
+                                  " modified=? "
+                                  "WHERE id=?");
     stmt.bind_and_execute(
         reuploading_file,
         internal_file_id,
@@ -493,22 +498,22 @@ void Sim::api_contest_file_delete(
         return api_error403();
     }
 
-    auto transaction = mysql.start_transaction();
-
-    mysql
+    auto transaction = mysql.start_repeatable_read_transaction();
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
                  " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
                  "FROM contest_files WHERE id=?")
         .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE),
-            default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING),
+            EnumVal(OldJob::Type::DELETE_FILE),
+            default_priority(OldJob::Type::DELETE_FILE),
+            EnumVal(OldJob::Status::PENDING),
             mysql_date(),
             contest_file_id
         );
 
-    mysql.prepare("DELETE FROM contest_files WHERE id=?").bind_and_execute(contest_file_id);
+    old_mysql.prepare("DELETE FROM contest_files WHERE id=?").bind_and_execute(contest_file_id);
 
     transaction.commit();
     sim::jobs::notify_job_server();

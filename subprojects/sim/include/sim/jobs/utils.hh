@@ -1,9 +1,9 @@
 #pragma once
 
-#include <sim/jobs/job.hh>
-#include <sim/problems/problem.hh>
-#include <sim/users/user.hh>
-#include <simlib/mysql/mysql.hh>
+#include <sim/jobs/old_job.hh>
+#include <sim/old_mysql/old_mysql.hh>
+#include <sim/problems/old_problem.hh>
+#include <sim/users/old_user.hh>
 #include <utility>
 
 namespace sim::jobs {
@@ -107,7 +107,7 @@ struct AddProblemInfo {
     bool ignore_simfile = false;
     bool seek_for_new_tests = false;
     bool reset_scoring = false;
-    sim::problems::Problem::Type problem_type = sim::problems::Problem::Type::PRIVATE;
+    sim::problems::OldProblem::Type problem_type = sim::problems::OldProblem::Type::PRIVATE;
 
     enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST; // TODO: remove this
 
@@ -122,7 +122,7 @@ struct AddProblemInfo {
         bool is,
         bool sfnt,
         bool rs,
-        sim::problems::Problem::Type pt
+        sim::problems::OldProblem::Type pt
     )
     : name(std::move(n))
     , label(std::move(l))
@@ -147,8 +147,8 @@ struct AddProblemInfo {
         seek_for_new_tests = (mask & 4);
         reset_scoring = (mask & 8);
 
-        problem_type = EnumVal<sim::problems::Problem::Type>(
-            extract_dumped_int<sim::problems::Problem::Type::UnderlyingType>(str)
+        problem_type = EnumVal<sim::problems::OldProblem::Type>(
+            extract_dumped_int<sim::problems::OldProblem::Type::UnderlyingType>(str)
         );
         stage = EnumVal<Stage>(extract_dumped_int<std::underlying_type_t<Stage>>(str));
     }
@@ -171,7 +171,7 @@ struct AddProblemInfo {
 };
 
 struct MergeProblemsInfo {
-    decltype(sim::problems::Problem::id) target_problem_id{};
+    decltype(sim::problems::OldProblem::id) target_problem_id{};
     static_assert(
         sizeof(target_problem_id) == 8, "Changing size needs updating column info in jobs table"
     );
@@ -179,7 +179,7 @@ struct MergeProblemsInfo {
 
     MergeProblemsInfo() = default;
 
-    MergeProblemsInfo(decltype(sim::problems::Problem::id) tpid, bool rts) noexcept
+    MergeProblemsInfo(decltype(sim::problems::OldProblem::id) tpid, bool rts) noexcept
     : target_problem_id(tpid)
     , rejudge_transferred_submissions(rts) {}
 
@@ -233,7 +233,7 @@ struct MergeUsersInfo {
 void restart_job(
     mysql::Connection& mysql,
     StringView job_id,
-    Job::Type job_type,
+    OldJob::Type job_type,
     StringView job_info,
     bool notify_job_server
 );

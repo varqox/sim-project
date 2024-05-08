@@ -1,14 +1,13 @@
 #pragma once
 
-#include <sim/sql_fields/varbinary.hh>
+#include <sim/old_sql_fields/varbinary.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/string_view.hh>
 #include <simlib/throw_assert.hh>
 #include <simlib/time.hh>
 #include <string>
-#include <utility>
 
-namespace sim::sql_fields {
+namespace sim::old_sql_fields {
 
 // Format: YYYY-mm-dd HH:MM:SS
 class Datetime : public Varbinary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
@@ -54,4 +53,4 @@ public:
     }
 };
 
-} // namespace sim::sql_fields
+} // namespace sim::old_sql_fields

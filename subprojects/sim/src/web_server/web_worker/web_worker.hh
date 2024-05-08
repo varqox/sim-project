@@ -5,8 +5,7 @@
 #include "../http/response.hh"
 #include "context.hh"
 
-#include <sim/mysql/mysql.hh>
-#include <sim/sessions/session.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/http/url_dispatcher.hh>
 #include <variant>
 
@@ -14,13 +13,13 @@ namespace web_server::web_worker {
 
 class WebWorker {
     using UrlDispatcher = ::http::UrlDispatcher<http::Response>;
-    mysql::Connection& mysql;
+    sim::mysql::Connection& mysql;
     std::optional<http::Request> request;
     UrlDispatcher get_dispatcher;
     UrlDispatcher post_dispatcher;
 
 public:
-    explicit WebWorker(mysql::Connection& mysql);
+    explicit WebWorker(sim::mysql::Connection& mysql);
 
     // Returns response for @p request or @p request if it cannot handle the @p request
     std::variant<http::Response, http::Request> handle(http::Request req);

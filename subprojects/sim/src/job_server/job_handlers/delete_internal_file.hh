@@ -12,7 +12,7 @@ public:
     : JobHandler(job_id)
     , internal_file_id_(internal_file_id) {}
 
-    void run() final;
+    void run(sim::mysql::Connection& mysql) final;
 };
 
 } // namespace job_server::job_handlers

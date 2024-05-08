@@ -24,7 +24,7 @@ public:
     , job_file_id_(job_file_id)
     , info_(std::move(info)) {}
 
-    void run() final;
+    void run(sim::mysql::Connection& mysql) final;
 };
 
 } // namespace job_server::job_handlers

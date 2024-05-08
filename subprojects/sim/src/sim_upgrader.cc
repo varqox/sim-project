@@ -1,50 +1,22 @@
-#include "web_server/logs.hh"
-
-#include <algorithm>
-#include <climits>
-#include <cstdint>
 #include <cstdio>
 #include <exception>
 #include <fcntl.h>
-#include <fstream>
-#include <map>
-#include <regex>
-#include <set>
-#include <sim/contest_entry_tokens/contest_entry_token.hh>
-#include <sim/contest_files/contest_file.hh>
-#include <sim/contest_rounds/contest_round.hh>
-#include <sim/contest_users/contest_user.hh>
+#include <memory>
 #include <sim/db/schema.hh>
-#include <sim/inf_datetime.hh>
 #include <sim/mysql/mysql.hh>
-#include <sim/problem_tags/problem_tag.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <sim/users/user.hh>
 #include <simlib/concat.hh>
 #include <simlib/concat_tostr.hh>
-#include <simlib/config_file.hh>
-#include <simlib/defer.hh>
-#include <simlib/err_defer.hh>
 #include <simlib/file_contents.hh>
-#include <simlib/file_descriptor.hh>
-#include <simlib/file_info.hh>
-#include <simlib/file_manip.hh>
 #include <simlib/from_unsafe.hh>
-#include <simlib/mysql/mysql.hh>
-#include <simlib/opened_temporary_file.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
-#include <simlib/ranges.hh>
 #include <simlib/sha.hh>
-#include <simlib/simple_parser.hh>
 #include <simlib/spawner.hh>
 #include <simlib/string_traits.hh>
-#include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
-#include <simlib/temporary_file.hh>
-#include <simlib/throw_assert.hh>
-#include <simlib/time.hh>
 #include <unistd.h>
-#include <utility>
 
 using std::string;
 using std::vector;
@@ -59,55 +31,30 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "ac310f5bda86d4966e5c69137448f53c461d2f1dee040ffedd11f9a410435747";
+    "9f4d6594716073cd5655d0dab35d444214c734c7b4c9f9380c48d15fb027c9c2";
 
 static void do_perform_upgrade(
-    [[maybe_unused]] const string& sim_dir, [[maybe_unused]] mysql::Connection& mysql
+    [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
 ) {
     // Upgrade here
-    std::map<uint64_t, std::string, std::greater<>> user_id_to_created_at;
-
-    auto res =
-        mysql.query("SELECT aux_id, MIN(created_at) FROM jobs WHERE type IN (9, 18) GROUP BY aux_id"
-        );
-    while (res.next()) {
-        auto user_id = str2num<uint64_t>(res[0]).value();
-        user_id_to_created_at.emplace(user_id, res[1].to_string());
-    }
-
-    res = mysql.query("SELECT id, created_at FROM users");
-    while (res.next()) {
-        auto user_id = str2num<uint64_t>(res[0]).value();
-        user_id_to_created_at.emplace(user_id, res[1].to_string());
-    }
-
-    auto min_date = mysql_date();
-    for (auto&& [user_id, created_at] : user_id_to_created_at) {
-        min_date = std::min(min_date, created_at);
-        stdlog(user_id, ' ', min_date);
-        mysql.prepare("UPDATE users SET created_at=? WHERE id=?")
-            .bind_and_execute(min_date, user_id);
-    }
-
     mysql.update("UNLOCK TABLES");
-    mysql.update("CREATE TABLE `schema_subversion_0` (x bit(1) NOT NULL) ENGINE=InnoDB DEFAULT "
-                 "CHARSET=utf8mb3 COLLATE=utf8mb3_bin");
+    mysql.update("ALTER TABLE contest_users CHANGE mode mode tinyint(3) unsigned NOT NULL");
 }
 
 enum class LockKind {
     READ,
     WRITE,
 };
-static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind);
+static void lock_all_tables(sim::mysql::Connection& mysql, LockKind lock_kind);
 
-static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
+static int perform_upgrade(const string& sim_dir, sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
     stdlog("\033[1;34mChecking if upgrade is needed.\033[m");
     lock_all_tables(mysql, LockKind::READ);
     auto normalized_schema = normalized(sim::db::get_db_schema(mysql));
     auto normalized_schema_hash = sha3_256(normalized_schema);
 
-    auto normalized_schema_after_upgrade = normalized(sim::db::schema);
+    auto normalized_schema_after_upgrade = normalized(sim::db::get_schema());
     auto normalized_schema_hash_after_upgrade = sha3_256(normalized_schema_after_upgrade);
 
     if (normalized_schema == normalized_schema_after_upgrade) {
@@ -131,29 +78,26 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     }
     if (normalized_schema.empty()) {
         stdlog("\033[1;34mDatabase is empty. Started initializing the database.\033[m");
-        for (const auto& table_schema : sim::db::schema.table_schemas) {
+        for (const auto& table_schema : sim::db::get_schema().table_schemas) {
             mysql.update(table_schema.create_table_sql);
         }
         // Create sim root user
         {
             auto [salt, hash] = sim::users::salt_and_hash_password("sim");
-            decltype(sim::users::User::type) type = sim::users::User::Type::ADMIN;
-            mysql
-                .prepare(
-                    "INSERT INTO users (id, created_at, type, username, first_name, last_name, "
-                    "email, password_salt, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                )
-                .bind_and_execute(
-                    sim::users::SIM_ROOT_UID,
-                    mysql_date(),
-                    type,
-                    "sim",
-                    "sim",
-                    "sim",
-                    "sim@sim",
-                    salt,
-                    hash
-                );
+            mysql.execute(sim::sql::InsertInto("users (id, created_at, type, username, first_name, "
+                                               "last_name, email, password_salt, password_hash)")
+                              .values(
+                                  "?, ?, ?, ?, ?, ?, ?, ?, ?",
+                                  sim::users::SIM_ROOT_ID,
+                                  mysql_date(),
+                                  sim::users::User::Type::ADMIN,
+                                  "sim",
+                                  "sim",
+                                  "sim",
+                                  "sim@sim",
+                                  salt,
+                                  hash
+                              ));
         }
         stdlog("\033[1;32mDatabase initialized.\033[m");
         return 0;
@@ -172,7 +116,7 @@ static int perform_upgrade(const string& sim_dir, mysql::Connection& mysql) {
     return 1;
 }
 
-static void lock_all_tables(mysql::Connection& mysql, LockKind lock_kind) {
+static void lock_all_tables(sim::mysql::Connection& mysql, LockKind lock_kind) {
     std::string query = "LOCK TABLES";
     bool first = true;
     for (const auto& table_name : sim::db::get_all_table_names(mysql)) {
@@ -266,16 +210,20 @@ static int true_main(int argc, char** argv) {
     sim_dir.resize(path_dirpath(sim_dir).size());
     sim_dir += "../";
 
-    sim::mysql::Connection mysql;
+    std::unique_ptr<sim::mysql::Connection> mysql;
     try {
         // Get database connection
-        mysql = sim::mysql::make_conn_with_credential_file(concat(sim_dir, ".db.config"));
+        // NOLINTNEXTLINE(modernize-make-unique)
+        mysql = std::unique_ptr<sim::mysql::Connection>{new sim::mysql::Connection(
+            sim::mysql::Connection::from_credential_file(concat_tostr(sim_dir, ".db.config").c_str()
+            )
+        )};
     } catch (const std::exception& e) {
         errlog("\033[31mFailed to connect to database\033[m - ", e.what());
         return 1;
     }
 
-    return perform_upgrade(sim_dir, mysql);
+    return perform_upgrade(sim_dir, *mysql);
 }
 
 int main(int argc, char** argv) {

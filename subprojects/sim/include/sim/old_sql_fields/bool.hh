@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace sim::sql_fields {
+namespace sim::old_sql_fields {
 
 class Bool {
 public:
@@ -34,4 +34,4 @@ public:
     constexpr explicit operator int_type&() noexcept { return val; }
 };
 
-} // namespace sim::sql_fields
+} // namespace sim::old_sql_fields

@@ -13,7 +13,7 @@ public:
     : JobHandler(job_id)
     , problem_id_(problem_id) {}
 
-    void run() override;
+    void run(sim::mysql::Connection& mysql) override;
 };
 
 } // namespace job_server::job_handlers

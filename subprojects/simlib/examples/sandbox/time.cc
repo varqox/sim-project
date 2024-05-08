@@ -12,6 +12,7 @@
 #include <string_view>
 #include <sys/signalfd.h>
 #include <unistd.h>
+#include <vector>
 
 int main(int argc, char** argv) {
     // Block signals (also in sandbox supervisor) so we can kill request upon them

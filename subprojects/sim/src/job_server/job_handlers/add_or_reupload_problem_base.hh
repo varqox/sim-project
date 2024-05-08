@@ -2,16 +2,19 @@
 
 #include "job_handler.hh"
 
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
 #include <sim/jobs/utils.hh>
+#include <sim/mysql/mysql.hh>
+#include <simlib/file_manip.hh>
 #include <simlib/libzip.hh>
+#include <simlib/sim/simfile.hh>
 #include <utility>
 
 namespace job_server::job_handlers {
 
 class AddOrReuploadProblemBase : virtual public JobHandler {
 protected:
-    decltype(sim::jobs::Job::type) job_type_;
+    decltype(sim::jobs::OldJob::type) job_type_;
     StringView job_creator_;
     sim::jobs::AddProblemInfo info_;
     FileRemover package_file_remover_;
@@ -29,11 +32,12 @@ private:
     std::string simfile_str_;
     sim::Simfile simfile_;
 
-    void load_job_log_from_db();
+    void load_job_log_from_db(sim::mysql::Connection& mysql);
 
 protected:
     AddOrReuploadProblemBase(
-        decltype(sim::jobs::Job::type) job_type,
+        sim::mysql::Connection& mysql,
+        decltype(sim::jobs::OldJob::type) job_type,
         StringView job_creator,
         sim::jobs::AddProblemInfo info,
         uint64_t job_file_id,
@@ -47,30 +51,30 @@ protected:
     , tmp_file_id_(tmp_file_id)
     , problem_id_(problem_id) {
         if (tmp_file_id.has_value()) {
-            load_job_log_from_db();
+            load_job_log_from_db(mysql);
         }
     }
 
-    static void assert_transaction_is_open();
+    static void assert_transaction_is_open(sim::mysql::Connection& mysql);
 
     // Runs conver and places package into a temporary internal file. Sets
     // need_main_solution_judge_report
-    void build_package();
+    void build_package(sim::mysql::Connection& mysql);
 
 private:
     // Initializes internal variables for use by the next functions
-    void open_package();
+    void open_package(sim::mysql::Connection& mysql);
 
 protected:
-    void add_problem_to_db();
+    void add_problem_to_db(sim::mysql::Connection& mysql);
 
-    void replace_problem_in_db();
+    void replace_problem_in_db(sim::mysql::Connection& mysql);
 
-    void submit_solutions();
+    void submit_solutions(sim::mysql::Connection& mysql);
 
     using JobHandler::job_done;
 
-    void job_done(bool& job_was_canceled);
+    void job_done(sim::mysql::Connection& mysql, bool& job_was_canceled);
 };
 
 } // namespace job_server::job_handlers

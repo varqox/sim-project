@@ -11,7 +11,7 @@ namespace web_server::capabilities {
 struct ContestEntryToken {
     bool view : 1;
     bool create : 1;
-    bool regen : 1;
+    bool regenerate : 1;
     bool delete_ : 1;
     bool use : 1;
     bool view_contest_name : 1;

@@ -5,10 +5,9 @@
 #include <cstddef>
 #include <limits>
 #include <optional>
-#include <sim/sql_fields/blob.hh>
-#include <sim/sql_fields/bool.hh>
-#include <sim/sql_fields/satisfying_predicate.hh>
-#include <sim/sql_fields/varbinary.hh>
+#include <sim/sql/fields/blob.hh>
+#include <sim/sql/fields/satisfying_predicate.hh>
+#include <sim/sql/fields/varbinary.hh>
 #include <simlib/always_false.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/enum_val.hh>
@@ -31,21 +30,22 @@ constexpr inline bool is_str_type = false;
 template <>
 constexpr inline bool is_str_type<CStringView> = true;
 
-template <size_t STATIC_LEN>
-constexpr inline bool is_str_type<sim::sql_fields::Blob<STATIC_LEN>> = true;
-
 template <size_t MAX_LEN>
-constexpr inline bool is_str_type<sim::sql_fields::Varbinary<MAX_LEN>> = true;
+constexpr inline bool is_str_type<sim::sql::fields::Varbinary<MAX_LEN>> = true;
+
+template <>
+constexpr inline bool is_str_type<sim::sql::fields::Blob> = true;
 
 template <class SqlField, bool (*predicate_func)(const SqlField&), const char* description_str>
 constexpr inline bool
-    is_str_type<sim::sql_fields::SatisfyingPredicate<SqlField, predicate_func, description_str>> =
+    is_str_type<sim::sql::fields::SatisfyingPredicate<SqlField, predicate_func, description_str>> =
         is_str_type<SqlField>;
 
 } // namespace detail
 
 template <class T>
-struct ApiParam {
+class ApiParam {
+public:
     CStringView name;
     CStringView description;
     using type = T;
@@ -68,18 +68,20 @@ public:
     : name{name}
     , description{description} {}
 
-    template <class OtherT, std::enable_if_t<not std::is_same_v<T, std::decay_t<OtherT>>, int> = 0>
+    template <
+        class OtherT,
+        std::enable_if_t<std::is_base_of_v<T, OtherT> && !std::is_same_v<T, OtherT>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr ApiParam(ApiParam<OtherT> api_param) noexcept
-    : ApiParam{
-          std::in_place, api_param.name, api_param.description, api_param.is_blank_str_val_allowed()
-      } {}
+    constexpr ApiParam(ApiParam<OtherT> other) noexcept
+    : ApiParam{std::in_place, other.name, other.description, other.is_blank_str_val_allowed()} {}
 
     template <class C>
     constexpr ApiParam(T C::* /*unused*/, CStringView name, CStringView description) noexcept
     : ApiParam{name, description} {}
 
-    constexpr bool is_blank_str_val_allowed() noexcept { return allow_blank_str_val; }
+    [[nodiscard]] constexpr bool is_blank_str_val_allowed() const noexcept {
+        return allow_blank_str_val;
+    }
 
     friend ApiParam allow_blank(ApiParam api_param) {
         static_assert(
@@ -109,45 +111,42 @@ std::nullopt_t append_error(std::string& errors_str, ApiParam<T> api_param, Arg&
 }
 
 inline std::optional<CStringView>
-validate(ApiParam<CStringView> api_param, CStringView str_val, std::string& errors_str) {
+validate(const ApiParam<CStringView>& api_param, CStringView str_val, std::string& errors_str) {
     if (str_val.empty() and !api_param.is_blank_str_val_allowed()) {
         return append_error(errors_str, api_param, "cannot be blank");
     }
     return str_val;
 }
 
-template <size_t STATIC_LEN>
-std::optional<sim::sql_fields::Blob<STATIC_LEN>> validate(
-    ApiParam<sim::sql_fields::Blob<STATIC_LEN>> api_param,
-    CStringView str_val,
-    std::string& errors_str
+inline std::optional<sim::sql::fields::Blob> validate(
+    const ApiParam<sim::sql::fields::Blob>& api_param, CStringView str_val, std::string& errors_str
 ) {
     if (str_val.empty() and !api_param.is_blank_str_val_allowed()) {
         return append_error(errors_str, api_param, "cannot be blank");
     }
-    using T = typename decltype(api_param)::type;
-    return T{str_val};
+    using T = typename std::remove_reference_t<decltype(api_param)>::type;
+    return T{str_val.to_string()};
 }
 
 template <size_t MAX_LEN>
-std::optional<sim::sql_fields::Varbinary<MAX_LEN>> validate(
-    ApiParam<sim::sql_fields::Varbinary<MAX_LEN>> api_param,
+std::optional<sim::sql::fields::Varbinary<MAX_LEN>> validate(
+    const ApiParam<sim::sql::fields::Varbinary<MAX_LEN>>& api_param,
     CStringView str_val,
     std::string& errors_str
 ) {
     if (str_val.empty() and !api_param.is_blank_str_val_allowed()) {
         return append_error(errors_str, api_param, "cannot be blank");
     }
-    using T = typename decltype(api_param)::type;
+    using T = typename std::remove_reference_t<decltype(api_param)>::type;
     if (str_val.size() > T::max_len) {
         return append_error(errors_str, api_param, "cannot be longer than ", T::max_len, " bytes");
     }
-    return T{str_val};
+    return T{str_val.to_string()};
 }
 
 template <class T>
-std::enable_if_t<is_enum_val_with_string_conversions<T>, std::optional<T>>
-validate(ApiParam<T> api_param, CStringView str_val, std::string& errors_str) {
+std::enable_if_t<is_enum_with_string_conversions<T>, std::optional<T>>
+validate(const ApiParam<T>& api_param, CStringView str_val, std::string& errors_str) {
     auto opt = T::from_str(str_val);
     if (!opt) {
         return append_error(errors_str, api_param, "has invalid value");
@@ -155,11 +154,8 @@ validate(ApiParam<T> api_param, CStringView str_val, std::string& errors_str) {
     return std::move(*opt);
 }
 
-template <class T>
-std::enable_if_t<
-    std::is_same_v<T, bool> or std::is_same_v<T, sim::sql_fields::Bool>,
-    std::optional<T>>
-validate(ApiParam<T> api_param, CStringView str_val, std::string& errors_str) {
+inline std::optional<bool>
+validate(const ApiParam<bool>& api_param, CStringView str_val, std::string& errors_str) {
     if (str_val == "true") {
         return true;
     }
@@ -171,7 +167,7 @@ validate(ApiParam<T> api_param, CStringView str_val, std::string& errors_str) {
 
 template <class T>
 std::enable_if_t<std::is_integral_v<T> and !std::is_same_v<T, bool>, std::optional<T>>
-validate(ApiParam<T> api_param, CStringView str_val, std::string& errors_str) {
+validate(const ApiParam<T>& api_param, CStringView str_val, std::string& errors_str) {
     if (auto opt = str2num<T>(str_val); opt) {
         return std::move(*opt);
     }
@@ -183,9 +179,10 @@ validate(ApiParam<T> api_param, CStringView str_val, std::string& errors_str) {
 }
 
 template <class SqlField, bool (*predicate_func)(const SqlField&), const char* description_str>
-std::optional<sim::sql_fields::SatisfyingPredicate<SqlField, predicate_func, description_str>>
+std::optional<sim::sql::fields::SatisfyingPredicate<SqlField, predicate_func, description_str>>
 validate(
-    ApiParam<sim::sql_fields::SatisfyingPredicate<SqlField, predicate_func, description_str>>
+    const ApiParam<
+        sim::sql::fields::SatisfyingPredicate<SqlField, predicate_func, description_str>>&
         api_param,
     CStringView str_val,
     std::string& errors_str
@@ -194,7 +191,7 @@ validate(
     if (!opt) {
         return std::nullopt;
     }
-    using T = typename decltype(api_param)::type;
+    using T = typename std::remove_const_t<std::remove_reference_t<decltype(api_param)>>::type;
     if (not T::predicate(*opt)) {
         return append_error(errors_str, api_param, "has to be ", T::description);
     }
@@ -412,23 +409,24 @@ constexpr std::optional<stripped_optional_t<T>> flatten_optional(std::optional<T
 
 } // namespace detail
 
-#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS(                                                \
-    form_fields, errors_str, api_param, caps_seq, macro, ...                                   \
-)                                                                                              \
-    [&] {                                                                                      \
-        auto var = macro(form_fields, errors_str, api_param, __VA_ARGS__);                     \
-        using Enum = ::web_server::http::detail::stripped_optional_t<decltype(var)>::EnumType; \
-        auto stripped_var = ::web_server::http::detail::flatten_optional(var);                 \
-        if (!stripped_var) {                                                                   \
-            return var;                                                                        \
-        }                                                                                      \
-        switch (*stripped_var) {                                                               \
-            REV_CAT(_END, IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_1 caps_seq)             \
-        }                                                                                      \
-        ::web_server::http::detail::append_error(                                              \
-            errors_str, api_param, "selects option to which you do not have permission"        \
-        );                                                                                     \
-        return decltype(var){std::nullopt};                                                    \
+#define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS(                                         \
+    form_fields, errors_str, api_param, caps_seq, macro, ...                            \
+)                                                                                       \
+    [&] {                                                                               \
+        auto var = macro(form_fields, errors_str, api_param, __VA_ARGS__);              \
+        using Enum = ::web_server::http::detail::stripped_optional_t<decltype(var)>;    \
+        auto stripped_var = ::web_server::http::detail::flatten_optional(var);          \
+        if (!stripped_var) {                                                            \
+            return var;                                                                 \
+        }                                                                               \
+        /* NOLINTNEXTLINE(bugprone-switch-missing-default-case) */                      \
+        switch (*stripped_var) {                                                        \
+            REV_CAT(_END, IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_1 caps_seq)      \
+        }                                                                               \
+        ::web_server::http::detail::append_error(                                       \
+            errors_str, api_param, "selects option to which you do not have permission" \
+        );                                                                              \
+        return decltype(var){std::nullopt};                                             \
     }()
 #define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_1_END
 #define IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS_CASES_2_END

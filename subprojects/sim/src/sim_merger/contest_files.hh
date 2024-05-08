@@ -5,24 +5,25 @@
 #include "users.hh"
 
 #include <set>
-#include <sim/contest_files/contest_file.hh>
+#include <sim/contest_files/old_contest_file.hh>
 #include <sim/random.hh>
 
 namespace sim_merger {
 
-class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
+class ContestFilesMerger : public Merger<sim::contest_files::OldContestFile> {
     const InternalFilesMerger& internal_files_;
     const ContestsMerger& contests_;
     const UsersMerger& users_;
 
-    std::set<decltype(sim::contest_files::ContestFile::id)> taken_contest_files_ids_;
+    std::set<decltype(sim::contest_files::OldContestFile::id)> taken_contest_files_ids_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::contest_files::ContestFile cf;
-        mysql::Optional<decltype(cf.creator)::value_type> m_creator;
-        auto stmt = conn.prepare(
+        sim::contest_files::OldContestFile cf;
+        old_mysql::Optional<decltype(cf.creator)::value_type> m_creator;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
             "SELECT id, file_id, contest_id, name, description, "
             "file_size, modified, creator FROM ",
             record_set.sql_table_name
@@ -54,7 +55,8 @@ class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::contest_files::ContestFile& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::contest_files::OldContestFile& /*unused*/) { return nullptr; }
+        );
     }
 
     PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id
@@ -62,18 +64,19 @@ class ContestFilesMerger : public Merger<sim::contest_files::ContestFile> {
         STACK_UNWINDING_MARK;
         std::string new_id = record_id.to_string();
         while (not taken_contest_files_ids_.emplace(new_id).second) {
-            new_id =
-                sim::generate_random_token(decltype(sim::contest_files::ContestFile::id)::max_len);
+            new_id = sim::generate_random_token(decltype(sim::contest_files::OldContestFile::id
+            )::max_len);
         }
-        return decltype(sim::contest_files::ContestFile::id)(new_id);
+        return decltype(sim::contest_files::OldContestFile::id)(new_id);
     }
 
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(id, file_id, contest_id, name, description,"

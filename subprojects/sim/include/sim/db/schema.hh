@@ -1,7 +1,7 @@
 #pragma once
 
+#include <sim/mysql/mysql.hh>
 #include <simlib/concat_tostr.hh>
-#include <simlib/mysql/mysql.hh>
 #include <string>
 #include <vector>
 
@@ -15,7 +15,7 @@ struct DbSchema {
     std::vector<TableSchema> table_schemas;
 };
 
-extern const DbSchema schema;
+const DbSchema& get_schema();
 
 std::string normalized(const TableSchema& table_schema);
 

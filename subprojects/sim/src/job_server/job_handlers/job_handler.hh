@@ -1,6 +1,11 @@
 #pragma once
 
-#include <simlib/sim/conver.hh>
+#include <cstdint>
+#include <sim/mysql/mysql.hh>
+#include <simlib/inplace_buff.hh>
+#include <simlib/logger.hh>
+#include <simlib/string_view.hh>
+#include <utility>
 
 namespace job_server::job_handlers {
 
@@ -28,16 +33,16 @@ protected:
     }
 
     template <class Arg1, class... Args>
-    void job_cancelled(Arg1&& arg1, Args&&... args) {
+    void job_cancelled(sim::mysql::Connection& mysql, Arg1&& arg1, Args&&... args) {
         job_log(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
-        job_canceled();
+        job_canceled(mysql);
     }
 
-    virtual void job_canceled();
+    virtual void job_canceled(sim::mysql::Connection& mysql);
 
-    virtual void job_done();
+    virtual void job_done(sim::mysql::Connection& mysql);
 
-    virtual void job_done(StringView new_info);
+    virtual void job_done(sim::mysql::Connection& mysql, StringView new_info);
 
 public:
     JobHandler(const JobHandler&) = delete;
@@ -46,7 +51,7 @@ public:
     JobHandler& operator=(JobHandler&&) = delete;
     virtual ~JobHandler() = default;
 
-    virtual void run() = 0;
+    virtual void run(sim::mysql::Connection& mysql) = 0;
 
     [[nodiscard]] bool failed() const noexcept { return job_failed_; }
 

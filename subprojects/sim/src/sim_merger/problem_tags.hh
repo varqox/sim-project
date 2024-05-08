@@ -4,19 +4,21 @@
 #include "primary_keys_from_jobs.hh"
 #include "problems.hh"
 
-#include <sim/problem_tags/problem_tag.hh>
+#include <sim/problem_tags/old_problem_tag.hh>
 
 namespace sim_merger {
 
-class ProblemTagsMerger : public Merger<sim::problem_tags::ProblemTag> {
+class ProblemTagsMerger : public Merger<sim::problem_tags::OldProblemTag> {
     const ProblemsMerger& problems_;
 
     void load(RecordSet& record_set) override {
         STACK_UNWINDING_MARK;
 
-        sim::problem_tags::ProblemTag ptag;
-        auto stmt =
-            conn.prepare("SELECT problem_id, name, is_hidden FROM ", record_set.sql_table_name);
+        sim::problem_tags::OldProblemTag ptag;
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        auto stmt = old_mysql.prepare(
+            "SELECT problem_id, name, is_hidden FROM ", record_set.sql_table_name
+        );
         stmt.bind_and_execute();
         stmt.res_bind_all(ptag.problem_id, ptag.name, ptag.is_hidden);
         while (stmt.next()) {
@@ -28,7 +30,7 @@ class ProblemTagsMerger : public Merger<sim::problem_tags::ProblemTag> {
 
     void merge() override {
         STACK_UNWINDING_MARK;
-        Merger::merge([&](const sim::problem_tags::ProblemTag& /*unused*/) { return nullptr; });
+        Merger::merge([&](const sim::problem_tags::OldProblemTag& /*unused*/) { return nullptr; });
     }
 
     PrimaryKeyType pre_merge_record_id_to_post_merge_record_id(const PrimaryKeyType& record_id
@@ -39,9 +41,10 @@ class ProblemTagsMerger : public Merger<sim::problem_tags::ProblemTag> {
 public:
     void save_merged() override {
         STACK_UNWINDING_MARK;
-        auto transaction = conn.start_transaction();
-        conn.update("TRUNCATE ", sql_table_name());
-        auto stmt = conn.prepare(
+        auto transaction = mysql->start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{*mysql};
+        old_mysql.update("TRUNCATE ", sql_table_name());
+        auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
             "(problem_id, name, is_hidden) "

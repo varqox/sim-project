@@ -23,6 +23,7 @@ if get_option('warning_level') > '0'
         '-Wgnu',
         '-Wunused-lambda-capture',
         '-Wno-c++20-designator',
+        '-Wno-c++20-extensions',
         '-Wno-gnu-zero-variadic-macro-arguments',
         '-Wno-c++2b-extensions',
     ]
@@ -326,7 +327,8 @@ tests = {
     'test/member_comparator.cc': {},
     'test/memory.cc': {},
     'test/merge.cc': {},
-    'test/mysql/mysql.cc': {},
+    'test/meta/concated_to_cstr.cc': {},
+    'test/meta/count.cc': {},
     'test/noexcept_concat.cc': {},
     'test/opened_temporary_file.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
     'test/path.cc': {},

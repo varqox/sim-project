@@ -3,44 +3,54 @@
 #include "context.hh"
 
 #include <chrono>
+#include <exception>
 #include <optional>
+#include <sim/mysql/mysql.hh>
 #include <sim/random.hh>
 #include <sim/sessions/session.hh>
+#include <sim/sql/sql.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
 #include <simlib/time.hh>
 
+using sim::sql::DeleteFrom;
+using sim::sql::InsertIgnoreInto;
+using sim::sql::Select;
+using sim::sql::Update;
 using web_server::http::Response;
 
 namespace web_server::web_worker {
 
 void Context::open_session() {
-    assert(not session);
+    STACK_UNWINDING_MARK;
+
+    throw_assert(not session);
     auto session_id = request.get_cookie(Session::id_cookie_name);
     if (session_id.empty()) {
         return; // Optimization (no mysql query) for empty or nonexistent cookie
     }
     Session s;
-    auto stmt =
-        mysql.prepare("SELECT s.csrf_token, s.user_id, u.type, u.username, s.data FROM "
-                      "sessions s JOIN users u ON u.id=s.user_id WHERE s.id=? AND expires>=?");
-    stmt.bind_and_execute(session_id, mysql_date());
-    stmt.res_bind_all(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
+    auto stmt = mysql.execute(Select("s.csrf_token, s.user_id, u.type, u.username, s.data")
+                                  .from("sessions s")
+                                  .join("users u")
+                                  .on("u.id=s.user_id")
+                                  .where("s.id=? AND expires>=?", session_id, mysql_date()));
+    stmt.res_bind(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
     if (not stmt.next()) {
         // Session expired or was deleted
         cookie_changes.set(Session::id_cookie_name, "", 0, std::nullopt, false, false);
         return;
     }
-    s.id = session_id;
+    s.id = session_id.to_string();
     s.orig_data = s.data;
     session = s;
 }
 
 void Context::close_session() {
-    assert(session);
+    STACK_UNWINDING_MARK;
+    throw_assert(session);
     if (session->data != session->orig_data) {
-        auto stmt = mysql.prepare("UPDATE sessions SET data=? WHERE id=?");
-        stmt.bind_and_execute(session->data, session->id);
+        mysql.execute(Update("sessions").set("data=?", session->data).where("id=?", session->id));
     }
     session = std::nullopt;
 }
@@ -52,9 +62,10 @@ void Context::create_session(
     decltype(Session::data) data,
     bool long_exiration
 ) {
-    assert(not session);
+    STACK_UNWINDING_MARK;
+    throw_assert(not session);
     // Remove expired sessions
-    mysql.prepare("DELETE FROM sessions WHERE expires<?").bind_and_execute(mysql_date());
+    mysql.execute(DeleteFrom("sessions").where("expires<=?", mysql_date()));
     // Create a new session
     Session s = {
         .id = {},
@@ -66,24 +77,29 @@ void Context::create_session(
         .orig_data = {},
     };
     s.orig_data = s.data;
-    s.csrf_token = sim::generate_random_token(decltype(s.csrf_token)::max_len);
-    auto stmt = mysql.prepare("INSERT IGNORE INTO sessions(id, csrf_token, user_id, data, "
-                              "user_agent, expires) VALUES(?, ?, ?, ?, ?, ?)");
+    s.csrf_token = sim::generate_random_token(decltype(s.csrf_token)::len);
     auto expires_tp = std::chrono::system_clock::now() +
-        (long_exiration ? sim::sessions::Session::long_session_max_lifetime
-                        : sim::sessions::Session::short_session_max_lifetime);
+        (long_exiration ? sim::sessions::Session::LONG_SESSION_MAX_LIFETIME
+                        : sim::sessions::Session::SHORT_SESSION_MAX_LIFETIME);
     auto expires_str = mysql_date(expires_tp);
-    do {
-        s.id = sim::generate_random_token(decltype(s.id)::max_len);
-        stmt.bind_and_execute(
-            s.id,
-            s.csrf_token,
-            s.user_id,
-            s.data,
-            request.headers.get("user-agent").value_or(""),
-            expires_str
+    for (;;) {
+        s.id = sim::generate_random_token(decltype(s.id)::len);
+        auto stmt = mysql.execute(
+            InsertIgnoreInto("sessions (id, csrf_token, user_id, data, user_agent, expires)")
+                .values(
+                    "?, ?, ?, ?, ?, ?",
+                    s.id,
+                    s.csrf_token,
+                    s.user_id,
+                    s.data,
+                    request.headers.get("user-agent").value_or(""),
+                    expires_str
+                )
         );
-    } while (stmt.affected_rows() == 0);
+        if (stmt.affected_rows() > 0) {
+            break;
+        }
+    }
 
     auto exp_time_t = long_exiration
         ? std::optional{std::chrono::system_clock::to_time_t(expires_tp)}
@@ -96,8 +112,9 @@ void Context::create_session(
 }
 
 void Context::destroy_session() {
-    assert(session);
-    mysql.prepare("DELETE FROM sessions WHERE id=?").bind_and_execute(session->id);
+    STACK_UNWINDING_MARK;
+    throw_assert(session);
+    mysql.execute(DeleteFrom("sessions").where("id=?", session->id));
     // Delete client cookies
     cookie_changes.set("session", "", 0, "/", true, true);
     cookie_changes.set("csrf_token", "", 0, "/", false, true);
@@ -141,6 +158,7 @@ Response Context::response_403(StringView content, StringView content_type) {
     // error 403 and the @p content
     if (session) {
         using UT = sim::users::User::Type;
+        // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
         switch (session->user_type) {
         case UT::ADMIN: {
             assert(not session_has_expired());
@@ -149,6 +167,7 @@ Response Context::response_403(StringView content, StringView content_type) {
         case UT::TEACHER:
         case UT::NORMAL: break;
         }
+        std::terminate();
     }
     return response_404();
 }

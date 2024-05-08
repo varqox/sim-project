@@ -1,10 +1,10 @@
 #pragma once
 
 #include <sim/inf_datetime.hh>
-#include <sim/sql_fields/varbinary.hh>
+#include <sim/old_sql_fields/varbinary.hh>
 #include <string>
 
-namespace sim::sql_fields {
+namespace sim::old_sql_fields {
 
 // Format: YYYY-mm-dd HH:MM:SS | # | @
 class InfDatetime : public Varbinary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
@@ -76,4 +76,4 @@ public:
     }
 };
 
-} // namespace sim::sql_fields
+} // namespace sim::old_sql_fields

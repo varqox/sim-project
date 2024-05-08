@@ -1,20 +1,21 @@
-#include "../main.hh"
 #include "reset_problem_time_limits.hh"
 
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/sim/problem_package.hh>
 
 using sim::internal_files::path_of;
-using sim::jobs::Job;
+using sim::jobs::OldJob;
 
 namespace job_server::job_handlers {
 
-void ResetProblemTimeLimits::run() {
+void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
     uint64_t problem_file_id = 0;
     {
-        auto stmt = mysql.prepare("SELECT file_id FROM problems WHERE id=?");
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        auto stmt = old_mysql.prepare("SELECT file_id FROM problems WHERE id=?");
         stmt.bind_and_execute(problem_id_);
         stmt.res_bind_all(problem_file_id);
         if (not stmt.next()) {
@@ -28,11 +29,12 @@ void ResetProblemTimeLimits::run() {
         return;
     }
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
+    auto old_mysql = old_mysql::ConnectionView{mysql};
 
-    mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
+    old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(mysql_date());
-    uint64_t new_file_id = mysql.insert_id();
+    uint64_t new_file_id = old_mysql.insert_id();
     auto new_pkg_path = sim::internal_files::path_of(new_file_id);
 
     // Save Simfile to new package file
@@ -57,26 +59,26 @@ void ResetProblemTimeLimits::run() {
 
     const auto current_date = mysql_date();
     // Add job to delete old problem file
-    mysql
+    old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
                  " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems "
                  "WHERE id=?")
         .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE),
-            default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING),
+            EnumVal(OldJob::Type::DELETE_FILE),
+            default_priority(OldJob::Type::DELETE_FILE),
+            EnumVal(OldJob::Status::PENDING),
             current_date,
             problem_id_
         );
 
     // Use new package as problem file
-    mysql
+    old_mysql
         .prepare("UPDATE problems SET file_id=?, simfile=?, updated_at=? "
                  "WHERE id=?")
         .bind_and_execute(new_file_id, new_simfile_, current_date, problem_id_);
 
-    job_done();
+    job_done(mysql);
 
     transaction.commit();
     new_pkg_remover.cancel();

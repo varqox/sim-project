@@ -15,18 +15,19 @@
 #include "job_handlers/reset_problem_time_limits.hh"
 #include "job_handlers/reupload_problem.hh"
 #include "job_handlers/reupload_problem__judge_main_solution.hh"
-#include "main.hh"
 
-#include <sim/jobs/job.hh>
+#include <memory>
+#include <sim/jobs/old_job.hh>
 #include <thread>
 
-using sim::jobs::Job;
+using sim::jobs::OldJob;
 
 namespace job_server {
 
 void job_dispatcher(
+    sim::mysql::Connection& mysql,
     uint64_t job_id,
-    Job::Type jtype,
+    OldJob::Type jtype,
     std::optional<uint64_t> file_id,
     std::optional<uint64_t> tmp_file_id,
     std::optional<StringView> creator,
@@ -39,27 +40,29 @@ void job_dispatcher(
     std::unique_ptr<job_handlers::JobHandler> job_handler;
     try {
         using namespace job_handlers; // NOLINT(google-build-using-namespace)
-        using JT = Job::Type;
+        using JT = OldJob::Type;
 
         switch (jtype) {
         case JT::ADD_PROBLEM:
             job_handler = make_unique<AddProblem>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id
+                mysql, job_id, creator.value(), info, file_id.value(), tmp_file_id
             );
             break;
 
         case JT::REUPLOAD_PROBLEM:
             job_handler = make_unique<ReuploadProblem>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id, aux_id.value()
+                mysql, job_id, creator.value(), info, file_id.value(), tmp_file_id, aux_id.value()
             );
             break;
 
-        case JT::EDIT_PROBLEM:
+        case JT::EDIT_PROBLEM: {
             // TODO: implement it (editing Simfile for now)
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-                .bind_and_execute(EnumVal(Job::Status::CANCELED), job_id);
+            auto old_mysql = old_mysql::ConnectionView{mysql};
+            old_mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
+                .bind_and_execute(EnumVal(OldJob::Status::CANCELED), job_id);
             return;
+        }
 
         case JT::DELETE_PROBLEM:
             job_handler = make_unique<DeleteProblem>(job_id, aux_id.value());
@@ -112,13 +115,13 @@ void job_dispatcher(
 
         case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
             job_handler = make_unique<AddProblemJudgeModelSolution>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id
+                mysql, job_id, creator.value(), info, file_id.value(), tmp_file_id
             );
             break;
 
         case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             job_handler = make_unique<ReuploadProblemJudgeModelSolution>(
-                job_id, creator.value(), info, file_id.value(), tmp_file_id, aux_id.value()
+                mysql, job_id, creator.value(), info, file_id.value(), tmp_file_id, aux_id.value()
             );
             break;
 
@@ -128,41 +131,43 @@ void job_dispatcher(
         }
 
         throw_assert(job_handler);
-        job_handler->run();
+        job_handler->run(mysql);
         if (job_handler->failed()) {
-            mysql.prepare("UPDATE jobs SET status=?, data=? WHERE id=?")
-                .bind_and_execute(EnumVal(Job::Status::FAILED), job_handler->get_log(), job_id);
+            auto old_mysql = old_mysql::ConnectionView{mysql};
+            old_mysql.prepare("UPDATE jobs SET status=?, data=? WHERE id=?")
+                .bind_and_execute(EnumVal(OldJob::Status::FAILED), job_handler->get_log(), job_id);
         }
 
     } catch (const std::exception& e) {
         ERRLOG_CATCH(e);
-        auto transaction = mysql.start_transaction();
+        auto transaction = mysql.start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{mysql};
 
         // Add job to delete temporary file
-        auto stmt = mysql.prepare("INSERT INTO jobs(file_id, creator, type,"
-                                  " priority, status, created_at, aux_id, info, data) "
-                                  "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM jobs"
-                                  " WHERE id=? AND tmp_file_id IS NOT NULL");
+        auto stmt = old_mysql.prepare("INSERT INTO jobs(file_id, creator, type,"
+                                      " priority, status, created_at, aux_id, info, data) "
+                                      "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM jobs"
+                                      " WHERE id=? AND tmp_file_id IS NOT NULL");
         stmt.bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE),
-            default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING),
+            EnumVal(OldJob::Type::DELETE_FILE),
+            default_priority(OldJob::Type::DELETE_FILE),
+            EnumVal(OldJob::Status::PENDING),
             mysql_date(),
             job_id
         );
 
         // Fail job
-        stmt = mysql.prepare("UPDATE jobs SET tmp_file_id=NULL, status=?, data=? "
-                             "WHERE id=?");
+        stmt = old_mysql.prepare("UPDATE jobs SET tmp_file_id=NULL, status=?, data=? "
+                                 "WHERE id=?");
         if (job_handler) {
             stmt.bind_and_execute(
-                EnumVal(Job::Status::FAILED),
+                EnumVal(OldJob::Status::FAILED),
                 concat(job_handler->get_log(), "\nCaught exception: ", e.what()),
                 job_id
             );
         } else {
             stmt.bind_and_execute(
-                EnumVal(Job::Status::FAILED), concat("\nCaught exception: ", e.what()), job_id
+                EnumVal(OldJob::Status::FAILED), concat("\nCaught exception: ", e.what()), job_id
             );
         }
 

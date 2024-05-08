@@ -3,9 +3,9 @@
 #include <atomic>
 #include <cstddef>
 #include <fcntl.h>
-#include <functional>
 #include <mutex>
 #include <optional>
+#include <sim/mysql/mysql.hh>
 #include <simlib/always_false.hh>
 #include <simlib/concat.hh>
 #include <simlib/enum_val.hh>
@@ -16,7 +16,6 @@
 #include <simlib/macros/stack_unwinding.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/meta/is_one_of.hh>
-#include <simlib/sql.hh>
 #include <simlib/string_view.hh>
 #include <simlib/throw_assert.hh>
 #include <tuple>
@@ -32,7 +31,7 @@
 #define NO_DEBUG_MYSQL(...) __VA_ARGS__
 #endif
 
-namespace mysql {
+namespace old_mysql {
 
 // Optional type used to access data retrieved from MySQL
 template <class T>
@@ -114,16 +113,20 @@ constexpr inline bool is_optional = false;
 template <class T>
 constexpr inline bool is_optional<Optional<T>> = true;
 
+} // namespace old_mysql
+
 #if __has_include(<mysql.h>) && __has_include(<errmsg.h>)
 #define SIMLIB_MYSQL_ENABLED 1
 #include <errmsg.h>
 #include <mysql.h>
 
-class Connection;
+namespace old_mysql {
+
+class ConnectionView;
 
 class Result {
 private:
-    friend Connection;
+    friend ConnectionView;
 
     size_t* connection_referencing_objects_no_;
     MYSQL_RES* res_;
@@ -131,10 +134,10 @@ private:
     // NOLINTNEXTLINE(google-runtime-int)
     unsigned long* lengths_{};
 
-    Result(MYSQL_RES* res, size_t& conn_ref_objs_no)
-    : connection_referencing_objects_no_(&conn_ref_objs_no)
+    Result(MYSQL_RES* res, size_t* conn_ref_objs_no)
+    : connection_referencing_objects_no_(conn_ref_objs_no)
     , res_(res) {
-        ++conn_ref_objs_no;
+        ++*connection_referencing_objects_no_;
     }
 
 public:
@@ -220,7 +223,7 @@ public:
 
 class Statement {
 private:
-    friend Connection;
+    friend ConnectionView;
 
     size_t* connection_referencing_objects_no_ = nullptr;
     MYSQL_STMT* stmt_ = nullptr;
@@ -246,8 +249,8 @@ private:
         res_binds_[idx].is_null = &res_binds_[idx].is_null_value;
     }
 
-    Statement(MYSQL_STMT* stmt, size_t& conn_ref_objs_no)
-    : connection_referencing_objects_no_(&conn_ref_objs_no)
+    Statement(MYSQL_STMT* stmt, size_t* conn_ref_objs_no)
+    : connection_referencing_objects_no_(conn_ref_objs_no)
     , stmt_(stmt)
     , binds_size_(mysql_stmt_param_count(stmt))
     , binds_(std::make_unique<MYSQL_BIND[]>(binds_size_))
@@ -263,7 +266,7 @@ private:
             clear_res_bind(i);
         }
 
-        ++conn_ref_objs_no;
+        ++*connection_referencing_objects_no_;
     }
 
 public:
@@ -482,7 +485,7 @@ public:
                 return InplaceBuff<inplace_buff_size>(arg);
             } else if constexpr (std::is_same_v<TypeNoRef, const std::string>) {
                 return InplaceBuff<inplace_buff_size>(arg);
-            } else if constexpr (mysql::is_optional<TypeNoRefNoCV>) {
+            } else if constexpr (old_mysql::is_optional<TypeNoRefNoCV>) {
                 return arg.to_opt();
             } else if constexpr (std::is_enum_v<TypeNoRefNoCV>) {
                 return EnumVal{arg};
@@ -549,7 +552,7 @@ public:
 
     /// Binds optional value @p x - std::nullopt corresponds to NULL
     template <class T>
-    void res_bind(unsigned idx, mysql::Optional<T>& x) NO_DEBUG_MYSQL(noexcept) {
+    void res_bind(unsigned idx, old_mysql::Optional<T>& x) NO_DEBUG_MYSQL(noexcept) {
         res_bind(idx, x.value_);
         static_assert(std::
                           is_same_v<decltype(res_binds_[idx].is_null), decltype(&x.has_no_value_)>);
@@ -586,8 +589,10 @@ public:
     bool next() {
         STACK_UNWINDING_MARK;
 
+        res_fix_binds(); // If the previous fetch changed binds we need to rebind the parameters
         int rc = mysql_stmt_fetch(stmt_);
         if (rc == 0) {
+            // TODO: this should be checked if trunaction occurs
             // Check for unexpected nulls
             for (unsigned idx = 0; idx < res_binds_size_; ++idx) {
                 auto is_null = res_binds_[idx].is_null;
@@ -628,7 +633,6 @@ public:
             }
         }
 
-        res_fix_binds();
         return true;
     }
 
@@ -645,343 +649,83 @@ public:
     }
 };
 
-class Transaction {
-    friend class Connection;
-
-    Connection* conn_{nullptr};
-    std::function<void()> rollback_action_;
-
-    explicit Transaction(Connection& conn);
-
-public:
-    Transaction() = default;
-
-    Transaction(const Transaction&) = delete;
-    Transaction& operator=(const Transaction&) = delete;
-
-    Transaction(Transaction&& trans) noexcept : conn_(std::exchange(trans.conn_, nullptr)) {}
-
-    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
-    Transaction& operator=(Transaction&& trans) noexcept {
-        rollback();
-        conn_ = std::exchange(trans.conn_, nullptr);
-        return *this;
-    }
-
-    void rollback();
-
-    // Sets a callback that will be called AFTER transaction rollback
-    void set_rollback_action(std::function<void()> rollback_action) {
-        rollback_action_ = std::move(rollback_action);
-    }
-
-    void commit();
-
-    ~Transaction();
-};
-
-class Connection {
-private:
-    struct Library {
-        Library() {
-            // Must be done before starting threads
-            if (mysql_library_init(0, nullptr, nullptr)) {
-                THROW("Could not initialize MySQL library");
-            }
-        }
-
-        Library(const Library&) = delete;
-        Library(Library&&) = delete;
-        Library& operator=(const Library&) = delete;
-        Library& operator=(Library&&) = delete;
-
-        ~Library() { mysql_library_end(); }
-    };
-
-    static inline const Library init_;
-
+class ConnectionView {
     MYSQL* conn_;
-    size_t referencing_objects_no_ = 0;
-
-    friend class Transaction;
-
-    DEBUG_MYSQL(static size_t get_next_connection_id() noexcept {
-        static std::atomic_size_t next_connection_id = 0;
-        return next_connection_id++;
-    }
-
-                size_t connection_id = get_next_connection_id();)
-
-    void reconnect() {
-        InplaceBuff<32> host(conn_->host);
-        InplaceBuff<32> user(conn_->user);
-        InplaceBuff<32> passwd(conn_->passwd);
-        InplaceBuff<32> db(conn_->db);
-
-        Connection c;
-        c.connect(host, user, passwd, db);
-        *this = std::move(c);
-    }
-
-    template <class T>
-    static bool ret_val_success(T* ret) noexcept {
-        return (ret != nullptr);
-    }
-
-    template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-    static bool ret_val_success(T ret) noexcept {
-        return ret == T();
-    }
-
-    template <class Func2, class Func3, class Func, class... Args>
-    auto do_call_and_try_reconnecting_on_error(
-        Func2&& resetter, Func3&& error_msg, Func&& func, Args&&... args
-    ) {
-        STACK_UNWINDING_MARK;
-        // std::forward is omitted as we may use the arguments second time
-        auto rc = func(args...);
-        if (ret_val_success(rc)) {
-            return rc;
-        }
-
-        if (not is_one_of(
-                static_cast<int>(mysql_errno(conn_)), CR_SERVER_GONE_ERROR, CR_SERVER_LOST
-            ))
-        {
-            THROW(error_msg());
-        }
-
-        // Cannot reconnect if other objects already uses this connection
-        if (referencing_objects_no_ != 0) {
-            THROW(error_msg());
-        }
-
-        reconnect();
-        resetter();
-
-        rc = func(args...);
-        if (ret_val_success(rc)) {
-            return rc;
-        }
-
-        THROW(error_msg());
-    }
-
-    template <class Func, class... Args>
-    auto call_and_try_reconnecting_on_error(
-        StringView operation_kind, StringView sql_str, Func&& func, Args&&... args
-    ) {
-        STACK_UNWINDING_MARK;
-        return do_call_and_try_reconnecting_on_error(
-            [] {},
-            [&] { return concat(operation_kind, '(', sql_str, "):\n", mysql_error(conn_)); },
-            std::forward<Func>(func),
-            std::forward<Args>(args)...
-        );
-    }
+    size_t* connection_referencing_objects_num;
 
 public:
-    Connection() {
-        static std::mutex construction_serializer;
-        {
-            std::lock_guard guard(construction_serializer);
-            conn_ = mysql_init(nullptr);
-        }
-        if (not conn_) {
-            THROW("mysql_init() failed - not enough memory is available");
-        }
+    explicit ConnectionView(::sim::mysql::Connection& conn) noexcept
+    : conn_{conn.conn}
+    , connection_referencing_objects_num{&conn.referencing_objects_num} {
+        ++*connection_referencing_objects_num;
     }
 
-    Connection(const Connection&) = delete;
+    ~ConnectionView() { --*connection_referencing_objects_num; }
 
-    Connection(Connection&& c) noexcept
-    : conn_(std::exchange(c.conn_, nullptr))
-    , referencing_objects_no_(c.referencing_objects_no_)
-          DEBUG_MYSQL(, connection_id(c.connection_id)) {}
-
-    Connection& operator=(const Connection&) = delete;
-
-    Connection& operator=(Connection&& c) noexcept {
-        close();
-        conn_ = std::exchange(c.conn_, nullptr);
-        referencing_objects_no_ = c.referencing_objects_no_;
-        DEBUG_MYSQL(connection_id = c.connection_id);
-        return *this;
-    }
-
-    void close() noexcept {
-        if (conn_) {
-            mysql_close(conn_);
-            conn_ = nullptr;
-        }
-    }
-
-    ~Connection() {
-        if (conn_) {
-            mysql_close(conn_);
-        }
-    }
-
-    MYSQL* impl() noexcept { return conn_; }
-
-    // NOLINTNEXTLINE(google-explicit-constructor)
-    operator MYSQL*() noexcept { return impl(); }
-
-    void connect(FilePath host, FilePath user, FilePath passwd, FilePath db) {
-        STACK_UNWINDING_MARK;
-
-        my_bool x = true;
-        (void)mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
-
-        if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr, 0)) {
-            THROW(mysql_error(conn_));
-        }
-
-        // Set CLOEXEC flag on the mysql socket
-        int mysql_socket = mysql_get_socket(conn_);
-        int flags = fcntl(mysql_socket, F_GETFD);
-        if (flags == -1) {
-            THROW("fcntl()", errmsg());
-        }
-        if (fcntl(mysql_socket, F_SETFD, flags | FD_CLOEXEC) == -1) {
-            THROW("fcntl()", errmsg());
-        }
-    }
-
-    bool disconnected() noexcept {
-        return (mysql_ping(conn_) != 0 and mysql_errno(conn_) == CR_SERVER_GONE_ERROR);
-    }
+    ConnectionView(const ConnectionView&) = delete;
+    ConnectionView(ConnectionView&&) = delete;
+    ConnectionView& operator=(const ConnectionView&) = delete;
+    ConnectionView& operator=(ConnectionView&&) = delete;
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
     [[nodiscard]] Result query(Args&&... sql) {
         STACK_UNWINDING_MARK;
         auto sql_str = concat(std::forward<Args>(sql)...);
-        DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ", sql_str);)
-        call_and_try_reconnecting_on_error(
-            "query", sql_str, mysql_real_query, *this, sql_str.data(), sql_str.size
-        );
+        if (mysql_real_query(conn_, sql_str.data(), sql_str.size)) {
+            THROW(mysql_error(conn_));
+        }
 
-        MYSQL_RES* res = call_and_try_reconnecting_on_error(
-            "mysql_store_result in query", sql_str, mysql_store_result, *this
-        );
-        return {res, referencing_objects_no_};
+        auto* res = mysql_store_result(conn_);
+        if (!res) {
+            THROW(mysql_error(conn_));
+        }
+        return {res, connection_referencing_objects_num};
     }
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
     void update(Args&&... sql) {
         STACK_UNWINDING_MARK;
         auto sql_str = concat(std::forward<Args>(sql)...);
-        DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): update -> ", sql_str);)
-        call_and_try_reconnecting_on_error(
-            "update", sql_str, mysql_real_query, *this, sql_str.data(), sql_str.size
-        );
+        if (mysql_real_query(conn_, sql_str.data(), sql_str.size)) {
+            THROW(mysql_error(conn_));
+        }
     }
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
     [[nodiscard]] Statement prepare(Args&&... sql) {
         STACK_UNWINDING_MARK;
         auto sql_str = concat(std::forward<Args>(sql)...);
-        DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): prepare -> ", sql_str);)
-        MYSQL_STMT* stmt = call_and_try_reconnecting_on_error(
-            "mysql_stmt_init in prepare", sql_str, mysql_stmt_init, *this
-        );
+        auto* stmt = mysql_stmt_init(conn_);
+        if (!stmt) {
+            THROW(mysql_error(conn_));
+        }
         try {
-            do_call_and_try_reconnecting_on_error(
-                [&] {
-                    (void)mysql_stmt_close(stmt);
-                    stmt = call_and_try_reconnecting_on_error(
-                        "mysql_stmt_init in prepare", sql_str, mysql_stmt_init, *this
-                    );
-                },
-                [&] { return concat("prepare(", sql_str, "):\n", mysql_stmt_error(stmt)); },
-                mysql_stmt_prepare,
-                stmt,
-                sql_str.data(),
-                sql_str.size
-            );
-
+            if (mysql_stmt_prepare(stmt, sql_str.data(), sql_str.size)) {
+                THROW(mysql_error(conn_));
+            }
         } catch (...) {
             (void)mysql_stmt_close(stmt);
             throw;
         }
-
-        return {stmt, referencing_objects_no_};
+        return {stmt, connection_referencing_objects_num};
     }
 
-    template <
-        template <class...>
-        class T,
-        class... Params,
-        std::enable_if_t<std::is_convertible_v<T<Params...>, sql::SelectQuery<Params...>>, int> = 0>
-    Statement prepare_bind_and_execute(T<Params...> select_query) {
-        auto full_select_query = sql::SelectQuery<Params...>{std::move(select_query)};
-        auto stmt = prepare(std::move(full_select_query.sql_str));
-        stmt.bind_and_execute_from_tuple(std::move(full_select_query.params));
-        return stmt;
-    }
+    [[nodiscard]] MYSQL* impl() const noexcept { return conn_; }
 
     my_ulonglong insert_id() noexcept { return mysql_insert_id(conn_); }
-
-    Transaction start_transaction() {
-        STACK_UNWINDING_MARK;
-        return Transaction(*this);
-    }
-
-    Transaction start_serializable_transaction() {
-        STACK_UNWINDING_MARK;
-        update("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-        return Transaction(*this);
-    }
-
-    Transaction start_read_committed_transaction() {
-        STACK_UNWINDING_MARK;
-        update("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
-        return Transaction(*this);
-    }
 };
 
-inline Transaction::Transaction(Connection& conn) : conn_(&conn) {
-    conn_->update("START TRANSACTION");
-    // This have to be done last because of potential exceptions
-    ++conn_->referencing_objects_no_;
-}
-
-inline void Transaction::rollback() {
-    if (conn_) {
-        if (mysql_rollback(*conn_)) {
-            THROW(mysql_error(*conn_));
-        }
-
-        --conn_->referencing_objects_no_;
-        conn_ = nullptr;
-
-        if (rollback_action_) {
-            rollback_action_();
-        }
-    }
-}
-
-inline void Transaction::commit() {
-    if (mysql_commit(*conn_)) {
-        THROW(mysql_error(*conn_));
-    }
-
-    --conn_->referencing_objects_no_;
-    conn_ = nullptr;
-}
-
-inline Transaction::~Transaction() {
-    try {
-        rollback();
-    } catch (...) {
-        // There is nothing we can do with exceptions
-    }
-    // If the exception was thrown the counter may have not been decremented
-    if (conn_) {
-        --conn_->referencing_objects_no_;
-    }
-}
+} // namespace old_mysql
 
 #endif // __has_include(<mysql.h>) && __has_include(<errmsg.h>)
 
-} // namespace mysql
+namespace sim::old_mysql {
+
+template <class T>
+using Optional = ::old_mysql::Optional<T>;
+
+using Result = ::old_mysql::Result;
+using Statement = ::old_mysql::Statement;
+using ConnectionView = ::old_mysql::ConnectionView;
+
+} // namespace sim::old_mysql

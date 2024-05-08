@@ -130,6 +130,10 @@ private:
         }
     }
 
+// Debian 12 still uses too old version of the libzip to upgrade to the non-deprecated API
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
     ZipSource(
         zip_t* zip,
         zip_t* src_zip,
@@ -153,6 +157,8 @@ private:
             THROW("zip_source_zip() - ", zip_strerror(zip));
         }
     }
+
+#pragma GCC diagnostic pop
 
 public:
     ZipSource(const ZipSource&) = delete;

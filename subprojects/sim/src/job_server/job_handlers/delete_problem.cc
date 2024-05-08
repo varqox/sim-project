@@ -1,21 +1,22 @@
-#include "../main.hh"
 #include "delete_problem.hh"
 
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/time.hh>
 
-using sim::jobs::Job;
+using sim::jobs::OldJob;
 
 namespace job_server::job_handlers {
 
-void DeleteProblem::run() {
+void DeleteProblem::run(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     // Check whether the problem is not used as a contest problem
     {
-        auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
-                                  " WHERE problem_id=? LIMIT 1");
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        auto stmt = old_mysql.prepare("SELECT 1 FROM contest_problems"
+                                      " WHERE problem_id=? LIMIT 1");
         stmt.bind_and_execute(problem_id_);
         if (stmt.next()) {
             return set_failure("There exists a contest problem that uses (attaches) this "
@@ -26,7 +27,8 @@ void DeleteProblem::run() {
 
     // Assure that problem exist and log its Simfile
     {
-        auto stmt = mysql.prepare("SELECT simfile FROM problems WHERE id=?");
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        auto stmt = old_mysql.prepare("SELECT simfile FROM problems WHERE id=?");
         stmt.bind_and_execute(problem_id_);
         InplaceBuff<0> simfile;
         stmt.res_bind_all(simfile);
@@ -38,38 +40,39 @@ void DeleteProblem::run() {
     }
 
     // Add job to delete problem file
-    mysql
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
                  " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM problems WHERE id=?")
         .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE),
-            default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING),
+            EnumVal(OldJob::Type::DELETE_FILE),
+            default_priority(OldJob::Type::DELETE_FILE),
+            EnumVal(OldJob::Status::PENDING),
             mysql_date(),
             problem_id_
         );
 
     // Add jobs to delete problem submissions' files
-    mysql
+    old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
                  " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM submissions WHERE problem_id=?")
         .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE),
-            default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING),
+            EnumVal(OldJob::Type::DELETE_FILE),
+            default_priority(OldJob::Type::DELETE_FILE),
+            EnumVal(OldJob::Status::PENDING),
             mysql_date(),
             problem_id_
         );
 
     // Delete problem (all necessary actions will take plate thanks to foreign
     // key constrains)
-    mysql.prepare("DELETE FROM problems WHERE id=?").bind_and_execute(problem_id_);
+    old_mysql.prepare("DELETE FROM problems WHERE id=?").bind_and_execute(problem_id_);
 
-    job_done();
+    job_done(mysql);
 
     transaction.commit();
 }

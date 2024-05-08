@@ -1,10 +1,10 @@
 #include "contest.hh"
 #include "utils.hh"
 
-#include <cstdint>
 #include <sim/contest_users/contest_user.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/sql/sql.hh>
 #include <sim/users/user.hh>
-#include <simlib/mysql/mysql.hh>
 #include <simlib/utilities.hh>
 
 using sim::contest_users::ContestUser;
@@ -58,32 +58,34 @@ Contest contest_for(
 
 std::optional<std::pair<Contest, std::optional<decltype(sim::contest_users::ContestUser::mode)>>>
 contest_for(
-    mysql::Connection& mysql,
+    sim::mysql::Connection& mysql,
     const decltype(web_worker::Context::session)& session,
     decltype(sim::contests::Contest::id) contest_id
 ) {
     STACK_UNWINDING_MARK;
 
     decltype(sim::contests::Contest::is_public) is_public;
-    mysql::Optional<decltype(ContestUser::mode)> contest_user_mode;
-    mysql::Statement stmt;
-    if (session) {
-        stmt = mysql.prepare("SELECT c.is_public, cu.mode FROM contests c "
-                             "LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=? "
-                             "WHERE c.id=?");
-        stmt.bind_and_execute(session->user_id, contest_id);
-        stmt.res_bind_all(is_public, contest_user_mode);
-    } else {
-        stmt = mysql.prepare("SELECT is_public FROM contests WHERE id=?");
-        stmt.bind_and_execute(contest_id);
-        stmt.res_bind_all(is_public);
-    }
+    std::optional<decltype(ContestUser::mode)> contest_user_mode;
+    auto stmt = [&] {
+        using sim::sql::Select;
+        if (session) {
+            auto stmt =
+                mysql.execute(Select("SELECT c.is_public, cu.mode")
+                                  .from("contests c")
+                                  .left_join("contest_users cu")
+                                  .on("cu.contest_id=c.id AND cu.user_id=?", session->user_id)
+                                  .where("c.id=?", contest_id));
+            stmt.res_bind(is_public, contest_user_mode);
+            return stmt;
+        }
+        auto stmt = mysql.execute(Select("is_public").from("contests").where("id=?", contest_id));
+        stmt.res_bind(is_public);
+        return stmt;
+    }();
     if (not stmt.next()) {
         return std::nullopt;
     }
-    return std::pair{
-        contest_for(session, is_public, contest_user_mode), contest_user_mode.to_opt()
-    };
+    return std::pair{contest_for(session, is_public, contest_user_mode), contest_user_mode};
 }
 
 } // namespace web_server::capabilities

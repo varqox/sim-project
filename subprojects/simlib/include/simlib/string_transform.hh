@@ -47,7 +47,7 @@ InplaceBuff<N> to_hex(const StringView& str) {
 template <size_t N = 256>
 InplaceBuff<N> encode_uri(const StringView& str) {
     using std::array;
-    constexpr auto is_safe = [] {
+    static constexpr auto is_safe = [] {
         array<bool, 256> res = {};
         for (auto [beg, end] : array{array{'a', 'z'}, array{'A', 'Z'}, array{'0', '9'}}) {
             for (unsigned char i = beg; i <= end; ++i) {
@@ -133,14 +133,14 @@ inline void append_as_html_escaped(std::string& str, const StringView& s) {
 
 // Escapes HTML unsafe character sequences
 template <class T>
-inline std::string html_escape(T&& str) {
+inline std::string html_escape(const T& str) {
     std::string res;
     append_as_html_escaped(res, str);
     return res;
 }
 
-template <class... Arg, std::enable_if_t<(is_string_argument<Arg> and ...), int> = 0>
-void append_stringified_json(std::string& str, Arg&&... arg) {
+template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
+void append_stringified_json(std::string& str, Args&&... args) {
     auto safe_append = [&str](auto&& arg) {
         auto p = ::data(arg);
         for (size_t i = 0, len = string_length(arg); i < len; ++i) {
@@ -162,7 +162,7 @@ void append_stringified_json(std::string& str, Arg&&... arg) {
     };
 
     str += '"';
-    (safe_append(stringify(std::forward<Arg>(arg))), ...);
+    (safe_append(stringify(std::forward<Args>(args))), ...);
     str += '"';
 }
 

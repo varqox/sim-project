@@ -1,27 +1,28 @@
-#include "../main.hh"
 #include "delete_contest_problem.hh"
 
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/time.hh>
 
-using sim::jobs::Job;
+using sim::jobs::OldJob;
 
 namespace job_server::job_handlers {
 
-void DeleteContestProblem::run() {
+void DeleteContestProblem::run(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
+    auto old_mysql = old_mysql::ConnectionView{mysql};
 
     // Log some info about the deleted contest problem
     {
-        auto stmt = mysql.prepare("SELECT c.name, c.id, r.name, r.id, cp.name, p.name,"
-                                  " p.id "
-                                  "FROM contest_problems cp "
-                                  "JOIN contest_rounds r ON r.id=cp.contest_round_id "
-                                  "JOIN contests c ON c.id=cp.contest_id "
-                                  "JOIN problems p ON p.id=cp.problem_id "
-                                  "WHERE cp.id=?");
+        auto stmt = old_mysql.prepare("SELECT c.name, c.id, r.name, r.id, cp.name, p.name,"
+                                      " p.id "
+                                      "FROM contest_problems cp "
+                                      "JOIN contest_rounds r ON r.id=cp.contest_round_id "
+                                      "JOIN contests c ON c.id=cp.contest_id "
+                                      "JOIN problems p ON p.id=cp.problem_id "
+                                      "WHERE cp.id=?");
         stmt.bind_and_execute(contest_problem_id_);
         InplaceBuff<32> cname;
         InplaceBuff<32> cid;
@@ -47,24 +48,25 @@ void DeleteContestProblem::run() {
     }
 
     // Add jobs to delete submission files
-    mysql
+    old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
                  " created_at, aux_id, info, data) "
                  "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
                  " FROM submissions WHERE contest_problem_id=?")
         .bind_and_execute(
-            EnumVal(Job::Type::DELETE_FILE),
-            default_priority(Job::Type::DELETE_FILE),
-            EnumVal(Job::Status::PENDING),
+            EnumVal(OldJob::Type::DELETE_FILE),
+            default_priority(OldJob::Type::DELETE_FILE),
+            EnumVal(OldJob::Status::PENDING),
             mysql_date(),
             contest_problem_id_
         );
 
     // Delete contest problem (all necessary actions will take place thanks to
     // foreign key constrains)
-    mysql.prepare("DELETE FROM contest_problems WHERE id=?").bind_and_execute(contest_problem_id_);
+    old_mysql.prepare("DELETE FROM contest_problems WHERE id=?")
+        .bind_and_execute(contest_problem_id_);
 
-    job_done();
+    job_done(mysql);
 
     transaction.commit();
 }

@@ -1,8 +1,8 @@
 #include <cerrno>
 #include <cstdlib>
+#include <simlib/file_descriptor.hh>
 #include <simlib/unlinked_temporary_file.hh>
 #include <sys/stat.h>
-#include <simlib/file_descriptor.hh>
 #include <unistd.h>
 
 FileDescriptor open_unlinked_tmp_file(int flags) noexcept {

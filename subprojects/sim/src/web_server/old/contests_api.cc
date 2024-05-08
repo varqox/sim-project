@@ -6,31 +6,33 @@
 #include <map>
 #include <sim/contest_problems/contest_problem.hh>
 #include <sim/contest_problems/iterate.hh>
-#include <sim/contest_rounds/contest_round.hh>
+#include <sim/contest_problems/old_contest_problem.hh>
 #include <sim/contest_rounds/iterate.hh>
-#include <sim/contest_users/contest_user.hh>
-#include <sim/contests/contest.hh>
+#include <sim/contest_rounds/old_contest_round.hh>
+#include <sim/contest_users/old_contest_user.hh>
 #include <sim/contests/get.hh>
+#include <sim/contests/old_contest.hh>
 #include <sim/contests/permissions.hh>
 #include <sim/inf_datetime.hh>
-#include <sim/is_username.hh>
 #include <sim/jobs/utils.hh>
-#include <sim/submissions/submission.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/submissions/old_submission.hh>
 #include <simlib/from_unsafe.hh>
+#include <simlib/inplace_buff.hh>
 #include <simlib/string_view.hh>
-#include <type_traits>
 #include <utility>
 
 using sim::inf_timestamp_to_InfDatetime;
 using sim::InfDatetime;
 using sim::is_safe_inf_timestamp;
 using sim::contest_problems::ContestProblem;
-using sim::contest_rounds::ContestRound;
-using sim::contest_users::ContestUser;
-using sim::contests::Contest;
-using sim::jobs::Job;
-using sim::problems::Problem;
-using sim::submissions::Submission;
+using sim::contest_problems::OldContestProblem;
+using sim::contest_rounds::OldContestRound;
+using sim::contest_users::OldContestUser;
+using sim::contests::OldContest;
+using sim::jobs::OldJob;
+using sim::problems::OldProblem;
+using sim::submissions::OldSubmission;
 using sim::users::User;
 using std::map;
 using std::optional;
@@ -42,7 +44,7 @@ inline bool whether_to_show_full_status(
     sim::contests::Permissions cperms,
     const InfDatetime& full_results,
     const decltype(mysql_date())& curr_mysql_date,
-    ContestProblem::ScoreRevealing score_revealing
+    OldContestProblem::ScoreRevealing score_revealing
 ) {
     // TODO: check append_submission_status() for making it use the new function
     if (uint(cperms & sim::contests::Permissions::ADMIN) or full_results <= curr_mysql_date) {
@@ -50,9 +52,9 @@ inline bool whether_to_show_full_status(
     }
 
     switch (score_revealing) {
-    case ContestProblem::ScoreRevealing::NONE:
-    case ContestProblem::ScoreRevealing::ONLY_SCORE: return false;
-    case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
+    case OldContestProblem::ScoreRevealing::NONE:
+    case OldContestProblem::ScoreRevealing::ONLY_SCORE: return false;
+    case OldContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
     }
 
     __builtin_unreachable();
@@ -62,7 +64,7 @@ inline bool whether_to_show_score(
     sim::contests::Permissions cperms,
     const InfDatetime& full_results,
     const decltype(mysql_date())& curr_mysql_date,
-    ContestProblem::ScoreRevealing score_revealing
+    OldContestProblem::ScoreRevealing score_revealing
 ) {
     // TODO: check append_submission_status() for making it use the new function
     if (uint(cperms & sim::contests::Permissions::ADMIN)) {
@@ -74,9 +76,9 @@ inline bool whether_to_show_score(
     }
 
     switch (score_revealing) {
-    case ContestProblem::ScoreRevealing::NONE: return false;
-    case ContestProblem::ScoreRevealing::ONLY_SCORE:
-    case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
+    case OldContestProblem::ScoreRevealing::NONE: return false;
+    case OldContestProblem::ScoreRevealing::ONLY_SCORE:
+    case OldContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: return true;
     }
 
     __builtin_unreachable();
@@ -86,9 +88,9 @@ static inline InplaceBuff<32> color_class_json(
     sim::contests::Permissions cperms,
     const InfDatetime& full_results,
     const decltype(mysql_date())& curr_mysql_date,
-    optional<Submission::Status> full_status,
-    optional<Submission::Status> initial_status,
-    ContestProblem::ScoreRevealing score_revealing
+    optional<OldSubmission::Status> full_status,
+    optional<OldSubmission::Status> initial_status,
+    OldContestProblem::ScoreRevealing score_revealing
 ) {
 
     if (whether_to_show_full_status(cperms, full_results, curr_mysql_date, score_revealing)) {
@@ -188,7 +190,7 @@ public:
         // clang-format on
     }
 
-    void append_contest(const Contest& contest) {
+    void append_contest(const OldContest& contest) {
         content_.append(
             "\n[",
             contest.id,
@@ -201,7 +203,7 @@ public:
         content_.append("],\n["); // TODO: this is ugly...
     }
 
-    void append_round(const ContestRound& contest_round) {
+    void append_round(const OldContestRound& contest_round) {
         round_to_full_results_.emplace(contest_round.id, contest_round.full_results);
         // clang-format off
         content_.append(
@@ -223,7 +225,7 @@ public:
     }
 
     void append_problem(
-        const ContestProblem& contest_problem,
+        const OldContestProblem& contest_problem,
         const sim::contest_problems::ExtraIterateData& extra_data
     ) {
         auto& cp = contest_problem;
@@ -263,7 +265,7 @@ void Sim::api_contests() {
 
     // We may read data several times (permission checking), so transaction is
     // used to ensure data consistency
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
@@ -342,7 +344,8 @@ void Sim::api_contests() {
 
     // Execute query
     qfields.append(qwhere, " ORDER BY c.id DESC LIMIT ", rows_limit);
-    auto res = mysql.query(qfields);
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto res = old_mysql.query(qfields);
 
     // Column names
     // clang-format off
@@ -361,8 +364,8 @@ void Sim::api_contests() {
         auto cumode =
             (res.is_null(USER_MODE)
                  ? std::nullopt
-                 : optional(ContestUser::Mode(WONT_THROW(
-                       str2num<ContestUser::Mode::UnderlyingType>(res[USER_MODE]).value()
+                 : optional(OldContestUser::Mode(WONT_THROW(
+                       str2num<OldContestUser::Mode::UnderlyingType>(res[USER_MODE]).value()
                    ))));
         auto contest_perms = sim::contests::get_permissions(
             (session.has_value() ? optional(session->user_type) : std::nullopt), is_public, cumode
@@ -413,7 +416,7 @@ void Sim::api_contest() {
 
     // We read data in several queries - transaction will make the data
     // consistent
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
     auto curr_date = mysql_date();
 
     auto contest_opt = sim::contests::get(
@@ -468,7 +471,7 @@ void Sim::api_contest() {
         contest_id,
         contest_perms,
         curr_date,
-        [&](const ContestRound& round) { resp_builder.append_round(round); }
+        [&](const OldContestRound& round) { resp_builder.append_round(round); }
     );
 
     resp_builder.start_appending_problems();
@@ -481,7 +484,7 @@ void Sim::api_contest() {
         (session.has_value() ? optional{session->user_id} : std::nullopt),
         (session.has_value() ? optional{session->user_type} : std::nullopt),
         curr_date,
-        [&](const ContestProblem& contest_problem,
+        [&](const OldContestProblem& contest_problem,
             const sim::contest_problems::ExtraIterateData& extra_data) {
             resp_builder.append_problem(contest_problem, extra_data);
         }
@@ -495,7 +498,7 @@ void Sim::api_contest_round(StringView contest_round_id) {
 
     // We read data in several queries - transaction will make the data
     // consistent
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
     auto curr_date = mysql_date();
 
     auto contest_opt = sim::contests::get(
@@ -514,14 +517,14 @@ void Sim::api_contest_round(StringView contest_round_id) {
         return api_error403();
     }
 
-    optional<ContestRound> contest_round_opt;
+    optional<OldContestRound> contest_round_opt;
     sim::contest_rounds::iterate(
         mysql,
         sim::contest_rounds::IterateIdKind::CONTEST_ROUND,
         contest_round_id,
         contest_perms,
         curr_date,
-        [&](const ContestRound& cr) { contest_round_opt = cr; }
+        [&](const OldContestRound& cr) { contest_round_opt = cr; }
     );
 
     if (not contest_round_opt) {
@@ -568,7 +571,7 @@ void Sim::api_contest_round(StringView contest_round_id) {
         (session.has_value() ? optional{session->user_id} : std::nullopt),
         (session.has_value() ? optional{session->user_type} : std::nullopt),
         curr_date,
-        [&](const ContestProblem& contest_problem,
+        [&](const OldContestProblem& contest_problem,
             const sim::contest_problems::ExtraIterateData& extra_data) {
             resp_builder.append_problem(contest_problem, extra_data);
         }
@@ -582,7 +585,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 
     // We read data in several queries - transaction will make the data
     // consistent
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
     auto curr_date = mysql_date();
 
     auto contest_opt = sim::contests::get(
@@ -601,7 +604,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
         return api_error403();
     }
 
-    optional<pair<ContestProblem, sim::contest_problems::ExtraIterateData>> contest_problem_info;
+    optional<pair<OldContestProblem, sim::contest_problems::ExtraIterateData>> contest_problem_info;
     sim::contest_problems::iterate(
         mysql,
         sim::contest_problems::IterateIdKind::CONTEST_PROBLEM,
@@ -610,7 +613,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
         (session.has_value() ? optional{session->user_id} : std::nullopt),
         (session.has_value() ? optional{session->user_type} : std::nullopt),
         curr_date,
-        [&](const ContestProblem& contest_problem,
+        [&](const OldContestProblem& contest_problem,
             const sim::contest_problems::ExtraIterateData& extra_data) {
             contest_problem_info.emplace(contest_problem, extra_data);
         }
@@ -664,7 +667,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
         contest_problem_id,
         contest_perms,
         curr_date,
-        [&](const ContestRound& cr) { resp_builder.append_round(cr); }
+        [&](const OldContestRound& cr) { resp_builder.append_round(cr); }
     );
 
     resp_builder.start_appending_problems();
@@ -680,7 +683,7 @@ void Sim::api_contest_create(capabilities::Contests caps_contests) {
 
     // Validate fields
     StringView name;
-    form_validate_not_blank(name, "name", "Contest's name", decltype(Contest::name)::max_len);
+    form_validate_not_blank(name, "name", "Contest's name", decltype(OldContest::name)::max_len);
 
     bool is_public = request.form_fields.contains("public");
     if (is_public and !caps_contests.add_public) {
@@ -695,18 +698,19 @@ void Sim::api_contest_create(capabilities::Contests caps_contests) {
         return api_error400(notifications);
     }
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     // Add contest
-    auto stmt = mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
     stmt.bind_and_execute(mysql_date(), name, is_public);
 
     auto contest_id = stmt.insert_id();
     // Add user to owners
-    mysql
+    old_mysql
         .prepare("INSERT contest_users(user_id, contest_id, mode) "
                  "VALUES(?, ?, ?)")
-        .bind_and_execute(session->user_id, contest_id, EnumVal(ContestUser::Mode::OWNER));
+        .bind_and_execute(session->user_id, contest_id, EnumVal(OldContestUser::Mode::OWNER));
 
     transaction.commit();
     append(contest_id);
@@ -721,7 +725,7 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
 
     // Validate fields
     StringView name;
-    form_validate_not_blank(name, "name", "Contest's name", decltype(Contest::name)::max_len);
+    form_validate_not_blank(name, "name", "Contest's name", decltype(OldContest::name)::max_len);
 
     StringView source_contest_id;
     form_validate_not_blank(source_contest_id, "source_contest", "ID of the contest to clone");
@@ -739,7 +743,7 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
         return api_error400(notifications);
     }
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
     auto curr_date = mysql_date();
 
     auto source_contest_opt = sim::contests::get(
@@ -759,21 +763,23 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Collect contest rounds to clone
-    std::map<decltype(ContestRound::item), ContestRound> contest_rounds;
+    std::map<decltype(OldContestRound::item), OldContestRound> contest_rounds;
     sim::contest_rounds::iterate(
         mysql,
         sim::contest_rounds::IterateIdKind::CONTEST,
         source_contest_id,
         source_contest_perms,
         curr_date,
-        [&](const ContestRound& cr) { contest_rounds.emplace(cr.item, cr); }
+        [&](const OldContestRound& cr) { contest_rounds.emplace(cr.item, cr); }
     );
 
     // Collect contest problems to clone
-    std::map<pair<decltype(ContestRound::id), decltype(ContestProblem::item)>, ContestProblem>
+    std::map<
+        pair<decltype(OldContestRound::id), decltype(OldContestProblem::item)>,
+        OldContestProblem>
         contest_problems;
 
-    optional<ContestProblem> unclonable_contest_problem;
+    optional<OldContestProblem> unclonable_contest_problem;
     sim::contest_problems::iterate(
         mysql,
         sim::contest_problems::IterateIdKind::CONTEST,
@@ -782,7 +788,8 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
         (session.has_value() ? optional{session->user_id} : std::nullopt),
         (session.has_value() ? optional{session->user_type} : std::nullopt),
         curr_date,
-        [&](const ContestProblem& cp, const sim::contest_problems::ExtraIterateData& extra_data) {
+        [&](const OldContestProblem& cp,
+            const sim::contest_problems::ExtraIterateData& extra_data) {
             contest_problems.emplace(pair(cp.contest_round_id, cp.item), cp);
             if (uint(~extra_data.problem_perms & sim::problems::Permissions::VIEW)) {
                 unclonable_contest_problem = cp;
@@ -801,13 +808,14 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Add contest
-    auto stmt = mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
     stmt.bind_and_execute(mysql_date(), name, is_public);
     auto new_contest_id = stmt.insert_id();
 
     // Update contest rounds to fit into new contest
     {
-        decltype(ContestRound::item) new_item = 0;
+        decltype(OldContestRound::item) new_item = 0;
         for (auto& [item, cr] : contest_rounds) {
             cr.item = new_item++;
             cr.contest_id = new_contest_id;
@@ -815,9 +823,10 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Add contest rounds to the new contest
-    std::map<decltype(ContestRound::id), decltype(ContestRound::id)> old_round_id_to_new_id;
-    stmt = mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends, "
-                         "full_results, ranking_exposure) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+    std::map<decltype(OldContestRound::id), decltype(OldContestRound::id)> old_round_id_to_new_id;
+    stmt =
+        old_mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends, "
+                          "full_results, ranking_exposure) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, r] : contest_rounds) {
         stmt.bind_and_execute(
             mysql_date(),
@@ -834,8 +843,8 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
 
     // Update contest problems to fit into the new contest
     {
-        decltype(ContestProblem::item) new_item = 0;
-        decltype(ContestRound::id) curr_round_id = 0; // Initial value does not matter
+        decltype(OldContestProblem::item) new_item = 0;
+        decltype(OldContestRound::id) curr_round_id = 0; // Initial value does not matter
         for (auto& [key, cp] : contest_problems) {
             auto& [round_id, item] = key;
             if (round_id != curr_round_id) {
@@ -850,7 +859,7 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Add contest problems to the new contest
-    stmt = mysql.prepare(
+    stmt = old_mysql.prepare(
         "INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
         " item, method_of_choosing_final_submission, score_revealing) "
         "VALUES(?,?, ?, ?, ?, ?, ?, ?)"
@@ -869,10 +878,10 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     // Add user to owners
-    mysql
+    old_mysql
         .prepare("INSERT contest_users(user_id, contest_id, mode) "
                  "VALUES(?, ?, ?)")
-        .bind_and_execute(session->user_id, new_contest_id, EnumVal(ContestUser::Mode::OWNER));
+        .bind_and_execute(session->user_id, new_contest_id, EnumVal(OldContestUser::Mode::OWNER));
 
     transaction.commit();
     append(new_contest_id);
@@ -889,7 +898,7 @@ void Sim::api_contest_edit(
 
     // Validate fields
     StringView name;
-    form_validate_not_blank(name, "name", "Contest's name", decltype(Contest::name)::max_len);
+    form_validate_not_blank(name, "name", "Contest's name", decltype(OldContest::name)::max_len);
 
     bool will_be_public = request.form_fields.contains("public");
     if (will_be_public and not is_public and uint(~perms & sim::contests::Permissions::MAKE_PUBLIC))
@@ -904,17 +913,18 @@ void Sim::api_contest_edit(
         return api_error400(notifications);
     }
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
     // Update contest
-    mysql.prepare("UPDATE contests SET name=?, is_public=? WHERE id=?")
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    old_mysql.prepare("UPDATE contests SET name=?, is_public=? WHERE id=?")
         .bind_and_execute(name, will_be_public, contest_id);
 
     if (make_submitters_contestants) {
-        mysql
+        old_mysql
             .prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "
                      "SELECT owner, ?, ? FROM submissions "
                      "WHERE contest_id=? GROUP BY owner")
-            .bind_and_execute(contest_id, EnumVal(ContestUser::Mode::CONTESTANT), contest_id);
+            .bind_and_execute(contest_id, EnumVal(OldContestUser::Mode::CONTESTANT), contest_id);
     }
 
     transaction.commit();
@@ -932,14 +942,15 @@ void Sim::api_contest_delete(StringView contest_id, sim::contests::Permissions p
     }
 
     // Queue deleting job
-    auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                              " created_at, aux_id, info, data) "
-                              "VALUES(?, ?, ?, ?, ?, ?, '', '')");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("INSERT jobs (creator, status, priority, type,"
+                                  " created_at, aux_id, info, data) "
+                                  "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
         session->user_id,
-        EnumVal(Job::Status::PENDING),
-        default_priority(Job::Type::DELETE_CONTEST),
-        EnumVal(Job::Type::DELETE_CONTEST),
+        EnumVal(OldJob::Status::PENDING),
+        default_priority(OldJob::Type::DELETE_CONTEST),
+        EnumVal(OldJob::Type::DELETE_CONTEST),
         mysql_date(),
         contest_id
     );
@@ -961,7 +972,7 @@ void Sim::api_contest_round_create(StringView contest_id, sim::contests::Permiss
     CStringView ends;
     CStringView full_results;
     CStringView ranking_expo;
-    form_validate_not_blank(name, "name", "Round's name", decltype(ContestRound::name)::max_len);
+    form_validate_not_blank(name, "name", "Round's name", decltype(OldContestRound::name)::max_len);
     form_validate_not_blank(begins, "begins", "Begin time", is_safe_inf_timestamp);
     form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
     form_validate_not_blank(
@@ -977,10 +988,11 @@ void Sim::api_contest_round_create(StringView contest_id, sim::contests::Permiss
 
     // Add round
     auto curr_date = mysql_date();
-    auto stmt = mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item,"
-                              " begins, ends, full_results, ranking_exposure) "
-                              "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
-                              "FROM contest_rounds WHERE contest_id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item,"
+                                  " begins, ends, full_results, ranking_exposure) "
+                                  "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
+                                  "FROM contest_rounds WHERE contest_id=?");
     stmt.bind_and_execute(
         mysql_date(),
         contest_id,
@@ -1013,7 +1025,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     CStringView ends;
     CStringView full_results;
     CStringView ranking_expo;
-    form_validate(name, "name", "Round's name", decltype(ContestRound::name)::max_len);
+    form_validate(name, "name", "Round's name", decltype(OldContestRound::name)::max_len);
     form_validate_not_blank(begins, "begins", "Begin time", is_safe_inf_timestamp);
     form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
     form_validate_not_blank(
@@ -1027,7 +1039,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
         return api_error400(notifications);
     }
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
     auto curr_date = mysql_date();
 
     auto source_contest_opt = sim::contests::get(
@@ -1046,14 +1058,14 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
         return api_error404("There is no contest round with this id that you can clone");
     }
 
-    optional<ContestRound> contest_round_opt;
+    optional<OldContestRound> contest_round_opt;
     sim::contest_rounds::iterate(
         mysql,
         sim::contest_rounds::IterateIdKind::CONTEST_ROUND,
         source_contest_round_id,
         source_contest_perms,
         curr_date,
-        [&](const ContestRound& cr) { contest_round_opt = cr; }
+        [&](const OldContestRound& cr) { contest_round_opt = cr; }
     );
     if (not contest_round_opt) {
         return error500(); // Contest round have to exist after successful sim::contests::get()
@@ -1071,8 +1083,8 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     contest_round.ranking_exposure = inf_timestamp_to_InfDatetime(ranking_expo);
 
     // Collect contest problems to clone
-    std::map<decltype(ContestProblem::item), ContestProblem> contest_problems;
-    optional<ContestProblem> unclonable_contest_problem;
+    std::map<decltype(OldContestProblem::item), OldContestProblem> contest_problems;
+    optional<OldContestProblem> unclonable_contest_problem;
     sim::contest_problems::iterate(
         mysql,
         sim::contest_problems::IterateIdKind::CONTEST_ROUND,
@@ -1081,7 +1093,8 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
         (session.has_value() ? optional{session->user_id} : std::nullopt),
         (session.has_value() ? optional{session->user_type} : std::nullopt),
         curr_date,
-        [&](const ContestProblem& cp, const sim::contest_problems::ExtraIterateData& extra_data) {
+        [&](const OldContestProblem& cp,
+            const sim::contest_problems::ExtraIterateData& extra_data) {
             contest_problems.emplace(cp.item, cp);
             if (uint(~extra_data.problem_perms & sim::problems::Permissions::VIEW)) {
                 unclonable_contest_problem = cp;
@@ -1100,11 +1113,12 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     // Add contest round
+    auto old_mysql = old_mysql::ConnectionView{mysql};
     auto stmt =
-        mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends,"
-                      " full_results, ranking_exposure) "
-                      "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
-                      "FROM contest_rounds WHERE contest_id=?");
+        old_mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item, begins, ends,"
+                          " full_results, ranking_exposure) "
+                          "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
+                          "FROM contest_rounds WHERE contest_id=?");
     stmt.bind_and_execute(
         mysql_date(),
         contest_id,
@@ -1119,7 +1133,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
 
     // Update contest problems to fit into new contest round
     {
-        decltype(ContestProblem::item) new_item = 0;
+        decltype(OldContestProblem::item) new_item = 0;
         for (auto& [item, cp] : contest_problems) {
             cp.item = new_item++;
             cp.contest_id = contest_round.contest_id;
@@ -1128,7 +1142,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     // Add contest problems to the new contest round
-    stmt = mysql.prepare(
+    stmt = old_mysql.prepare(
         "INSERT contest_problems(created_at, contest_round_id, contest_id, problem_id, name,"
         " item, method_of_choosing_final_submission, score_revealing) "
         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)"
@@ -1151,7 +1165,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
 }
 
 void Sim::api_contest_round_edit(
-    decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms
+    decltype(OldContestRound::id) contest_round_id, sim::contests::Permissions perms
 ) {
     STACK_UNWINDING_MARK;
 
@@ -1165,7 +1179,7 @@ void Sim::api_contest_round_edit(
     CStringView ends;
     CStringView full_results;
     CStringView ranking_expo;
-    form_validate_not_blank(name, "name", "Round's name", decltype(ContestRound::name)::max_len);
+    form_validate_not_blank(name, "name", "Round's name", decltype(OldContestRound::name)::max_len);
     form_validate_not_blank(begins, "begins", "Begin time", is_safe_inf_timestamp);
     form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
     form_validate_not_blank(
@@ -1181,10 +1195,11 @@ void Sim::api_contest_round_edit(
 
     // Update round
     auto curr_date = mysql_date();
-    auto stmt = mysql.prepare("UPDATE contest_rounds "
-                              "SET name=?, begins=?, ends=?, full_results=?,"
-                              " ranking_exposure=? "
-                              "WHERE id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("UPDATE contest_rounds "
+                                  "SET name=?, begins=?, ends=?, full_results=?,"
+                                  " ranking_exposure=? "
+                                  "WHERE id=?");
     stmt.bind_and_execute(
         name,
         inf_timestamp_to_InfDatetime(begins).to_str(),
@@ -1196,7 +1211,7 @@ void Sim::api_contest_round_edit(
 }
 
 void Sim::api_contest_round_delete(
-    decltype(ContestRound::id) contest_round_id, sim::contests::Permissions perms
+    decltype(OldContestRound::id) contest_round_id, sim::contests::Permissions perms
 ) {
     STACK_UNWINDING_MARK;
 
@@ -1209,14 +1224,15 @@ void Sim::api_contest_round_delete(
     }
 
     // Queue deleting job
-    auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                              " created_at, aux_id, info, data) "
-                              "VALUES(?, ?, ?, ?, ?, ?, '', '')");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("INSERT jobs (creator, status, priority, type,"
+                                  " created_at, aux_id, info, data) "
+                                  "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
         session->user_id,
-        EnumVal(Job::Status::PENDING),
-        default_priority(Job::Type::DELETE_CONTEST_ROUND),
-        EnumVal(Job::Type::DELETE_CONTEST_ROUND),
+        EnumVal(OldJob::Status::PENDING),
+        default_priority(OldJob::Type::DELETE_CONTEST_ROUND),
+        EnumVal(OldJob::Type::DELETE_CONTEST_ROUND),
         mysql_date(),
         contest_round_id
     );
@@ -1244,8 +1260,8 @@ constexpr http::ApiParam contest_problem_score_revealing{
 } // namespace params
 
 void Sim::api_contest_problem_add(
-    decltype(Contest::id) contest_id,
-    decltype(ContestRound::id) contest_round_id,
+    decltype(OldContest::id) contest_id,
+    decltype(OldContestRound::id) contest_round_id,
     sim::contests::Permissions perms
 ) {
     STACK_UNWINDING_MARK;
@@ -1261,14 +1277,15 @@ void Sim::api_contest_problem_add(
         (score_revealing, params::contest_problem_score_revealing, REQUIRED)
     );
 
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
-    auto stmt = mysql.prepare("SELECT owner_id, type, name FROM problems WHERE id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("SELECT owner_id, type, name FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 
-    mysql::Optional<decltype(Problem::owner_id)::value_type> problem_owner_id;
-    decltype(Problem::type) problem_type;
-    decltype(Problem::name) problem_name;
+    old_mysql::Optional<decltype(OldProblem::owner_id)::value_type> problem_owner_id;
+    decltype(OldProblem::type) problem_type;
+    decltype(OldProblem::name) problem_name;
     stmt.res_bind_all(problem_owner_id, problem_type, problem_name);
     if (not stmt.next()) {
         return api_error404(from_unsafe{concat("No problem was found with ID = ", problem_id)});
@@ -1285,14 +1302,14 @@ void Sim::api_contest_problem_add(
     }
 
     // Add contest problem
-    stmt = mysql.prepare("INSERT contest_problems(created_at, contest_round_id, contest_id,"
-                         " problem_id, name, item, method_of_choosing_final_submission,"
-                         " score_revealing) "
-                         "SELECT ?, ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
-                         "FROM contest_problems "
-                         "WHERE contest_round_id=?");
+    stmt = old_mysql.prepare("INSERT contest_problems(created_at, contest_round_id, contest_id,"
+                             " problem_id, name, item, method_of_choosing_final_submission,"
+                             " score_revealing) "
+                             "SELECT ?, ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
+                             "FROM contest_problems "
+                             "WHERE contest_round_id=?");
     static_assert( // NOLINTNEXTLINE(misc-redundant-expression)
-        decltype(ContestProblem::name)::max_len >= decltype(Problem::name)::max_len,
+        decltype(OldContestProblem::name)::max_len >= decltype(OldProblem::name)::max_len,
         "Contest problem name has to be able to hold the attached problem's name"
     );
     stmt.bind_and_execute(
@@ -1300,9 +1317,9 @@ void Sim::api_contest_problem_add(
         contest_round_id,
         contest_id,
         problem_id,
-        (name.size == 0 ? problem_name : name),
-        method_of_choosing_final_submission,
-        score_revealing,
+        (name.empty() ? StringView{problem_name} : StringView{name}),
+        EnumVal{method_of_choosing_final_submission},
+        EnumVal{score_revealing},
         contest_round_id
     );
 
@@ -1319,16 +1336,17 @@ void Sim::api_contest_problem_rejudge_all_submissions(
         return api_error403();
     }
 
-    mysql
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    old_mysql
         .prepare("INSERT jobs (creator, status, priority, type,"
                  " created_at, aux_id, info, data) "
                  "SELECT ?, ?, ?, ?, ?, id, ?, '' "
                  "FROM submissions WHERE contest_problem_id=? ORDER BY id")
         .bind_and_execute(
             session->user_id,
-            EnumVal(Job::Status::PENDING),
-            default_priority(Job::Type::REJUDGE_SUBMISSION),
-            EnumVal(Job::Type::REJUDGE_SUBMISSION),
+            EnumVal(OldJob::Status::PENDING),
+            default_priority(OldJob::Type::REJUDGE_SUBMISSION),
+            EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
             mysql_date(),
             sim::jobs::dump_string(problem_id),
             contest_problem_id
@@ -1353,17 +1371,18 @@ void Sim::api_contest_problem_edit(
     );
 
     // Have to check if it is necessary to reselect problem final submissions
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     // Get the old method of choosing final submission and whether the score was revealed
-    auto stmt = mysql.prepare("SELECT method_of_choosing_final_submission, score_revealing "
-                              "FROM contest_problems WHERE id=?");
-    stmt.bind_and_execute(contest_problem_id);
+    auto stmt =
+        mysql.execute(sim::sql::Select("method_of_choosing_final_submission, score_revealing")
+                          .from("contest_problems")
+                          .where("id=?", contest_problem_id));
 
     decltype(ContestProblem::method_of_choosing_final_submission
     ) old_method_of_choosing_final_submission;
     decltype(ContestProblem::score_revealing) old_score_revealing;
-    stmt.res_bind_all(old_method_of_choosing_final_submission, old_score_revealing);
+    stmt.res_bind(old_method_of_choosing_final_submission, old_score_revealing);
     if (not stmt.next()) {
         return; // Such contest problem does not exist (probably had just
                 // been deleted)
@@ -1375,30 +1394,37 @@ void Sim::api_contest_problem_edit(
               ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE and
           score_revealing != old_score_revealing));
 
+    auto old_mysql = old_mysql::ConnectionView{mysql};
     if (reselect_final_sumbissions) {
         // Queue reselecting final submissions
-        stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, created_at,"
-                             " aux_id, info, data) "
-                             "VALUES(?, ?, ?, ?, ?, ?, '', '')");
-        stmt.bind_and_execute(
-            session->user_id,
-            EnumVal(Job::Status::PENDING),
-            default_priority(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
-            EnumVal(Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
-            mysql_date(),
-            contest_problem_id
-        );
 
-        append(stmt.insert_id());
+        old_mysql
+            .prepare("INSERT jobs (creator, status, priority, type, created_at,"
+                     " aux_id, info, data) "
+                     "VALUES(?, ?, ?, ?, ?, ?, '', '')")
+            .bind_and_execute(
+                session->user_id,
+                EnumVal(OldJob::Status::PENDING),
+                default_priority(OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
+                EnumVal(OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
+                mysql_date(),
+                contest_problem_id
+            );
+
+        append(old_mysql.insert_id());
     }
 
     // Update problem
-    stmt = mysql.prepare("UPDATE contest_problems "
-                         "SET name=?, score_revealing=?, method_of_choosing_final_submission=? "
-                         "WHERE id=?");
-    stmt.bind_and_execute(
-        name, score_revealing, method_of_choosing_final_submission, contest_problem_id
-    );
+    old_mysql
+        .prepare("UPDATE contest_problems "
+                 "SET name=?, score_revealing=?, method_of_choosing_final_submission=? "
+                 "WHERE id=?")
+        .bind_and_execute(
+            name,
+            EnumVal{score_revealing},
+            EnumVal{method_of_choosing_final_submission},
+            contest_problem_id
+        );
 
     transaction.commit();
     sim::jobs::notify_job_server();
@@ -1418,14 +1444,16 @@ void Sim::api_contest_problem_delete(
     }
 
     // Queue deleting job
-    auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-                              " created_at, aux_id, info, data) "
-                              "VALUES(?, ?, ?, ?, ?, ?, '', '')");
+
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("INSERT jobs (creator, status, priority, type,"
+                                  " created_at, aux_id, info, data) "
+                                  "VALUES(?, ?, ?, ?, ?, ?, '', '')");
     stmt.bind_and_execute(
         session->user_id,
-        EnumVal(Job::Status::PENDING),
-        default_priority(Job::Type::DELETE_CONTEST_PROBLEM),
-        EnumVal(Job::Type::DELETE_CONTEST_PROBLEM),
+        EnumVal(OldJob::Status::PENDING),
+        default_priority(OldJob::Type::DELETE_CONTEST_PROBLEM),
+        EnumVal(OldJob::Type::DELETE_CONTEST_PROBLEM),
         mysql_date(),
         contest_problem_id
     );
@@ -1437,12 +1465,13 @@ void Sim::api_contest_problem_delete(
 void Sim::api_contest_problem_statement(StringView problem_id) {
     STACK_UNWINDING_MARK;
 
-    auto stmt = mysql.prepare("SELECT file_id, label, simfile FROM problems WHERE id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("SELECT file_id, label, simfile FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 
-    decltype(Problem::file_id) problem_file_id = 0;
-    decltype(Problem::label) problem_label;
-    decltype(Problem::simfile) problem_simfile;
+    decltype(OldProblem::file_id) problem_file_id = 0;
+    decltype(OldProblem::label) problem_label;
+    decltype(OldProblem::simfile) problem_simfile;
     stmt.res_bind_all(problem_file_id, problem_label, problem_simfile);
     if (not stmt.next()) {
         return api_error404();
@@ -1479,10 +1508,11 @@ void Sim::api_contest_ranking(
     }
 
     // We read data several times, so transaction makes it consistent
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     // Gather submissions owners
-    auto stmt = mysql.prepare(
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare(
         "SELECT u.id, u.first_name, u.last_name FROM submissions s JOIN "
         "users u ON s.owner=u.id WHERE s.",
         submissions_query_id_name,
@@ -1491,8 +1521,8 @@ void Sim::api_contest_ranking(
     stmt.bind_and_execute(query_id);
 
     decltype(User::id) u_id = 0;
-    decltype(User::first_name) fname;
-    decltype(User::last_name) lname;
+    InplaceBuff<0> fname;
+    InplaceBuff<0> lname;
     stmt.res_bind_all(u_id, fname, lname);
 
     std::vector<SubmissionOwner> sowners;
@@ -1501,22 +1531,22 @@ void Sim::api_contest_ranking(
     }
 
     // Gather submissions
-    decltype(ContestRound::id) cr_id = 0;
-    decltype(ContestRound::full_results) cr_full_results;
-    decltype(ContestProblem::id) cp_id = 0;
-    decltype(ContestProblem::score_revealing) cp_score_revealing;
-    decltype(Submission::owner)::value_type s_owner = 0;
-    decltype(Submission::id) sf_id = 0;
-    EnumVal<Submission::Status> sf_full_status{};
+    decltype(OldContestRound::id) cr_id = 0;
+    decltype(OldContestRound::full_results) cr_full_results;
+    decltype(OldContestProblem::id) cp_id = 0;
+    decltype(OldContestProblem::score_revealing) cp_score_revealing;
+    decltype(OldSubmission::owner)::value_type s_owner = 0;
+    decltype(OldSubmission::id) sf_id = 0;
+    EnumVal<OldSubmission::Status> sf_full_status{};
     int64_t sf_score = 0;
-    decltype(Submission::id) si_id = 0;
-    EnumVal<Submission::Status> si_initial_status{};
+    decltype(OldSubmission::id) si_id = 0;
+    EnumVal<OldSubmission::Status> si_initial_status{};
 
     // TODO: there is too much logic duplication (not only below) on whether to
     // show full or initial status and show or not show the score
     auto prepare_stmt = [&](auto&& extra_cr_sql, auto&&... extra_bind_params) {
         // clang-format off
-        stmt = mysql.prepare(
+        stmt = old_mysql.prepare(
            "SELECT cr.id, cr.full_results, cp.id, cp.score_revealing, sf.owner,"
            " sf.id, sf.full_status, sf.score, si.id, si.initial_status "
            "FROM submissions sf "

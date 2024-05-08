@@ -16,10 +16,10 @@ public:
     , donor_user_id_(donor_user_id)
     , info_(info) {}
 
-    void run() final;
+    void run(sim::mysql::Connection& mysql) final;
 
 private:
-    void run_impl();
+    void run_impl(sim::mysql::Connection& mysql);
 };
 
 } // namespace job_server::job_handlers

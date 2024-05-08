@@ -20,7 +20,9 @@ if get_option('warning_level') > '0'
         '-Wgnu',
         '-Wunused-lambda-capture',
         '-Wno-c++20-designator',
+        '-Wno-c++20-extensions',
         '-Wno-gnu-zero-variadic-macro-arguments',
+        '-Wno-c++2b-extensions',
     ]
     foreach warning : warnings
         if cc.has_argument(warning)
@@ -81,6 +83,7 @@ libsim = library('sim',
         'src/sim/contests/permissions.cc',
         'src/sim/cpp_syntax_highlighter.cc',
         'src/sim/db/schema.cc',
+        'src/sim/db/tables.cc',
         'src/sim/jobs/utils.cc',
         'src/sim/merging/merge_ids.cc',
         'src/sim/mysql/mysql.cc',
@@ -266,12 +269,12 @@ if _install
     install_subdir('src/web_server/static', install_dir : '.')
 
     mkdir_p = 'mkdir -p "$MESON_INSTALL_DESTDIR_PREFIX/@0@"'
-    cp_if_missing = 'test -e "$MESON_INSTALL_DESTDIR_PREFIX/@1@" || cp "$MESON_SOURCE_ROOT/@0@" "$MESON_INSTALL_DESTDIR_PREFIX/@1@"'
+    cp_if_missing = 'test -e "$MESON_INSTALL_DESTDIR_PREFIX/@1@" || cp "' + meson.current_source_dir() + '/@0@" "$MESON_INSTALL_DESTDIR_PREFIX/@1@"'
     meson.add_install_script('sh', '-c', 'chmod 0700 "$MESON_INSTALL_DESTDIR_PREFIX"')
     meson.add_install_script('sh', '-c', mkdir_p.format('internal_files'))
     meson.add_install_script('sh', '-c', mkdir_p.format('logs'))
     meson.add_install_script('sh', '-c', cp_if_missing.format('src/sim.conf', 'sim.conf'))
-    meson.add_install_script('sh', '-c', 'if test -e "$MESON_INSTALL_DESTDIR_PREFIX/.db.config"; then ' + setup_installation.full_path() + ' "$MESON_INSTALL_DESTDIR_PREFIX"; else { printf "To complete installation you need to run:\n%s %s\n" \'' + setup_installation.full_path() + '\' $MESON_INSTALL_DESTDIR_PREFIX; false; } fi')
+    meson.add_install_script('sh', '-c', 'if test -e "$MESON_INSTALL_DESTDIR_PREFIX/.db.config"; then ' + setup_installation.full_path() + ' "$MESON_INSTALL_DESTDIR_PREFIX"; else { printf "\\033[1;33mTo complete installation you need to run:\\n%s %s\\033[m\\n" \'' + setup_installation.full_path() + '\' $MESON_INSTALL_DESTDIR_PREFIX; false; } fi')
 endif
 
 #################################### Tests ####################################
@@ -283,6 +286,7 @@ tests = {
     'test/sim/cpp_syntax_highlighter.cc': {'args': [meson.current_source_dir() + '/test/sim/cpp_syntax_highlighter_test_cases/']},
     'test/sim/jobs/utils.cc': {},
     'test/sim/merging/merge_ids.cc': {'priority': 10},
+    'test/sim/sql/sql.cc': {},
     'test/web_server/http/form_validation.cc': {},
 }
 

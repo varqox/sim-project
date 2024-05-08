@@ -15,7 +15,7 @@ public:
     , submission_id_(submission_id)
     , job_creation_time_(job_creation_time) {}
 
-    void run() override;
+    void run(sim::mysql::Connection& mysql) override;
 };
 
 } // namespace job_server::job_handlers

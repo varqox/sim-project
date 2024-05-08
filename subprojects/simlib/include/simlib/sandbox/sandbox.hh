@@ -141,10 +141,10 @@ class SupervisorConnection {
     int supervisor_error_fd;
     int uncaught_exceptions_in_constructor = std::uncaught_exceptions();
 
-    SupervisorConnection(int sock_fd, int supervisor_pidfd, int supervisor_error_fd) noexcept
-    : sock_fd{sock_fd}
-    , supervisor_pidfd{supervisor_pidfd}
-    , supervisor_error_fd{supervisor_error_fd} {}
+    SupervisorConnection(int sock_fd_, int supervisor_pidfd_, int supervisor_error_fd_) noexcept
+    : sock_fd{sock_fd_}
+    , supervisor_pidfd{supervisor_pidfd_}
+    , supervisor_error_fd{supervisor_error_fd_} {}
 
 public:
     // Spawns supervisor process. Throws on error.
@@ -168,7 +168,7 @@ public:
         int kill_fd;
         int uncaught_exceptions_in_constructor = std::uncaught_exceptions();
 
-        explicit KillRequestHandle(int kill_fd) noexcept : kill_fd{kill_fd} {}
+        explicit KillRequestHandle(int kill_fd_) noexcept : kill_fd{kill_fd_} {}
 
     public:
         KillRequestHandle(const KillRequestHandle&) = delete;

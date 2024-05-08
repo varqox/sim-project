@@ -2,10 +2,9 @@
 
 #include <cstdint>
 #include <sim/internal_files/internal_file.hh>
-#include <sim/primary_key.hh>
-#include <sim/sql_fields/blob.hh>
-#include <sim/sql_fields/datetime.hh>
-#include <sim/sql_fields/varbinary.hh>
+#include <sim/sql/fields/blob.hh>
+#include <sim/sql/fields/datetime.hh>
+#include <sim/sql/fields/varbinary.hh>
 #include <sim/users/user.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
 
@@ -19,18 +18,16 @@ struct Problem {
     );
 
     uint64_t id;
-    sql_fields::Datetime created_at;
+    sql::fields::Datetime created_at;
     decltype(internal_files::InternalFile::id) file_id;
-    EnumVal<Type> type;
-    sql_fields::Varbinary<128> name;
-    sql_fields::Varbinary<64> label;
-    sql_fields::Blob<4096> simfile;
+    Type type;
+    sql::fields::Varbinary<128> name;
+    sql::fields::Varbinary<64> label;
+    sql::fields::Blob simfile;
     std::optional<decltype(users::User::id)> owner_id;
-    sql_fields::Datetime updated_at;
+    sql::fields::Datetime updated_at;
 
-    static constexpr auto primary_key = PrimaryKey{&Problem::id};
-
-    static constexpr uint64_t new_statement_max_size = 10 << 20; // 10 MiB
+    static constexpr uint64_t NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MiB
 };
 
 } // namespace sim::problems

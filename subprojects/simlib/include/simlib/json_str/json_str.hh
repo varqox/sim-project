@@ -5,7 +5,6 @@
 #include <simlib/concat_tostr.hh>
 #include <simlib/enum_val.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
-#include <simlib/mysql/mysql.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <string>
@@ -56,7 +55,7 @@ protected:
             append_raw_value("null");
         } else if constexpr (std::is_integral_v<DT>) {
             append_raw_value(val);
-        } else if constexpr (detail::is_std_optional<DT> or mysql::is_optional<DT>) {
+        } else if constexpr (detail::is_std_optional<DT>) {
             if (val) {
                 append_value(*val);
             } else {

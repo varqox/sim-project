@@ -70,8 +70,8 @@ public:
     struct [[nodiscard]] RunHandle {
         sandbox::SupervisorConnection::RequestHandle request_handle;
 
-        explicit RunHandle(sandbox::SupervisorConnection::RequestHandle request_handle) noexcept
-        : request_handle{std::move(request_handle)} {}
+        explicit RunHandle(sandbox::SupervisorConnection::RequestHandle request_handle_) noexcept
+        : request_handle{std::move(request_handle_)} {}
     };
 
     virtual RunHandle async_run(

@@ -1,17 +1,16 @@
 #include <chrono>
-#include <sim/jobs/job.hh>
+#include <sim/jobs/old_job.hh>
 #include <sim/mysql/mysql.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>
-#include <simlib/path.hh>
-#include <simlib/process.hh>
 #include <simlib/sim/problem_package.hh>
 #include <simlib/spawner.hh>
 #include <simlib/time.hh>
 #include <simlib/working_directory.hh>
 
-using sim::jobs::Job;
+using sim::jobs::OldJob;
 using std::string;
 using std::vector;
 
@@ -37,7 +36,7 @@ int main2(int argc, char** argv) {
     FileRemover mysql_cnf_guard;
 
     // Get connection
-    auto conn = sim::mysql::make_conn_with_credential_file(".db.config");
+    auto mysql = sim::mysql::Connection::from_credential_file(".db.config");
 
     FileDescriptor fd{MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_0600};
     if (fd == -1) {
@@ -46,12 +45,19 @@ int main2(int argc, char** argv) {
     }
 
     mysql_cnf_guard.reset(MYSQL_CNF);
-    write_all_throw(
-        fd,
-        from_unsafe{concat(
-            "[client]\nuser=\"", conn.impl()->user, "\"\npassword=\"", conn.impl()->passwd, "\"\n"
-        )}
-    );
+    {
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        write_all_throw(
+            fd,
+            from_unsafe{concat(
+                "[client]\nuser=\"",
+                old_mysql.impl()->user,
+                "\"\npassword=\"",
+                old_mysql.impl()->passwd,
+                "\"\n"
+            )}
+        );
+    }
 
     auto run_command = [](vector<string> args) {
         auto es = Spawner::run(args[0], args);
@@ -68,16 +74,19 @@ int main2(int argc, char** argv) {
         using std::chrono::system_clock;
         using namespace std::chrono_literals;
 
-        auto transaction = conn.start_transaction();
-        auto stmt = conn.prepare("SELECT tmp_file_id FROM jobs "
-                                 "WHERE tmp_file_id IS NOT NULL AND status IN (?,?,?)");
+        auto transaction = mysql.start_repeatable_read_transaction();
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        auto stmt = old_mysql.prepare("SELECT tmp_file_id FROM jobs "
+                                      "WHERE tmp_file_id IS NOT NULL AND status IN (?,?,?)");
         stmt.bind_and_execute(
-            EnumVal(Job::Status::DONE), EnumVal(Job::Status::FAILED), EnumVal(Job::Status::CANCELED)
+            EnumVal(OldJob::Status::DONE),
+            EnumVal(OldJob::Status::FAILED),
+            EnumVal(OldJob::Status::CANCELED)
         );
         uint64_t tmp_file_id = 0;
         stmt.res_bind_all(tmp_file_id);
 
-        auto deleter = conn.prepare("DELETE FROM internal_files WHERE id=?");
+        auto deleter = old_mysql.prepare("DELETE FROM internal_files WHERE id=?");
         // Remove jobs temporary internal files
         while (stmt.next()) {
             auto file_path = sim::internal_files::path_of(tmp_file_id);
@@ -97,7 +106,7 @@ int main2(int argc, char** argv) {
             orphaned_files.emplace(file.to_string());
         });
 
-        stmt = conn.prepare("SELECT id FROM internal_files");
+        stmt = old_mysql.prepare("SELECT id FROM internal_files");
         stmt.bind_and_execute();
         InplaceBuff<32> file_id;
         stmt.res_bind_all(file_id);
@@ -127,12 +136,13 @@ int main2(int argc, char** argv) {
         transaction.commit();
     }
 
+    auto old_mysql = old_mysql::ConnectionView{mysql};
     run_command({
         "mysqldump",
         concat_tostr("--defaults-file=", MYSQL_CNF),
         "--result-file=dump.sql",
         "--single-transaction",
-        conn.impl()->db,
+        old_mysql.impl()->db,
     });
 
     if (chmod("dump.sql", S_0600)) {

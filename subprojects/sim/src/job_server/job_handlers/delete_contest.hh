@@ -12,7 +12,7 @@ public:
     : JobHandler(job_id)
     , contest_id_(contest_id) {}
 
-    void run() final;
+    void run(sim::mysql::Connection& mysql) final;
 };
 
 } // namespace job_server::job_handlers

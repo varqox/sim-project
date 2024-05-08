@@ -2,9 +2,7 @@
 
 #include <cstdint>
 #include <sim/contests/contest.hh>
-#include <sim/primary_key.hh>
 #include <sim/users/user.hh>
-#include <simlib/enum_val.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
 
 namespace sim::contest_users {
@@ -18,9 +16,7 @@ struct ContestUser {
 
     decltype(users::User::id) user_id;
     decltype(contests::Contest::id) contest_id;
-    EnumVal<Mode> mode;
-
-    static constexpr auto primary_key = PrimaryKey{&ContestUser::user_id, &ContestUser::contest_id};
+    Mode mode;
 };
 
 } // namespace sim::contest_users

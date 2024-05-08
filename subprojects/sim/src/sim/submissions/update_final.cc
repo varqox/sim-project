@@ -1,13 +1,15 @@
-#include <sim/contest_problems/contest_problem.hh>
-#include <sim/submissions/submission.hh>
+#include <sim/contest_problems/old_contest_problem.hh>
+#include <sim/old_mysql/old_mysql.hh>
+#include <sim/submissions/old_submission.hh>
 #include <sim/submissions/update_final.hh>
 #include <simlib/time.hh>
 
-using sim::contest_problems::ContestProblem;
-using sim::submissions::Submission;
+using sim::contest_problems::OldContestProblem;
+using sim::submissions::OldSubmission;
 
-static void
-update_problem_final(mysql::Connection& mysql, uint64_t submission_owner, uint64_t problem_id) {
+static void update_problem_final(
+    old_mysql::ConnectionView& mysql, uint64_t submission_owner, uint64_t problem_id
+) {
     STACK_UNWINDING_MARK;
 
     // Such index: (final_candidate, owner, problem_id, score DESC, full_status,
@@ -31,7 +33,7 @@ update_problem_final(mysql::Connection& mysql, uint64_t submission_owner, uint64
         return; // Nothing more to be done
     }
 
-    EnumVal<Submission::Status> full_status{};
+    EnumVal<OldSubmission::Status> full_status{};
     stmt = mysql.prepare("SELECT full_status "
                          "FROM submissions USE INDEX(final3) "
                          "WHERE final_candidate=1 AND owner=? AND problem_id=?"
@@ -60,7 +62,7 @@ update_problem_final(mysql::Connection& mysql, uint64_t submission_owner, uint64
 }
 
 static void update_contest_final(
-    mysql::Connection& mysql, uint64_t submission_owner, uint64_t contest_problem_id
+    old_mysql::ConnectionView& mysql, uint64_t submission_owner, uint64_t contest_problem_id
 ) {
     // TODO: update the initial_final if the submission is half-judged (only
     // initial_status is set and method of choosing the final submission does not show points)
@@ -71,9 +73,9 @@ static void update_contest_final(
                               "FROM contest_problems WHERE id=?");
     stmt.bind_and_execute(contest_problem_id);
 
-    decltype(ContestProblem::method_of_choosing_final_submission
+    decltype(OldContestProblem::method_of_choosing_final_submission
     ) method_of_choosing_final_submission;
-    decltype(ContestProblem::score_revealing) score_revealing;
+    decltype(OldContestProblem::score_revealing) score_revealing;
     stmt.res_bind_all(method_of_choosing_final_submission, score_revealing);
     if (not stmt.next()) {
         return; // Such contest problem does not exist (probably had just
@@ -94,7 +96,7 @@ static void update_contest_final(
     uint64_t new_final_id = 0;
     uint64_t new_initial_final_id = 0;
     switch (method_of_choosing_final_submission) {
-    case ContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING: {
+    case OldContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING: {
         // Choose the new final submission
         stmt = mysql.prepare("SELECT id FROM submissions USE INDEX(final1) "
                              "WHERE owner=? AND contest_problem_id=?"
@@ -110,7 +112,7 @@ static void update_contest_final(
         new_initial_final_id = new_final_id;
         break;
     }
-    case ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE: {
+    case OldContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE: {
         // Such index: (final_candidate, owner, contest_problem_id, score DESC,
         // full_status, id DESC) is what we need, but MySQL does not support it,
         // so the below workaround is used to select the final submission
@@ -127,7 +129,7 @@ static void update_contest_final(
             return unset_all_finals();
         }
 
-        EnumVal<Submission::Status> full_status{};
+        EnumVal<OldSubmission::Status> full_status{};
         stmt = mysql.prepare("SELECT full_status "
                              "FROM submissions USE INDEX(final2) "
                              "WHERE final_candidate=1 AND owner=?"
@@ -149,12 +151,12 @@ static void update_contest_final(
 
         // Choose the new initial final submission
         switch (score_revealing) {
-        case ContestProblem::ScoreRevealing::NONE: {
+        case OldContestProblem::ScoreRevealing::NONE: {
             // Such index: (final_candidate, owner, contest_problem_id,
             // initial_status, id DESC) is what we need, but MySQL does not
             // support it, so the below workaround is used to select the initial
             // final submission efficiently
-            EnumVal<Submission::Status> initial_status{};
+            EnumVal<OldSubmission::Status> initial_status{};
             stmt = mysql.prepare("SELECT initial_status "
                                  "FROM submissions USE INDEX(initial_final2) "
                                  "WHERE final_candidate=1 AND owner=?"
@@ -176,12 +178,12 @@ static void update_contest_final(
             break;
         }
 
-        case ContestProblem::ScoreRevealing::ONLY_SCORE: {
+        case OldContestProblem::ScoreRevealing::ONLY_SCORE: {
             // Such index: (final_candidate, owner, contest_problem_id,
             // score DESC, initial_status, id DESC) is what we need, but MySQL
             // does not support it, so the below workaround is used to select
             // the initial final submission efficiently
-            EnumVal<Submission::Status> initial_status{};
+            EnumVal<OldSubmission::Status> initial_status{};
             stmt = mysql.prepare("SELECT initial_status "
                                  "FROM submissions USE INDEX(initial_final3) "
                                  "WHERE final_candidate=1 AND owner=?"
@@ -205,7 +207,7 @@ static void update_contest_final(
             break;
         }
 
-        case ContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: {
+        case OldContestProblem::ScoreRevealing::SCORE_AND_FULL_STATUS: {
             new_initial_final_id = new_final_id;
             break;
         }
@@ -242,14 +244,15 @@ void update_final_lock(
     }
 
     // This acts as a lock that serializes updating finals
-    mysql
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    old_mysql
         .prepare("UPDATE submissions SET id=id "
                  "WHERE owner=? AND problem_id=? ORDER BY id LIMIT 1")
         .bind_and_execute(submission_owner, problem_id);
 }
 
 void update_final(
-    mysql::Connection& mysql,
+    sim::mysql::Connection& mysql,
     std::optional<uint64_t> submission_owner,
     uint64_t problem_id,
     std::optional<uint64_t> contest_problem_id,
@@ -261,20 +264,22 @@ void update_final(
         return; // Nothing to do with System submission
     }
 
-    auto impl = [&] {
-        update_problem_final(mysql, submission_owner.value(), problem_id);
+    auto impl = [&](old_mysql::ConnectionView& old_mysql) {
+        update_problem_final(old_mysql, submission_owner.value(), problem_id);
         if (contest_problem_id.has_value()) {
-            update_contest_final(mysql, submission_owner.value(), contest_problem_id.value());
+            update_contest_final(old_mysql, submission_owner.value(), contest_problem_id.value());
         }
     };
 
     if (make_transaction) {
-        auto transaction = mysql.start_transaction();
+        auto transaction = mysql.start_repeatable_read_transaction();
         update_final_lock(mysql, submission_owner, problem_id);
-        impl();
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        impl(old_mysql);
         transaction.commit();
     } else {
-        impl();
+        auto old_mysql = old_mysql::ConnectionView{mysql};
+        impl(old_mysql);
     }
 }
 

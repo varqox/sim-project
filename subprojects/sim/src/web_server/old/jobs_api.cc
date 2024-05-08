@@ -6,13 +6,13 @@
 #include <simlib/time_format_conversions.hh>
 #include <type_traits>
 
-using sim::jobs::Job;
-using sim::problems::Problem;
+using sim::jobs::OldJob;
+using sim::problems::OldProblem;
 
 namespace web_server::old {
 
-static constexpr const char* job_type_str(Job::Type type) noexcept {
-    using JT = Job::Type;
+static constexpr const char* job_type_str(OldJob::Type type) noexcept {
+    using JT = OldJob::Type;
 
     switch (type) {
     case JT::JUDGE_SUBMISSION: return "Judge submission";
@@ -51,7 +51,7 @@ void Sim::api_jobs() {
 
     // We may read data several times (permission checking), so transaction is
     // used to ensure data consistency
-    auto transaction = mysql.start_transaction();
+    auto transaction = mysql.start_repeatable_read_transaction();
 
     // Get the overall permissions to the job queue
     jobs_perms = jobs_get_overall_permissions();
@@ -130,9 +130,10 @@ void Sim::api_jobs() {
         } else if (cond == '=' and ~mask & ID_COND) {
             select_specified_job = true;
             // Get job information to grant permissions
-            EnumVal<Job::Type> jtype{};
-            mysql::Optional<decltype(Job::aux_id)::value_type> aux_id;
-            auto stmt = mysql.prepare("SELECT type, aux_id FROM jobs WHERE id=?");
+            EnumVal<OldJob::Type> jtype{};
+            old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
+            auto old_mysql = old_mysql::ConnectionView{mysql};
+            auto stmt = old_mysql.prepare("SELECT type, aux_id FROM jobs WHERE id=?");
             stmt.bind_and_execute(arg_id);
             stmt.res_bind_all(jtype, aux_id);
             if (not stmt.next()) {
@@ -168,17 +169,17 @@ void Sim::api_jobs() {
                 " AND j.aux_id=",
                 arg_id,
                 " AND j.type IN(",
-                EnumVal(Job::Type::ADD_PROBLEM).to_int(),
+                EnumVal(OldJob::Type::ADD_PROBLEM).to_int(),
                 ',',
-                EnumVal(Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(),
+                EnumVal(OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(),
                 ',',
-                EnumVal(Job::Type::REUPLOAD_PROBLEM).to_int(),
+                EnumVal(OldJob::Type::REUPLOAD_PROBLEM).to_int(),
                 ',',
-                EnumVal(Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(),
+                EnumVal(OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(),
                 ',',
-                EnumVal(Job::Type::DELETE_PROBLEM).to_int(),
+                EnumVal(OldJob::Type::DELETE_PROBLEM).to_int(),
                 ',',
-                EnumVal(Job::Type::EDIT_PROBLEM).to_int(),
+                EnumVal(OldJob::Type::EDIT_PROBLEM).to_int(),
                 ')'
             );
 
@@ -193,9 +194,9 @@ void Sim::api_jobs() {
                 " AND j.aux_id=",
                 arg_id,
                 " AND (j.type=",
-                EnumVal(Job::Type::JUDGE_SUBMISSION).to_int(),
+                EnumVal(OldJob::Type::JUDGE_SUBMISSION).to_int(),
                 " OR j.type=",
-                EnumVal(Job::Type::REJUDGE_SUBMISSION).to_int(),
+                EnumVal(OldJob::Type::REJUDGE_SUBMISSION).to_int(),
                 ')'
             );
 
@@ -220,16 +221,17 @@ void Sim::api_jobs() {
 
     // Execute query
     qfields.append(qwhere, " ORDER BY j.id DESC LIMIT ", rows_limit);
-    auto res = mysql.query(qfields);
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto res = old_mysql.query(qfields);
 
     append_column_names();
 
     while (res.next()) {
-        EnumVal<Job::Type> job_type{
-            WONT_THROW(str2num<Job::Type::UnderlyingType>(res[JTYPE]).value())
+        EnumVal<OldJob::Type> job_type{
+            WONT_THROW(str2num<OldJob::Type::UnderlyingType>(res[JTYPE]).value())
         };
-        EnumVal<Job::Status> job_status{
-            WONT_THROW(str2num<Job::Status::UnderlyingType>(res[JSTATUS]).value())
+        EnumVal<OldJob::Status> job_status{
+            WONT_THROW(str2num<OldJob::Status::UnderlyingType>(res[JSTATUS]).value())
         };
 
         // clang-format off
@@ -240,12 +242,12 @@ void Sim::api_jobs() {
 
         // Status: (CSS class, text)
         switch (job_status) {
-        case Job::Status::PENDING:
-        case Job::Status::NOTICED_PENDING: append(R"(["","Pending"],)"); break;
-        case Job::Status::IN_PROGRESS: append(R"(["yellow","In progress"],)"); break;
-        case Job::Status::DONE: append(R"(["green","Done"],)"); break;
-        case Job::Status::FAILED: append(R"(["red","Failed"],)"); break;
-        case Job::Status::CANCELED: append(R"(["blue","Canceled"],)"); break;
+        case OldJob::Status::PENDING:
+        case OldJob::Status::NOTICED_PENDING: append(R"(["","Pending"],)"); break;
+        case OldJob::Status::IN_PROGRESS: append(R"(["yellow","In progress"],)"); break;
+        case OldJob::Status::DONE: append(R"(["green","Done"],)"); break;
+        case OldJob::Status::FAILED: append(R"(["red","Failed"],)"); break;
+        case OldJob::Status::CANCELED: append(R"(["blue","Canceled"],)"); break;
         }
 
         append(res[PRIORITY], ',');
@@ -269,22 +271,22 @@ void Sim::api_jobs() {
         append('{');
 
         switch (job_type) {
-        case Job::Type::JUDGE_SUBMISSION:
-        case Job::Type::REJUDGE_SUBMISSION: {
+        case OldJob::Type::JUDGE_SUBMISSION:
+        case OldJob::Type::REJUDGE_SUBMISSION: {
             append("\"problem\":", sim::jobs::extract_dumped_string(res[JINFO]));
             append(",\"submission\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::ADD_PROBLEM:
-        case Job::Type::REUPLOAD_PROBLEM:
-        case Job::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
-        case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: {
-            auto ptype_to_str = [](Problem::Type& ptype) {
+        case OldJob::Type::ADD_PROBLEM:
+        case OldJob::Type::REUPLOAD_PROBLEM:
+        case OldJob::Type::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+        case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: {
+            auto ptype_to_str = [](OldProblem::Type& ptype) {
                 switch (ptype) {
-                case Problem::Type::PUBLIC: return "public";
-                case Problem::Type::PRIVATE: return "private";
-                case Problem::Type::CONTEST_ONLY: return "contest only";
+                case OldProblem::Type::PUBLIC: return "public";
+                case OldProblem::Type::PRIVATE: return "private";
+                case OldProblem::Type::CONTEST_ONLY: return "contest only";
                 }
                 return "unknown";
             };
@@ -323,49 +325,49 @@ void Sim::api_jobs() {
             break;
         }
 
-        case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: {
+        case OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: {
             append("\"contest problem\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::DELETE_PROBLEM: {
+        case OldJob::Type::DELETE_PROBLEM: {
             append("\"problem\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::MERGE_USERS: {
+        case OldJob::Type::MERGE_USERS: {
             append("\"deleted user\":", res[AUX_ID]);
             sim::jobs::MergeUsersInfo info(res[JINFO]);
             append(",\"target user\":", info.target_user_id);
             break;
         }
 
-        case Job::Type::DELETE_USER: {
+        case OldJob::Type::DELETE_USER: {
             append("\"user\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::DELETE_CONTEST: {
+        case OldJob::Type::DELETE_CONTEST: {
             append("\"contest\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::DELETE_CONTEST_ROUND: {
+        case OldJob::Type::DELETE_CONTEST_ROUND: {
             append("\"contest round\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::DELETE_CONTEST_PROBLEM: {
+        case OldJob::Type::DELETE_CONTEST_PROBLEM: {
             append("\"contest problem\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: {
+        case OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: {
             append("\"problem\":", res[AUX_ID]);
             break;
         }
 
-        case Job::Type::MERGE_PROBLEMS: {
+        case OldJob::Type::MERGE_PROBLEMS: {
             append("\"deleted problem\":", res[AUX_ID]);
             sim::jobs::MergeProblemsInfo info(res[JINFO]);
             append(",\"target problem\":", info.target_problem_id);
@@ -376,15 +378,15 @@ void Sim::api_jobs() {
             break;
         }
 
-        case Job::Type::CHANGE_PROBLEM_STATEMENT: {
+        case OldJob::Type::CHANGE_PROBLEM_STATEMENT: {
             append("\"problem\":", res[AUX_ID]);
             sim::jobs::ChangeProblemStatementInfo info(res[JINFO]);
             append(",\"new statement path\":", json_stringify(info.new_statement_path));
             break;
         }
 
-        case Job::Type::DELETE_FILE: // Nothing to show
-        case Job::Type::EDIT_PROBLEM: break;
+        case OldJob::Type::DELETE_FILE: // Nothing to show
+        case OldJob::Type::EDIT_PROBLEM: break;
         }
         append("},");
 
@@ -399,7 +401,7 @@ void Sim::api_jobs() {
         if (uint(perms & PERM::DOWNLOAD_LOG)) {
             append('r');
         }
-        using JT = Job::Type;
+        using JT = OldJob::Type;
         if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
             is_one_of(
                 job_type,
@@ -443,7 +445,7 @@ void Sim::api_jobs() {
 
 void Sim::api_job() {
     STACK_UNWINDING_MARK;
-    using JT = Job::Type;
+    using JT = OldJob::Type;
 
     if (not session.has_value()) {
         return api_error403();
@@ -454,15 +456,16 @@ void Sim::api_job() {
         return api_error400();
     }
 
-    mysql::Optional<uint64_t> file_id;
-    mysql::Optional<InplaceBuff<32>> jcreator;
-    mysql::Optional<decltype(Job::aux_id)::value_type> aux_id;
+    old_mysql::Optional<uint64_t> file_id;
+    old_mysql::Optional<InplaceBuff<32>> jcreator;
+    old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
     InplaceBuff<256> jinfo;
     EnumVal<JT> jtype{};
-    EnumVal<Job::Status> jstatus{};
+    EnumVal<OldJob::Status> jstatus{};
 
-    auto stmt = mysql.prepare("SELECT file_id, creator, type, status, aux_id, info "
-                              "FROM jobs WHERE id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("SELECT file_id, creator, type, status, aux_id, info "
+                                  "FROM jobs WHERE id=?");
     stmt.bind_and_execute(jobs_jid);
     stmt.res_bind_all(file_id, jcreator, jtype, jstatus, aux_id, jinfo);
     if (not stmt.next()) {
@@ -518,11 +521,12 @@ void Sim::api_job_cancel() {
     }
 
     // Cancel job
-    mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-        .bind_and_execute(EnumVal(Job::Status::CANCELED), jobs_jid);
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    old_mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
+        .bind_and_execute(EnumVal(OldJob::Status::CANCELED), jobs_jid);
 }
 
-void Sim::api_job_restart(Job::Type job_type, StringView job_info) {
+void Sim::api_job_restart(OldJob::Type job_type, StringView job_info) {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
 
@@ -554,16 +558,19 @@ void Sim::api_job_download_log() {
         concat_tostr("attachment; filename=job-", jobs_jid, "-log");
 
     // Fetch the log
-    auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
+    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto stmt = old_mysql.prepare("SELECT data FROM jobs WHERE id=?");
     stmt.bind_and_execute(jobs_jid);
     stmt.res_bind_all(resp.content);
     throw_assert(stmt.next());
 }
 
-void Sim::api_job_download_uploaded_package(std::optional<uint64_t> file_id, Job::Type job_type) {
+void Sim::api_job_download_uploaded_package(
+    std::optional<uint64_t> file_id, OldJob::Type job_type
+) {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
-    using JT = Job::Type;
+    using JT = OldJob::Type;
 
     if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or
         not is_one_of(
@@ -583,11 +590,11 @@ void Sim::api_job_download_uploaded_package(std::optional<uint64_t> file_id, Job
 }
 
 void Sim::api_job_download_uploaded_statement(
-    std::optional<uint64_t> file_id, Job::Type job_type, StringView info
+    std::optional<uint64_t> file_id, OldJob::Type job_type, StringView info
 ) {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
-    using JT = Job::Type;
+    using JT = OldJob::Type;
 
     if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) or
         job_type != JT::CHANGE_PROBLEM_STATEMENT)

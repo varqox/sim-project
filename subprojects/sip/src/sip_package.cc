@@ -121,8 +121,8 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
     using sim::judge::language_suite::Suite;
 
     auto& generator_suite = [&]() -> Suite& {
-        Suite* generator_suite;
-        auto compile_generator = [&generator_suite](FilePath generator) {
+        Suite* gen_suite;
+        auto compile_generator = [&gen_suite](FilePath generator) {
             auto compilation_cache = compilation_cache::get_cache();
             auto generator_path = concat_tostr(generator);
             if (!has_prefix(generator_path, "/")) {
@@ -133,7 +133,7 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
             if (log_compilation) {
                 stdlog("compiling ", generator, "...").flush_no_nl();
             }
-            auto cres = generator_suite->compile(
+            auto cres = gen_suite->compile(
                 generator_path,
                 {
                     .time_limit = GENERATOR_COMPILATION_TIME_LIMIT,
@@ -166,7 +166,7 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
         auto set_and_compile_bash_generator = [&](StringView command) {
             // Cache bash suite
             static auto bash_suite = sim::judge::language_suite::Bash{};
-            generator_suite = &bash_suite;
+            gen_suite = &bash_suite;
             auto tmp_file = TemporaryFile{"/tmp/sip-bash-generator.XXXXXX"};
             put_file_contents(tmp_file.path(), command);
             compile_generator(tmp_file.path());
@@ -176,7 +176,7 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
             set_and_compile_bash_generator(
                 from_unsafe{concat_tostr(substring(test.generator, 3), ' ', test.generator_args)}
             );
-            return *generator_suite;
+            return *gen_suite;
         }
 
         auto generator_lang = sim::filename_to_lang(test.generator);
@@ -199,20 +199,20 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test, CStringV
             set_and_compile_bash_generator(
                 from_unsafe{concat_tostr(test.generator, ' ', test.generator_args)}
             );
-            return *generator_suite;
+            return *gen_suite;
         }
 
         // Cache suites
         static std::map<sim::SolutionLanguage, std::unique_ptr<Suite>> suites;
         auto it = suites.find(generator_lang);
         if (it != suites.end()) {
-            generator_suite = it->second.get();
+            gen_suite = it->second.get();
         } else {
-            generator_suite = suites.emplace(generator_lang, sim::lang_to_suite(generator_lang))
-                                  .first->second.get();
+            gen_suite = suites.emplace(generator_lang, sim::lang_to_suite(generator_lang))
+                            .first->second.get();
         }
         compile_generator(test.generator.to_string());
-        return *generator_suite;
+        return *gen_suite;
     }();
 
     stdlog("\033[2K\033[Ggenerating ", test.name, ".in...").flush_no_nl();
@@ -365,7 +365,7 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test, SipJudgeLo
         {
             .status = tr_status,
             .comment = res.comment,
-            .score = 1,
+            .score = score,
             .program =
                 {
                     .runtime = sres.runtime,
@@ -1076,7 +1076,7 @@ static void compile_tex_file(StringView file) {
 
         auto res_ok = std::visit(
             overloaded{
-                [](sandbox::result::Ok res_ok) { return res_ok; },
+                [](sandbox::result::Ok res_ok_) { return res_ok_; },
                 [](sandbox::result::Error res_err) -> sandbox::result::Ok {
                     throw SipError("sandbox error: ", res_err.description);
                 }

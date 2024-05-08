@@ -426,7 +426,9 @@ public:
             std::optional<StringView> prev_url_a;
             foreach_handler(
                 pref_map,
-                [&, &pref_map = pref_map](StringView pref_a, StringView suff_a, StringView url_a) {
+                [&,
+                 &captured_pref_map =
+                     pref_map](StringView pref_a, StringView suff_a, StringView url_a) {
                     // Single url_pattern with two handlers is also a collision
                     if (std::exchange(prev_url_a, url_a) == url_a) {
                         debuglog("collision: ", url_a, ' ', url_a);
@@ -434,7 +436,7 @@ public:
                     }
 
                     foreach_handler(
-                        pref_map,
+                        captured_pref_map,
                         [&](StringView pref_b, StringView suff_b, StringView url_b) {
                             // Consider each pair only once and skip pairs of the form
                             // (x, x)

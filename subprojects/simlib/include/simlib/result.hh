@@ -9,7 +9,7 @@ template <class T>
 struct Ok {
     T val;
 
-    constexpr explicit Ok(T val) noexcept : val{std::move(val)} {}
+    constexpr explicit Ok(T val_) noexcept : val{std::move(val_)} {}
 
     Ok(const Ok&) = default;
     Ok(Ok&&) noexcept = default;
@@ -19,7 +19,7 @@ struct Ok {
 
     template <class U, std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr Ok(Ok<U>&& other) noexcept : val{std::move(other.val)} {}
+    constexpr Ok(Ok<U>&& other) noexcept : val{std::move(other).val} {}
 };
 
 template <>
@@ -62,7 +62,7 @@ template <class T>
 struct Err {
     T err;
 
-    constexpr explicit Err(T err) noexcept : err{std::move(err)} {}
+    constexpr explicit Err(T err_) noexcept : err{std::move(err_)} {}
 
     Err(const Err&) = default;
     Err(Err&&) noexcept = default;
@@ -72,7 +72,7 @@ struct Err {
 
     template <class U, std::enable_if_t<std::is_constructible_v<T, U&&>, int> = 0>
     // NOLINTNEXTLINE(google-explicit-constructor)
-    constexpr Err(Err<U>&& other) noexcept : err{std::move(other.err)} {}
+    constexpr Err(Err<U>&& other) noexcept : err{std::move(other).err} {}
 };
 
 template <>

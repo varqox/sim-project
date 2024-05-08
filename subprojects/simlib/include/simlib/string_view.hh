@@ -2,12 +2,12 @@
 
 #include <cassert>
 #include <cstring>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <simlib/from_unsafe.hh>
 #include <simlib/to_string.hh>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 
 template <class Char>
@@ -98,6 +98,8 @@ public:
     StringBase& operator=(T&&) = delete; // Protect from assigning unsafe data
 
     ~StringBase() = default;
+
+    explicit constexpr operator std::string_view() const noexcept { return {data(), size()}; }
 
     // Returns whether the StringBase is empty (size() == 0)
     [[nodiscard]] constexpr bool empty() const noexcept { return (len == 0); }
@@ -462,6 +464,9 @@ public:
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr StringView(StringBase&& s) noexcept : StringBase(s) {}
 
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr StringView(std::string_view sv) noexcept : StringBase(sv.data(), sv.size()) {}
+
     template <
         class T,
         std::enable_if_t<
@@ -710,6 +715,9 @@ public:
     // construction of CStringView
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr operator StringView() && noexcept { return {data(), size()}; }
+
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    constexpr operator std::string_view() const noexcept { return {data(), size()}; }
 
     template <
         class T,
