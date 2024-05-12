@@ -146,7 +146,7 @@ jobs:
       - run: dnf install --quiet --assumeyes git
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: dnf install --assumeyes g++ mariadb-server mariadb-connector-c-devel libseccomp-devel libzip-devel libcap-devel rustc fpc pkgconf meson gtest-devel gmock-devel libasan
+        run: dnf install --assumeyes g++ mariadb-server mariadb-connector-c-devel libseccomp-devel libzip-devel libcap-devel rustc fpc pkgconf meson gtest-devel gmock-devel libasan libubsan
       - run: chown tester:tester -R .
       - run: su tester -c 'meson setup release-build/ -Dbuildtype=release -Dbuild=all -Dinstall=sim -Dcpp_args='-D_GLIBCXX_ASSERTIONS' -Db_sanitize=address,undefined -Db_lundef=false'
       - run: su tester -c 'meson compile -C release-build/'
