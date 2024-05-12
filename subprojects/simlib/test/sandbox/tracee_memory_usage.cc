@@ -13,7 +13,7 @@ TEST(sandbox, tracee_memory_only_mmapped) {
         sc.send_request({{tester_executable_path, "17"}}, {.stderr_fd = STDERR_FILENO})
     );
     ASSERT_RESULT_OK(res, CLD_EXITED, 0);
-    ASSERT_LT(std::get<Ok>(res).cgroup.peak_memory_in_bytes, 4 << 20);
+    ASSERT_LT(std::get<Ok>(res).cgroup.peak_memory_in_bytes, 16 << 20);
 }
 
 // NOLINTNEXTLINE

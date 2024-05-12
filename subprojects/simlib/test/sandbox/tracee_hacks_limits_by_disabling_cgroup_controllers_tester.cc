@@ -19,7 +19,7 @@ int main() {
 
     // Check that controllers disabled successfully
     throw_assert(can_create_child());
-    try_use_lots_of_memory(10 << 20);
+    try_use_lots_of_memory(33 << 20);
 
     // Enable controllers for the supervisor to not error-out
     put_file_contents(tracee_cgroup_path + "/../cgroup.subtree_control", "+pids +memory");
