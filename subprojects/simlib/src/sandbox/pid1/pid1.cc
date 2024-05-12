@@ -23,7 +23,7 @@
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/timespec_arithmetic.hh>
-#include <simlib/ubsan.hh>
+#include <simlib/undefined_sanitizer.hh>
 #include <sys/capability.h>
 #include <sys/mount.h>
 #include <sys/prctl.h>

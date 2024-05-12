@@ -2,6 +2,7 @@
 #include "assert_result.hh"
 
 #include <chrono>
+#include <simlib/address_sanitizer.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/time_format_conversions.hh>
 #include <unistd.h>
@@ -31,20 +32,20 @@ TEST(sandbox, process_num_limit) {
         0
     );
 
-// AddressSanitizer uses threads internally making tester fail with such low limit
-#if !(__has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__))
-    ASSERT_RESULT_OK(
-        sc.await_result(sc.send_request(
-            {{tester_executable_path, "pids_limit"}},
-            {
-                .stderr_fd = STDERR_FILENO,
-                .cgroup = {.process_num_limit = 1},
-            }
-        )),
-        CLD_EXITED,
-        0
-    );
-#endif
+    // AddressSanitizer uses threads internally making tester fail with such low limit
+    if constexpr (!ADDRESS_SANITIZER) {
+        ASSERT_RESULT_OK(
+            sc.await_result(sc.send_request(
+                {{tester_executable_path, "pids_limit"}},
+                {
+                    .stderr_fd = STDERR_FILENO,
+                    .cgroup = {.process_num_limit = 1},
+                }
+            )),
+            CLD_EXITED,
+            0
+        );
+    }
 }
 
 // NOLINTNEXTLINE
