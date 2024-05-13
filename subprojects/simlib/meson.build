@@ -145,7 +145,6 @@ simlib = library('simlib',
         'src/logger.cc',
         'src/path.cc',
         'src/proc_stat_file_contents.cc',
-        'src/proc_status_file.cc',
         'src/process.cc',
         'src/random.cc',
         'src/read_exact.cc',
@@ -334,7 +333,6 @@ tests = {
     'test/opened_temporary_file.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
     'test/path.cc': {},
     'test/proc_stat_file_contents.cc': {},
-    'test/proc_status_file.cc': {},
     'test/process.cc': {},
     'test/random.cc': {},
     'test/random_bit_vec.cc': {},
@@ -355,28 +353,28 @@ tests = {
     'test/sandbox/external/sigpipe_send_recv.cc': {},
     'test/sandbox/invalid_request.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
     'test/sandbox/killing_request.cc': {},
-    'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee.cc': {'tester': 'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee_tester.cc'},
+    'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee.cc': {'tester-without-address-sanitizer': 'test/sandbox/sandbox_closes_std_file_descriptors_after_spawning_tracee_tester.cc'}, # this test cannot be run with address sanitizer because of messing with standard file descriptors
     'test/sandbox/sandbox_closes_unnecessary_file_descriptors.cc': {'tester': 'test/sandbox/sandbox_closes_unnecessary_file_descriptors_tester.cc'},
-    'test/sandbox/sandbox_mount_namespace.cc': {'tester': 'test/sandbox/sandbox_mount_namespace_tester.cc', 'dependencies': [gtest_main_dep, gmock_dep], 'priority': 10},
-    'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr.cc': {'tester': 'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr_tester.cc'},
+    'test/sandbox/sandbox_mount_namespace.cc': {'tester-without-address-sanitizer': 'test/sandbox/sandbox_mount_namespace_tester.cc', 'dependencies': [gtest_main_dep, gmock_dep], 'priority': 10}, # this test test mount namespaces especially "no mount operations", address sanitizer requires /proc to be remounted making such test infeasible
+    'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr.cc': {'tester-without-address-sanitizer': 'test/sandbox/sandbox_opens_dev_null_as_default_stdin_stdout_stderr_tester.cc'}, # this test cannot be run with address sanitizer because of messing with standard file descriptors
     'test/sandbox/sandbox_places_tracee_in_a_separate_session_and_process_group.cc': {'tester': 'test/sandbox/sandbox_places_tracee_in_a_separate_session_and_process_group_tester.cc'},
     'test/sandbox/sandbox_reports_unexpected_supervisor_process_death.cc': {'dependencies': [gtest_main_dep, gmock_dep]},
     'test/sandbox/sandbox_supervisor_does_not_run_as_root.cc': {'dependencies': [gtest_dep], 'args': sandbox_supervisor},
     'test/sandbox/sandbox_supervisor_validates_arguments.cc': {'dependencies': [gtest_dep], 'args': sandbox_supervisor},
     'test/sandbox/sandbox_terminates_early_upon_client_process_death.cc': {},
-    'test/sandbox/sandbox_uses_cgroup_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_cgroup_namespace_tester.cc'},
+    'test/sandbox/sandbox_uses_cgroup_namespace.cc': {'tester-without-address-sanitizer': 'test/sandbox/sandbox_uses_cgroup_namespace_tester.cc'}, # this test cannot be run with address sanitizer because it requires not remounted /proc
     'test/sandbox/sandbox_uses_cgroups.cc': {'tester': 'test/sandbox/sandbox_uses_cgroups_tester.cc'},
     'test/sandbox/sandbox_uses_ipc_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_ipc_namespace_tester.cc'},
     'test/sandbox/sandbox_uses_net_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_net_namespace_tester.cc'},
-    'test/sandbox/sandbox_uses_pid_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_pid_namespace_tester.cc'},
+    'test/sandbox/sandbox_uses_pid_namespace.cc': {'tester-without-address-sanitizer': 'test/sandbox/sandbox_uses_pid_namespace_tester.cc'}, # this test cannot be run with address sanitizer because it requires not remounted /proc
     'test/sandbox/sandbox_uses_time_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_time_namespace_tester.cc'},
-    'test/sandbox/sandbox_uses_user_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_user_namespace_tester.cc'},
+    'test/sandbox/sandbox_uses_user_namespace.cc': {'tester-without-address-sanitizer': 'test/sandbox/sandbox_uses_user_namespace_tester.cc'}, # this test cannot be run with address sanitized because it requires not remounted /proc
     'test/sandbox/sandbox_uses_uts_namespace.cc': {'tester': 'test/sandbox/sandbox_uses_uts_namespace_tester.cc'},
     'test/sandbox/si.cc': {},
     'test/sandbox/simple.cc': {},
     'test/sandbox/tracee_cgroup_limits.cc': {'tester': 'test/sandbox/tracee_cgroup_limits_tester.cc'},
     'test/sandbox/tracee_cpu_time_limit.cc': {'tester': 'test/sandbox/tracee_cpu_time_limit_tester.cc', 'dependencies': [gtest_main_dep, gmock_dep]},
-    'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers.cc': {'tester': 'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers_tester.cc'},
+    'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers.cc': {'tester-without-address-sanitizer': 'test/sandbox/tracee_hacks_limits_by_disabling_cgroup_controllers_tester.cc'}, # this test fails with address sanitizer because of low memory limit
     'test/sandbox/tracee_is_killed_upon_supervisor_process_death.cc': {},
     'test/sandbox/tracee_memory_usage.cc': {'tester': 'test/sandbox/tracee_memory_usage_tester.cc'},
     'test/sandbox/tracee_no_new_privs.cc': {'tester': 'test/sandbox/tracee_no_new_privs_tester.cc'},
@@ -433,12 +431,14 @@ foreach test_src, args : tests
     foreach key, value : args
         if key == 'dependencies'
             test_executable_deps = value
-        elif key == 'tester'
+        elif key == 'tester' or key == 'tester-without-address-sanitizer'
             tester = executable(value.underscorify(),
                 implicit_include_directories : false,
                 sources : value,
                 build_by_default : false,
                 dependencies : simlib_dep,
+                cpp_args : key == 'tester-without-address-sanitizer' ? ['-fno-sanitize=address'] : [],
+                link_args : key == 'tester-without-address-sanitizer' ? ['-fno-sanitize=address'] : [],
             )
             tester_dep = [tester]
             test_kwargs += {

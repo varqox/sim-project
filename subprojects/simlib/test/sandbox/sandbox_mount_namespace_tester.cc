@@ -8,9 +8,11 @@
 #include <simlib/file_perms.hh>
 #include <simlib/from_unsafe.hh>
 #include <simlib/macros/throw.hh>
+#include <simlib/read_file.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
 #include <simlib/throw_assert.hh>
+#include <simlib/write_file.hh>
 #include <string_view>
 #include <sys/mount.h>
 #include <sys/random.h>
@@ -24,31 +26,6 @@ void no_operations_no_new_root_mount_path() {
     int fd = open("/proc/self/exe", O_RDONLY | O_CLOEXEC);
     throw_assert(fd >= 0);
     throw_assert(close(fd) == 0);
-}
-
-std::string read_file(FilePath path) {
-    auto fd = FileDescriptor{path, O_RDONLY | O_CLOEXEC};
-    throw_assert(fd >= 0);
-    std::string res;
-    std::array<char, 8192> buff;
-    for (;;) {
-        auto len = read(fd, buff.data(), buff.size());
-        throw_assert(len >= 0);
-        if (len == 0) {
-            return res;
-        }
-        res.append(buff.data(), buff.data() + len);
-    }
-}
-
-void write_file(FilePath path, StringView data, mode_t mode = S_0644) {
-    auto fd = FileDescriptor{path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode};
-    throw_assert(fd >= 0);
-    auto res = write(fd, data.data(), data.size());
-    if (res < 0) {
-        THROW("write()", errmsg());
-    }
-    throw_assert(res == static_cast<ssize_t>(data.size()));
 }
 
 void test_exec(FilePath path_for_executable, bool expect_execable) {

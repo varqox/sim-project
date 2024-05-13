@@ -1,5 +1,6 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
+#include "mount_operations_mount_proc_if_running_under_leak_sanitizer.hh"
 
 #include <chrono>
 #include <simlib/address_sanitizer.hh>
@@ -14,7 +15,20 @@ using sandbox::result::Ok;
 TEST(sandbox, no_limit) {
     auto sc = sandbox::spawn_supervisor();
     ASSERT_RESULT_OK(
-        sc.await_result(sc.send_request({{tester_executable_path}}, {.stderr_fd = STDERR_FILENO})),
+        sc.await_result(sc.send_request(
+            {{tester_executable_path}},
+            {
+                .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+            }
+        )),
         CLD_EXITED,
         0
     );
@@ -24,11 +38,37 @@ TEST(sandbox, no_limit) {
 TEST(sandbox, process_num_limit) {
     auto sc = sandbox::spawn_supervisor();
     ASSERT_RESULT_ERROR(
-        sc.await_result(sc.send_request({{"/bin/true"}}, {.cgroup = {.process_num_limit = 0}})),
+        sc.await_result(sc.send_request(
+            {{"/bin/true"}},
+            {
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+                .cgroup = {.process_num_limit = 0},
+            }
+        )),
         "pid1: clone3() - Resource temporarily unavailable (os error 11)"
     );
     ASSERT_RESULT_OK(
-        sc.await_result(sc.send_request({{"/bin/true"}}, {.cgroup = {.process_num_limit = 1}})),
+        sc.await_result(sc.send_request(
+            {{"/bin/true"}},
+            {
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+                .cgroup = {.process_num_limit = 1},
+            }
+        )),
         CLD_EXITED,
         0
     );
@@ -39,6 +79,14 @@ TEST(sandbox, process_num_limit) {
             {{tester_executable_path, "pids_limit"}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
                 .cgroup = {.process_num_limit = 1 + LEAK_SANITIZER},
             }
         )),
@@ -53,11 +101,21 @@ TEST(sandbox, memory_limit) {
     ASSERT_RESULT_ERROR(
         sc.await_result(sc.send_request(
             {{"/bin/true"}},
-            {.cgroup =
-                 {
-                     .memory_limit_in_bytes = 0,
-                     .swap_limit_in_bytes = 0,
-                 }}
+            {
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+                .cgroup =
+                    {
+                        .memory_limit_in_bytes = 0,
+                        .swap_limit_in_bytes = 0,
+                    },
+            }
         )),
         "tracee process died unexpectedly before execveat() without an error message: killed by "
         "signal KILL - Killed"
@@ -65,11 +123,21 @@ TEST(sandbox, memory_limit) {
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
             {{"/bin/true"}},
-            {.cgroup =
-                 {
-                     .memory_limit_in_bytes = 2 << 20,
-                     .swap_limit_in_bytes = 0,
-                 }}
+            {
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+                .cgroup =
+                    {
+                        .memory_limit_in_bytes = 2 << 20,
+                        .swap_limit_in_bytes = 0,
+                    },
+            }
         )),
         CLD_EXITED,
         0
@@ -79,6 +147,14 @@ TEST(sandbox, memory_limit) {
             {{tester_executable_path, "check_memory_limit"}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
                 .cgroup = {.memory_limit_in_bytes = 2 << 20, .swap_limit_in_bytes = 0},
             }
         )),
@@ -95,6 +171,14 @@ TEST(sandbox, process_num_and_memory_limit) {
             {{tester_executable_path, "pids_limit", "check_memory_limit"}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
                 .cgroup =
                     {
                         .process_num_limit = 1 + LEAK_SANITIZER,
@@ -115,6 +199,14 @@ TEST(sandbox, cpu_max_bandwidth) {
         {{tester_executable_path, "cpu_max_bandwidth"}},
         {
             .stderr_fd = STDERR_FILENO,
+            .linux_namespaces =
+                {
+                    .mount =
+                        {
+                            .operations =
+                                mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                        },
+                },
             .cgroup =
                 {
                     .cpu_max_bandwidth =

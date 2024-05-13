@@ -1,7 +1,7 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
 
-#include <simlib/leak_sanitizer.hh>
+#include <simlib/merge.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <unistd.h>
 
@@ -15,8 +15,8 @@ TEST(sandbox, tracee_hacks_limits_by_disabling_cgroup_controllers) {
                 .stderr_fd = STDERR_FILENO,
                 .cgroup =
                     {
-                        .process_num_limit = 1 + LEAK_SANITIZER,
-                        .memory_limit_in_bytes = 32 << 20,
+                        .process_num_limit = 1,
+                        .memory_limit_in_bytes = 64 << 20,
                         .swap_limit_in_bytes = 0,
                     },
             }
@@ -46,8 +46,8 @@ TEST(sandbox, prevented_tracee_hacking_limits_by_disabling_cgroup_controllers) {
                     },
                 .cgroup =
                     {
-                        .process_num_limit = 1 + LEAK_SANITIZER,
-                        .memory_limit_in_bytes = 32 << 20,
+                        .process_num_limit = 1,
+                        .memory_limit_in_bytes = 64 << 20,
                         .swap_limit_in_bytes = 0,
                     },
             }

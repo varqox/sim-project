@@ -5,9 +5,9 @@
 #include <optional>
 #include <simlib/directory.hh>
 #include <simlib/errmsg.hh>
-#include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/repeating.hh>
+#include <simlib/string_traits.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <string>
@@ -26,14 +26,15 @@ find_cgroup_with_pid_as_only_process(std::string& path, pid_t pid) {
 
     {
         std::array<char, 32> buff;
-        auto len = read_all(cgroup_procs_fd, buff.data(), buff.size());
-        if (errno == ENODEV) {
-            return std::nullopt; // cgorup just disappeared
-        }
-        if (errno) {
+        auto len = read(cgroup_procs_fd, buff.data(), buff.size());
+        if (len < 0) {
+            if (errno == ENODEV) {
+                return std::nullopt; // cgroup just disappeared
+            }
             THROW("read()", errmsg());
         }
-        if (str2num<pid_t>(StringView{buff.data(), len}.without_trailing('\n')) == pid) {
+        auto sv = StringView{buff.data(), static_cast<size_t>(len)};
+        if (has_suffix(sv, "\n") && str2num<pid_t>(sv.without_suffix(1)) == pid) {
             return path;
         }
     }
@@ -41,7 +42,7 @@ find_cgroup_with_pid_as_only_process(std::string& path, pid_t pid) {
     std::optional<std::string> found;
     auto dir = Directory{path};
     if (!dir.is_open()) {
-        return std::nullopt; // cgorup just disappeared
+        return std::nullopt; // cgroup just disappeared
     }
     path += '/';
     for_each_dir_component(dir, [&](dirent* entry) {

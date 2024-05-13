@@ -1,5 +1,6 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
+#include "mount_operations_mount_proc_if_running_under_leak_sanitizer.hh"
 
 #include <fcntl.h>
 #include <mqueue.h>
@@ -29,9 +30,20 @@ TEST(sandbox, sandbox_uses_net_namespace) {
     }
     Defer mq_unlinker = [&] { (void)mq_unlink(name.c_str()); };
     ASSERT_RESULT_OK(
-        sc.await_result(
-            sc.send_request({{tester_executable_path, name}}, {.stderr_fd = STDERR_FILENO})
-        ),
+        sc.await_result(sc.send_request(
+            {{tester_executable_path, name}},
+            {
+                .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+            }
+        )),
         CLD_EXITED,
         0
     );
