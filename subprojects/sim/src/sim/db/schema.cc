@@ -107,7 +107,7 @@ const DbSchema& get_schema() {
                         "  KEY `owner_id_2` (`owner_id`,`type`,`id`),"
                         "  KEY `owner_id` (`owner_id`,`id`),"
                         "  KEY `type` (`type`,`id`),"
-                        "  CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE,"
                         "  CONSTRAINT `problems_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
@@ -219,7 +219,7 @@ const DbSchema& get_schema() {
                         "  KEY `contest_id` (`contest_id`,`modified`),"
                         "  KEY `file_id` (`file_id`),"
                         "  KEY `creator` (`creator`),"
-                        "  CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE,"
                         "  CONSTRAINT `contest_files_ibfk_2` FOREIGN KEY (`contest_id`) REFERENCES `contests` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
                         "  CONSTRAINT `contest_files_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
@@ -309,7 +309,7 @@ const DbSchema& get_schema() {
                         "  KEY `initial_final3` (`final_candidate`,`owner`,`contest_problem_id`,`score`,`initial_status`,`id`),"
                         // For foreign keys
                         "  KEY `file_id` (`file_id`),"
-                        "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE,"
                         "  CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`owner`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
                         "  CONSTRAINT `submissions_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
                         "  CONSTRAINT `submissions_ibfk_4` FOREIGN KEY (`contest_problem_id`) REFERENCES `contest_problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
