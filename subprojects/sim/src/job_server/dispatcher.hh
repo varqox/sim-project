@@ -13,8 +13,6 @@ void job_dispatcher(
     uint64_t job_id,
     sim::jobs::OldJob::Type jtype,
     std::optional<uint64_t> file_id,
-    std::optional<uint64_t> tmp_file_id,
-    std::optional<StringView> creator,
     std::optional<uint64_t> aux_id,
     StringView info,
     StringView created_at

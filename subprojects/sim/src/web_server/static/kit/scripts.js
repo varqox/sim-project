@@ -115,6 +115,8 @@ function url_api_contest_entry_tokens_regenerate(contest_id) { return `/api/cont
 function url_api_contest_entry_tokens_regenerate_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/regenerate_short`; }
 function url_api_contest_entry_tokens_view(contest_id) { return `/api/contest/${contest_id}/entry_tokens`; }
 function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/contest_name`; }
+function url_api_problem(problem_id) { return `/api/problem/${problem_id}`; }
+function url_api_problem_reupload(problem_id) { return `/api/problem/${problem_id}/reupload`; }
 function url_api_problems() { return '/api/problems'; }
 function url_api_problems_add() { return '/api/problems/add'; }
 function url_api_problems_with_type(problem_type) { return `/api/problems/type=/${problem_type}`; }
@@ -145,6 +147,7 @@ function url_problem_download(problem_id) { return `/api/download/problem/${prob
 function url_problem_edit(problem_id) { return `/p/${problem_id}/edit`; }
 function url_problem_merge(problem_id) { return `/p/${problem_id}/merge`; }
 function url_problem_reset_time_limits(problem_id) { return `/p/${problem_id}/reset_time_limits`; }
+function url_problem_reupload(problem_id) { return `/problem/${problem_id}/reupload`; }
 function url_problem_solutions(problem_id) { return `/p/${problem_id}#all_submissions#solutions`; }
 function url_problem_statement(problem_id, problem_name) { return `/api/download/statement/problem/${problem_id}/${encodeURIComponent(problem_name)}`; }
 function url_problems() { return '/problems'; }
@@ -1405,18 +1408,18 @@ function View(new_window_location) {
 	set_api_interface(self, self.content_elem);
 };
 
-function elem_link_to_view(contents, view_func, url_func, ...url_func_args) {
+function elem_link_to_view(contents, view_func, url_func, ...view_and_url_func_args) {
 	const elem = elem_of('a', contents);
-	elem.href = url_func(...url_func_args);
+	elem.href = url_func(...view_and_url_func_args);
 	elem.addEventListener('click', (event) => {
 		event.preventDefault();
-		view_func(...url_func_args);
+		view_func(...view_and_url_func_args);
 	});
 	return elem;
 }
 
-function elem_link_with_class_to_view(classes, contents, view_func, url_func, ...url_func_args) {
-	const elem = elem_link_to_view(contents, view_func, url_func, ...url_func_args);
+function elem_link_with_class_to_view(classes, contents, view_func, url_func, ...view_and_url_func_args) {
+	const elem = elem_link_to_view(contents, view_func, url_func, ...view_and_url_func_args);
 	elem.className = classes;
 	return elem;
 }
@@ -1782,32 +1785,20 @@ function datetime_to_string(date) {
 		' ', hour < 10 ? '0' : '', hour, ':', minute < 10 ? '0' : '', minute, ':', second < 10 ? '0' : '', second);
 }
 
-async function add_problem() {
-	const view = new View(url_problems_add());
-	const form = new Form('Add problem', url_api_problems_add());
-	const type_select = form.append_select('visibility', 'Visibility');
-	if (global_capabilities.problems.add_problem_with_type_private) {
-		type_select.append_option('private', 'Private', {selected: true});
-	}
-	if (global_capabilities.problems.add_problem_with_type_contest_only) {
-		type_select.append_option('contest_only', 'Contest only');
-	}
-	if (global_capabilities.problems.add_problem_with_type_public) {
-		type_select.append_option('public', 'Public');
-	}
+function append_common_form_elems_for_add_problem_and_reupload_problem(form, problem = null) {
 	const ignore_simfile_select = form.append_select('ignore_simfile', 'Ignore simfile');
-	const name_input = form.append_input_text('name', 'Name', '', 24, {
+	const name_input = form.append_input_text('name', 'Name', problem?.name ?? '', 24, {
 		required: false,
 		trim: true,
 		placeholder: 'Take from Simfile',
 	});
-	const label_input = form.append_input_text('label', 'Label', '', 24, {
+	const label_input = form.append_input_text('label', 'Label', problem?.label ?? '', 24, {
 		required: false,
 		trim: true,
 		placeholder: 'Take from Simfile',
 	});
 
-	const memory_limit_input = form.append_input_text('memory_limit_in_mib', 'Memory limit', '', 9, {
+	const memory_limit_input = form.append_input_text('memory_limit_in_mib', 'Memory limit', problem?.default_memory_limit ?? '', 9, {
 		required: false,
 		trim: true,
 		placeholder: 'Take from Simfile',
@@ -1860,7 +1851,37 @@ async function add_problem() {
 	});
 
 	form.append_input_file('package', 'Zipped package');
+}
+
+async function add_problem() {
+	const view = new View(url_problems_add());
+	const form = new Form('Add problem', url_api_problems_add());
+	const type_select = form.append_select('visibility', 'Visibility');
+	if (global_capabilities.problems.add_problem_with_type_private) {
+		type_select.append_option('private', 'Private', {selected: true});
+	}
+	if (global_capabilities.problems.add_problem_with_type_contest_only) {
+		type_select.append_option('contest_only', 'Contest only');
+	}
+	if (global_capabilities.problems.add_problem_with_type_public) {
+		type_select.append_option('public', 'Public');
+	}
+	append_common_form_elems_for_add_problem_and_reupload_problem(form);
 	form.append_submit_button('Add problem', {css_classes: 'blue'});
+	form.success_handler = (response, {show_success}) => {
+		view_job(true, response.job.id);
+		show_success('Success');
+	};
+	form.attach_to(view.content_elem);
+}
+
+async function reupload_problem(problem_id) {
+	const view = new View(url_problem_reupload(problem_id));
+	const problem = await view.get_from_api(url_api_problem(problem_id));
+	console.log(problem);
+	const form = new Form(`Reupload problem ${problem_id}`, url_api_problem_reupload(problem_id));
+	append_common_form_elems_for_add_problem_and_reupload_problem(form, problem);
+	form.append_submit_button('Reupload problem', {css_classes: 'blue'});
 	form.success_handler = (response, {show_success}) => {
 		view_job(true, response.job.id);
 		show_success('Success');
@@ -3528,9 +3549,8 @@ ActionsToHTML.oldproblem = function(problem, problem_view /*= false*/) {
 		res.push(a_view_button('/p/' + problem.id + '/edit', 'Edit',
 			'btn-small blue', edit_problem.bind(null, true, problem.id)));
 
-	// if (problem_view && problem.actions.indexOf('R') !== -1)
-	// 	res.push(a_view_button('/p/' + problem.id + '/reupload', 'Reupload',
-	// 		'btn-small orange', reupload_problem.bind(null, true, problem.id)));
+	if (problem_view && problem.actions.indexOf('R') !== -1)
+		res.push(elem_link_with_class_to_view('btn-small orange', 'Reupload', reupload_problem, url_problem_reupload, problem.id));
 
 	if (problem_view && problem.actions.indexOf('D') !== -1)
 		res.push(a_view_button('/p/' + problem.id + '/delete', 'Delete',
@@ -4504,110 +4524,6 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 }
 
 /* ================================ Problems ================================ */
-function append_reupload_problem(elem, as_oldmodal, problem) {
-	elem.append(ajax_form('Reupload problem', '/api/problem/' + problem.id + '/reupload',
-		OldForm.field_group("Problem's name", {
-			type: 'text',
-			name: 'name',
-			value: problem.name,
-			size: 25,
-			// maxlength: 'TODO...',
-			placeholder: 'Take from Simfile',
-		}).add(OldForm.field_group("Problem's label", {
-			type: 'text',
-			name: 'label',
-			value: problem.label,
-			size: 25,
-			// maxlength: 'TODO...',
-			placeholder: 'Take from Simfile or make from name',
-		})).add(OldForm.field_group("Problem's type",
-			$('<select>', {
-				name: 'type',
-				required: true,
-				html: $('<option>', {
-					value: 'PUB',
-					text: 'Public',
-					selected: ('Public' == problem.type ? true : undefined)
-				}).add('<option>', {
-					value: 'PRI',
-					text: 'Private',
-					selected: ('Private' == problem.type ? true : undefined)
-				}).add('<option>', {
-					value: 'CON',
-					text: 'Contest only',
-					selected: ('Contest only' == problem.type ? true : undefined)
-				})
-			})
-		)).add(OldForm.field_group('Memory limit [MiB]', {
-			type: 'text',
-			name: 'mem_limit',
-			value: problem.memory_limit,
-			size: 25,
-			// maxlength: 'TODO...',
-			trim_before_send: true,
-			placeholder: 'Take from Simfile',
-		})).add(OldForm.field_group('Global time limit [s] (for each test)', {
-			type: 'text',
-			name: 'global_time_limit',
-			size: 25,
-			// maxlength: 'TODO...',
-			trim_before_send: true,
-			placeholder: 'No global time limit',
-		})).add(OldForm.field_group('Reset time limits using model solution', {
-			type: 'checkbox',
-			name: 'reset_time_limits',
-			checked: true
-		})).add(OldForm.field_group('Seek for new tests', {
-			type: 'checkbox',
-			name: 'seek_for_new_tests',
-			checked: true
-		})).add(OldForm.field_group('Reset scoring', {
-			type: 'checkbox',
-			name: 'reset_scoring'
-		})).add(OldForm.field_group('Ignore Simfile', {
-			type: 'checkbox',
-			name: 'ignore_simfile',
-		})).add(OldForm.field_group('Zipped package', {
-			type: 'file',
-			name: 'package',
-			required: true
-		})).add('<div>', {
-			html: $('<input>', {
-				class: 'btn blue',
-				type: 'submit',
-				value: 'Submit'
-			})
-		}), function(resp) {
-			if (as_oldmodal) {
-				show_success_via_oldloader($(this)[0], 'Reuploaded');
-				view_job(true, resp);
-			} else {
-				this.parent().remove();
-				window.location.href = '/jobs/' + resp;
-			}
-		}, 'reupload-problem')
-	);
-}
-function reupload_problem(as_oldmodal, problem_id) {
-	old_view_ajax(as_oldmodal, '/api/problems/=' + problem_id, function(data) {
-		if (data.length === 0)
-			return show_error_via_oldloader(this, {
-				status: '404',
-				statusText: 'Not Found'
-			});
-
-		problem = data[0];
-		var actions = problem.actions;
-		if (actions.indexOf('R') === -1)
-			return show_error_via_oldloader(this, {
-					status: '403',
-					statusText: 'Not Allowed'
-				});
-
-		append_reupload_problem(this, as_oldmodal, problem);
-
-	}, '/p/' + problem_id + '/reupload');
-}
 function append_problem_tags(elem, problem_id, problem_tags) {
 	elem = $(elem);
 
@@ -4865,11 +4781,6 @@ function edit_problem(as_oldmodal, problem_id, opt_hash) {
 		if (problem.actions.indexOf('C') !== -1) {
 			tabs.push('Change statement',
 				append_change_problem_statement_form.bind(null, elem, as_oldmodal, problem_id));
-		}
-
-		if (problem.actions.indexOf('R') !== -1) {
-			tabs.push('Reupload',
-				append_reupload_problem.bind(null, elem, as_oldmodal, problem));
 		}
 
 		old_tabmenu(default_tabmenu_attacher.bind(elem), tabs);

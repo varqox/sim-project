@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <memory>
 #include <simlib/ranges.hh>
-#include <algorithm>
 
 using std::array;
 using std::is_same_v;

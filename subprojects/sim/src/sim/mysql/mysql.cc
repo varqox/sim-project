@@ -202,25 +202,18 @@ Statement::Statement(Statement&& other) noexcept
 , connection_referencing_objects_num{other.connection_referencing_objects_num}
 , stmt{std::exchange(other.stmt, nullptr)}
 , field_count{other.field_count}
+, store_result{other.store_result}
 , res{std::move(other.res)} {
     ++*connection_referencing_objects_num;
-}
-
-Statement& Statement::operator=(Statement&& other) noexcept {
-    if (this != &other) {
-        conn = other.conn;
-        std::swap(connection_referencing_objects_num, other.connection_referencing_objects_num);
-        stmt = std::exchange(other.stmt, nullptr);
-        field_count = other.field_count;
-        res = std::move(other.res);
-    }
-    return *this;
 }
 
 void Statement::do_not_store_result() noexcept { store_result = false; }
 
 bool Statement::next() {
     STACK_UNWINDING_MARK;
+    if (!res.mysql_binds) {
+        THROW("You need to call .res_bind() before calling .next()");
+    }
     // This is needed if we changed the bind parameters.
     if (res.previous_fetch_changed_binds && mysql_stmt_bind_result(stmt, res.mysql_binds.get())) {
         THROW(mysql_stmt_error(stmt));
@@ -479,18 +472,18 @@ void run_unit_tests(sim::mysql::Connection& mysql) {
         throw_assert(!stmt.next());
 
         // optional<bool>
-        stmt = mysql.execute(Select("x").from("test").order_by("id"));
+        auto opt_stmt = mysql.execute(Select("x").from("test").order_by("id"));
         std::optional<bool> ob;
-        stmt.res_bind(ob);
-        throw_assert(stmt.next() && ob == true);
-        throw_assert(stmt.next() && ob == std::nullopt);
-        throw_assert(stmt.next() && ob == false);
-        throw_assert(!stmt.next());
+        opt_stmt.res_bind(ob);
+        throw_assert(opt_stmt.next() && ob == true);
+        throw_assert(opt_stmt.next() && ob == std::nullopt);
+        throw_assert(opt_stmt.next() && ob == false);
+        throw_assert(!opt_stmt.next());
 
         // Truncation
-        stmt = mysql.execute(SqlWithParams("SELECT 2"));
-        stmt.res_bind(b);
-        assert_throws(stmt.next(), "Truncated data at column: 0");
+        auto truncation_stmt = mysql.execute(SqlWithParams("SELECT 2"));
+        truncation_stmt.res_bind(b);
+        assert_throws(truncation_stmt.next(), "Truncated data at column: 0");
     }
     // signed short and optional<signed short>
     {
@@ -516,18 +509,18 @@ void run_unit_tests(sim::mysql::Connection& mysql) {
         throw_assert(!stmt.next());
 
         // optional<signed short>
-        stmt = mysql.execute(Select("x").from("test").order_by("id"));
+        auto opt_stmt = mysql.execute(Select("x").from("test").order_by("id"));
         std::optional<int16_t> oi;
-        stmt.res_bind(oi);
-        throw_assert(stmt.next() && oi == -1);
-        throw_assert(stmt.next() && oi == std::nullopt);
-        throw_assert(stmt.next() && oi == -2);
-        throw_assert(!stmt.next());
+        opt_stmt.res_bind(oi);
+        throw_assert(opt_stmt.next() && oi == -1);
+        throw_assert(opt_stmt.next() && oi == std::nullopt);
+        throw_assert(opt_stmt.next() && oi == -2);
+        throw_assert(!opt_stmt.next());
 
         // Truncation
-        stmt = mysql.execute(SqlWithParams("SELECT 1000000"));
-        stmt.res_bind(i);
-        assert_throws(stmt.next(), "Truncated data at column: 0");
+        auto truncation_stmt = mysql.execute(SqlWithParams("SELECT 1000000"));
+        truncation_stmt.res_bind(i);
+        assert_throws(truncation_stmt.next(), "Truncated data at column: 0");
     }
     // unsigned short and optional<unsigned short>
     {
@@ -553,18 +546,18 @@ void run_unit_tests(sim::mysql::Connection& mysql) {
         throw_assert(!stmt.next());
 
         // optional<unsigned short>
-        stmt = mysql.execute(Select("x").from("test").order_by("id"));
+        auto opt_stmt = mysql.execute(Select("x").from("test").order_by("id"));
         std::optional<uint16_t> oi;
-        stmt.res_bind(oi);
-        throw_assert(stmt.next() && oi == 7);
-        throw_assert(stmt.next() && oi == std::nullopt);
-        throw_assert(stmt.next() && oi == 42);
-        throw_assert(!stmt.next());
+        opt_stmt.res_bind(oi);
+        throw_assert(opt_stmt.next() && oi == 7);
+        throw_assert(opt_stmt.next() && oi == std::nullopt);
+        throw_assert(opt_stmt.next() && oi == 42);
+        throw_assert(!opt_stmt.next());
 
         // Truncation
-        stmt = mysql.execute(SqlWithParams("SELECT -1"));
-        stmt.res_bind(i);
-        assert_throws(stmt.next(), "Truncated data at column: 0");
+        auto truncation_stmt = mysql.execute(SqlWithParams("SELECT -1"));
+        truncation_stmt.res_bind(i);
+        assert_throws(truncation_stmt.next(), "Truncated data at column: 0");
     }
     // std::string and optional<std::string>
     {
@@ -597,17 +590,17 @@ void run_unit_tests(sim::mysql::Connection& mysql) {
         throw_assert(!stmt.next());
 
         // optional<std::string>
-        stmt = mysql.execute(Select("x").from("test").order_by("id"));
+        auto opt_stmt = mysql.execute(Select("x").from("test").order_by("id"));
         std::optional<std::string> os;
-        stmt.res_bind(os);
-        throw_assert(stmt.next() && os == "aaa");
-        throw_assert(stmt.next() && os == std::nullopt);
-        throw_assert(stmt.next() && os == "bbb");
-        throw_assert(stmt.next() && os == "ccc ddd");
-        throw_assert(stmt.next() && os == "eee");
-        throw_assert(stmt.next() && os == "");
-        throw_assert(stmt.next() && os == "xxx");
-        throw_assert(!stmt.next());
+        opt_stmt.res_bind(os);
+        throw_assert(opt_stmt.next() && os == "aaa");
+        throw_assert(opt_stmt.next() && os == std::nullopt);
+        throw_assert(opt_stmt.next() && os == "bbb");
+        throw_assert(opt_stmt.next() && os == "ccc ddd");
+        throw_assert(opt_stmt.next() && os == "eee");
+        throw_assert(opt_stmt.next() && os == "");
+        throw_assert(opt_stmt.next() && os == "xxx");
+        throw_assert(!opt_stmt.next());
     }
     // InplaceBuff
     {
@@ -691,27 +684,31 @@ void run_unit_tests(sim::mysql::Connection& mysql) {
         throw_assert(stmt.next() && e == EWSC::C);
         throw_assert(!stmt.next());
         // Unmapped value
-        stmt = mysql.execute(SqlWithParams("SELECT 3"));
-        stmt.res_bind(e);
-        assert_throws(stmt.next(), "Invalid value for ENUM_WITH_STRING_CONVERSIONS at column: 0");
+        auto unmapped_stmt = mysql.execute(SqlWithParams("SELECT 3"));
+        unmapped_stmt.res_bind(e);
+        assert_throws(
+            unmapped_stmt.next(), "Invalid value for ENUM_WITH_STRING_CONVERSIONS at column: 0"
+        );
 
         // optional<ENUM_WITH_STRING_CONVERSIONS>
-        stmt = mysql.execute(Select("x").from("test").order_by("id"));
+        auto opt_stmt = mysql.execute(Select("x").from("test").order_by("id"));
         std::optional<EWSC> oe;
-        stmt.res_bind(oe);
-        throw_assert(stmt.next() && oe == EWSC::A);
-        throw_assert(stmt.next() && oe == EWSC::B);
-        throw_assert(stmt.next() && oe == std::nullopt);
-        throw_assert(stmt.next() && oe == EWSC::C);
+        opt_stmt.res_bind(oe);
+        throw_assert(opt_stmt.next() && oe == EWSC::A);
+        throw_assert(opt_stmt.next() && oe == EWSC::B);
+        throw_assert(opt_stmt.next() && oe == std::nullopt);
+        throw_assert(opt_stmt.next() && oe == EWSC::C);
         // Unmapped value
-        stmt = mysql.execute(SqlWithParams("SELECT 3"));
-        stmt.res_bind(oe);
-        assert_throws(stmt.next(), "Invalid value for ENUM_WITH_STRING_CONVERSIONS at column: 0");
+        auto opt_unmapped_stmt = mysql.execute(SqlWithParams("SELECT 3"));
+        opt_unmapped_stmt.res_bind(oe);
+        assert_throws(
+            opt_unmapped_stmt.next(), "Invalid value for ENUM_WITH_STRING_CONVERSIONS at column: 0"
+        );
 
         // Truncation
-        stmt = mysql.execute(SqlWithParams("SELECT -1"));
-        stmt.res_bind(e);
-        assert_throws(stmt.next(), "Truncated data at column: 0");
+        auto truncation_stmt = mysql.execute(SqlWithParams("SELECT -1"));
+        truncation_stmt.res_bind(e);
+        assert_throws(truncation_stmt.next(), "Truncated data at column: 0");
     }
     // Errors
     assert_throws(mysql.update("ABC"), "You have an error in your SQL syntax");

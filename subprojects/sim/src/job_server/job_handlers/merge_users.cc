@@ -53,9 +53,11 @@ void MergeUsers::run_impl(sim::mysql::Connection& mysql) {
         // Logging
         job_log("Merged user's username: ", donor_username);
         job_log("Merged user's type: ", donor_user_type.to_str());
-
-        stmt = mysql.execute(Select("1").from("users").where("id=?", info_.target_user_id));
-        if (not stmt.next()) {
+        auto target_user_stmt =
+            mysql.execute(Select("1").from("users").where("id=?", info_.target_user_id));
+        int x;
+        target_user_stmt.res_bind(x);
+        if (not target_user_stmt.next()) {
             return set_failure("Target user does not exist");
         }
     }

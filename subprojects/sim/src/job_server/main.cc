@@ -207,10 +207,6 @@ public:
                     break;
                 }
 
-                case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-                    queue_job(judge_jobs, aux_id.value(), true);
-                    break;
-
                 // Problem job
                 case JT::REUPLOAD_PROBLEM:
                 case JT::EDIT_PROBLEM:
@@ -695,8 +691,6 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
 
     EnumVal<sim::jobs::OldJob::Type> jtype{};
     old_mysql::Optional<uint64_t> file_id;
-    old_mysql::Optional<uint64_t> tmp_file_id;
-    old_mysql::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
     InplaceBuff<32> created_at;
     old_mysql::Optional<uint64_t> aux_id; // TODO: normalize this column...
     InplaceBuff<512> info;
@@ -704,12 +698,10 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
     mysql.execute(sim::sql::SqlWithParams("SELECT 1")); // Reconnect to database if disconnected
     auto old_mysql = old_mysql::ConnectionView{mysql};
     {
-        auto stmt = old_mysql.prepare(
-            "SELECT file_id, tmp_file_id, creator, created_at, type, aux_id, info "
-            "FROM jobs WHERE id=? AND status!=?"
-        );
+        auto stmt = old_mysql.prepare("SELECT file_id, created_at, type, aux_id, info "
+                                      "FROM jobs WHERE id=? AND status!=?");
         stmt.bind_and_execute(job.id, EnumVal(sim::jobs::OldJob::Status::CANCELED));
-        stmt.res_bind_all(file_id, tmp_file_id, creator, created_at, jtype, aux_id, info);
+        stmt.res_bind_all(file_id, created_at, jtype, aux_id, info);
 
         if (not stmt.next()) { // Job has been probably canceled
             return exit_procedures();
@@ -721,14 +713,7 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
         .bind_and_execute(EnumVal(sim::jobs::OldJob::Status::IN_PROGRESS), job.id);
 
     stdlog("Processing job ", job.id, "...");
-
-    std::optional<StringView> creat;
-    if (creator.has_value()) {
-        creat = creator.value();
-    }
-    job_server::job_dispatcher(
-        mysql, job.id, jtype, file_id, tmp_file_id, creat, aux_id, info, created_at
-    );
+    job_server::job_dispatcher(mysql, job.id, jtype, file_id, aux_id, info, created_at);
 
     exit_procedures();
 }
@@ -1133,9 +1118,7 @@ static void clean_up_db(sim::mysql::Connection& mysql) {
         InplaceBuff<128> job_info;
         stmt.res_bind_all(job_id, job_type, job_info);
         while (stmt.next()) {
-            sim::jobs::restart_job(
-                mysql, from_unsafe{to_string(job_id)}, job_type, job_info, false
-            );
+            sim::jobs::restart_job(mysql, from_unsafe{to_string(job_id)}, false);
         }
 
         // Fix jobs that are noticed [ending] after the job-server died

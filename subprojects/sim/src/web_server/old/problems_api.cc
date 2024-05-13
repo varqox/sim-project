@@ -420,9 +420,6 @@ void Sim::api_problem() {
     if (next_arg == "reset_time_limits") {
         return api_problem_reset_time_limits(problem_perms);
     }
-    if (next_arg == "reupload") {
-        return api_problem_reupload(problem_perms);
-    }
     if (next_arg == "edit") {
         return api_problem_edit(problem_perms);
     }
@@ -439,123 +436,6 @@ void Sim::api_problem() {
         return api_problem_attaching_contest_problems(problem_perms);
     }
     return api_error400();
-}
-
-void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
-    STACK_UNWINDING_MARK;
-
-    // Validate fields
-    CStringView name;
-    CStringView label;
-    CStringView memory_limit;
-    CStringView global_time_limit;
-    CStringView package_file;
-    bool reset_time_limits = request.form_fields.contains("reset_time_limits");
-    bool ignore_simfile = request.form_fields.contains("ignore_simfile");
-    bool seek_for_new_tests = request.form_fields.contains("seek_for_new_tests");
-    bool reset_scoring = request.form_fields.contains("reset_scoring");
-
-    form_validate(name, "name", "Problem's name", decltype(OldProblem::name)::max_len);
-    form_validate(label, "label", "Problem's label", decltype(OldProblem::label)::max_len);
-    form_validate(memory_limit, "mem_limit", "Memory limit", is_digit_not_greater_than<(std::numeric_limits<uint64_t>::max() >> 20)>);
-    form_validate_file_path_not_blank(package_file, "package", "Zipped package");
-    form_validate(
-        global_time_limit,
-        "global_time_limit",
-        "Global time limit",
-        is_real
-    ); // TODO: add length limit
-
-    using std::chrono::duration;
-    using std::chrono::duration_cast;
-    using std::chrono::nanoseconds;
-
-    // Convert global_time_limit
-    decltype(sim::jobs::AddProblemInfo::global_time_limit) gtl;
-    if (not global_time_limit.empty()) {
-        gtl = duration_cast<nanoseconds>(duration<double>(strtod(global_time_limit.c_str(), nullptr)
-        ));
-        if (gtl.value() < sim::MIN_TIME_LIMIT) {
-            add_notification(
-                "error",
-                "Global time limit cannot be lower than ",
-                to_string(sim::MIN_TIME_LIMIT),
-                " s"
-            );
-        }
-    }
-
-    // Memory limit
-    decltype(sim::jobs::AddProblemInfo::memory_limit) mem_limit;
-    if (not memory_limit.empty()) {
-        mem_limit = WONT_THROW(str2num<decltype(mem_limit)::value_type>(memory_limit).value());
-    }
-
-    // Validate problem type
-    auto ptype_str = request.form_fields.get("type");
-    OldProblem::Type ptype = OldProblem::Type::PRIVATE; // Silence GCC warning
-    if (ptype_str == "PRI") {
-        ptype = OldProblem::Type::PRIVATE;
-    } else if (ptype_str == "PUB") {
-        ptype = OldProblem::Type::PUBLIC;
-    } else if (ptype_str == "CON") {
-        ptype = OldProblem::Type::CONTEST_ONLY;
-    } else {
-        add_notification("error", "Invalid problem's type");
-    }
-
-    if (notifications.size) {
-        return api_error400(notifications);
-    }
-
-    sim::jobs::AddProblemInfo ap_info{
-        name.to_string(),
-        label.to_string(),
-        mem_limit,
-        gtl,
-        reset_time_limits,
-        ignore_simfile,
-        seek_for_new_tests,
-        reset_scoring,
-        ptype
-    };
-
-    auto transaction = mysql.start_repeatable_read_transaction();
-    auto old_mysql = old_mysql::ConnectionView{mysql};
-    old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
-        .bind_and_execute(mysql_date());
-    auto job_file_id = old_mysql.insert_id();
-    FileRemover job_file_remover(sim::internal_files::old_path_of(job_file_id).to_string());
-
-    // Make the uploaded package file the job's file
-    if (move(package_file, sim::internal_files::old_path_of(job_file_id))) {
-        THROW("move()", errmsg());
-    }
-
-    decltype(OldJob::type) jtype =
-        (reuploading ? OldJob::Type::REUPLOAD_PROBLEM : OldJob::Type::ADD_PROBLEM);
-    old_mysql
-        .prepare("INSERT jobs(file_id, creator, priority, type, status, created_at,"
-                 " aux_id, info, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
-        .bind_and_execute(
-            job_file_id,
-            session->user_id,
-            default_priority(jtype),
-            jtype,
-            EnumVal(OldJob::Status::PENDING),
-            mysql_date(),
-            (reuploading ? std::optional(problems_pid) : std::nullopt),
-            ap_info.dump()
-        );
-
-    auto job_id = old_mysql.insert_id(); // Has to be retrieved before commit
-
-    transaction.commit();
-    job_file_remover.cancel();
-    sim::jobs::notify_job_server();
-
-    append(job_id);
 }
 
 void Sim::api_statement_impl(
@@ -756,16 +636,6 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
 
     sim::jobs::notify_job_server();
     append(old_mysql.insert_id());
-}
-
-void Sim::api_problem_reupload(sim::problems::Permissions perms) {
-    STACK_UNWINDING_MARK;
-
-    if (uint(~perms & sim::problems::Permissions::REUPLOAD)) {
-        return api_error403();
-    }
-
-    api_problem_add_or_reupload_impl(true);
 }
 
 void Sim::api_problem_edit(sim::problems::Permissions perms) {

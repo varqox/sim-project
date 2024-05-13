@@ -23,12 +23,11 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
 
         OldJob job;
         old_mysql::Optional<decltype(job.file_id)::value_type> m_file_id;
-        old_mysql::Optional<decltype(job.tmp_file_id)::value_type> m_tmp_file_id;
         old_mysql::Optional<decltype(job.creator)::value_type> m_creator;
         old_mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
-            "SELECT id, file_id, tmp_file_id, creator, type,"
+            "SELECT id, file_id, creator, type,"
             " priority, status, created_at, aux_id, info, data "
             "FROM ",
             record_set.sql_table_name
@@ -37,7 +36,6 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
         stmt.res_bind_all(
             job.id,
             m_file_id,
-            m_tmp_file_id,
             m_creator,
             job.type,
             job.priority,
@@ -49,15 +47,11 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
         );
         while (stmt.next()) {
             job.file_id = m_file_id.to_opt();
-            job.tmp_file_id = m_tmp_file_id.to_opt();
             job.creator = m_creator.to_opt();
             job.aux_id = m_aux_id.to_opt();
 
             if (job.file_id) {
                 job.file_id = internal_files_.new_id(job.file_id.value(), record_set.kind);
-            }
-            if (job.tmp_file_id) {
-                job.tmp_file_id = internal_files_.new_id(job.tmp_file_id.value(), record_set.kind);
             }
             if (job.creator) {
                 job.creator = users_.new_id(job.creator.value(), record_set.kind);
@@ -76,7 +70,6 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
 
             case OldJob::Type::DELETE_PROBLEM:
             case OldJob::Type::REUPLOAD_PROBLEM:
-            case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             case OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
             case OldJob::Type::CHANGE_PROBLEM_STATEMENT:
                 job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
@@ -142,7 +135,7 @@ public:
         auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
-            "(id, file_id, tmp_file_id, creator, type, priority,"
+            "(id, file_id, creator, type, priority,"
             " status, created_at, aux_id, info, data) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
@@ -154,7 +147,6 @@ public:
             stmt.bind_and_execute(
                 x.id,
                 x.file_id,
-                x.tmp_file_id,
                 x.creator,
                 x.type,
                 x.priority,

@@ -94,7 +94,7 @@ class Sim final {
 
     void api_job();
 
-    void api_job_restart(sim::jobs::OldJob::Type job_type, StringView job_info);
+    void api_job_restart();
 
     void api_job_cancel();
 
@@ -113,8 +113,6 @@ class Sim final {
 
     void api_problem();
 
-    void api_problem_add_or_reupload_impl(bool reuploading);
-
     void api_statement_impl(uint64_t problem_file_id, StringView problem_label, StringView simfile);
 
     void api_problem_statement(
@@ -126,8 +124,6 @@ class Sim final {
     void api_problem_rejudge_all_submissions(sim::problems::Permissions perms);
 
     void api_problem_reset_time_limits(sim::problems::Permissions perms);
-
-    void api_problem_reupload(sim::problems::Permissions perms);
 
     void api_problem_edit(sim::problems::Permissions perms);
 

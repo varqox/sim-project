@@ -21,6 +21,8 @@
 #include <simlib/file_path.hh>
 #include <simlib/file_remover.hh>
 #include <simlib/json_str/json_str.hh>
+#include <simlib/macros/stack_unwinding.hh>
+#include <simlib/result.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
@@ -38,6 +40,7 @@ using sim::submissions::Submission;
 using sim::users::User;
 using std::optional;
 using web_server::capabilities::ProblemsListCapabilities;
+using web_server::http::ApiParam;
 using web_server::http::Response;
 using web_server::web_worker::Context;
 
@@ -314,6 +317,156 @@ Response do_list_user_problems(
     );
 }
 
+optional<capabilities::ProblemCapabilities>
+get_problem_caps(Context& ctx, decltype(Problem::id) problem_id) {
+    auto stmt =
+        ctx.mysql.execute(Select("type, owner_id").from("problems").where("id=?", problem_id));
+    decltype(Problem::type) type;
+    decltype(Problem::owner_id) owner_id;
+    stmt.res_bind(type, owner_id);
+    if (stmt.next()) {
+        return capabilities::problem(ctx.session, type, owner_id);
+    }
+    return std::nullopt;
+}
+
+namespace params {
+
+constexpr ApiParam visibility{&Problem::type, "visibility", "Visibility"};
+constexpr ApiParam<bool> ignore_simfile{"ignore_simfile", "Ignore simfile"};
+constexpr ApiParam<web_server::http::SubmittedFile> package{"package", "Zipped package"};
+constexpr ApiParam name{&Problem::name, "name", "Name"};
+constexpr ApiParam label{&Problem::label, "label", "Label"};
+constexpr ApiParam<CStringView> memory_limit_in_mib_str{"memory_limit_in_mib", "Memory limit"};
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+ENUM_WITH_STRING_CONVERSIONS(TimeLimitsKind, uint8_t,
+    (KEEP_IF_POSSIBLE, 1, "keep_if_possible")
+    (RESET, 2, "reset")
+    (FIXED, 3, "fixed")
+);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+constexpr ApiParam<TimeLimitsKind> time_limits{"time_limits", "Time limits"};
+constexpr ApiParam<CStringView> fixed_time_limit_in_nsec_str{
+    "fixed_time_limit_in_nsec", "Fixed time limit"
+};
+constexpr ApiParam<bool> reset_scoring{"reset_scoring", "Reset scoring"};
+constexpr ApiParam<bool> look_for_new_tests{"look_for_new_tests", "Look for new tests"};
+
+} // namespace params
+
+struct AddProblemAndReuploadProblemCommonParams {
+    bool ignore_simfile;
+    web_server::http::SubmittedFile package;
+    decltype(Problem::name) name;
+    decltype(Problem::label) label;
+    std::optional<uint64_t> memory_limit_in_mib;
+    params::TimeLimitsKind time_limits;
+    std::optional<std::chrono::nanoseconds> fixed_time_limit;
+    bool reset_scoring;
+    bool look_for_new_tests;
+};
+
+Result<AddProblemAndReuploadProblemCommonParams, std::string>
+validate_add_problem_and_reupload_problem_common_prams(Context& ctx) {
+    STACK_UNWINDING_MARK;
+
+    VALIDATE(ctx.request.form_fields, [](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
+        (ignore_simfile, params::ignore_simfile, REQUIRED)
+        (package, params::package, FILE_REQUIRED)
+    );
+    VALIDATE(ctx.request.form_fields, [](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
+        (name, allow_blank_if(params::name, !ignore_simfile), REQUIRED)
+        (label, allow_blank_if(params::label, !ignore_simfile), REQUIRED)
+        (memory_limit_in_mib_str, allow_blank_if(params::memory_limit_in_mib_str, !ignore_simfile), REQUIRED)
+    );
+
+    std::optional<uint64_t> memory_limit_in_mib;
+    if (!memory_limit_in_mib_str.empty()) {
+        if (!is_digit(memory_limit_in_mib_str)) {
+            return Err{std::string{"Invalid memory limit: not a number"}};
+        }
+        auto memory_limit_opt = str2num<uint32_t>(memory_limit_in_mib_str);
+        if (!memory_limit_opt) {
+            return Err{std::string{"Invalid memory limit: too big number"}};
+        }
+        memory_limit_in_mib = static_cast<uint64_t>(*memory_limit_opt);
+    }
+
+    // NOLINTNEXTLINE(bugprone-branch-clone)
+    VALIDATE(ctx.request.form_fields, [](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
+        (time_limits, params::time_limits, REQUIRED_ENUM_CAPS(
+            (KEEP_IF_POSSIBLE, !ignore_simfile)
+            (RESET, true)
+            (FIXED, true)
+        ))
+    );
+
+    std::optional<std::chrono::nanoseconds> fixed_time_limit;
+    // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
+    switch (time_limits) {
+    case params::TimeLimitsKind::KEEP_IF_POSSIBLE:
+    case params::TimeLimitsKind::RESET: break;
+    case params::TimeLimitsKind::FIXED: {
+        VALIDATE(ctx.request.form_fields, [](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
+            (fixed_time_limit_in_nsec_str, params::fixed_time_limit_in_nsec_str, REQUIRED)
+        );
+        if (!is_digit(fixed_time_limit_in_nsec_str)) {
+            return Err{std::string{"Invalid fixed time limit: not a number"}};
+        }
+        using std::chrono::nanoseconds;
+        auto fixed_time_limit_opt = str2num<nanoseconds::rep>(fixed_time_limit_in_nsec_str);
+        if (!fixed_time_limit_opt) {
+            return Err{std::string{"Invalid fixed time limit: too big number"}};
+        }
+        fixed_time_limit = nanoseconds{*fixed_time_limit_opt};
+        if (fixed_time_limit < sim::MIN_TIME_LIMIT) {
+            return Err{concat_tostr(
+                "Invalid fixed time limit: cannot be smaller than ",
+                to_string(sim::MIN_TIME_LIMIT),
+                "s"
+            )};
+        }
+        if (fixed_time_limit > sim::MAX_TIME_LIMIT) {
+            return Err{concat_tostr(
+                "Invalid fixed time limit: cannot be larger than ",
+                to_string(sim::MAX_TIME_LIMIT),
+                "s"
+            )};
+        }
+    } break;
+    }
+
+    bool reset_scoring = false;
+    bool look_for_new_tests = true;
+    if (!ignore_simfile) {
+        VALIDATE(ctx.request.form_fields, [](auto&& errors) { return Err{std::forward<decltype(errors)>(errors)}; },
+            (reset_scoring_, params::reset_scoring, REQUIRED)
+            (look_for_new_tests_, params::look_for_new_tests, REQUIRED)
+        );
+        reset_scoring = reset_scoring_;
+        look_for_new_tests = look_for_new_tests_;
+    }
+
+    return Ok{AddProblemAndReuploadProblemCommonParams{
+        .ignore_simfile = std::move(ignore_simfile),
+        .package = std::move(package),
+        .name = std::move(name),
+        .label = std::move(label),
+        .memory_limit_in_mib = std::move(memory_limit_in_mib),
+        .time_limits = std::move(time_limits),
+        .fixed_time_limit = std::move(fixed_time_limit),
+        .reset_scoring = std::move(reset_scoring),
+        .look_for_new_tests = std::move(look_for_new_tests),
+    }};
+}
+
 } // namespace
 
 namespace web_server::problems::api {
@@ -381,17 +534,19 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
 
     ProblemInfo p;
     p.id = problem_id;
-    auto stmt =
-        ctx.mysql.execute(Select("type, owner_id").from("problems").where("id=?", problem_id));
-    stmt.res_bind(p.type, p.owner_id);
-    if (not stmt.next()) {
-        return ctx.response_404();
+    {
+        auto stmt =
+            ctx.mysql.execute(Select("type, owner_id").from("problems").where("id=?", problem_id));
+        stmt.res_bind(p.type, p.owner_id);
+        if (not stmt.next()) {
+            return ctx.response_404();
+        }
     }
     auto caps = capabilities::problem(ctx.session, p.type, p.owner_id);
     if (not caps.view) {
         return ctx.response_403();
     }
-    stmt = ctx.mysql.execute(
+    auto stmt = ctx.mysql.execute(
         Select("p.name, p.label, u.username, u.first_name, u.last_name, p.created_at, "
                "p.updated_at, s.full_status, p.simfile")
             .from("problems p")
@@ -447,31 +602,6 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
     return ctx.response_json(std::move(obj).into_str());
 }
 
-namespace params {
-
-constexpr http::ApiParam visibility{&Problem::type, "visibility", "Visibility"};
-constexpr http::ApiParam<bool> ignore_simfile{"ignore_simfile", "Ignore simfile"};
-constexpr http::ApiParam<http::SubmittedFile> package{"package", "Zipped package"};
-constexpr http::ApiParam name{&Problem::name, "name", "Name"};
-constexpr http::ApiParam label{&Problem::label, "label", "Label"};
-constexpr http::ApiParam<CStringView> memory_limit_in_mib_str{
-    "memory_limit_in_mib", "Memory limit"
-};
-
-ENUM_WITH_STRING_CONVERSIONS(TimeLimitsKind, uint8_t,
-    (KEEP_IF_POSSIBLE, 1, "keep_if_possible")
-    (RESET, 2, "reset")
-    (FIXED, 3, "fixed")
-);
-constexpr http::ApiParam<TimeLimitsKind> time_limits{"time_limits", "Time limits"};
-constexpr http::ApiParam<CStringView> fixed_time_limit_in_nsec_str{
-    "fixed_time_limit_in_nsec", "Fixed time limit"
-};
-constexpr http::ApiParam<bool> reset_scoring{"reset_scoring", "Reset scoring"};
-constexpr http::ApiParam<bool> look_for_new_tests{"look_for_new_tests", "Look for new tests"};
-
-} // namespace params
-
 http::Response add(web_worker::Context& ctx) {
     STACK_UNWINDING_MARK;
 
@@ -486,88 +616,19 @@ http::Response add(web_worker::Context& ctx) {
             (CONTEST_ONLY, caps.add_problem_with_type_contest_only)
             (PUBLIC, caps.add_problem_with_type_public)
         ))
-        (ignore_simfile, params::ignore_simfile, REQUIRED)
-        (uploaded_package, params::package, FILE_REQUIRED)
-    );
-    VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (name, allow_blank_if(params::name, !ignore_simfile), REQUIRED)
-        (label, allow_blank_if(params::label, !ignore_simfile), REQUIRED)
-        (memory_limit_in_mib_str, allow_blank_if(params::memory_limit_in_mib_str, !ignore_simfile), REQUIRED)
     );
 
-    std::optional<uint64_t> memory_limit_in_mib;
-    if (!memory_limit_in_mib_str.empty()) {
-        if (!is_digit(memory_limit_in_mib_str)) {
-            return ctx.response_400("Invalid memory limit: not a number");
-        }
-        auto memory_limit_opt = str2num<uint32_t>(memory_limit_in_mib_str);
-        if (!memory_limit_opt) {
-            return ctx.response_400("Invalid memory limit: too big number");
-        }
-        memory_limit_in_mib = static_cast<uint64_t>(*memory_limit_opt);
+    auto res = validate_add_problem_and_reupload_problem_common_prams(ctx);
+    if (res.is_err()) {
+        return ctx.response_400(from_unsafe{std::move(res).unwrap_err()});
     }
+    auto common_params = std::move(res).unwrap();
 
-    // NOLINTNEXTLINE(bugprone-branch-clone)
-    VALIDATE(ctx.request.form_fields, ctx.response_400,
-        (time_limits, params::time_limits, REQUIRED_ENUM_CAPS(
-            (KEEP_IF_POSSIBLE, !ignore_simfile)
-            (RESET, true)
-            (FIXED, true)
-        ))
-    );
-
-    std::optional<std::chrono::nanoseconds> fixed_time_limit;
-    switch (time_limits) {
-    case params::TimeLimitsKind::KEEP_IF_POSSIBLE:
-    case params::TimeLimitsKind::RESET: break;
-    case params::TimeLimitsKind::FIXED: {
-        VALIDATE(ctx.request.form_fields, ctx.response_400,
-            (fixed_time_limit_in_nsec_str, params::fixed_time_limit_in_nsec_str, REQUIRED)
-        );
-        if (!is_digit(fixed_time_limit_in_nsec_str)) {
-            return ctx.response_400("Invalid fixed time limit: not a number");
-        }
-        using std::chrono::nanoseconds;
-        auto fixed_time_limit_opt = str2num<nanoseconds::rep>(fixed_time_limit_in_nsec_str);
-        if (!fixed_time_limit_opt) {
-            return ctx.response_400("Invalid fixed time limit: too big number");
-        }
-        fixed_time_limit = nanoseconds{*fixed_time_limit_opt};
-        if (fixed_time_limit < sim::MIN_TIME_LIMIT) {
-            return ctx.response_400(from_unsafe{concat_tostr(
-                "Invalid fixed time limit: cannot be smaller than ",
-                to_string(sim::MIN_TIME_LIMIT),
-                "s"
-            )});
-        }
-        if (fixed_time_limit > sim::MAX_TIME_LIMIT) {
-            return ctx.response_400(from_unsafe{concat_tostr(
-                "Invalid fixed time limit: cannot be larger than ",
-                to_string(sim::MAX_TIME_LIMIT),
-                "s"
-            )});
-        }
-    } break;
-    }
-
-    bool reset_scoring = false;
-    bool look_for_new_tests = true;
-    if (!ignore_simfile) {
-        VALIDATE(ctx.request.form_fields, ctx.response_400,
-            (reset_scoring_, params::reset_scoring, REQUIRED)
-            (look_for_new_tests_, params::look_for_new_tests, REQUIRED)
-        );
-        reset_scoring = reset_scoring_;
-        look_for_new_tests = look_for_new_tests_;
-    }
-
-    auto stmt =
-        ctx.mysql.execute(InsertInto("internal_files (created_at)").values("?", mysql_date()));
-    auto file_id = stmt.insert_id();
+    auto file_id = sim::internal_files::new_internal_file_id(ctx.mysql);
     auto job_file_path = sim::internal_files::path_of(file_id);
     auto file_remover = FileRemover{job_file_path};
     // Make the uploaded package
-    if (move(uploaded_package.path, job_file_path)) {
+    if (move(common_params.package.path, job_file_path)) {
         THROW("move()");
     }
     ctx.uncommited_files_removers.emplace_back(std::move(file_remover));
@@ -584,22 +645,91 @@ http::Response add(web_worker::Context& ctx) {
                           ));
     auto job_id = ctx.old_mysql.insert_id();
     ctx.mysql.execute(
-        InsertInto("add_problem_jobs (id, visibility, force_time_limits_reset, ignore_simfile, "
-                   "name, label, memory_limit_in_mib, fixed_time_limit_in_ns, reset_scoring, "
-                   "look_for_new_tests, file_id, added_problem_id)")
+        InsertInto("add_problem_jobs (id, file_id, visibility, force_time_limits_reset, "
+                   "ignore_simfile, name, label, memory_limit_in_mib, fixed_time_limit_in_ns, "
+                   "reset_scoring, look_for_new_tests, added_problem_id)")
             .values(
                 "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL",
                 job_id,
+                file_id,
                 visibility,
-                time_limits == params::TimeLimitsKind::RESET,
-                ignore_simfile,
-                name,
-                label,
-                memory_limit_in_mib,
-                fixed_time_limit ? optional{fixed_time_limit->count()} : std::nullopt,
-                reset_scoring,
-                look_for_new_tests,
-                file_id
+                common_params.time_limits == params::TimeLimitsKind::RESET,
+                common_params.ignore_simfile,
+                common_params.name,
+                common_params.label,
+                common_params.memory_limit_in_mib,
+                common_params.fixed_time_limit ? optional{common_params.fixed_time_limit->count()}
+                                               : std::nullopt,
+                common_params.reset_scoring,
+                common_params.look_for_new_tests
+            )
+    );
+    ctx.notify_job_server_after_commit = true;
+
+    json_str::Object obj;
+    obj.prop_obj("job", [&](auto& obj) { obj.prop("id", job_id); });
+    return ctx.response_json(std::move(obj).into_str());
+}
+
+Response reupload(Context& ctx, decltype(Problem::id) problem_id) {
+    STACK_UNWINDING_MARK;
+
+    auto caps_opt = get_problem_caps(ctx, problem_id);
+    if (!caps_opt) {
+        return ctx.response_404();
+    }
+    auto& caps = *caps_opt;
+    if (!caps.reupload) {
+        return ctx.response_403();
+    }
+
+    auto res = validate_add_problem_and_reupload_problem_common_prams(ctx);
+    if (res.is_err()) {
+        return ctx.response_400(from_unsafe{std::move(res).unwrap_err()});
+    }
+    auto common_params = std::move(res).unwrap();
+
+    auto file_id = sim::internal_files::new_internal_file_id(ctx.mysql);
+    auto job_file_path = sim::internal_files::path_of(file_id);
+    auto file_remover = FileRemover{job_file_path};
+    // Make the uploaded package
+    if (move(common_params.package.path, job_file_path)) {
+        THROW("move()");
+    }
+    ctx.uncommited_files_removers.emplace_back(std::move(file_remover));
+
+    auto job_type = Job::Type::REUPLOAD_PROBLEM;
+    ctx.mysql.execute(
+        InsertInto("jobs (created_at, creator, type, priority, status, aux_id, info, data)")
+            .values(
+                "?, ?, ?, ?, ?, ?, '', ''",
+                mysql_date(),
+                ctx.session->user_id,
+                job_type,
+                default_priority(job_type),
+                Job::Status::PENDING,
+                problem_id
+            )
+    );
+    auto job_id = ctx.old_mysql.insert_id();
+    ctx.mysql.execute(
+        InsertInto("reupload_problem_jobs (id, problem_id, file_id, force_time_limits_reset, "
+                   "ignore_simfile, name, label, memory_limit_in_mib, fixed_time_limit_in_ns, "
+                   "reset_scoring, look_for_new_tests)")
+            .values(
+                "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
+                job_id,
+                problem_id,
+                file_id,
+                common_params.time_limits == params::TimeLimitsKind::RESET,
+                common_params.ignore_simfile,
+                common_params.name,
+                common_params.label,
+                common_params.memory_limit_in_mib,
+                common_params.fixed_time_limit ? optional{common_params.fixed_time_limit->count()}
+                                               : std::nullopt,
+                common_params.reset_scoring,
+                common_params.look_for_new_tests
             )
     );
     ctx.notify_job_server_after_commit = true;

@@ -28,7 +28,9 @@ protected:
 
     template <class... Args>
     void set_failure(Args&&... args) {
-        job_log(std::forward<Args>(args)...);
+        if constexpr (sizeof...(args) > 0) {
+            job_log(std::forward<Args>(args)...);
+        }
         job_failed_ = true;
     }
 
