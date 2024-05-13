@@ -1,7 +1,7 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
-#include "simlib/leak_sanitizer.hh"
 
+#include <simlib/leak_sanitizer.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <unistd.h>
 

@@ -24,7 +24,6 @@ inline bool can_create_children(unsigned n) {
         }
     };
 
-
     for (auto& pid : pids) {
         pid = fork();
         if (pid == -1) {

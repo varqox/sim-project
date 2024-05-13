@@ -1,7 +1,7 @@
 #include "can_create_children.hh"
-#include "simlib/leak_sanitizer.hh"
 #include "try_use_lots_of_memory.hh"
 
+#include <simlib/leak_sanitizer.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/to_arg_seq.hh>
 

@@ -1,9 +1,9 @@
 #include "can_create_children.hh"
 #include "find_cgroup_with_pid_as_only_process.hh"
-#include "simlib/leak_sanitizer.hh"
 #include "try_use_lots_of_memory.hh"
 
 #include <simlib/file_contents.hh>
+#include <simlib/leak_sanitizer.hh>
 #include <simlib/throw_assert.hh>
 #include <string>
 #include <unistd.h>

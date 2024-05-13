@@ -92,7 +92,6 @@ TEST(sandbox, max_file_size_in_bytes) {
 
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "file_size"}},
             {
                 .stderr_fd = STDERR_FILENO,
