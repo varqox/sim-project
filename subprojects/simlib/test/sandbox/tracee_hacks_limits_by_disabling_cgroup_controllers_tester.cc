@@ -1,5 +1,6 @@
-#include "can_create_child.hh"
+#include "can_create_children.hh"
 #include "find_cgroup_with_pid_as_only_process.hh"
+#include "simlib/leak_sanitizer.hh"
 #include "try_use_lots_of_memory.hh"
 
 #include <simlib/file_contents.hh>
@@ -8,7 +9,7 @@
 #include <unistd.h>
 
 int main() {
-    throw_assert(!can_create_child()); // limits work
+    throw_assert(!can_create_children(1 + LEAK_SANITIZER)); // limits work
     auto path = std::string{"/sys/fs/cgroup"};
     auto tracee_cgroup_path_opt = find_cgroup_with_pid_as_only_process(path, getpid());
     if (!tracee_cgroup_path_opt) {
@@ -18,7 +19,7 @@ int main() {
     put_file_contents(tracee_cgroup_path + "/../cgroup.subtree_control", "-pids -memory");
 
     // Check that controllers disabled successfully
-    throw_assert(can_create_child());
+    throw_assert(can_create_children(1 + LEAK_SANITIZER));
     try_use_lots_of_memory(33 << 20);
 
     // Enable controllers for the supervisor to not error-out
