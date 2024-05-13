@@ -21,15 +21,10 @@ jobs:
       - run: su tester -c 'meson compile -C release-build/'
       - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
 
-  ubuntu-23:
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:23.10
-      options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
+  ubuntu-24:
+    runs-on: ubuntu-24.04
     steps:
-      - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
       - run: useradd tester
-      - run: chown -R tester:tester /sys/fs/cgroup
       - run: apt-get update
       - run: env DEBIAN_FRONTEND=noninteractive apt-get install -y git
       - uses: actions/checkout@v4
@@ -115,15 +110,10 @@ jobs:
       - run: su tester -c 'meson compile -C release-build/'
       - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
 
-  ubuntu-23-with-sanitizers:
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:23.10
-      options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
+  ubuntu-24-with-sanitizers:
+    runs-on: ubuntu-24.04
     steps:
-      - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
       - run: useradd tester
-      - run: chown -R tester:tester /sys/fs/cgroup
       - run: apt-get update
       - run: env DEBIAN_FRONTEND=noninteractive apt-get install -y git
       - uses: actions/checkout@v4
