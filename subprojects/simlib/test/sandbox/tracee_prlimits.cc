@@ -2,7 +2,6 @@
 #include "assert_result.hh"
 
 #include <chrono>
-#include <cstdlib>
 #include <fcntl.h>
 #include <gtest/gtest.h>
 #include <optional>
@@ -97,10 +96,6 @@ TEST(sandbox, max_file_size_in_bytes) {
             {{tester_executable_path, "file_size"}},
             {
                 .stderr_fd = STDERR_FILENO,
-                .env =
-                    {
-                        {std::string{"LD_LIBRARY_PATH="} + getenv("LD_LIBRARY_PATH")},
-                    },
                 .linux_namespaces =
                     {
                         .mount =

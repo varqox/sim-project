@@ -1,19 +1,24 @@
+#include <array>
 #include <cerrno>
 #include <fcntl.h>
 #include <sched.h>
-#include <simlib/file_contents.hh>
+#include <simlib/errmsg.hh>
+#include <simlib/file_descriptor.hh>
 #include <simlib/file_path.hh>
 #include <simlib/file_perms.hh>
 #include <simlib/from_unsafe.hh>
 #include <simlib/macros/throw.hh>
-#include <simlib/random_bytes.hh>
 #include <simlib/string_traits.hh>
+#include <simlib/string_view.hh>
 #include <simlib/throw_assert.hh>
 #include <string_view>
 #include <sys/mount.h>
+#include <sys/random.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <vector>
 
 void no_operations_no_new_root_mount_path() {
     int fd = open("/proc/self/exe", O_RDONLY | O_CLOEXEC);
@@ -21,10 +26,35 @@ void no_operations_no_new_root_mount_path() {
     throw_assert(close(fd) == 0);
 }
 
+std::string read_file(FilePath path) {
+    auto fd = FileDescriptor{path, O_RDONLY | O_CLOEXEC};
+    throw_assert(fd >= 0);
+    std::string res;
+    std::array<char, 8192> buff;
+    for (;;) {
+        auto len = read(fd, buff.data(), buff.size());
+        throw_assert(len >= 0);
+        if (len == 0) {
+            return res;
+        }
+        res.append(buff.data(), buff.data() + len);
+    }
+}
+
+void write_file(FilePath path, StringView data, mode_t mode = S_0644) {
+    auto fd = FileDescriptor{path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode};
+    throw_assert(fd >= 0);
+    auto res = write(fd, data.data(), data.size());
+    if (res < 0) {
+        THROW("write()", errmsg());
+    }
+    throw_assert(res == static_cast<ssize_t>(data.size()));
+}
+
 void test_exec(FilePath path_for_executable, bool expect_execable) {
     char* empty[] = {nullptr};
-    auto exe_contents = get_file_contents(expect_execable ? "/bin/true" : "/bin/false");
-    put_file_contents(path_for_executable, exe_contents.data(), exe_contents.size(), S_0755);
+    auto exe_contents = read_file(expect_execable ? "/bin/true" : "/bin/false");
+    write_file(path_for_executable, StringView{exe_contents.data(), exe_contents.size()}, S_0755);
     if (expect_execable) {
         pid_t pid = fork();
         throw_assert(pid != -1);
@@ -42,36 +72,37 @@ void test_exec(FilePath path_for_executable, bool expect_execable) {
 
 void mount_tmpfs() {
     // max_total_size_of_files = nullopt
-    put_file_contents("/dev/max_total_size_of_files_nullopt/ok", "");
-    put_file_contents("/dev/max_total_size_of_files_nullopt/x", from_unsafe{random_bytes(65536)});
+    write_file("/dev/max_total_size_of_files_nullopt/ok", "");
+    std::vector<char> data(65536);
+    throw_assert(getrandom(data.data(), data.size(), 0) == static_cast<ssize_t>(data.size()));
+    write_file("/dev/max_total_size_of_files_nullopt/x", StringView{data.data(), data.size()});
     // max_total_size_of_files = 0
-    put_file_contents("/dev/max_total_size_of_files_0/ok", "xxx");
+    write_file("/dev/max_total_size_of_files_0/ok", "xxx");
     try {
-        put_file_contents("/dev/max_total_size_of_files_0/too_much", "xxx");
+        write_file("/dev/max_total_size_of_files_0/too_much", "xxx");
         THROW("expected exception");
     } catch (const std::exception& e) {
-        throw_assert(has_prefix(e.what(), "write() failed - No space left on device (os error 28)")
-        );
+        throw_assert(has_prefix(e.what(), "write() - No space left on device (os error 28)"));
     }
     // max_total_size_of_files = 1
-    put_file_contents("/dev/max_total_size_of_files_1/ok", "xxx");
+    write_file("/dev/max_total_size_of_files_1/ok", "xxx");
     try {
-        put_file_contents("/dev/max_total_size_of_files_1/too_much", "xxx");
+        write_file("/dev/max_total_size_of_files_1/too_much", "xxx");
         THROW("expected exception");
     } catch (const std::exception& e) {
-        throw_assert(has_prefix(e.what(), "write() failed - No space left on device (os error 28)")
-        );
+        throw_assert(has_prefix(e.what(), "write() - No space left on device (os error 28)"));
     }
     // max_total_size_of_files = 32768
-    put_file_contents("/dev/max_total_size_of_files_32768/ok", from_unsafe{random_bytes(32768)});
+    data.resize(32768);
+    throw_assert(getrandom(data.data(), data.size(), 0) == static_cast<ssize_t>(data.size()));
+    write_file("/dev/max_total_size_of_files_32768/ok", StringView{data.data(), data.size()});
     try {
-        put_file_contents(
-            "/dev/max_total_size_of_files_32768/too_much", from_unsafe{random_bytes(1)}
-        );
+        char random_byte;
+        throw_assert(getrandom(&random_byte, 1, 0) == 1);
+        write_file("/dev/max_total_size_of_files_32768/too_much", StringView{&random_byte, 1});
         THROW("expected exception");
     } catch (const std::exception& e) {
-        throw_assert(has_prefix(e.what(), "write() failed - No space left on device (os error 28)")
-        );
+        throw_assert(has_prefix(e.what(), "write() - No space left on device (os error 28)"));
     }
 
     // inode_limit = nullopt
@@ -113,7 +144,7 @@ void mount_proc() {
         open("/dev/read_only_true/self/comm", O_WRONLY | O_CLOEXEC) == -1 && errno == EROFS
     );
     // read_only = false
-    put_file_contents("/dev/read_only_false/self/comm", "test");
+    write_file("/dev/read_only_false/self/comm", "test");
 
     // no_exec = true
     throw_assert(

@@ -13,8 +13,8 @@ template <class T = int64_t>
 T arg(int n) {
 	assert(n > 0);
 	if (n >= args_parser::argc) {
-		fputs("Too few arguments specified\n", stderr);
-		exit(1);
+		(void)fputs("Too few arguments specified\n", stderr);
+		_exit(1);
 	}
 	auto argn = args_parser::argv[n];
 	auto argn_end = argn + strlen(argn);
@@ -34,9 +34,9 @@ T arg(int n) {
 		if (errno == 0 and ptr != argn and ptr == argn_end) {
 			return res;
 		}
-		fprintf(stderr, "Invalid argument no %i: cannot convert to %s\n", n,
+		(void)fprintf(stderr, "Invalid argument no %i: cannot convert to %s\n", n,
 		        std::is_integral_v<T> ? "integer" : "floating point number");
-		exit(1);
+		_exit(1);
 	} else {
 		return T{argn};
 	}
@@ -45,8 +45,8 @@ T arg(int n) {
 std::string_view test_name() {
 	static auto test_name = getenv("SIP_TEST_NAME");
 	if (not test_name) {
-		fputs("SIP_TEST_NAME environment variable is not set\n", stderr);
-		exit(1);
+		(void)fputs("SIP_TEST_NAME environment variable is not set\n", stderr);
+		_exit(1);
 	}
 	return test_name;
 }
@@ -55,17 +55,17 @@ std::mt19937_64& generator() {
 	static std::mt19937_64 generator{[] {
 		auto seed_str = getenv("SIP_TEST_SEED");
 		if (not seed_str) {
-			fputs("SIP_TEST_SEED environment variable is not set\n", stderr);
-			exit(1);
+			(void)fputs("SIP_TEST_SEED environment variable is not set\n", stderr);
+			_exit(1);
 		}
 		uint64_t seed{};
 		if (auto [p, ec] =
 		       from_chars(seed_str, seed_str + strlen(seed_str), seed);
 		    ec != std::errc())
 		{
-			fputs("SIP_TEST_SEED environment variable is not a valid integer\n",
+			(void)fputs("SIP_TEST_SEED environment variable is not a valid integer\n",
 			      stderr);
-			exit(1);
+			_exit(1);
 		}
 		return seed;
 	}()};

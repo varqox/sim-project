@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <simlib/concat.hh>
 #include <simlib/concat_tostr.hh>
+#include <simlib/env.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/macros/stack_unwinding.hh>
@@ -14,7 +15,7 @@
 
 static auto user_templates_dir() {
     static constexpr StringView templates_home_subdir = "/.config/sip/templates/";
-    static auto home = getenv("HOME");
+    static auto home = get_env_var("HOME");
     if (not home) {
         log_warning(
             "failed to get variable HOME from the environment, not "
@@ -22,7 +23,7 @@ static auto user_templates_dir() {
             templates_home_subdir
         );
     }
-    return concat(home, templates_home_subdir);
+    return concat(*home, templates_home_subdir);
 }
 
 using std::optional;

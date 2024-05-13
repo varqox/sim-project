@@ -43,13 +43,16 @@ static void do_perform_upgrade(
     STACK_UNWINDING_MARK;
     // Upgrade here
     mysql.update("ALTER TABLE problems DROP CONSTRAINT problems_ibfk_1");
-    mysql.update("ALTER TABLE problems ADD CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE problems ADD CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) "
+                 "REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
 
     mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_1");
-    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY "
+                 "(`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
 
     mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_1");
-    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_1` FOREIGN KEY "
+                 "(`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
 }
 
 enum class LockKind {
