@@ -77,27 +77,6 @@ int main2(int argc, char** argv) {
 
         auto transaction = mysql.start_repeatable_read_transaction();
         auto old_mysql = old_mysql::ConnectionView{mysql};
-        auto stmt = old_mysql.prepare("SELECT tmp_file_id FROM jobs "
-                                      "WHERE tmp_file_id IS NOT NULL AND status IN (?,?,?)");
-        stmt.bind_and_execute(
-            EnumVal(OldJob::Status::DONE),
-            EnumVal(OldJob::Status::FAILED),
-            EnumVal(OldJob::Status::CANCELED)
-        );
-        uint64_t tmp_file_id = 0;
-        stmt.res_bind_all(tmp_file_id);
-
-        auto deleter = old_mysql.prepare("DELETE FROM internal_files WHERE id=?");
-        // Remove jobs temporary internal files
-        while (stmt.next()) {
-            auto file_path = sim::internal_files::old_path_of(tmp_file_id);
-            if (access(file_path, F_OK) == 0 and
-                system_clock::now() - get_modification_time(file_path) > 2h)
-            {
-                deleter.bind_and_execute(tmp_file_id);
-                (void)unlink(file_path);
-            }
-        }
 
         // Remove internal files that do not have an entry in internal_files
         sim::PackageContents fc;
@@ -107,7 +86,7 @@ int main2(int argc, char** argv) {
             orphaned_files.emplace(file.to_string());
         });
 
-        stmt = old_mysql.prepare("SELECT id FROM internal_files");
+        auto stmt = old_mysql.prepare("SELECT id FROM internal_files");
         stmt.bind_and_execute();
         InplaceBuff<32> file_id;
         stmt.res_bind_all(file_id);

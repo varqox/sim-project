@@ -91,19 +91,18 @@ struct PrimaryKeysFromJobs {
         old_mysql::Optional<decltype(OldJob::creator)::value_type> creator;
         EnumVal<OldJob::Type> type{};
         old_mysql::Optional<decltype(OldJob::file_id)::value_type> file_id;
-        old_mysql::Optional<decltype(OldJob::tmp_file_id)::value_type> tmp_file_id;
         sim::old_sql_fields::Datetime added_str;
         old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
         sim::old_sql_fields::Blob<32> info;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
             "SELECT id, creator, type, file_id, "
-            "tmp_file_id, created_at, aux_id, info FROM ",
+            "created_at, aux_id, info FROM ",
             job_table_name,
             " ORDER BY id"
         );
         stmt.bind_and_execute();
-        stmt.res_bind_all(id, creator, type, file_id, tmp_file_id, added_str, aux_id, info);
+        stmt.res_bind_all(id, creator, type, file_id, added_str, aux_id, info);
         while (stmt.next()) {
             auto created_at = str_to_time_point(added_str.to_cstr());
 
@@ -111,9 +110,6 @@ struct PrimaryKeysFromJobs {
             jobs.add_id(id, created_at);
             if (file_id.has_value()) {
                 internal_files.add_id(file_id.value(), created_at);
-            }
-            if (tmp_file_id.has_value()) {
-                internal_files.add_id(tmp_file_id.value(), created_at);
             }
             if (creator.has_value()) {
                 users.add_id(creator.value(), created_at);
@@ -132,7 +128,6 @@ struct PrimaryKeysFromJobs {
 
             case OldJob::Type::DELETE_PROBLEM:
             case OldJob::Type::REUPLOAD_PROBLEM:
-            case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
             case OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
             case OldJob::Type::CHANGE_PROBLEM_STATEMENT:
                 problems.add_id(aux_id.value(), created_at);

@@ -326,7 +326,6 @@ const DbSchema& get_schema() {
                         "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
                         "  `created_at` datetime NOT NULL,"
                         "  `file_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove when becomes unneeded
-                        "  `tmp_file_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove when becomes unneeded
                         "  `creator` bigint(20) unsigned DEFAULT NULL,"
                         "  `type` tinyint(3) unsigned NOT NULL,"
                         "  `priority` tinyint(3) unsigned NOT NULL,"
@@ -367,6 +366,29 @@ const DbSchema& get_schema() {
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `add_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
                         "  CONSTRAINT `add_problem_jobs_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE"
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
+                    ),
+                    // clang-format on
+                },
+                {
+                    // clang-format off
+                    .create_table_sql = concat_tostr(
+                        "CREATE TABLE `reupload_problem_jobs` ("
+                        "  `id` bigint(20) unsigned NOT NULL,"
+                        "  `problem_id` bigint(20) unsigned NOT NULL,"
+                        "  `file_id` bigint(20) unsigned NOT NULL,"
+                        "  `force_time_limits_reset` tinyint(1) NOT NULL,"
+                        "  `ignore_simfile` tinyint(1) NOT NULL,"
+                        "  `name` varbinary(", decltype(AddProblemJob::name)::max_len, ") NOT NULL,"
+                        "  `label` varbinary(", decltype(AddProblemJob::label)::max_len, ") NOT NULL,"
+                        "  `memory_limit_in_mib` bigint(20) unsigned DEFAULT NULL,"
+                        "  `fixed_time_limit_in_ns` bigint(20) unsigned DEFAULT NULL,"
+                        "  `reset_scoring` tinyint(1) NOT NULL,"
+                        "  `look_for_new_tests` tinyint(1) NOT NULL,"
+                        "  PRIMARY KEY (`id`),"
+                        "  KEY `file_id` (`file_id`),"
+                        "  CONSTRAINT `reupload_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `reupload_problem_jobs_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on

@@ -224,7 +224,58 @@ public:
     ~Statement() noexcept(false);
 
     Statement(Statement&& other) noexcept;
-    Statement& operator=(Statement&& other) noexcept;
+
+    // There is a problem with libmariadb preventing implementation of this operator because of
+    // getting "Commands out of sync; you can't run this command now" error. Consider following
+    // code illustrating the problem:
+    //
+    // auto* stmt1 = mysql_stmt_init(conn);
+    // throw_assert(stmt1);
+    // throw_assert(!mysql_stmt_prepare(
+    //     stmt1,
+    //     "select 1 from users where id=1",
+    //     strlen("select 1 from users where id=1")
+    // ));
+    // throw_assert(!mysql_stmt_execute(stmt1));
+    //
+    // int x1;
+    // MYSQL_BIND binds1[1];
+    // binds1[0].buffer_type = MYSQL_TYPE_LONG;
+    // binds1[0].buffer = &x1;
+    // binds1[0].is_unsigned = false;
+    // binds1[0].error = &binds1[0].error_value;
+    // binds1[0].is_null = &binds1[0].is_null_value;
+    // throw_assert(!mysql_stmt_bind_result(stmt1, binds1));
+    // throw_assert(!mysql_stmt_store_result(stmt1));
+    //
+    // auto stmt2 = mysql_stmt_init(conn);
+    // throw_assert(stmt2);
+    // if (mysql_stmt_prepare(
+    //     stmt2,
+    //     "select 1 from users where id=1",
+    //     strlen("select 1 from users where id=1")
+    // )) {
+    //     THROW(mysql_stmt_error(stmt2));
+    // }
+    // throw_assert(!mysql_stmt_execute(stmt2));
+    // // This is the root cause of the problem, this call has to be before
+    // // mysql_stmt_execute(stmt2) for the problem to disappear.
+    // throw_assert(!mysql_stmt_close(stmt1));
+    //
+    // int x2;
+    // MYSQL_BIND binds2[1];
+    // binds2[0].buffer_type = MYSQL_TYPE_LONG;
+    // binds2[0].buffer = &x2;
+    // binds2[0].is_unsigned = false;
+    // binds2[0].error = &binds2[0].error_value;
+    // binds2[0].is_null = &binds2[0].is_null_value;
+    // throw_assert(!mysql_stmt_bind_result(stmt2, binds2));
+    //
+    // if (mysql_stmt_store_result(stmt2)) {
+    //     THROW(mysql_stmt_error(stmt2)); // Here exception "Commands out of sync;" is thrown
+    // }
+    // throw_assert(!mysql_stmt_close(stmt2));
+    Statement& operator=(Statement&& other) = delete;
 
     Statement(const Statement&) = delete;
     Statement& operator=(const Statement&) = delete;

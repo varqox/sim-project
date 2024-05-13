@@ -53,6 +53,7 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type);
     GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
+    GET("/problem/{u64}/reupload")(problems::ui::reupload);
     GET("/problems")(problems::ui::list_problems);
     GET("/problems/add")(problems::ui::add);
     GET("/sign_in")(users::ui::sign_in);
@@ -71,6 +72,7 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     POST("/api/contest/{u64}/entry_tokens/regenerate")(contest_entry_tokens::api::regenerate);
     POST("/api/contest/{u64}/entry_tokens/regenerate_short")(contest_entry_tokens::api::regenerate_short);
     POST("/api/contest_entry_token/{string}/use")(contest_entry_tokens::api::use);
+    POST("/api/problem/{u64}/reupload")(problems::api::reupload);
     POST("/api/problems/add")(problems::api::add);
     POST("/api/sign_in")(users::api::sign_in);
     POST("/api/sign_out")(users::api::sign_out);

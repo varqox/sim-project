@@ -15,6 +15,7 @@
 #include <simlib/concat_tostr.hh>
 #include <simlib/enum_to_underlying_type.hh>
 #include <simlib/json_str/json_str.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/string_view.hh>
 #include <simlib/time.hh>
 #include <utility>
@@ -29,6 +30,7 @@ using sim::sql::Update;
 using sim::users::User;
 using std::optional;
 using web_server::capabilities::UsersListCapabilities;
+using web_server::http::ApiParam;
 using web_server::http::Response;
 using web_server::web_worker::Context;
 
@@ -109,7 +111,7 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
 
 constexpr bool
 is_query_allowed(UsersListCapabilities caps, optional<decltype(User::type)> user_type) {
-    if (not user_type) {
+    if (!user_type) {
         return caps.query_all;
     }
     // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
@@ -150,7 +152,7 @@ Response do_list_users(
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::list_users(ctx.session);
-    if (not is_query_allowed(caps, user_type)) {
+    if (!is_query_allowed(caps, user_type)) {
         return ctx.response_403();
     }
     return do_list(ctx, limit, std::move(where_cond) && caps_to_condition(caps, user_type));
@@ -167,6 +169,36 @@ optional<decltype(User::type)> get_user_type(Context& ctx, decltype(User::id) us
     }
     return std::nullopt;
 }
+
+optional<web_server::capabilities::UserCapabilities>
+get_user_caps(Context& ctx, decltype(User::id) user_id) {
+    STACK_UNWINDING_MARK;
+
+    auto user_type_opt = get_user_type(ctx, user_id);
+    if (user_type_opt) {
+        return capabilities::user(ctx.session, user_id, *user_type_opt);
+    }
+    return std::nullopt;
+}
+
+namespace params {
+
+constexpr ApiParam username{&User::username, "username", "Username"};
+constexpr ApiParam type{&User::type, "type", "Type"};
+constexpr ApiParam first_name{&User::first_name, "first_name", "First name"};
+constexpr ApiParam last_name{&User::last_name, "last_name", "Last name"};
+constexpr ApiParam email{&User::email, "email", "Email"};
+constexpr ApiParam<CStringView> password{"password", "Password"};
+constexpr ApiParam<CStringView> password_repeated{"password_repeated", "Password (repeat)"};
+constexpr ApiParam<CStringView> old_password{"old_password", "Old password"};
+constexpr ApiParam<CStringView> new_password{"new_password", "New password"};
+constexpr ApiParam<CStringView> new_password_repeated{
+    "new_password_repeated", "New password (repeat)"
+};
+constexpr ApiParam<bool> remember_for_a_month{"remember_for_a_month", "Remember for a month"};
+constexpr ApiParam target_user_id{&User::id, "target_user_id", "Target user ID"};
+
+} // namespace params
 
 } // namespace
 
@@ -201,11 +233,11 @@ Response view_user(Context& ctx, decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
 
     auto user_type_opt = get_user_type(ctx, user_id);
-    if (not user_type_opt) {
+    if (!user_type_opt) {
         return ctx.response_404();
     }
     auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
-    if (not caps.view) {
+    if (!caps.view) {
         return ctx.response_403();
     }
 
@@ -215,7 +247,7 @@ Response view_user(Context& ctx, decltype(User::id) user_id) {
         Select("type, username, first_name, last_name, email").from("users").where("id=?", user_id)
     );
     stmt.res_bind(u.type, u.username, u.first_name, u.last_name, u.email);
-    if (not stmt.next()) {
+    if (!stmt.next()) {
         return ctx.response_404();
     }
 
@@ -224,30 +256,11 @@ Response view_user(Context& ctx, decltype(User::id) user_id) {
     return ctx.response_json(std::move(obj).into_str());
 }
 
-namespace params {
-
-constexpr http::ApiParam username{&User::username, "username", "Username"};
-constexpr http::ApiParam type{&User::type, "type", "Type"};
-constexpr http::ApiParam first_name{&User::first_name, "first_name", "First name"};
-constexpr http::ApiParam last_name{&User::last_name, "last_name", "Last name"};
-constexpr http::ApiParam email{&User::email, "email", "Email"};
-constexpr http::ApiParam<CStringView> password{"password", "Password"};
-constexpr http::ApiParam<CStringView> password_repeated{"password_repeated", "Password (repeat)"};
-constexpr http::ApiParam<CStringView> old_password{"old_password", "Old password"};
-constexpr http::ApiParam<CStringView> new_password{"new_password", "New password"};
-constexpr http::ApiParam<CStringView> new_password_repeated{
-    "new_password_repeated", "New password (repeat)"
-};
-constexpr http::ApiParam<bool> remember_for_a_month{"remember_for_a_month", "Remember for a month"};
-constexpr http::ApiParam target_user_id{&User::id, "target_user_id", "Target user ID"};
-
-} // namespace params
-
 Response sign_in(Context& ctx) {
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::users(ctx.session);
-    if (not caps.sign_in) {
+    if (!caps.sign_in) {
         return ctx.response_403();
     }
 
@@ -279,7 +292,7 @@ Response sign_up(Context& ctx) {
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::users(ctx.session);
-    if (not caps.sign_up) {
+    if (!caps.sign_up) {
         return ctx.response_403();
     }
     VALIDATE(ctx.request.form_fields, ctx.response_400,
@@ -328,11 +341,11 @@ Response sign_out(Context& ctx) {
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::users(ctx.session);
-    if (not ctx.session) {
-        throw_assert(not caps.sign_out);
+    if (!ctx.session) {
+        throw_assert(!caps.sign_out);
         return ctx.response_400("You are already signed out");
     }
-    if (not caps.sign_out) {
+    if (!caps.sign_out) {
         return ctx.response_400("You have no permission to sign out");
     }
     ctx.destroy_session();
@@ -343,7 +356,7 @@ Response add(Context& ctx) {
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::users(ctx.session);
-    if (not caps.add_user) {
+    if (!caps.add_user) {
         return ctx.response_403();
     }
 
@@ -394,11 +407,11 @@ Response edit(Context& ctx, decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
 
     auto user_type_opt = get_user_type(ctx, user_id);
-    if (not user_type_opt) {
+    if (!user_type_opt) {
         return ctx.response_404();
     }
     auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
-    if (not caps.edit) {
+    if (!caps.edit) {
         return ctx.response_403();
     }
 
@@ -451,7 +464,7 @@ bool password_is_valid(
     decltype(User::password_salt) password_salt;
     decltype(User::password_hash) password_hash;
     stmt.res_bind(password_salt, password_hash);
-    if (not stmt.next()) {
+    if (!stmt.next()) {
         return false;
     }
     return sim::users::password_matches(password, password_salt, password_hash);
@@ -460,12 +473,12 @@ bool password_is_valid(
 Response change_password(Context& ctx, decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
 
-    auto user_type_opt = get_user_type(ctx, user_id);
-    if (not user_type_opt) {
+    auto caps_opt = get_user_caps(ctx, user_id);
+    if (!caps_opt) {
         return ctx.response_404();
     }
-    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
-    if (not caps.change_password) {
+    auto& caps = *caps_opt;
+    if (!caps.change_password) {
         return ctx.response_403();
     }
 
@@ -498,12 +511,12 @@ Response change_password(Context& ctx, decltype(User::id) user_id) {
 Response delete_(Context& ctx, decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
 
-    auto user_type_opt = get_user_type(ctx, user_id);
-    if (not user_type_opt) {
+    auto caps_opt = get_user_caps(ctx, user_id);
+    if (!caps_opt) {
         return ctx.response_404();
     }
-    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
-    if (not caps.delete_) {
+    auto& caps = *caps_opt;
+    if (!caps.delete_) {
         return ctx.response_403();
     }
 
@@ -539,12 +552,12 @@ Response delete_(Context& ctx, decltype(User::id) user_id) {
 Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
 
-    auto user_type_opt = get_user_type(ctx, user_id);
-    if (not user_type_opt) {
+    auto caps_opt = get_user_caps(ctx, user_id);
+    if (!caps_opt) {
         return ctx.response_404();
     }
-    auto caps = capabilities::user(ctx.session, user_id, *user_type_opt);
-    if (not caps.merge_into_another_user) {
+    auto& caps = *caps_opt;
+    if (!caps.merge_into_another_user) {
         return ctx.response_403();
     }
 
@@ -562,11 +575,11 @@ Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
     }
 
     auto target_user_type_opt = get_user_type(ctx, target_user_id);
-    if (not target_user_type_opt) {
+    if (!target_user_type_opt) {
         return ctx.response_404();
     }
     auto target_user_caps = capabilities::user(ctx.session, target_user_id, *target_user_type_opt);
-    if (not target_user_caps.merge_someone_into_this_user) {
+    if (!target_user_caps.merge_someone_into_this_user) {
         return ctx.response_400("You cannot merge into this target target user");
     }
 

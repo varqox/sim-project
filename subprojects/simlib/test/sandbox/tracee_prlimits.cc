@@ -4,7 +4,9 @@
 #include <chrono>
 #include <cstdlib>
 #include <fcntl.h>
+#include <gtest/gtest.h>
 #include <optional>
+#include <simlib/address_sanitizer.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <unistd.h>
@@ -21,8 +23,15 @@ TEST(sandbox, no_prlimit_limit) {
     );
 }
 
+// AddressSanitizer allocates ~14 TB of memory internally and restricting address space to 1 GiB
+// causes it to fail
+#if ADDRESS_SANITIZER
+// NOLINTNEXTLINE
+TEST(sandbox, DISABLED_prlimit_max_address_space_size_in_bytes) {
+#else
 // NOLINTNEXTLINE
 TEST(sandbox, prlimit_max_address_space_size_in_bytes) {
+#endif
     auto sc = sandbox::spawn_supervisor();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
@@ -134,20 +143,24 @@ TEST(sandbox, file_descriptors_num_limit) {
         CLD_EXITED,
         127
     );
-    ASSERT_RESULT_OK(
-        sc.await_result(sc.send_request(
-            {{tester_executable_path, "file_descriptors_num"}},
-            {
-                .stderr_fd = STDERR_FILENO,
-                .prlimit =
-                    {
-                        .file_descriptors_num_limit = 4,
-                    },
-            }
-        )),
-        CLD_EXITED,
-        0
-    );
+
+    // AddressSanitizer uses internally some file descriptors so that the test fails
+    if constexpr (!ADDRESS_SANITIZER) {
+        ASSERT_RESULT_OK(
+            sc.await_result(sc.send_request(
+                {{tester_executable_path, "file_descriptors_num"}},
+                {
+                    .stderr_fd = STDERR_FILENO,
+                    .prlimit =
+                        {
+                            .file_descriptors_num_limit = 4,
+                        },
+                }
+            )),
+            CLD_EXITED,
+            0
+        );
+    }
 }
 
 // NOLINTNEXTLINE

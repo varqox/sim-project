@@ -15,7 +15,6 @@ struct Job {
         (JUDGE_SUBMISSION, 1, "judge_submission")
         (ADD_PROBLEM, 2, "add_problem")
         (REUPLOAD_PROBLEM, 3, "reupload_problem")
-        (REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION, 5, "reupload_problem__judge_model_solution")
         (EDIT_PROBLEM, 6, "edit_problem")
         (DELETE_PROBLEM, 7, "delete_problem")
         (RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM, 8,
@@ -45,7 +44,6 @@ struct Job {
     uint64_t id;
     sql::fields::Datetime created_at;
     std::optional<decltype(internal_files::InternalFile::id)> file_id;
-    std::optional<decltype(internal_files::InternalFile::id)> tmp_file_id;
     std::optional<decltype(users::User::id)> creator;
     Type type;
     uint8_t priority;
@@ -71,7 +69,6 @@ constexpr decltype(Job::priority) default_priority(Job::Type type) {
     case Job::Type::EDIT_PROBLEM:
     case Job::Type::CHANGE_PROBLEM_STATEMENT: return 25;
     case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
-    case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
     case Job::Type::ADD_PROBLEM:
     case Job::Type::REUPLOAD_PROBLEM: return 10;
     case Job::Type::JUDGE_SUBMISSION: return 5;
@@ -85,7 +82,6 @@ constexpr bool is_problem_management_job(Job::Type type) {
     switch (type) {
     case Job::Type::ADD_PROBLEM:
     case Job::Type::REUPLOAD_PROBLEM:
-    case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case Job::Type::EDIT_PROBLEM:
     case Job::Type::DELETE_PROBLEM:
     case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
@@ -111,7 +107,6 @@ constexpr bool is_submission_job(Job::Type type) {
     case Job::Type::REJUDGE_SUBMISSION: return true;
     case Job::Type::ADD_PROBLEM:
     case Job::Type::REUPLOAD_PROBLEM:
-    case Job::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
     case Job::Type::EDIT_PROBLEM:
     case Job::Type::DELETE_PROBLEM:
     case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:

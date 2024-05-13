@@ -50,4 +50,6 @@ view_problem(web_server::web_worker::Context& ctx, decltype(sim::problems::Probl
 
 http::Response add(web_worker::Context& ctx);
 
+http::Response reupload(web_worker::Context& ctx, decltype(sim::problems::Problem::id) problem_id);
+
 } // namespace web_server::problems::api

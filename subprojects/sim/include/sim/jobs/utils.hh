@@ -230,14 +230,6 @@ struct MergeUsersInfo {
     }
 };
 
-void restart_job(
-    mysql::Connection& mysql,
-    StringView job_id,
-    OldJob::Type job_type,
-    StringView job_info,
-    bool notify_job_server
-);
-
 void restart_job(mysql::Connection& mysql, StringView job_id, bool notify_job_server);
 
 // Notifies the Job server that there are jobs to do

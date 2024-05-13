@@ -19,7 +19,6 @@ static constexpr const char* job_type_str(OldJob::Type type) noexcept {
     case JT::REJUDGE_SUBMISSION: return "Rejudge submission";
     case JT::ADD_PROBLEM: return "Add problem";
     case JT::REUPLOAD_PROBLEM: return "Reupload problem";
-    case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return "Reupload problem - set time limits";
     case JT::EDIT_PROBLEM: return "Edit problem";
     case JT::DELETE_PROBLEM: return "Delete problem";
     case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
@@ -172,8 +171,6 @@ void Sim::api_jobs() {
                 ',',
                 EnumVal(OldJob::Type::REUPLOAD_PROBLEM).to_int(),
                 ',',
-                EnumVal(OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION).to_int(),
-                ',',
                 EnumVal(OldJob::Type::DELETE_PROBLEM).to_int(),
                 ',',
                 EnumVal(OldJob::Type::EDIT_PROBLEM).to_int(),
@@ -275,8 +272,7 @@ void Sim::api_jobs() {
         }
 
         case OldJob::Type::ADD_PROBLEM:
-        case OldJob::Type::REUPLOAD_PROBLEM:
-        case OldJob::Type::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: {
+        case OldJob::Type::REUPLOAD_PROBLEM: {
             if (not res.is_null(AUX_ID)) {
                 append("\"problem\":", res[AUX_ID]);
                 actions.append('p'); // View problem
@@ -363,12 +359,7 @@ void Sim::api_jobs() {
         }
         using JT = OldJob::Type;
         if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
-            is_one_of(
-                job_type,
-                JT::ADD_PROBLEM,
-                JT::REUPLOAD_PROBLEM,
-                JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION
-            ))
+            is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM))
         {
             append('u'); // TODO: ^ that is very nasty
         }
@@ -450,7 +441,7 @@ void Sim::api_job() {
         return api_job_cancel();
     }
     if (next_arg == "restart") {
-        return api_job_restart(jtype, jinfo);
+        return api_job_restart();
     }
     if (next_arg == "log") {
         return api_job_download_log();
@@ -485,7 +476,7 @@ void Sim::api_job_cancel() {
         .bind_and_execute(EnumVal(OldJob::Status::CANCELED), jobs_jid);
 }
 
-void Sim::api_job_restart(OldJob::Type job_type, StringView job_info) {
+void Sim::api_job_restart() {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
 
@@ -500,7 +491,7 @@ void Sim::api_job_restart(OldJob::Type job_type, StringView job_info) {
         return api_error403();
     }
 
-    sim::jobs::restart_job(mysql, jobs_jid, job_type, job_info, true);
+    sim::jobs::restart_job(mysql, jobs_jid, true);
 }
 
 void Sim::api_job_download_log() {
@@ -532,12 +523,7 @@ void Sim::api_job_download_uploaded_package(
     using JT = OldJob::Type;
 
     if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or
-        not is_one_of(
-            job_type,
-            JT::ADD_PROBLEM,
-            JT::REUPLOAD_PROBLEM,
-            JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION
-        ))
+        not is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM))
     {
         return api_error403(); // TODO: ^ that is very nasty
     }

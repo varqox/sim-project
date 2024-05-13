@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <simlib/call_in_destructor.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/macros/stack_unwinding.hh>
@@ -94,10 +95,16 @@ class ZipSource {
     zip_uint32_t external_attributes_ = default_mode << 16;
 
 private:
-    ZipSource(zip_t* zip, const void* data, zip_uint64_t len)
-    : zsource_(zip_source_buffer(zip, data, len, 0)) {
+    ZipSource(zip_t* zip, const void* data, zip_uint64_t len) : zsource_{nullptr} {
         STACK_UNWINDING_MARK;
-        if (zsource_ == nullptr) {
+        auto* data_copy = malloc(len); // NOLINT(cppcoreguidelines-no-malloc)
+        if (!data_copy) {
+            THROW("malloc()", errmsg());
+        }
+        std::memcpy(data_copy, data, len);
+        zsource_ = zip_source_buffer(zip, data_copy, len, 1);
+        if (!zsource_) {
+            ::free(data_copy); // NOLINT(cppcoreguidelines-no-malloc)
             THROW("zip_source_buffer() - ", zip_strerror(zip));
         }
     }
