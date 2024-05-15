@@ -35,88 +35,24 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "d3cfccafda3b0f451ed1f4fe567d523faea78aea69df16146041afdc8d60383a";
+    "2a327d9def9ee5218519b4a82440de679b9d801acf04adf6f4f1dc802c002a46";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
 ) {
     STACK_UNWINDING_MARK;
     // Upgrade here
-    using sim::jobs::Job;
-    {
-        mysql.update("UNLOCK TABLES");
-        // clang-format off
-        mysql.update("CREATE TABLE `reupload_problem_jobs` ("
-                     "  `id` bigint(20) unsigned NOT NULL,"
-                     "  `problem_id` bigint(20) unsigned NOT NULL,"
-                     "  `file_id` bigint(20) unsigned NOT NULL,"
-                     "  `force_time_limits_reset` tinyint(1) NOT NULL,"
-                     "  `ignore_simfile` tinyint(1) NOT NULL,"
-                     "  `name` varbinary(128) NOT NULL,"
-                     "  `label` varbinary(64) NOT NULL,"
-                     "  `memory_limit_in_mib` bigint(20) unsigned DEFAULT NULL,"
-                     "  `fixed_time_limit_in_ns` bigint(20) unsigned DEFAULT NULL,"
-                     "  `reset_scoring` tinyint(1) NOT NULL,"
-                     "  `look_for_new_tests` tinyint(1) NOT NULL,"
-                     "  PRIMARY KEY (`id`),"
-                     "  KEY `file_id` (`file_id`),"
-                     "  CONSTRAINT `reupload_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
-                     "  CONSTRAINT `reupload_problem_jobs_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE"
-                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
-        );
-        // clang-format on
-        // Convert old AddProblemInfo into
-        auto stmt = mysql.execute(sim::sql::Select("id, file_id, aux_id, info")
-                                      .from("jobs")
-                                      .where("type IN (?, ?)", Job::Type::REUPLOAD_PROBLEM, 5));
-        decltype(Job::id) id;
-        decltype(Job::file_id) file_id;
-        decltype(Job::aux_id) aux_id;
-        decltype(Job::info) info;
-        stmt.res_bind(id, file_id, aux_id, info);
-        while (stmt.next()) {
-            auto api = sim::jobs::AddProblemInfo{info};
-            mysql.execute(
-                sim::sql::InsertInto(
-                    "reupload_problem_jobs (id, problem_id, file_id, force_time_limits_reset, "
-                    "ignore_simfile, name, label, memory_limit_in_mib, fixed_time_limit_in_ns, "
-                    "reset_scoring, look_for_new_tests)"
-                )
-                    .values(
-                        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
-                        id,
-                        aux_id,
-                        file_id,
-                        api.reset_time_limits,
-                        api.ignore_simfile,
-                        api.name,
-                        api.label,
-                        api.memory_limit,
-                        api.global_time_limit ? std::optional{api.global_time_limit->count()}
-                                              : std::nullopt,
-                        api.reset_scoring,
-                        api.seek_for_new_tests
-                    )
-            );
-        }
-        mysql.execute(sim::sql::Update("jobs")
-                          .set("type=?, info=''", Job::Type::REUPLOAD_PROBLEM)
-                          .where("type IN (?, ?)", Job::Type::REUPLOAD_PROBLEM, 5));
-    }
-    // Fix not updating added_problem_id in add_problem_jobs
-    auto stmt = mysql.execute(
-        sim::sql::Select("id, aux_id").from("jobs").where("type=?", Job::Type::ADD_PROBLEM)
-    );
-    decltype(Job::id) id;
-    decltype(Job::aux_id) aux_id;
-    stmt.res_bind(id, aux_id);
-    while (stmt.next()) {
-        mysql.execute(
-            sim::sql::Update("add_problem_jobs").set("added_problem_id=?", aux_id).where("id=?", id)
-        );
-    }
+    mysql.update("ALTER TABLE problems DROP CONSTRAINT problems_ibfk_1");
+    mysql.update("ALTER TABLE problems ADD CONSTRAINT `problems_ibfk_1` FOREIGN KEY (`file_id`) "
+                 "REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
 
-    mysql.update("ALTER TABLE jobs DROP COLUMN tmp_file_id");
+    mysql.update("ALTER TABLE contest_files DROP CONSTRAINT contest_files_ibfk_1");
+    mysql.update("ALTER TABLE contest_files ADD CONSTRAINT `contest_files_ibfk_1` FOREIGN KEY "
+                 "(`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
+
+    mysql.update("ALTER TABLE submissions DROP CONSTRAINT submissions_ibfk_1");
+    mysql.update("ALTER TABLE submissions ADD CONSTRAINT `submissions_ibfk_1` FOREIGN KEY "
+                 "(`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE");
 }
 
 enum class LockKind {

@@ -21,10 +21,10 @@ jobs:
       - run: su tester -c 'meson compile -C release-build/'
       - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
 
-  ubuntu-23:
+  ubuntu-24:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:23.10
+      image: ubuntu:24.04
       options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
     steps:
       - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup
@@ -115,10 +115,10 @@ jobs:
       - run: su tester -c 'meson compile -C release-build/'
       - run: su tester -c 'meson test -C release-build/ --print-errorlogs'
 
-  ubuntu-23-with-sanitizers:
+  ubuntu-24-with-sanitizers:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:23.10
+      image: ubuntu:24.04
       options: --security-opt seccomp=unconfined --privileged --security-opt systempaths=unconfined # needed to make clone3() work in the container, and mount cgroup2 read-write, and /proc mountable
     steps:
       - run: mount -t cgroup2 -o nsdelegate,remount none /sys/fs/cgroup

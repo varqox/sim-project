@@ -1,14 +1,11 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
 
-#include <exception>
 #include <fcntl.h>
 #include <gmock/gmock.h>
 #include <optional>
-#include <simlib/concat_tostr.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/sandbox/sandbox.hh>
-#include <simlib/string_view.hh>
 #include <stdexcept>
 
 using std::nullopt;
@@ -159,15 +156,9 @@ TEST(sandbox, mount_tmpfs) {
         sc
             .await_result(sc
                               .send_request(
-                                  FileDescriptor{tester_executable_path.data(), O_RDONLY},
                                   {{tester_executable_path, "mount_tmpfs"}},
                                   {
                                       .stderr_fd = STDERR_FILENO,
-                                      .env =
-                                          {
-                                              {std::string{"LD_LIBRARY_PATH="} +
-                                               getenv("LD_LIBRARY_PATH")},
-                                          },
                                       .linux_namespaces =
                                           {
                                               .mount =
@@ -372,7 +363,6 @@ TEST(sandbox, mount_proc) {
     auto& sc = get_sc();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "mount_proc"}},
             {
                 .stderr_fd = STDERR_FILENO,
@@ -419,14 +409,10 @@ TEST(sandbox, mount_proc) {
 // NOLINTNEXTLINE
 TEST(sandbox, bind_mount) {
     auto& sc = get_sc();
-    ASSERT_RESULT_OK(sc.await_result(sc.send_request(FileDescriptor{tester_executable_path.data(), O_RDONLY},
+    ASSERT_RESULT_OK(sc.await_result(sc.send_request(
         {{tester_executable_path, "bind_mount"}},
         {
             .stderr_fd = STDERR_FILENO,
-                .env =
-                    {
-                        {std::string{"LD_LIBRARY_PATH="} + getenv("LD_LIBRARY_PATH")},
-                    },
             .linux_namespaces = {
                 .mount = {
                     .operations = {{
@@ -538,7 +524,6 @@ TEST(sandbox, create_dir) {
     auto& sc = get_sc();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "create_dir"}},
             {
                 .stderr_fd = STDERR_FILENO,
@@ -636,7 +621,6 @@ TEST(sandbox, create_file) {
     auto& sc = get_sc();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "create_file"}},
             {
                 .stderr_fd = STDERR_FILENO,
@@ -734,7 +718,6 @@ TEST(sandbox, tracee_cannot_umount_mounts) {
     auto& sc = get_sc();
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "tracee_cannot_umount_mounts"}},
             {
                 .stderr_fd = STDERR_FILENO,

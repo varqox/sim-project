@@ -1,16 +1,17 @@
 #include <cerrno>
 #include <csignal>
+#include <cstdint>
 #include <fcntl.h>
-#include <simlib/file_contents.hh>
 #include <simlib/file_perms.hh>
 #include <simlib/macros/throw.hh>
-#include <simlib/random_bytes.hh>
 #include <simlib/throw_assert.hh>
 #include <simlib/to_arg_seq.hh>
 #include <sys/mman.h>
+#include <sys/random.h>
 #include <sys/resource.h>
 #include <thread>
 #include <unistd.h>
+#include <vector>
 
 template <class T>
 rlimit64 get_prlimit(T resource) {
@@ -96,8 +97,10 @@ int main(int argc, char** argv) {
 
         // Create another file (the limit is not on the cumulative size)
         fd = open("/dev/another_file", O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, S_0644);
-        throw_assert(write_all(fd, from_unsafe{random_bytes(42)}) == 42);
-        throw_assert(write_all(fd, "x", 1) == 0 && errno == EFBIG);
+        std::vector<uint8_t> data(42);
+        throw_assert(getrandom(data.data(), data.size(), 0) == 42);
+        throw_assert(write(fd, data.data(), data.size()) == 42);
+        throw_assert(write(fd, "x", 1) == -1 && errno == EFBIG);
         throw_assert(close(fd) == 0);
     }
     if (file_descriptors_num) {

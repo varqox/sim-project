@@ -4,17 +4,17 @@ statement: foo.txt
 solutions: [sol.c]
 memory_limit: 32
 limits: [
-	000 6.058
-	6ocen 6.058
+	000 12.168
+	6ocen 12.168
 
-	1a 6.058
-	1d 6.058
-	1file 6.058
+	1a 12.168
+	1d 12.168
+	1file 12.168
 
-	3 6.058 9
-	3file 6.058
+	3 12.168 9
+	3file 12.168
 
-	5 6.058
+	5 12.168
 ]
 scoring: [
 	000 0

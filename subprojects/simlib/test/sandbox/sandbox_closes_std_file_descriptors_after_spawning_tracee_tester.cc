@@ -1,5 +1,4 @@
 #include <cstring>
-#include <initializer_list>
 #include <poll.h>
 #include <unistd.h>
 

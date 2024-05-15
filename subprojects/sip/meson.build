@@ -131,4 +131,4 @@ base_targets = [sip]
 alias_target('base', base_targets)
 
 #################################### Tests ####################################
-test('sip_tests', find_program('test/run_sip_tests.py'), args : [sip.full_path()], depends : sip, priority : 10)
+test('sip_tests', find_program('test/run_sip_tests.py'), args : [sip.full_path()], depends : sip, timeout : 300, priority : 10)

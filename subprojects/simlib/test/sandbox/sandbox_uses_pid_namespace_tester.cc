@@ -1,10 +1,10 @@
 #include <cerrno>
-#include <csignal>
 #include <cstddef>
 #include <fcntl.h>
+#include <regex>
 #include <simlib/file_descriptor.hh>
 #include <simlib/noexcept_concat.hh>
-#include <simlib/proc_status_file.hh>
+#include <simlib/read_file.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/syscalls.hh>
 #include <simlib/throw_assert.hh>
@@ -64,28 +64,38 @@ void check_killing_with_all_signals() {
 }
 
 void check_killing_supervisor_using_pidfd_from_opening_proc_subdir() {
-    // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-    pid_t procfs_pid = str2num<pid_t>(from_unsafe{field_from_proc_status(
-                                          open("/proc/self/status", O_RDONLY | O_CLOEXEC), "Pid"
-                                      )})
-                           .value();
+    pid_t procfs_pid = [] {
+        auto proc_self_status_contents = read_file("/proc/self/status");
+        std::smatch parts;
+        throw_assert(
+            std::regex_search(proc_self_status_contents, parts, std::regex{"\nPid:\\s*(\\d*)"})
+        );
+        return str2num<pid_t>(from_unsafe{parts[1].str()}).value();
+    }();
 
     throw_assert(procfs_pid != 0);
     throw_assert(procfs_pid != 2); // procfs should be from the parent pid namespace
 
-    pid_t procfs_parent_pid =
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        str2num<pid_t>(from_unsafe{field_from_proc_status(open_proc_status(procfs_pid), "PPid")})
-            .value();
+    pid_t procfs_parent_pid = [] {
+        auto proc_self_status_contents = read_file("/proc/self/status");
+        std::smatch parts;
+        throw_assert(
+            std::regex_search(proc_self_status_contents, parts, std::regex{"\nPPid:\\s*(\\d*)"})
+        );
+        return str2num<pid_t>(from_unsafe{parts[1].str()}).value();
+    }();
     throw_assert(procfs_parent_pid != 0);
     throw_assert(procfs_parent_pid != 1); // procfs should be from the parent pid namespace
 
-    pid_t procfs_grandparent_pid =
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        str2num<pid_t>(
-            from_unsafe{field_from_proc_status(open_proc_status(procfs_parent_pid), "PPid")}
-        )
-            .value();
+    pid_t procfs_grandparent_pid = [procfs_parent_pid] {
+        auto proc_parent_status_contents =
+            read_file(noexcept_concat("/proc/", procfs_parent_pid, "/status"));
+        std::smatch parts;
+        throw_assert(
+            std::regex_search(proc_parent_status_contents, parts, std::regex{"\nPPid:\\s*(\\d*)"})
+        );
+        return str2num<pid_t>(from_unsafe{parts[1].str()}).value();
+    }();
     throw_assert(procfs_grandparent_pid != 0);
 
     auto grandparent_pidfd = FileDescriptor{

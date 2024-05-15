@@ -1,4 +1,3 @@
-#include <cstddef>
 #include <fcntl.h>
 #include <simlib/throw_assert.hh>
 #include <sys/stat.h>

@@ -1,5 +1,4 @@
 #include <cerrno>
-#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
@@ -32,6 +31,7 @@ int main() {
         throw_assert(false && "unexpected entry");
     entry_ok:;
     }
+    (void)closedir(dir);
 
     return 0;
 }

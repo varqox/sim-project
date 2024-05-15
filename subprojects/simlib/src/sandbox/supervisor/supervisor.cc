@@ -881,7 +881,7 @@ void Cgroups::set_tracee_limits(const request::Request::Cgroup& cg) noexcept {
 namespace seccomp {
 
 sock_fprog create_filter_for_pid1() noexcept {
-    int mfd = memfd_create("seccom_filter", MFD_CLOEXEC);
+    int mfd = memfd_create("seccomp_filter", MFD_CLOEXEC);
     if (mfd < 0) {
         die_with_error("memfd_create()");
     }

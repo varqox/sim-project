@@ -1,6 +1,6 @@
 #include <cctype>
 #include <iostream>
-#include <simlib/file_contents.hh>
+#include <simlib/read_file.hh>
 #include <simlib/string_transform.hh>
 #include <simlib/string_view.hh>
 #include <simlib/throw_assert.hh>
@@ -42,12 +42,12 @@ int main(int argc, char** argv) {
 
     // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
     auto overflow_uid =
-        str2num<uid_t>(StringView{from_unsafe{get_file_contents("/proc/sys/kernel/overflowuid")}
+        str2num<uid_t>(StringView{from_unsafe{read_file("/proc/sys/kernel/overflowuid")}
                        }.without_trailing(isspace))
             .value();
     // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
     auto overflow_gid =
-        str2num<gid_t>(StringView{from_unsafe{get_file_contents("/proc/sys/kernel/overflowgid")}
+        str2num<gid_t>(StringView{from_unsafe{read_file("/proc/sys/kernel/overflowgid")}
                        }.without_trailing(isspace))
             .value();
     throw_assert(stat64("/proc/", &st) == 0);

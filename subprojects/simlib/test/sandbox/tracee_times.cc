@@ -1,5 +1,6 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
+#include "mount_operations_mount_proc_if_running_under_leak_sanitizer.hh"
 
 #include <gtest/gtest.h>
 #include <simlib/concat_tostr.hh>
@@ -37,8 +38,20 @@ TEST(sandbox, tracee_runtime_and_cpu_time) {
 // NOLINTNEXTLINE
 TEST(sandbox, tracee_cpu_time_is_accounted) {
     auto sc = sandbox::spawn_supervisor();
-    auto res_var =
-        sc.await_result(sc.send_request({{tester_executable_path}}, {.stderr_fd = STDERR_FILENO}));
+    auto res_var = sc.await_result(sc.send_request(
+        {{tester_executable_path}},
+        {
+            .stderr_fd = STDERR_FILENO,
+            .linux_namespaces =
+                {
+                    .mount =
+                        {
+                            .operations =
+                                mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                        },
+                },
+        }
+    ));
     ASSERT_RESULT_OK(res_var, CLD_EXITED, 0);
     auto res = std::get<Ok>(res_var);
     SCOPED_TRACE(concat_tostr("real: ", to_string(res.runtime)));

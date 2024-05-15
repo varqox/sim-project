@@ -1,12 +1,14 @@
 #include "find_cgroup_with_pid_as_only_process.hh"
 
 #include <exception>
-#include <simlib/file_contents.hh>
+#include <regex>
 #include <simlib/file_manip.hh>
 #include <simlib/noexcept_concat.hh>
-#include <simlib/proc_status_file.hh>
+#include <simlib/read_file.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_transform.hh>
+#include <simlib/throw_assert.hh>
+#include <simlib/write_file.hh>
 #include <unistd.h>
 
 void test_escaping_from_tracee_cgroup() {
@@ -18,10 +20,10 @@ void test_escaping_from_tracee_cgroup() {
     auto tracee_cgroup_path = *tracee_cgroup_path_opt;
     // Try to escape into the parent cgroup
     try {
-        put_file_contents(tracee_cgroup_path + "/../cgroup.procs", "0");
+        write_file(tracee_cgroup_path + "/../cgroup.procs", "0");
         _exit(2);
     } catch (const std::exception& e) {
-        if (!has_prefix(e.what(), "write() failed - No such file or directory (os error 2)")) {
+        if (!has_prefix(e.what(), "write() - No such file or directory (os error 2)")) {
             _exit(3);
         }
     }
@@ -30,32 +32,31 @@ void test_escaping_from_tracee_cgroup() {
         _exit(4);
     }
     try {
-        put_file_contents(tracee_cgroup_path + "/../abc/cgroup.procs", "0");
+        write_file(tracee_cgroup_path + "/../abc/cgroup.procs", "0");
         _exit(5);
     } catch (const std::exception& e) {
-        if (!has_prefix(e.what(), "write() failed - No such file or directory (os error 2)")) {
+        if (!has_prefix(e.what(), "write() - No such file or directory (os error 2)")) {
             _exit(6);
         }
     }
 }
 
 void test_tracee_cgroup_path() {
-    if (get_file_contents("/proc/self/cgroup") != "0::/\n") {
+    if (read_file("/proc/self/cgroup") != "0::/\n") {
         _exit(7);
     }
 }
 
 void test_pid1_cgroup_path() {
-    pid_t procfs_parent_pid =
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        str2num<pid_t>(from_unsafe{field_from_proc_status(
-                           open("/proc/self/status", O_RDONLY | O_CLOEXEC), "PPid"
-                       )})
-            .value();
-    ;
-    if (get_file_contents(noexcept_concat("/proc/", procfs_parent_pid, "/cgroup")) !=
-        "0::/../pid1\n")
-    {
+    pid_t procfs_parent_pid = [] {
+        auto proc_self_status_contents = read_file("/proc/self/status");
+        std::smatch parts;
+        throw_assert(
+            std::regex_search(proc_self_status_contents, parts, std::regex{"\nPPid:\\s*(\\d*)"})
+        );
+        return str2num<pid_t>(from_unsafe{parts[1].str()}).value();
+    }();
+    if (read_file(noexcept_concat("/proc/", procfs_parent_pid, "/cgroup")) != "0::/../pid1\n") {
         _exit(8);
     }
 }

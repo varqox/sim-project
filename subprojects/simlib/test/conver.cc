@@ -317,7 +317,7 @@ private:
         }
     }
 
-    void round_post_judge_simfile_time_limits_to_whole_seconds() {
+    void round_post_judge_simfile_time_limits_to_multiple_of_one_seconds() {
         using std::chrono_literals::operator""s;
         // This should remove the problem with random time limit if they
         // were set using the model solution.
@@ -332,7 +332,7 @@ private:
     }
 
     void check_result() {
-        round_post_judge_simfile_time_limits_to_whole_seconds();
+        round_post_judge_simfile_time_limits_to_multiple_of_one_seconds();
         if (regenerate_outs) {
             overwrite_test_output_files();
         }

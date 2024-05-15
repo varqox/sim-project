@@ -120,6 +120,7 @@ Response WebWorker::handler_impl(ResponseMaker&& response_maker) {
         .request = request.value(),
         .mysql = mysql,
         .old_mysql = old_mysql::ConnectionView{mysql},
+        .uncommited_files_removers = {},
         .session = std::nullopt,
         .cookie_changes = {},
     };

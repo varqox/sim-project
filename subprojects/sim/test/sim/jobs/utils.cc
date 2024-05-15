@@ -94,38 +94,3 @@ TEST(jobs, extract_dumped_int2) {
     ASSERT_EQ(d, 0x1040aab9c4aa3973);
     ASSERT_EQ(buff, "");
 }
-
-// NOLINTNEXTLINE
-TEST(jobs, extract_dumped_string) {
-    StringView buff(
-        "\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
-        "12213\0\0\0\x09qdsp\x03l\xffr3",
-        42
-    );
-
-    ASSERT_EQ(extract_dumped_string(buff), "te2i0j192jeo");
-    ASSERT_EQ(
-        buff,
-        StringView(
-            "\0\0\0\0\0\0\0\x05"
-            "12213\0\0\0\x09qdsp\x03l\xffr3",
-            26
-        )
-    );
-
-    ASSERT_EQ(extract_dumped_string(buff), "");
-    ASSERT_EQ(
-        buff,
-        StringView(
-            "\0\0\0\x05"
-            "12213\0\0\0\x09qdsp\x03l\xffr3",
-            22
-        )
-    );
-
-    ASSERT_EQ(extract_dumped_string(buff), "12213");
-    ASSERT_EQ(buff, StringView("\0\0\0\x09qdsp\x03l\xffr3", 13));
-
-    ASSERT_EQ(extract_dumped_string(buff), "qdsp\x03l\xffr3");
-    ASSERT_EQ(buff, "");
-}

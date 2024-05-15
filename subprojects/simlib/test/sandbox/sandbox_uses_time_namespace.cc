@@ -1,5 +1,6 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
+#include "mount_operations_mount_proc_if_running_under_leak_sanitizer.hh"
 
 #include <simlib/sandbox/sandbox.hh>
 #include <string_view>
@@ -16,7 +17,17 @@ TEST(sandbox, sandbox_uses_net_namespace) {
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
             {{tester_executable_path, std::string_view(time_ns_id.data(), time_ns_id_len)}},
-            {.stderr_fd = STDERR_FILENO}
+            {
+                .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+            }
         )),
         CLD_EXITED,
         0

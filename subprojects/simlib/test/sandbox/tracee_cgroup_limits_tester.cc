@@ -1,6 +1,7 @@
-#include "can_create_child.hh"
+#include "can_create_children.hh"
 #include "try_use_lots_of_memory.hh"
 
+#include <simlib/leak_sanitizer.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/to_arg_seq.hh>
 
@@ -20,7 +21,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (pids_limit != !can_create_child()) {
+    if (pids_limit != !can_create_children(1 + LEAK_SANITIZER)) {
         return 1;
     }
     if (cpu_max_bandwidth) {

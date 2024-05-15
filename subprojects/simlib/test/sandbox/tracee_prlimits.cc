@@ -1,13 +1,14 @@
 #include "../gtest_with_tester.hh"
 #include "assert_result.hh"
+#include "mount_operations_mount_proc_if_running_under_leak_sanitizer.hh"
 
 #include <chrono>
-#include <cstdlib>
 #include <fcntl.h>
 #include <gtest/gtest.h>
 #include <optional>
 #include <simlib/address_sanitizer.hh>
 #include <simlib/file_descriptor.hh>
+#include <simlib/merge.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <unistd.h>
 
@@ -17,7 +18,20 @@ using sandbox::result::Ok;
 TEST(sandbox, no_prlimit_limit) {
     auto sc = sandbox::spawn_supervisor();
     ASSERT_RESULT_OK(
-        sc.await_result(sc.send_request({{tester_executable_path}}, {.stderr_fd = STDERR_FILENO})),
+        sc.await_result(sc.send_request(
+            {{tester_executable_path}},
+            {
+                .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
+            }
+        )),
         CLD_EXITED,
         0
     );
@@ -57,6 +71,14 @@ TEST(sandbox, max_core_file_size_in_bytes) {
             {{tester_executable_path, "core_file_size"}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
                 .prlimit =
                     {
                         .max_core_file_size_in_bytes = 0,
@@ -75,6 +97,14 @@ TEST(sandbox, cpu_time_limit_in_seconds) {
         {{tester_executable_path, "cpu_time"}},
         {
             .stderr_fd = STDERR_FILENO,
+            .linux_namespaces =
+                {
+                    .mount =
+                        {
+                            .operations =
+                                mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                        },
+                },
             .prlimit =
                 {
                     .cpu_time_limit_in_seconds = 1,
@@ -93,26 +123,24 @@ TEST(sandbox, max_file_size_in_bytes) {
 
     ASSERT_RESULT_OK(
         sc.await_result(sc.send_request(
-            FileDescriptor{tester_executable_path.data(), O_RDONLY},
             {{tester_executable_path, "file_size"}},
             {
                 .stderr_fd = STDERR_FILENO,
-                .env =
-                    {
-                        {std::string{"LD_LIBRARY_PATH="} + getenv("LD_LIBRARY_PATH")},
-                    },
                 .linux_namespaces =
                     {
                         .mount =
                             {
-                                .operations = {{
-                                    sandbox::RequestOptions::LinuxNamespaces::Mount::MountTmpfs{
-                                        .path = "/dev",
-                                        .max_total_size_of_files_in_bytes = std::nullopt,
-                                        .inode_limit = 2,
-                                        .read_only = false,
-                                    },
-                                }},
+                                .operations = merge(
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                                    Slice{{
+                                        sandbox::RequestOptions::LinuxNamespaces::Mount::MountTmpfs{
+                                            .path = "/dev",
+                                            .max_total_size_of_files_in_bytes = std::nullopt,
+                                            .inode_limit = 2,
+                                            .read_only = false,
+                                        },
+                                    }}
+                                ),
                             },
                     },
                 .prlimit =
@@ -134,6 +162,14 @@ TEST(sandbox, file_descriptors_num_limit) {
             {{tester_executable_path}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
                 .prlimit =
                     {
                         .file_descriptors_num_limit = 3, // dynamic linker will fail
@@ -151,6 +187,15 @@ TEST(sandbox, file_descriptors_num_limit) {
                 {{tester_executable_path, "file_descriptors_num"}},
                 {
                     .stderr_fd = STDERR_FILENO,
+                    .linux_namespaces =
+                        {
+                            .mount =
+                                {
+                                    .operations =
+                                        mount_operations_mount_proc_if_running_under_leak_sanitizer(
+                                        ),
+                                },
+                        },
                     .prlimit =
                         {
                             .file_descriptors_num_limit = 4,
@@ -171,6 +216,14 @@ TEST(sandbox, max_stack_size_in_bytes) {
             {{tester_executable_path}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
                 .prlimit =
                     {
                         .max_stack_size_in_bytes = 0,
@@ -185,6 +238,14 @@ TEST(sandbox, max_stack_size_in_bytes) {
             {{tester_executable_path, "max_stack_size"}},
             {
                 .stderr_fd = STDERR_FILENO,
+                .linux_namespaces =
+                    {
+                        .mount =
+                            {
+                                .operations =
+                                    mount_operations_mount_proc_if_running_under_leak_sanitizer(),
+                            },
+                    },
                 .prlimit =
                     {
                         .max_stack_size_in_bytes = 4123 << 10,
