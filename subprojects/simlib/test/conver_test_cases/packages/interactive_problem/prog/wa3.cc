@@ -1,5 +1,6 @@
 // Krzysztof Małysa
 #include <iostream>
+#include <unistd.h>
 
 using namespace std;
 
@@ -9,7 +10,10 @@ int main() {
 
 	cout << "! ?\n" << flush;
 
-	for (;;) {} // Solution should be killed after checker verdicts WRONG
+	// Solution should be killed after checker verdicts WRONG
+	for (;;) {
+		pause(); // To minimize CPU time consumption under load
+	}
 
 	return 0;
 }

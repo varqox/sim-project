@@ -4,19 +4,19 @@ statement: foo.txt
 solutions: [sol.c]
 memory_limit: 32
 limits: [
-	some 12
+	some 11
 
-	0 12
-	6ocen 12
+	0 11
+	6ocen 11
 
-	1a 12
-	1d 12
-	1file 12
+	1a 11
+	1d 11
+	1file 11
 
-	3 12 9
-	3file 12
+	3 11 9
+	3file 11
 
-	5 12
+	5 11
 ]
 scoring: [
 	'"" 47'
