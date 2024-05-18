@@ -193,7 +193,7 @@ std::vector<FileRemover> submit_solutions(
         log("Submitting: ", solution);
         auto solution_file_id = sim::internal_files::new_internal_file_id(mysql, curr_datetime);
         mysql.execute(
-            InsertInto("submissions (created_at, file_id, owner, problem_id, contest_problem_id, "
+            InsertInto("submissions (created_at, file_id, user_id, problem_id, contest_problem_id, "
                        "contest_round_id, contest_id, type, language, initial_status, full_status, "
                        "last_judgment, initial_report, final_report)")
                 .values(

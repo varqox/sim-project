@@ -3875,7 +3875,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					'<th class="priority">Priority</th>' +
 					'<th class="created_at">Created at</th>' +
 					'<th class="status">Status</th>' +
-					'<th class="owner">Owner</th>' +
+					'<th class="creator">Creator</th>' +
 					'<th class="info">Info</th>' +
 					'<th class="actions">Actions</th>' +
 				'</tr></thead><tbody></tbody>');
@@ -4232,7 +4232,7 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 					html: [
 						$('<thead>', {html: '<tr>' +
 							'<th style="min-width:90px">Lang</th>' +
-							(s.owner_id === null ? ''
+							(s.user_id === null ? ''
 								: '<th style="min-width:120px">User</th>') +
 							'<th style="min-width:120px">Problem</th>' +
 							'<th style="min-width:150px">Submission time</th>' +
@@ -4246,11 +4246,11 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 								class: (s.type === 'Ignored' ? 'ignored' : undefined),
 								html: [
 									$('<td>', {text: s.language}),
-									(s.owner_id === null ? '' : $('<td>', {
-										html: [a_view_button(url_user(s.owner_id), s.owner_username,
-												undefined, view_user.bind(null, true, s.owner_id)),
-											' (' + text_to_safe_html(s.owner_first_name) + ' ' +
-												text_to_safe_html(s.owner_last_name) + ')'
+									(s.user_id === null ? '' : $('<td>', {
+										html: [a_view_button(url_user(s.user_id), s.user_username,
+												undefined, view_user.bind(null, true, s.user_id)),
+											' (' + text_to_safe_html(s.user_first_name) + ' ' +
+												text_to_safe_html(s.user_last_name) + ')'
 										]
 									})),
 									$('<td>', {
@@ -4348,19 +4348,19 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 				new JobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
 			});
 
-		if (s.owner_id !== null) {
-			tabs.push((s.owner_id == signed_user_id ? 'My' : "User's") + ' submissions to this problem', function() {
+		if (s.user_id !== null) {
+			tabs.push((s.user_id == signed_user_id ? 'My' : "User's") + ' submissions to this problem', function() {
 				elem.append($('<div>'));
-				tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + (s.contest_id === null ? '/p' + s.problem_id : '/P' + s.contest_problem_id));
+				tab_submissions_lister(elem.children().last(), '/u' + s.user_id + (s.contest_id === null ? '/p' + s.problem_id : '/P' + s.contest_problem_id));
 			});
 
-			if (s.contest_id !== null && s.owner_id != signed_user_id) {
+			if (s.contest_id !== null && s.user_id != signed_user_id) {
 				tabs.push("User's submissions to this round", function() {
 					elem.append($('<div>'));
-					tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + '/R' + s.contest_round_id);
+					tab_submissions_lister(elem.children().last(), '/u' + s.user_id + '/R' + s.contest_round_id);
 				}, "User's submissions to this contest", function() {
 					elem.append($('<div>'));
-					tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + '/C' + s.contest_id);
+					tab_submissions_lister(elem.children().last(), '/u' + s.user_id + '/C' + s.contest_id);
 				});
 			}
 		}
@@ -4429,14 +4429,14 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 
 			// Username
 			if (this_.show_user) {
-				if (x.owner_id === null)
+				if (x.user_id === null)
 					row.appendChild(elem_with_text('td', 'System'));
-				else if (x.owner_first_name === null || x.owner_last_name === null)
-					row.appendChild(elem_with_text('td', x.owner_id));
+				else if (x.user_first_name === null || x.user_last_name === null)
+					row.appendChild(elem_with_text('td', x.user_id));
 				else {
 					td = document.createElement('td');
-					td.appendChild(a_view_button(url_user(x.owner_id), x.owner_first_name + ' ' + x.owner_last_name, undefined,
-							view_user.bind(null, true, x.owner_id)));
+					td.appendChild(a_view_button(url_user(x.user_id), x.user_first_name + ' ' + x.user_last_name, undefined,
+							view_user.bind(null, true, x.user_id)));
 					row.appendChild(td);
 				}
 

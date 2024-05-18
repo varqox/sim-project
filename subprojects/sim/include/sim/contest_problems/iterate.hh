@@ -55,9 +55,9 @@ void iterate(
                          : "JOIN contest_rounds cr ON cr.id=cp.contest_round_id "
                            "AND cr.begins<=? "),
         "JOIN problems p ON p.id=cp.problem_id "
-        "LEFT JOIN submissions si ON si.owner=? AND si.contest_problem_id=cp.id"
+        "LEFT JOIN submissions si ON si.user_id=? AND si.contest_problem_id=cp.id"
         " AND si.contest_initial_final=1 "
-        "LEFT JOIN submissions sf ON sf.owner=? AND sf.contest_problem_id=cp.id"
+        "LEFT JOIN submissions sf ON sf.user_id=? AND sf.contest_problem_id=cp.id"
         " AND sf.contest_final=1 "
         "WHERE ",
         id_field,

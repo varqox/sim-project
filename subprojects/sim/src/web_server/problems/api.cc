@@ -53,13 +53,13 @@ struct ProblemInfo {
     decltype(Problem::type) type{};
     decltype(Problem::name) name;
     decltype(Problem::label) label;
-    std::optional<decltype(Problem::owner_id)::value_type> owner_id;
-    std::optional<std::string> owner_username;
-    std::optional<std::string> owner_first_name;
-    std::optional<std::string> owner_last_name;
+    optional<decltype(Problem::owner_id)::value_type> owner_id;
+    optional<std::string> owner_username;
+    optional<std::string> owner_first_name;
+    optional<std::string> owner_last_name;
     decltype(Problem::created_at) created_at;
     decltype(Problem::updated_at) updated_at;
-    std::optional<decltype(Submission::full_status)> final_submission_full_status;
+    optional<decltype(Submission::full_status)> final_submission_full_status;
 
     explicit ProblemInfo() = default;
     ProblemInfo(const ProblemInfo&) = delete;
@@ -157,7 +157,7 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
             .left_join("submissions s")
             .on(Condition("s.problem_id=p.id") &&
                 Condition(
-                    "s.owner=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt
+                    "s.user_id=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt
                 ) &&
                 Condition("s.problem_final IS TRUE"))
             .where(Condition{where_cond})
@@ -366,9 +366,9 @@ struct AddProblemAndReuploadProblemCommonParams {
     web_server::http::SubmittedFile package;
     decltype(Problem::name) name;
     decltype(Problem::label) label;
-    std::optional<uint64_t> memory_limit_in_mib;
+    optional<uint64_t> memory_limit_in_mib;
     params::TimeLimitsKind time_limits;
-    std::optional<std::chrono::nanoseconds> fixed_time_limit;
+    optional<std::chrono::nanoseconds> fixed_time_limit;
     bool reset_scoring;
     bool look_for_new_tests;
 };
@@ -387,7 +387,7 @@ validate_add_problem_and_reupload_problem_common_prams(Context& ctx) {
         (memory_limit_in_mib_str, allow_blank_if(params::memory_limit_in_mib_str, !ignore_simfile), REQUIRED)
     );
 
-    std::optional<uint64_t> memory_limit_in_mib;
+    optional<uint64_t> memory_limit_in_mib;
     if (!memory_limit_in_mib_str.empty()) {
         if (!is_digit(memory_limit_in_mib_str)) {
             return Err{std::string{"Invalid memory limit: not a number"}};
@@ -408,7 +408,7 @@ validate_add_problem_and_reupload_problem_common_prams(Context& ctx) {
         ))
     );
 
-    std::optional<std::chrono::nanoseconds> fixed_time_limit;
+    optional<std::chrono::nanoseconds> fixed_time_limit;
     // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
     switch (time_limits) {
     case params::TimeLimitsKind::KEEP_IF_POSSIBLE:
@@ -555,7 +555,7 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
             .left_join("submissions s")
             .on(Condition("s.problem_id=p.id") &&
                 Condition(
-                    "s.owner=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt
+                    "s.user_id=?", ctx.session ? optional{ctx.session->user_id} : std::nullopt
                 ) &&
                 Condition("s.problem_final IS TRUE"))
             .where("p.id=?", problem_id)

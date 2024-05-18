@@ -8,18 +8,18 @@ using sim::contest_problems::OldContestProblem;
 using sim::submissions::OldSubmission;
 
 static void update_problem_final(
-    old_mysql::ConnectionView& mysql, uint64_t submission_owner, uint64_t problem_id
+    old_mysql::ConnectionView& mysql, uint64_t submission_user_id, uint64_t problem_id
 ) {
     STACK_UNWINDING_MARK;
 
-    // Such index: (final_candidate, owner, problem_id, score DESC, full_status,
+    // Such index: (final_candidate, user_id, problem_id, score DESC, full_status,
     // id DESC) is what we need, but MySQL does not support it, so the below
     // workaround is used to select the final submission efficiently
     auto stmt = mysql.prepare("SELECT score FROM submissions USE INDEX(final3) "
-                              "WHERE final_candidate=1 AND owner=?"
+                              "WHERE final_candidate=1 AND user_id=?"
                               " AND problem_id=? "
                               "ORDER BY score DESC LIMIT 1");
-    stmt.bind_and_execute(submission_owner, problem_id);
+    stmt.bind_and_execute(submission_user_id, problem_id);
 
     int64_t final_score = 0;
     stmt.res_bind_all(final_score);
@@ -28,27 +28,27 @@ static void update_problem_final(
         // candidates now
         mysql
             .prepare("UPDATE submissions SET problem_final=0 "
-                     "WHERE owner=? AND problem_id=? AND problem_final=1")
-            .bind_and_execute(submission_owner, problem_id);
+                     "WHERE user_id=? AND problem_id=? AND problem_final=1")
+            .bind_and_execute(submission_user_id, problem_id);
         return; // Nothing more to be done
     }
 
     EnumVal<OldSubmission::Status> full_status{};
     stmt = mysql.prepare("SELECT full_status "
                          "FROM submissions USE INDEX(final3) "
-                         "WHERE final_candidate=1 AND owner=? AND problem_id=?"
+                         "WHERE final_candidate=1 AND user_id=? AND problem_id=?"
                          " AND score=? "
                          "ORDER BY full_status LIMIT 1");
-    stmt.bind_and_execute(submission_owner, problem_id, final_score);
+    stmt.bind_and_execute(submission_user_id, problem_id, final_score);
     stmt.res_bind_all(full_status);
     throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
     // Choose the new final submission
     stmt = mysql.prepare("SELECT id FROM submissions USE INDEX(final3) "
-                         "WHERE final_candidate=1 AND owner=? AND problem_id=?"
+                         "WHERE final_candidate=1 AND user_id=? AND problem_id=?"
                          " AND score=? AND full_status=? "
                          "ORDER BY id DESC LIMIT 1");
-    stmt.bind_and_execute(submission_owner, problem_id, final_score, full_status);
+    stmt.bind_and_execute(submission_user_id, problem_id, final_score, full_status);
 
     uint64_t new_final_id = 0;
     stmt.res_bind_all(new_final_id);
@@ -57,12 +57,12 @@ static void update_problem_final(
     // Update finals
     mysql
         .prepare("UPDATE submissions SET problem_final=IF(id=?, 1, 0) "
-                 "WHERE owner=? AND problem_id=? AND (problem_final=1 OR id=?)")
-        .bind_and_execute(new_final_id, submission_owner, problem_id, new_final_id);
+                 "WHERE user_id=? AND problem_id=? AND (problem_final=1 OR id=?)")
+        .bind_and_execute(new_final_id, submission_user_id, problem_id, new_final_id);
 }
 
 static void update_contest_final(
-    old_mysql::ConnectionView& mysql, uint64_t submission_owner, uint64_t contest_problem_id
+    old_mysql::ConnectionView& mysql, uint64_t submission_user_id, uint64_t contest_problem_id
 ) {
     // TODO: update the initial_final if the submission is half-judged (only
     // initial_status is set and method of choosing the final submission does not show points)
@@ -88,9 +88,9 @@ static void update_contest_final(
         mysql
             .prepare("UPDATE submissions "
                      "SET contest_final=0, contest_initial_final=0 "
-                     "WHERE owner=? AND contest_problem_id=?"
+                     "WHERE user_id=? AND contest_problem_id=?"
                      " AND (contest_final=1 OR contest_initial_final=1)")
-            .bind_and_execute(submission_owner, contest_problem_id);
+            .bind_and_execute(submission_user_id, contest_problem_id);
     };
 
     uint64_t new_final_id = 0;
@@ -99,10 +99,10 @@ static void update_contest_final(
     case OldContestProblem::MethodOfChoosingFinalSubmission::LATEST_COMPILING: {
         // Choose the new final submission
         stmt = mysql.prepare("SELECT id FROM submissions USE INDEX(final1) "
-                             "WHERE owner=? AND contest_problem_id=?"
+                             "WHERE user_id=? AND contest_problem_id=?"
                              " AND final_candidate=1 "
                              "ORDER BY id DESC LIMIT 1");
-        stmt.bind_and_execute(submission_owner, contest_problem_id);
+        stmt.bind_and_execute(submission_user_id, contest_problem_id);
         stmt.res_bind_all(new_final_id);
         if (not stmt.next()) {
             // Nothing to do (no submission that may be final)
@@ -113,16 +113,16 @@ static void update_contest_final(
         break;
     }
     case OldContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE: {
-        // Such index: (final_candidate, owner, contest_problem_id, score DESC,
+        // Such index: (final_candidate, user_id, contest_problem_id, score DESC,
         // full_status, id DESC) is what we need, but MySQL does not support it,
         // so the below workaround is used to select the final submission
         // efficiently
         int64_t final_score = 0;
         stmt = mysql.prepare("SELECT score FROM submissions USE INDEX(final2) "
-                             "WHERE final_candidate=1 AND owner=?"
+                             "WHERE final_candidate=1 AND user_id=?"
                              " AND contest_problem_id=? "
                              "ORDER BY score DESC LIMIT 1");
-        stmt.bind_and_execute(submission_owner, contest_problem_id);
+        stmt.bind_and_execute(submission_user_id, contest_problem_id);
         stmt.res_bind_all(final_score);
         if (not stmt.next()) {
             // Nothing to do (no submission that may be final)
@@ -132,75 +132,75 @@ static void update_contest_final(
         EnumVal<OldSubmission::Status> full_status{};
         stmt = mysql.prepare("SELECT full_status "
                              "FROM submissions USE INDEX(final2) "
-                             "WHERE final_candidate=1 AND owner=?"
+                             "WHERE final_candidate=1 AND user_id=?"
                              " AND contest_problem_id=? AND score=? "
                              "ORDER BY full_status LIMIT 1");
-        stmt.bind_and_execute(submission_owner, contest_problem_id, final_score);
+        stmt.bind_and_execute(submission_user_id, contest_problem_id, final_score);
         stmt.res_bind_all(full_status);
         throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
         // Choose the new final submission
         stmt = mysql.prepare("SELECT id FROM submissions USE INDEX(final2) "
-                             "WHERE final_candidate=1 AND owner=?"
+                             "WHERE final_candidate=1 AND user_id=?"
                              " AND contest_problem_id=? AND score=?"
                              " AND full_status=? "
                              "ORDER BY id DESC LIMIT 1");
-        stmt.bind_and_execute(submission_owner, contest_problem_id, final_score, full_status);
+        stmt.bind_and_execute(submission_user_id, contest_problem_id, final_score, full_status);
         stmt.res_bind_all(new_final_id);
         throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
         // Choose the new initial final submission
         switch (score_revealing) {
         case OldContestProblem::ScoreRevealing::NONE: {
-            // Such index: (final_candidate, owner, contest_problem_id,
+            // Such index: (final_candidate, user_id, contest_problem_id,
             // initial_status, id DESC) is what we need, but MySQL does not
             // support it, so the below workaround is used to select the initial
             // final submission efficiently
             EnumVal<OldSubmission::Status> initial_status{};
             stmt = mysql.prepare("SELECT initial_status "
                                  "FROM submissions USE INDEX(initial_final2) "
-                                 "WHERE final_candidate=1 AND owner=?"
+                                 "WHERE final_candidate=1 AND user_id=?"
                                  " AND contest_problem_id=? "
                                  "ORDER BY initial_status LIMIT 1");
-            stmt.bind_and_execute(submission_owner, contest_problem_id);
+            stmt.bind_and_execute(submission_user_id, contest_problem_id);
             stmt.res_bind_all(initial_status);
             throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
             stmt = mysql.prepare("SELECT id "
                                  "FROM submissions USE INDEX(initial_final2) "
-                                 "WHERE final_candidate=1 AND owner=?"
+                                 "WHERE final_candidate=1 AND user_id=?"
                                  " AND contest_problem_id=?"
                                  " AND initial_status=? "
                                  "ORDER BY id DESC LIMIT 1");
-            stmt.bind_and_execute(submission_owner, contest_problem_id, initial_status);
+            stmt.bind_and_execute(submission_user_id, contest_problem_id, initial_status);
             stmt.res_bind_all(new_initial_final_id);
             throw_assert(stmt.next()); // Previous query succeeded, so this has to
             break;
         }
 
         case OldContestProblem::ScoreRevealing::ONLY_SCORE: {
-            // Such index: (final_candidate, owner, contest_problem_id,
+            // Such index: (final_candidate, user_id, contest_problem_id,
             // score DESC, initial_status, id DESC) is what we need, but MySQL
             // does not support it, so the below workaround is used to select
             // the initial final submission efficiently
             EnumVal<OldSubmission::Status> initial_status{};
             stmt = mysql.prepare("SELECT initial_status "
                                  "FROM submissions USE INDEX(initial_final3) "
-                                 "WHERE final_candidate=1 AND owner=?"
+                                 "WHERE final_candidate=1 AND user_id=?"
                                  " AND contest_problem_id=? AND score=? "
                                  "ORDER BY initial_status LIMIT 1");
-            stmt.bind_and_execute(submission_owner, contest_problem_id, final_score);
+            stmt.bind_and_execute(submission_user_id, contest_problem_id, final_score);
             stmt.res_bind_all(initial_status);
             throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
             stmt = mysql.prepare("SELECT id "
                                  "FROM submissions USE INDEX(initial_final3) "
-                                 "WHERE final_candidate=1 AND owner=?"
+                                 "WHERE final_candidate=1 AND user_id=?"
                                  " AND contest_problem_id=? AND score=?"
                                  " AND initial_status=? "
                                  "ORDER BY id DESC LIMIT 1");
             stmt.bind_and_execute(
-                submission_owner, contest_problem_id, final_score, initial_status
+                submission_user_id, contest_problem_id, final_score, initial_status
             );
             stmt.res_bind_all(new_initial_final_id);
             throw_assert(stmt.next()); // Previous query succeeded, so this has to
@@ -221,25 +221,25 @@ static void update_contest_final(
     mysql
         .prepare("UPDATE submissions SET contest_final=IF(id=?, 1, 0) "
                  "WHERE id=?"
-                 " OR (owner=? AND contest_problem_id=? AND contest_final=1)")
-        .bind_and_execute(new_final_id, new_final_id, submission_owner, contest_problem_id);
+                 " OR (user_id=? AND contest_problem_id=? AND contest_final=1)")
+        .bind_and_execute(new_final_id, new_final_id, submission_user_id, contest_problem_id);
 
     // Update initial finals
     mysql
         .prepare("UPDATE submissions SET contest_initial_final=IF(id=?, 1, 0) "
-                 "WHERE id=? OR (owner=? AND contest_problem_id=?"
+                 "WHERE id=? OR (user_id=? AND contest_problem_id=?"
                  " AND contest_initial_final=1)")
         .bind_and_execute(
-            new_initial_final_id, new_initial_final_id, submission_owner, contest_problem_id
+            new_initial_final_id, new_initial_final_id, submission_user_id, contest_problem_id
         );
 }
 
 namespace sim::submissions {
 
 void update_final_lock(
-    mysql::Connection& mysql, std::optional<uint64_t> submission_owner, uint64_t problem_id
+    mysql::Connection& mysql, std::optional<uint64_t> submission_user_id, uint64_t problem_id
 ) {
-    if (not submission_owner.has_value()) {
+    if (not submission_user_id.has_value()) {
         return; // update_final on System submission is no-op
     }
 
@@ -247,33 +247,33 @@ void update_final_lock(
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
         .prepare("UPDATE submissions SET id=id "
-                 "WHERE owner=? AND problem_id=? ORDER BY id LIMIT 1")
-        .bind_and_execute(submission_owner, problem_id);
+                 "WHERE user_id=? AND problem_id=? ORDER BY id LIMIT 1")
+        .bind_and_execute(submission_user_id, problem_id);
 }
 
 void update_final(
     sim::mysql::Connection& mysql,
-    std::optional<uint64_t> submission_owner,
+    std::optional<uint64_t> submission_user_id,
     uint64_t problem_id,
     std::optional<uint64_t> contest_problem_id,
     bool make_transaction
 ) {
     STACK_UNWINDING_MARK;
 
-    if (not submission_owner.has_value()) {
+    if (not submission_user_id.has_value()) {
         return; // Nothing to do with System submission
     }
 
     auto impl = [&](old_mysql::ConnectionView& old_mysql) {
-        update_problem_final(old_mysql, submission_owner.value(), problem_id);
+        update_problem_final(old_mysql, submission_user_id.value(), problem_id);
         if (contest_problem_id.has_value()) {
-            update_contest_final(old_mysql, submission_owner.value(), contest_problem_id.value());
+            update_contest_final(old_mysql, submission_user_id.value(), contest_problem_id.value());
         }
     };
 
     if (make_transaction) {
         auto transaction = mysql.start_repeatable_read_transaction();
-        update_final_lock(mysql, submission_owner, problem_id);
+        update_final_lock(mysql, submission_user_id, problem_id);
         auto old_mysql = old_mysql::ConnectionView{mysql};
         impl(old_mysql);
         transaction.commit();

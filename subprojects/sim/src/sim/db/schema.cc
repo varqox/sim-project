@@ -249,7 +249,7 @@ const DbSchema& get_schema() {
                         "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
                         "  `created_at` datetime NOT NULL,"
                         "  `file_id` bigint(20) unsigned NOT NULL,"
-                        "  `owner` bigint(20) unsigned DEFAULT NULL,"
+                        "  `user_id` bigint(20) unsigned DEFAULT NULL,"
                         "  `problem_id` bigint(20) unsigned NOT NULL,"
                         "  `contest_problem_id` bigint(20) unsigned DEFAULT NULL,"
                         "  `contest_round_id` bigint(20) unsigned DEFAULT NULL,"
@@ -268,24 +268,24 @@ const DbSchema& get_schema() {
                         "  `initial_report` mediumblob NOT NULL," // TODO: NULL
                         "  `final_report` mediumblob NOT NULL," // TODO: NULL
                         "  PRIMARY KEY (`id`),"
-                        // Submissions API: with owner
-                        "  KEY `owner` (`owner`,`id`),"
-                        "  KEY `owner_2` (`owner`,`type`,`id`),"
-                        "  KEY `owner_3` (`owner`,`problem_id`,`id`),"
-                        "  KEY `owner_4` (`owner`,`contest_problem_id`,`id`),"
-                        "  KEY `owner_5` (`owner`,`contest_round_id`,`id`),"
-                        "  KEY `owner_6` (`owner`,`contest_id`,`id`),"
-                        "  KEY `owner_7` (`owner`,`contest_final`,`id`),"
-                        "  KEY `owner_8` (`owner`,`problem_final`,`id`),"
-                        "  KEY `owner_9` (`owner`,`problem_id`,`type`,`id`),"
-                        "  KEY `owner_10` (`owner`,`problem_id`,`problem_final`),"
-                        "  KEY `owner_11` (`owner`,`contest_problem_id`,`type`,`id`),"
-                        "  KEY `owner_12` (`owner`,`contest_problem_id`,`contest_final`),"
-                        "  KEY `owner_13` (`owner`,`contest_round_id`,`type`,`id`),"
-                        "  KEY `owner_14` (`owner`,`contest_round_id`,`contest_final`,`id`),"
-                        "  KEY `owner_15` (`owner`,`contest_id`,`type`,`id`),"
-                        "  KEY `owner_16` (`owner`,`contest_id`,`contest_final`,`id`),"
-                        // Submissions API: without owner
+                        // Submissions API: with user_id
+                        "  KEY `user_id` (`user_id`,`id`),"
+                        "  KEY `user_id_2` (`user_id`,`type`,`id`),"
+                        "  KEY `user_id_3` (`user_id`,`problem_id`,`id`),"
+                        "  KEY `user_id_4` (`user_id`,`contest_problem_id`,`id`),"
+                        "  KEY `user_id_5` (`user_id`,`contest_round_id`,`id`),"
+                        "  KEY `user_id_6` (`user_id`,`contest_id`,`id`),"
+                        "  KEY `user_id_7` (`user_id`,`contest_final`,`id`),"
+                        "  KEY `user_id_8` (`user_id`,`problem_final`,`id`),"
+                        "  KEY `user_id_9` (`user_id`,`problem_id`,`type`,`id`),"
+                        "  KEY `user_id_10` (`user_id`,`problem_id`,`problem_final`),"
+                        "  KEY `user_id_11` (`user_id`,`contest_problem_id`,`type`,`id`),"
+                        "  KEY `user_id_12` (`user_id`,`contest_problem_id`,`contest_final`),"
+                        "  KEY `user_id_13` (`user_id`,`contest_round_id`,`type`,`id`),"
+                        "  KEY `user_id_14` (`user_id`,`contest_round_id`,`contest_final`,`id`),"
+                        "  KEY `user_id_15` (`user_id`,`contest_id`,`type`,`id`),"
+                        "  KEY `user_id_16` (`user_id`,`contest_id`,`contest_final`,`id`),"
+                        // Submissions API: without user_id
                         "  KEY `type` (`type`,`id`),"
                         "  KEY `problem_id` (`problem_id`,`id`),"
                         "  KEY `contest_problem_id` (`contest_problem_id`,`id`),"
@@ -296,21 +296,21 @@ const DbSchema& get_schema() {
                         "  KEY `contest_round_id_2` (`contest_round_id`,`type`,`id`),"
                         "  KEY `contest_id_2` (`contest_id`,`type`,`id`),"
                         // Needed to efficiently select final submission
-                        "  KEY `final1` (`final_candidate`,`owner`,`contest_problem_id`,`id`),"
-                        "  KEY `final2` (`final_candidate`,`owner`,`contest_problem_id`,`score`,`full_status`,`id`),"
-                        "  KEY `final3` (`final_candidate`,`owner`,`problem_id`,`score`,`full_status`,`id`),"
+                        "  KEY `final1` (`final_candidate`,`user_id`,`contest_problem_id`,`id`),"
+                        "  KEY `final2` (`final_candidate`,`user_id`,`contest_problem_id`,`score`,`full_status`,`id`),"
+                        "  KEY `final3` (`final_candidate`,`user_id`,`problem_id`,`score`,`full_status`,`id`),"
                         // Needed to efficiently query contest view coloring
-                        "  KEY `initial_final` (`owner`,`contest_problem_id`,`contest_initial_final`),"
+                        "  KEY `initial_final` (`user_id`,`contest_problem_id`,`contest_initial_final`),"
                         // Needed to efficiently update contest view coloring
                         //   final = last compiling: final1
                         //   no revealing and final = best submission:
-                        "  KEY `initial_final2` (`final_candidate`,`owner`,`contest_problem_id`,`initial_status`,`id`),"
+                        "  KEY `initial_final2` (`final_candidate`,`user_id`,`contest_problem_id`,`initial_status`,`id`),"
                         //   revealing score and final = best submission:
-                        "  KEY `initial_final3` (`final_candidate`,`owner`,`contest_problem_id`,`score`,`initial_status`,`id`),"
+                        "  KEY `initial_final3` (`final_candidate`,`user_id`,`contest_problem_id`,`score`,`initial_status`,`id`),"
                         // For foreign keys
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE,"
-                        "  CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`owner`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
                         "  CONSTRAINT `submissions_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
                         "  CONSTRAINT `submissions_ibfk_4` FOREIGN KEY (`contest_problem_id`) REFERENCES `contest_problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
                         "  CONSTRAINT `submissions_ibfk_5` FOREIGN KEY (`contest_round_id`) REFERENCES `contest_rounds` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"

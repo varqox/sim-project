@@ -1751,7 +1751,7 @@ table.jobs th.type {
 table.jobs th.status {
 	/*min-width: 60px;*/
 }
-table.jobs th.owner {
+table.jobs th.creator {
 	/*min-width: 60px;*/
 }
 table.jobs th.info {

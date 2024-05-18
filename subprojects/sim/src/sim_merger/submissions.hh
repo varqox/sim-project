@@ -18,14 +18,14 @@ class SubmissionsMerger : public Merger<sim::submissions::OldSubmission> {
         STACK_UNWINDING_MARK;
 
         sim::submissions::OldSubmission s;
-        old_mysql::Optional<decltype(s.owner)::value_type> m_owner;
+        old_mysql::Optional<decltype(s.user_id)::value_type> m_user_id;
         old_mysql::Optional<decltype(s.contest_problem_id)::value_type> m_contest_problem_id;
         old_mysql::Optional<decltype(s.contest_round_id)::value_type> m_contest_round_id;
         old_mysql::Optional<decltype(s.contest_id)::value_type> m_contest_id;
         old_mysql::Optional<decltype(s.score)::value_type> m_score;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
-            "SELECT id, file_id, owner, problem_id,"
+            "SELECT id, file_id, user_id, problem_id,"
             " contest_problem_id, contest_round_id, contest_id,"
             " type, language, final_candidate, problem_final,"
             " contest_final, contest_initial_final, initial_status,"
@@ -38,7 +38,7 @@ class SubmissionsMerger : public Merger<sim::submissions::OldSubmission> {
         stmt.res_bind_all(
             s.id,
             s.file_id,
-            m_owner,
+            m_user_id,
             s.problem_id,
             m_contest_problem_id,
             m_contest_round_id,
@@ -58,15 +58,15 @@ class SubmissionsMerger : public Merger<sim::submissions::OldSubmission> {
             s.final_report
         );
         while (stmt.next()) {
-            s.owner = m_owner.to_opt();
+            s.user_id = m_user_id.to_opt();
             s.contest_problem_id = m_contest_problem_id.to_opt();
             s.contest_round_id = m_contest_round_id.to_opt();
             s.contest_id = m_contest_id.to_opt();
             s.score = m_score.to_opt();
 
             s.file_id = internal_files_.new_id(s.file_id, record_set.kind);
-            if (s.owner) {
-                s.owner = users_.new_id(s.owner.value(), record_set.kind);
+            if (s.user_id) {
+                s.user_id = users_.new_id(s.user_id.value(), record_set.kind);
             }
             s.problem_id = problems_.new_id(s.problem_id, record_set.kind);
             if (s.contest_problem_id) {
@@ -99,7 +99,7 @@ public:
         auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
-            "(id, file_id, owner, problem_id, contest_problem_id,"
+            "(id, file_id, user_id, problem_id, contest_problem_id,"
             " contest_round_id, contest_id, type, language,"
             " final_candidate, problem_final, contest_final,"
             " contest_initial_final, initial_status, full_status,"
@@ -116,7 +116,7 @@ public:
             stmt.bind_and_execute(
                 x.id,
                 x.file_id,
-                x.owner,
+                x.user_id,
                 x.problem_id,
                 x.contest_problem_id,
                 x.contest_round_id,

@@ -27,7 +27,7 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 }
 
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
-    decltype(OldSubmission::owner) submission_owner,
+    decltype(OldSubmission::user_id) submission_user_id,
     OldSubmission::Type stype,
     std::optional<OldContestUser::Mode> cu_mode,
     decltype(OldProblem::owner_id) problem_owner
@@ -62,7 +62,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
                 PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
         }
 
-        if (submission_owner and session->user_id == submission_owner.value()) {
+        if (submission_user_id and session->user_id == submission_user_id.value()) {
             return overall_perms | PERM_SUBMISSION_ADMIN;
         }
 
@@ -70,7 +70,9 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
             PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
     }
 
-    if (session.has_value() and submission_owner and session->user_id == submission_owner.value()) {
+    if (session.has_value() and submission_user_id and
+        session->user_id == submission_user_id.value())
+    {
         return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
     }
 

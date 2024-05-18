@@ -100,17 +100,17 @@ void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
 
     // Collect update finals
     struct FTU {
-        old_mysql::Optional<uint64_t> owner;
+        old_mysql::Optional<uint64_t> user_id;
         old_mysql::Optional<uint64_t> contest_problem_id;
     };
 
     std::deque<FTU> finals_to_update;
     {
-        auto stmt = old_mysql.prepare("SELECT DISTINCT owner, contest_problem_id "
+        auto stmt = old_mysql.prepare("SELECT DISTINCT user_id, contest_problem_id "
                                       "FROM submissions WHERE problem_id=?");
         stmt.bind_and_execute(donor_problem_id_);
         FTU ftu_elem;
-        stmt.res_bind_all(ftu_elem.owner, ftu_elem.contest_problem_id);
+        stmt.res_bind_all(ftu_elem.user_id, ftu_elem.contest_problem_id);
         while (stmt.next()) {
             finals_to_update.emplace_back(ftu_elem);
         }
@@ -138,9 +138,9 @@ void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
 
     // Update finals (both contest and problem finals are being taken care of)
     for (const auto& ftu_elem : finals_to_update) {
-        sim::submissions::update_final_lock(mysql, ftu_elem.owner, info_.target_problem_id);
+        sim::submissions::update_final_lock(mysql, ftu_elem.user_id, info_.target_problem_id);
         sim::submissions::update_final(
-            mysql, ftu_elem.owner, info_.target_problem_id, ftu_elem.contest_problem_id, false
+            mysql, ftu_elem.user_id, info_.target_problem_id, ftu_elem.contest_problem_id, false
         );
     }
 

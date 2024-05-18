@@ -73,7 +73,7 @@ void Sim::api_submissions() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner_id,"
+    qfields.append("SELECT s.id, s.type, s.language, s.user_id, cu.mode, p.owner_id,"
                    " u.username, u.first_name, u.last_name, s.problem_id,"
                    " p.name, s.contest_problem_id, cp.name,"
                    " cp.method_of_choosing_final_submission, cp.score_revealing,"
@@ -83,7 +83,7 @@ void Sim::api_submissions() {
                    " s.initial_status, s.full_status, s.score");
     qwhere.append(
         " FROM submissions s "
-        "LEFT JOIN users u ON u.id=s.owner "
+        "LEFT JOIN users u ON u.id=s.user_id "
         "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
         "LEFT JOIN contest_problems cp ON cp.id=s.contest_problem_id "
         "LEFT JOIN contest_rounds r ON r.id=s.contest_round_id "
@@ -98,12 +98,12 @@ void Sim::api_submissions() {
         SID,
         STYPE,
         SLANGUAGE,
-        SOWNER,
+        SUSER,
         CUMODE,
         POWNER_ID,
-        SOWN_USERNAME,
-        SOWN_FNAME,
-        SOWN_LNAME,
+        SUSER_USERNAME,
+        SUSER_FNAME,
+        SUSER_LNAME,
         PROB_ID,
         PNAME,
         CPID,
@@ -141,10 +141,10 @@ void Sim::api_submissions() {
                    "\"id\","
                    "\"type\","
                    "\"language\","
-                   "\"owner_id\","
-                   "\"owner_username\","
-                   "\"owner_first_name\","
-                   "\"owner_last_name\","
+                   "\"user_id\","
+                   "\"user_username\","
+                   "\"user_first_name\","
+                   "\"user_last_name\","
                    "\"problem_id\","
                    "\"problem_name\","
                    "\"contest_problem_id\","
@@ -381,13 +381,13 @@ void Sim::api_submissions() {
                     }
                 }
 
-            } else if (cond_c == 'u') { // User's ID (submission's owner)
+            } else if (cond_c == 'u') { // User's ID (submission's user_id)
                 if (user_condition_occurred) {
                     return api_error400("User ID condition specified more than once");
                 }
 
                 user_condition_occurred = true;
-                qwhere.append(" AND s.owner=", arg_id);
+                qwhere.append(" AND s.user_id=", arg_id);
 
                 // Owner (almost) always has access to theirs submissions
                 if (str2num<decltype(session->user_id)>(arg_id) == session->user_id) {
@@ -434,12 +434,15 @@ void Sim::api_submissions() {
             WONT_THROW(str2num<OldSubmission::Type::UnderlyingType>(res[STYPE]).value())
         };
         SubmissionPermissions perms = submissions_get_permissions(
-            (res.is_null(SOWNER)
+            (res.is_null(SUSER)
                  ? std::nullopt
-                 : optional<decltype(sim::submissions::OldSubmission::owner
-                   )::value_type>{WONT_THROW(str2num<decltype(sim::submissions::OldSubmission::owner
-                                             )::value_type>(res[SOWNER])
-                                                 .value())}),
+                 : optional<
+                       decltype(sim::submissions::OldSubmission::user_id)::value_type>{WONT_THROW(
+                       str2num<decltype(sim::submissions::OldSubmission::user_id)::value_type>(
+                           res[SUSER]
+                       )
+                           .value()
+                   )}),
             stype,
             (res.is_null(CUMODE)
                  ? std::nullopt
@@ -573,31 +576,31 @@ void Sim::api_submissions() {
         );
 
         // Onwer's id
-        if (res.is_null(SOWNER)) {
+        if (res.is_null(SUSER)) {
             append("null,");
         } else {
-            append(res[SOWNER], ',');
+            append(res[SUSER], ',');
         }
 
         // Onwer's username
-        if (res.is_null(SOWN_USERNAME)) {
+        if (res.is_null(SUSER_USERNAME)) {
             append("null,");
         } else {
-            append("\"", res[SOWN_USERNAME], "\",");
+            append("\"", res[SUSER_USERNAME], "\",");
         }
 
         // Onwer's first name
-        if (res.is_null(SOWN_FNAME)) {
+        if (res.is_null(SUSER_FNAME)) {
             append("null,");
         } else {
-            append(json_stringify(res[SOWN_FNAME]), ',');
+            append(json_stringify(res[SUSER_FNAME]), ',');
         }
 
         // Onwer's last name
-        if (res.is_null(SOWN_LNAME)) {
+        if (res.is_null(SUSER_LNAME)) {
             append("null,");
         } else {
-            append(json_stringify(res[SOWN_LNAME]), ',');
+            append(json_stringify(res[SUSER_LNAME]), ',');
         }
 
         // Problem (id, name)
@@ -738,13 +741,13 @@ void Sim::api_submission() {
 
     submissions_sid = next_arg;
 
-    old_mysql::Optional<decltype(OldSubmission::owner)::value_type> sowner;
+    old_mysql::Optional<decltype(OldSubmission::user_id)::value_type> suser_id;
     old_mysql::Optional<decltype(OldProblem::owner_id)::value_type> p_owner_id;
     EnumVal<OldSubmission::Type> stype{};
     EnumVal<OldSubmission::Language> slang{};
     old_mysql::Optional<decltype(OldContestUser::mode)> cu_mode;
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT s.file_id, s.owner, s.type, s.language,"
+    auto stmt = old_mysql.prepare("SELECT s.file_id, s.user_id, s.type, s.language,"
                                   " cu.mode, p.owner_id "
                                   "FROM submissions s "
                                   "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
@@ -752,13 +755,13 @@ void Sim::api_submission() {
                                   " ON cu.contest_id=s.contest_id AND cu.user_id=? "
                                   "WHERE s.id=?");
     stmt.bind_and_execute(session->user_id, submissions_sid);
-    stmt.res_bind_all(submissions_file_id, sowner, stype, slang, cu_mode, p_owner_id);
+    stmt.res_bind_all(submissions_file_id, suser_id, stype, slang, cu_mode, p_owner_id);
     if (not stmt.next()) {
         return api_error404();
     }
 
     submissions_slang = slang;
-    submissions_perms = submissions_get_permissions(sowner, stype, cu_mode, p_owner_id);
+    submissions_perms = submissions_get_permissions(suser_id, stype, cu_mode, p_owner_id);
 
     // Subpages
     next_arg = url_args.extract_next_arg();
@@ -947,7 +950,7 @@ void Sim::api_submission_add() {
     }
 
     // Insert submission
-    auto stmt = old_mysql.prepare("INSERT submissions (file_id, owner, problem_id,"
+    auto stmt = old_mysql.prepare("INSERT submissions (file_id, user_id, problem_id,"
                                   " contest_problem_id, contest_round_id,"
                                   " contest_id, type, language, initial_status,"
                                   " full_status, created_at, last_judgment,"
@@ -1070,18 +1073,18 @@ void Sim::api_submission_change_type() {
     auto transaction = mysql.start_repeatable_read_transaction();
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT full_status, owner, problem_id,"
+    auto stmt = old_mysql.prepare("SELECT full_status, user_id, problem_id,"
                                   " contest_problem_id "
                                   "FROM submissions WHERE id=?");
     stmt.bind_and_execute(submissions_sid);
     EnumVal<SS> full_status{};
-    old_mysql::Optional<uint64_t> owner;
+    old_mysql::Optional<uint64_t> user_id;
     old_mysql::Optional<uint64_t> contest_problem_id;
     uint64_t problem_id = 0;
-    stmt.res_bind_all(full_status, owner, problem_id, contest_problem_id);
+    stmt.res_bind_all(full_status, user_id, problem_id, contest_problem_id);
     throw_assert(stmt.next());
 
-    sim::submissions::update_final_lock(mysql, owner, problem_id);
+    sim::submissions::update_final_lock(mysql, user_id, problem_id);
 
     // Cannot be FINAL
     if (is_special(full_status)) {
@@ -1100,7 +1103,7 @@ void Sim::api_submission_change_type() {
     old_mysql.prepare("UPDATE submissions SET type=?, final_candidate=? WHERE id=?")
         .bind_and_execute(new_type, (new_type == ST::NORMAL), submissions_sid);
 
-    sim::submissions::update_final(mysql, owner, problem_id, contest_problem_id, false);
+    sim::submissions::update_final(mysql, user_id, problem_id, contest_problem_id, false);
     transaction.commit();
 }
 
@@ -1114,16 +1117,16 @@ void Sim::api_submission_delete() {
     auto transaction = mysql.start_repeatable_read_transaction();
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT owner, problem_id, contest_problem_id "
+    auto stmt = old_mysql.prepare("SELECT user_id, problem_id, contest_problem_id "
                                   "FROM submissions WHERE id=?");
     stmt.bind_and_execute(submissions_sid);
-    old_mysql::Optional<uint64_t> owner;
+    old_mysql::Optional<uint64_t> user_id;
     old_mysql::Optional<uint64_t> contest_problem_id;
     uint64_t problem_id = 0;
-    stmt.res_bind_all(owner, problem_id, contest_problem_id);
+    stmt.res_bind_all(user_id, problem_id, contest_problem_id);
     throw_assert(stmt.next());
 
-    sim::submissions::update_final_lock(mysql, owner, problem_id);
+    sim::submissions::update_final_lock(mysql, user_id, problem_id);
 
     old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
@@ -1140,7 +1143,7 @@ void Sim::api_submission_delete() {
 
     old_mysql.prepare("DELETE FROM submissions WHERE id=?").bind_and_execute(submissions_sid);
 
-    sim::submissions::update_final(mysql, owner, problem_id, contest_problem_id, false);
+    sim::submissions::update_final(mysql, user_id, problem_id, contest_problem_id, false);
 
     transaction.commit();
     sim::jobs::notify_job_server();
