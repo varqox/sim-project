@@ -25,8 +25,6 @@ struct ProblemsListCapabilities {
     bool view_all_with_type_public : 1;
     bool view_all_with_type_contest_only : 1;
     bool view_all_with_type_private : 1;
-    bool web_ui_show_owner_column : 1;
-    bool web_ui_show_updated_at_column : 1;
 };
 
 ProblemsListCapabilities list_problems(const decltype(web_worker::Context::session)& session
