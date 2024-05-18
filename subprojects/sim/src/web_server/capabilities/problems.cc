@@ -33,8 +33,6 @@ ProblemsListCapabilities list_problems(const decltype(Context::session)& session
         .view_all_with_type_public = true,
         .view_all_with_type_contest_only = is_admin(session) or is_teacher(session),
         .view_all_with_type_private = is_admin(session),
-        .web_ui_show_owner_column = is_admin(session) or is_teacher(session),
-        .web_ui_show_updated_at_column = is_admin(session) or is_teacher(session),
     };
 }
 
@@ -48,8 +46,6 @@ list_user_problems(const decltype(Context::session)& session, decltype(User::id)
         .view_all_with_type_public = is_self(session, user_id) or is_admin(session),
         .view_all_with_type_contest_only = is_self(session, user_id) or is_admin(session),
         .view_all_with_type_private = is_self(session, user_id) or is_admin(session),
-        .web_ui_show_owner_column = is_admin(session) and !is_self(session, user_id),
-        .web_ui_show_updated_at_column = is_self(session, user_id) or is_admin(session),
     };
 }
 

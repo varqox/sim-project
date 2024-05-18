@@ -1159,7 +1159,7 @@ function handle_session_change(params) {
 	window.is_signed_in = () => signed_user_id != null;
 
 	window.signed_user_id = params.session?.user_id;
-	window.signed_user_type = params.session?.user_type; // TODO: remove after refactor or when it becomes unnecessary (also remove it from @p params on the server side)
+	window.signed_user_type = params.session?.user_type;
 
 	const navbar = (() => {
 		const navbar = document.querySelector('.navbar');
@@ -1889,10 +1889,17 @@ async function reupload_problem(problem_id) {
 	form.attach_to(view.content_elem);
 }
 
-function ProblemsLister(elem, query_url, list_capabilties) {
+function ProblemsLister(elem, query_url, list_capabilties, {
+	show_owner_column,
+	show_updated_at_column,
+}) {
 	if (this === window) {
 		throw new Error('Call as "new ProblemsLister()", not "ProblemsLister()"');
 	}
+	show_owner_column ??= true;
+	show_updated_at_column ??= true;
+
+
 	const self = this;
 	self.process_first_api_response = (list) => {
 		if (list.length === 0) {
@@ -1905,10 +1912,10 @@ function ProblemsLister(elem, query_url, list_capabilties) {
 		thead.appendChild(elem_with_class_and_text('th', 'type', 'Type'));
 		thead.appendChild(elem_with_class_and_text('th', 'label', 'Label'));
 		thead.appendChild(elem_with_class_and_text('th', 'name_and_tags', 'Name and tags'));
-		if (list_capabilties.ui_show_owner_column) {
+		if (show_owner_column) {
 			thead.appendChild(elem_with_class_and_text('th', 'owner', 'Owner'));
 		}
-		if (list_capabilties.ui_show_updated_at_column) {
+		if (show_updated_at_column) {
 			thead.appendChild(elem_with_class_of('th', 'updated_at', 'Updated at', elem_timezone_marker()));
 		}
 		thead.appendChild(elem_with_class_and_text('th', 'actions', 'Actions'));
@@ -1941,7 +1948,7 @@ function ProblemsLister(elem, query_url, list_capabilties) {
 				}
 			}
 
-			if (list_capabilties.ui_show_owner_column) {
+			if (show_owner_column) {
 				const owner_td = row.appendChild(document.createElement('td'));
 				if (problem.capabilities.view_owner) {
 					if (problem.owner != null) {
@@ -1952,7 +1959,7 @@ function ProblemsLister(elem, query_url, list_capabilties) {
 				}
 			}
 
-			if (list_capabilties.ui_show_updated_at_column) {
+			if (show_updated_at_column) {
 				row.appendChild(elem_with_text('td', problem.capabilities.view_update_time ? datetime_to_string(new Date(problem.updated_at)) : ''));
 			}
 
@@ -1985,10 +1992,10 @@ function list_problems() {
 		view.content_elem.appendChild(elem_link_with_class_to_view('btn', 'Add problem', add_problem, url_problems_add));
 	}
 
-	const retab = (url_all_func, url_by_type_func, list_capabilities, elem) => {
+	const retab = (url_all_func, url_by_type_func, list_capabilities, extra_params, elem) => {
 		const retab = (url, list_capabilities, elem) => {
 			const table = elem.appendChild(elem_with_class('table', 'problems stripped'));
-			new ProblemsLister(table, url, list_capabilities);
+			new ProblemsLister(table, url, list_capabilities, extra_params);
 		};
 
 		const tabmenu = new TabMenuBuilder();
@@ -2014,16 +2021,28 @@ function list_problems() {
 
 	const tabmenu = new TabMenuBuilder();
 	if (can_list_something(global_capabilities.problems.list_all)) {
-		tabmenu.add_tab('All problems', retab.bind(null,
+		tabmenu.add_tab('All problems', retab.bind(
+			null,
 			url_api_problems,
 			url_api_problems_with_type,
-			global_capabilities.problems.list_all));
+			global_capabilities.problems.list_all,
+			{
+				show_owner_column: window.signed_user_type == 'admin' || window.signed_user_type == 'teacher',
+				show_updated_at_column: window.signed_user_type == 'admin' || window.signed_user_type == 'teacher',
+			}
+		));
 	}
 	if (is_signed_in() && can_list_something(global_capabilities.problems.list_my)) {
-		tabmenu.add_tab('My problems', retab.bind(null,
+		tabmenu.add_tab('My problems', retab.bind(
+			null,
 			url_api_user_problems.bind(null, signed_user_id),
 			url_api_user_problems_with_type.bind(null, signed_user_id),
-			global_capabilities.problems.list_my));
+			global_capabilities.problems.list_my,
+			{
+				show_owner_column: false,
+				show_updated_at_column: window.signed_user_type == 'admin' || window.signed_user_type == 'teacher',
+			}
+		));
 	}
 	tabmenu.build_and_append_to(view.content_elem);
 }
