@@ -56,7 +56,7 @@ struct OldSubmission {
     uint64_t id;
     old_sql_fields::Datetime created_at;
     decltype(internal_files::OldInternalFile::id) file_id;
-    std::optional<decltype(sim::users::User::id)> owner;
+    std::optional<decltype(sim::users::User::id)> user_id;
     decltype(sim::problems::OldProblem::id) problem_id;
     std::optional<decltype(sim::contest_problems::OldContestProblem::id)> contest_problem_id;
     std::optional<decltype(sim::contest_rounds::OldContestRound::id)> contest_round_id;

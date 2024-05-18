@@ -624,7 +624,7 @@ private:
     SubmissionPermissions submissions_get_overall_permissions() noexcept;
 
     SubmissionPermissions submissions_get_permissions(
-        decltype(sim::submissions::OldSubmission::owner) submission_owner,
+        decltype(sim::submissions::OldSubmission::user_id) submission_user_id,
         sim::submissions::OldSubmission::Type stype,
         std::optional<sim::contest_users::OldContestUser::Mode> cu_mode,
         decltype(sim::problems::OldProblem::owner_id) problem_owner

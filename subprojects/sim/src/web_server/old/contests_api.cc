@@ -1479,18 +1479,18 @@ void Sim::api_contest_problem_statement(StringView problem_id) {
 
 namespace {
 
-struct SubmissionOwner {
+struct SubmissionUser {
     uint64_t id;
     InplaceBuff<32> name; // static size is set manually to save memory
 
     template <class... Args>
-    explicit SubmissionOwner(uint64_t sowner, Args&&... args) : id(sowner) {
+    explicit SubmissionUser(uint64_t suser_id, Args&&... args) : id(suser_id) {
         name.append(std::forward<Args>(args)...);
     }
 
-    bool operator<(const SubmissionOwner& s) const noexcept { return id < s.id; }
+    bool operator<(const SubmissionUser& s) const noexcept { return id < s.id; }
 
-    bool operator==(const SubmissionOwner& s) const noexcept { return id == s.id; }
+    bool operator==(const SubmissionUser& s) const noexcept { return id == s.id; }
 };
 
 } // anonymous namespace
@@ -1511,7 +1511,7 @@ void Sim::api_contest_ranking(
     auto old_mysql = old_mysql::ConnectionView{mysql};
     auto stmt = old_mysql.prepare(
         "SELECT u.id, u.first_name, u.last_name FROM submissions s JOIN "
-        "users u ON s.owner=u.id WHERE s.",
+        "users u ON s.user_id=u.id WHERE s.",
         submissions_query_id_name,
         "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id"
     );
@@ -1522,9 +1522,9 @@ void Sim::api_contest_ranking(
     InplaceBuff<0> lname;
     stmt.res_bind_all(u_id, fname, lname);
 
-    std::vector<SubmissionOwner> sowners;
+    std::vector<SubmissionUser> susers;
     while (stmt.next()) {
-        sowners.emplace_back(u_id, fname, ' ', lname);
+        susers.emplace_back(u_id, fname, ' ', lname);
     }
 
     // Gather submissions
@@ -1532,7 +1532,7 @@ void Sim::api_contest_ranking(
     decltype(OldContestRound::full_results) cr_full_results;
     decltype(OldContestProblem::id) cp_id = 0;
     decltype(OldContestProblem::score_revealing) cp_score_revealing;
-    decltype(OldSubmission::owner)::value_type s_owner = 0;
+    decltype(OldSubmission::user_id)::value_type s_user_id = 0;
     decltype(OldSubmission::id) sf_id = 0;
     EnumVal<OldSubmission::Status> sf_full_status{};
     int64_t sf_score = 0;
@@ -1544,17 +1544,17 @@ void Sim::api_contest_ranking(
     auto prepare_stmt = [&](auto&& extra_cr_sql, auto&&... extra_bind_params) {
         // clang-format off
         stmt = old_mysql.prepare(
-           "SELECT cr.id, cr.full_results, cp.id, cp.score_revealing, sf.owner,"
+           "SELECT cr.id, cr.full_results, cp.id, cp.score_revealing, sf.user_id,"
            " sf.id, sf.full_status, sf.score, si.id, si.initial_status "
            "FROM submissions sf "
-           "JOIN submissions si ON si.owner=sf.owner"
+           "JOIN submissions si ON si.user_id=sf.user_id"
            " AND si.contest_problem_id=sf.contest_problem_id"
            " AND si.contest_initial_final=1 "
            "JOIN contest_rounds cr ON cr.id=sf.contest_round_id ",
               std::forward<decltype(extra_cr_sql)>(extra_cr_sql), " "
            "JOIN contest_problems cp ON cp.id=sf.contest_problem_id "
            "WHERE sf.", submissions_query_id_name, "=? AND sf.contest_final=1 "
-           "ORDER BY sf.owner");
+           "ORDER BY sf.user_id");
         // clang-format on
         stmt.bind_and_execute(
             std::forward<decltype(extra_bind_params)>(extra_bind_params)..., query_id
@@ -1564,7 +1564,7 @@ void Sim::api_contest_ranking(
             cr_full_results,
             cp_id,
             cp_score_revealing,
-            s_owner,
+            s_user_id,
             sf_id,
             sf_full_status,
             sf_score,
@@ -1601,35 +1601,35 @@ void Sim::api_contest_ranking(
 
     const uint64_t session_uid = (session.has_value() ? session->user_id : 0);
 
-    bool first_owner = true;
-    std::optional<decltype(s_owner)> prev_owner;
-    bool show_owner_and_submission_id = false;
+    bool first_user = true;
+    std::optional<decltype(s_user_id)> prev_user;
+    bool show_user_and_submission_id = false;
 
     while (stmt.next()) {
         // Owner changes
-        if (first_owner or s_owner != prev_owner.value()) {
-            auto it = binary_find(sowners, SubmissionOwner(s_owner));
-            if (it == sowners.end()) {
-                continue; // Ignore submission as there is no owner to bind it
+        if (first_user or s_user_id != prev_user.value()) {
+            auto it = binary_find(susers, SubmissionUser(s_user_id));
+            if (it == susers.end()) {
+                continue; // Ignore submission as there is no user_id to bind it
                           // to (this maybe a little race condition, but if the
                           // user will query again it will not be the case (with
-                          // the current owner))
+                          // the current user_id))
             }
 
-            if (first_owner) {
+            if (first_user) {
                 append(",\n[");
-                first_owner = false;
+                first_user = false;
             } else {
                 --resp.content.size; // remove trailing ','
                 append("\n]],[");
             }
 
-            prev_owner = s_owner;
-            show_owner_and_submission_id =
-                (is_admin or (session.has_value() and session_uid == s_owner));
+            prev_user = s_user_id;
+            show_user_and_submission_id =
+                (is_admin or (session.has_value() and session_uid == s_user_id));
             // Owner
-            if (show_owner_and_submission_id) {
-                append(s_owner);
+            if (show_user_and_submission_id) {
+                append(s_user_id);
             } else {
                 append("null");
             }
@@ -1641,7 +1641,7 @@ void Sim::api_contest_ranking(
             whether_to_show_full_status(perms, cr_full_results, curr_date, cp_score_revealing);
 
         append("\n[");
-        if (not show_owner_and_submission_id) {
+        if (not show_user_and_submission_id) {
             append("null,");
         } else if (show_full_status) {
             append(sf_id, ',');
@@ -1661,7 +1661,7 @@ void Sim::api_contest_ranking(
         }
     }
 
-    if (first_owner) { // no submission was appended
+    if (first_user) { // no submission was appended
         append(']');
     } else {
         --resp.content.size; // remove trailing ','

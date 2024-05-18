@@ -14,14 +14,14 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
     uint64_t submission_file_id = 0;
     uint64_t problem_file_id = 0;
     uint64_t problem_id = 0;
-    old_mysql::Optional<uint64_t> sowner;
+    old_mysql::Optional<uint64_t> suser_id;
     old_mysql::Optional<uint64_t> contest_problem_id;
     InplaceBuff<64> last_judgment;
     InplaceBuff<64> p_updated_at;
     EnumVal<OldSubmission::Language> lang{};
     {
         auto old_mysql = old_mysql::ConnectionView{mysql};
-        auto stmt = old_mysql.prepare("SELECT s.file_id, s.language, s.owner,"
+        auto stmt = old_mysql.prepare("SELECT s.file_id, s.language, s.user_id,"
                                       " s.contest_problem_id, s.problem_id,"
                                       " s.last_judgment, p.file_id, p.updated_at "
                                       "FROM submissions s, problems p "
@@ -30,7 +30,7 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
         stmt.res_bind_all(
             submission_file_id,
             lang,
-            sowner,
+            suser_id,
             contest_problem_id,
             problem_id,
             last_judgment,
@@ -73,7 +73,7 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
         {
             auto transaction = mysql.start_repeatable_read_transaction();
             auto old_mysql = old_mysql::ConnectionView{mysql};
-            sim::submissions::update_final_lock(mysql, sowner, problem_id);
+            sim::submissions::update_final_lock(mysql, suser_id, problem_id);
 
             using ST = OldSubmission::Type;
             // Get the submission's ACTUAL type
@@ -116,7 +116,7 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
                 );
             }
 
-            sim::submissions::update_final(mysql, sowner, problem_id, contest_problem_id, false);
+            sim::submissions::update_final(mysql, suser_id, problem_id, contest_problem_id, false);
 
             transaction.commit();
         }

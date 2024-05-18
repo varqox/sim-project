@@ -52,7 +52,7 @@ void Sim::api_problems() {
                    "u.username, s.full_status");
     qwhere.append(
         " FROM problems p LEFT JOIN users u ON p.owner_id=u.id "
-        "LEFT JOIN submissions s ON s.owner=",
+        "LEFT JOIN submissions s ON s.user_id=",
         (session.has_value() ? StringView{from_unsafe{to_string(session->user_id)}} : "''"),
         " AND s.problem_id=p.id AND s.problem_final=1 "
         "WHERE TRUE"

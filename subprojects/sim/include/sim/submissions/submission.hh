@@ -52,7 +52,7 @@ struct Submission {
     uint64_t id;
     sql::fields::Datetime created_at;
     decltype(internal_files::InternalFile::id) file_id;
-    std::optional<decltype(users::User::id)> owner;
+    std::optional<decltype(users::User::id)> user_id;
     decltype(problems::Problem::id) problem_id;
     std::optional<decltype(contest_problems::ContestProblem::id)> contest_problem_id;
     std::optional<decltype(contest_rounds::ContestRound::id)> contest_round_id;

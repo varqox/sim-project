@@ -141,7 +141,7 @@ public:
                 auto old_mysql = old_mysql::ConnectionView{*mysql};
                 auto stmt = old_mysql.prepare("SELECT problem_id, contest_problem_id "
                                               "FROM submissions "
-                                              "WHERE owner=? "
+                                              "WHERE user_id=? "
                                               "GROUP BY problem_id, contest_problem_id");
                 stmt.bind_and_execute(user.data.id);
                 stmt.res_bind_all(problem_id, contest_problem_id);
