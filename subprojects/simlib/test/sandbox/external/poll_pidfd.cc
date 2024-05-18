@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <poll.h>
+#include <simlib/kernel_version.hh>
 #include <simlib/syscalls.hh>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -38,6 +39,10 @@ TEST(sandbox_external, signalfd_sigchld_waitpid) {
     ASSERT_EQ(si.si_code, CLD_EXITED);
     ASSERT_EQ(si.si_status, 0);
 
-    // pidfd signals being readable after the process became waited
-    check_poll(pidfd, POLLIN, PollReady{POLLIN});
+    // pidfd signals being readable after the process became waited on kernels before 6.9
+    if (kernel_version() >= KernelVersion{.major = 6, .minor = 9, .patch = 0}) {
+        check_poll(pidfd, POLLIN, PollReady{POLLHUP | POLLIN});
+    } else {
+        check_poll(pidfd, POLLIN, PollReady{POLLIN});
+    }
 }
