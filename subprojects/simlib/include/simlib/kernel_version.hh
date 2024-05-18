@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <cstring>
 #include <simlib/errmsg.hh>
@@ -17,7 +16,7 @@ struct KernelVersion {
 };
 
 constexpr bool operator==(const KernelVersion& a, const KernelVersion& b) noexcept {
-    return std::array{a.major, a.minor, a.patch} == std::array{b.major, b.minor, b.patch};
+    return a.major == b.major && a.minor == b.minor && a.patch == b.patch;
 }
 
 constexpr bool operator!=(const KernelVersion& a, const KernelVersion& b) noexcept {
@@ -25,7 +24,13 @@ constexpr bool operator!=(const KernelVersion& a, const KernelVersion& b) noexce
 }
 
 constexpr bool operator<(const KernelVersion& a, const KernelVersion& b) noexcept {
-    return std::array{a.major, a.minor, a.patch} < std::array{b.major, b.minor, b.patch};
+    if (a.major != b.major) {
+        return a.major < b.major;
+    }
+    if (a.minor != b.minor) {
+        return a.minor < b.minor;
+    }
+    return a.patch < b.patch;
 }
 
 constexpr bool operator>(const KernelVersion& a, const KernelVersion& b) noexcept { return b < a; }
