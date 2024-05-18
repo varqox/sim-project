@@ -4,6 +4,7 @@
 #include "../http/response.hh"
 #include "../problems/api.hh"
 #include "../problems/ui.hh"
+#include "../ui/ui.hh"
 #include "../users/api.hh"
 #include "../users/ui.hh"
 #include "context.hh"
@@ -53,12 +54,16 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type);
     GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
+    GET("/favicon.ico")(ui::favicon_ico);
     GET("/problem/{u64}/reupload")(problems::ui::reupload);
     GET("/problems")(problems::ui::list_problems);
     GET("/problems/add")(problems::ui::add);
     GET("/sign_in")(users::ui::sign_in);
     GET("/sign_out")(users::ui::sign_out);
     GET("/sign_up")(users::ui::sign_up);
+    GET("/ui/{string}/jquery.js")(ui::jquery_js);
+    GET("/ui/{string}/scripts.js")(ui::scripts_js);
+    GET("/ui/{string}/styles.css")(ui::styles_css);
     GET("/user/{u64}/change_password")(users::ui::change_password);
     GET("/user/{u64}/delete")(users::ui::delete_);
     GET("/user/{u64}/edit")(users::ui::edit);

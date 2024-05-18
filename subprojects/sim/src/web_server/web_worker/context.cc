@@ -1,6 +1,7 @@
 #include "../http/response.hh"
 #include "../ui_template.hh"
 #include "context.hh"
+#include "simlib/file_path.hh"
 
 #include <chrono>
 #include <exception>
@@ -18,6 +19,24 @@ using sim::sql::InsertIgnoreInto;
 using sim::sql::Select;
 using sim::sql::Update;
 using web_server::http::Response;
+
+namespace {
+
+Response response(
+    StringView status_code,
+    Response::ContentType response_type,
+    decltype(web_server::web_worker::Context::cookie_changes)&& cookie_changes,
+    StringView content,
+    StringView content_type
+) {
+    auto resp = Response{response_type, status_code};
+    resp.headers["content-type"] = content_type.to_string();
+    resp.cookies = std::move(cookie_changes);
+    resp.content = content;
+    return resp;
+}
+
+} // namespace
 
 namespace web_server::web_worker {
 
@@ -126,31 +145,30 @@ bool Context::session_has_expired() noexcept {
     return !request.get_cookie(Session::id_cookie_name).empty() and !session.has_value();
 }
 
-Response response(
-    StringView status_code,
-    decltype(Context::cookie_changes)&& cookie_changes,
-    StringView content,
-    StringView content_type
-) {
-    auto resp = Response{Response::TEXT, status_code};
-    resp.headers["content-type"] = content_type.to_string();
-    resp.cookies = std::move(cookie_changes);
-    resp.content = content;
-    return resp;
+Response Context::response_ok(StringView content, StringView content_type) {
+    return response("200 OK", Response::TEXT, std::move(cookie_changes), content, content_type);
 }
 
-Response Context::response_ok(StringView content, StringView content_type) {
-    return response("200 OK", std::move(cookie_changes), content, content_type);
+Response Context::response_file(FilePath path, StringView content_type) {
+    return response(
+        "200 OK", Response::FILE, std::move(cookie_changes), path.to_cstr(), content_type
+    );
 }
 
 Response Context::response_json(StringView content) {
     return response(
-        "200 OK", std::move(cookie_changes), content, "application/json; charset=utf-8"
+        "200 OK",
+        Response::TEXT,
+        std::move(cookie_changes),
+        content,
+        "application/json; charset=utf-8"
     );
 }
 
 Response Context::response_400(StringView content, StringView content_type) {
-    return response("400 Bad Request", std::move(cookie_changes), content, content_type);
+    return response(
+        "400 Bad Request", Response::TEXT, std::move(cookie_changes), content, content_type
+    );
 }
 
 Response Context::response_403(StringView content, StringView content_type) {
@@ -162,7 +180,9 @@ Response Context::response_403(StringView content, StringView content_type) {
         switch (session->user_type) {
         case UT::ADMIN: {
             assert(not session_has_expired());
-            return response("403 Forbidden", std::move(cookie_changes), content, content_type);
+            return response(
+                "403 Forbidden", Response::TEXT, std::move(cookie_changes), content, content_type
+            );
         }
         case UT::TEACHER:
         case UT::NORMAL: break;
@@ -177,7 +197,11 @@ http::Response Context::response_404() {
         "Your session has expired, please try to sign in and then try again.";
     auto content = session_has_expired() ? session_expired_msg : "";
     return response(
-        "404 Not Found", std::move(cookie_changes), content, "text/plain; charset=utf-8"
+        "404 Not Found",
+        Response::TEXT,
+        std::move(cookie_changes),
+        content,
+        "text/plain; charset=utf-8"
     );
 }
 

@@ -80,14 +80,10 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
                 "<meta charset=\"utf-8\">"
                 "<title>", html_escape(params.title), "</title>"
                 "<link rel=\"stylesheet\" type=\"text/css\" "
-                      "href=\"/kit/styles.css?",
-                          get_hash_of<STYLES_CSS>(), "\">"
-                "<script src=\"/kit/jquery.js?",
-                    get_hash_of<JQUERY_JS>(), "\"></script>"
-                "<script src=\"/kit/scripts.js?",
-                    get_hash_of<SCRIPTS_JS>(), "\"></script>"
-                "<link rel=\"shortcut icon\" type=\"image/png\" "
-                      "href=\"/kit/img/favicon.png\"/>"
+                    "href=\"/ui/", get_hash_of<STYLES_CSS>(), "/styles.css\">"
+                "<script src=\"/ui/", get_hash_of<JQUERY_JS>(), "/jquery.js\"></script>"
+                "<script src=\"/ui/", get_hash_of<SCRIPTS_JS>(), "/scripts.js\"></script>"
+                "<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"/favicon.ico\"/>"
             "</head>"
         "<body>"
             "<script>"
