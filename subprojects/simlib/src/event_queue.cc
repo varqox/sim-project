@@ -1,4 +1,5 @@
 #include <chrono>
+#include <exception>
 #include <simlib/errmsg.hh>
 #include <simlib/event_queue.hh>
 #include <simlib/macros/throw.hh>
@@ -53,7 +54,9 @@ void EventQueue::pause_immediately() noexcept {
     int fd = immediate_pause_fd_;
     assert(fd >= 0); // Make sure memory ordering "acquire" worked
     uint64_t x = 1;
-    (void)write(fd, &x, sizeof(x));
+    if (write(fd, &x, sizeof(x)) != sizeof(x)) {
+        std::terminate();
+    }
 }
 
 handler_id_t EventQueue::add_time_handler(time_point tp, std::function<void()> handler) {
@@ -103,7 +106,7 @@ handler_id_t EventQueue::add_time_handler_impl(time_point tp, std::function<void
 }
 
 static FileEvent poll_events_to_file_events(decltype(pollfd::revents) events) noexcept {
-    auto res = FileEvent(0);
+    auto res = FileEvent{0};
     if (events & POLLIN) {
         res = res | FileEvent::READABLE;
     }

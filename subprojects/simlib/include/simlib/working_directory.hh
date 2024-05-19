@@ -1,6 +1,7 @@
 #pragma once
 
 #include <climits>
+#include <exception>
 #include <simlib/errmsg.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/inplace_buff.hh>
@@ -32,7 +33,9 @@ public:
 
     ~DirectoryChanger() {
         if (old_cwd >= 0) {
-            (void)fchdir(old_cwd);
+            if (fchdir(old_cwd)) {
+                std::terminate();
+            }
         }
     }
 };
