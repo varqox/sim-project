@@ -53,6 +53,8 @@ struct Context {
     http::Response
     response_ok(StringView content = "", StringView content_type = "text/plain; charset=utf-8");
 
+    http::Response response_file(FilePath path, StringView content_type);
+
     http::Response response_json(StringView content);
 
     template <

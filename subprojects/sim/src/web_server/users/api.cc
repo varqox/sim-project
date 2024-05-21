@@ -430,8 +430,10 @@ Response edit(Context& ctx, decltype(User::id) user_id) {
     // Check if username is taken
     if (username) {
         auto stmt = ctx.mysql.execute(
-            Select("id").from("users").where("username=? AND id!=?", username, user_id)
+            Select("1").from("users").where("username=? AND id!=?", username, user_id)
         );
+        int x;
+        stmt.res_bind(x);
         if (stmt.next()) {
             return ctx.response_400("Username taken");
         }

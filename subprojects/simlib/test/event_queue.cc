@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <fcntl.h>
 #include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
@@ -744,7 +745,11 @@ TEST(EventQueue, file_unready_read_and_close_event) {
 
     EventQueue eq;
     auto start = system_clock::now();
-    eq.add_time_handler(start + 20us, [&] { write(wfd, "Test", sizeof("Test")); });
+    eq.add_time_handler(start + 20us, [&] {
+        if (write(wfd, "Test", sizeof("Test")) != sizeof("Test")) {
+            std::terminate();
+        }
+    });
 
     EXPECT_EQ(read(rfd, buff.data(), buff.size()), -1);
     EXPECT_EQ(errno, EAGAIN);
@@ -776,7 +781,9 @@ TEST(EventQueue, file_simultaneous_read_and_close_event) {
     ASSERT_EQ(pipe2(pfd.data(), O_NONBLOCK | O_CLOEXEC), 0);
     FileDescriptor rfd(pfd[0]);
     FileDescriptor wfd(pfd[1]);
-    write(wfd, "Test", sizeof("Test"));
+    if (write(wfd, "Test", sizeof("Test")) != sizeof("Test")) {
+        std::terminate();
+    }
     (void)wfd.close();
 
     int times = 0;

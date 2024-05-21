@@ -1,5 +1,6 @@
 #include <chrono>
 #include <csignal>
+#include <exception>
 #include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
 #include <simlib/concurrent/semaphore.hh>
@@ -7,7 +8,12 @@
 #include <thread>
 #include <unistd.h>
 
-inline void eputs(const char* str) noexcept { write(STDERR_FILENO, str, std::strlen(str)); }
+inline void eputs(const char* str) noexcept {
+    auto len = std::strlen(str);
+    if (write(STDERR_FILENO, str, len) != static_cast<ssize_t>(len)) {
+        std::terminate();
+    }
+}
 
 // NOLINTNEXTLINE
 TEST(handle_signals_while_running_DeathTest, no_signal_occurred) {
