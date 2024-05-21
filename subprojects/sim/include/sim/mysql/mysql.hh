@@ -217,7 +217,7 @@ class Statement {
 
         std::unique_ptr<Bind[]> binds;
         std::unique_ptr<MYSQL_BIND[]> mysql_binds;
-        bool previous_fetch_changed_binds;
+        bool previous_fetch_changed_binds = false;
     } res;
 
 public:
