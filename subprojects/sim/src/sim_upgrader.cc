@@ -144,7 +144,7 @@ static int perform_upgrade(const string& sim_dir, sim::mysql::Connection& mysql)
                               .values(
                                   "?, ?, ?, ?, ?, ?, ?, ?, ?",
                                   sim::users::SIM_ROOT_ID,
-                                  mysql_date(),
+                                  utc_mysql_datetime(),
                                   sim::users::User::Type::ADMIN,
                                   "sim",
                                   "sim",

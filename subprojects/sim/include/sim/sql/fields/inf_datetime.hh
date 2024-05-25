@@ -25,12 +25,12 @@ public:
 
     explicit InfDatetime(std::string str)
     : Varbinary{[&]() -> decltype(auto) {
-        throw_assert(is_datetime(str));
+        throw_assert(is_datetime(str.c_str()));
         return std::move(str);
     }()} {}
 
     InfDatetime& operator=(std::string str) {
-        throw_assert(is_datetime(str));
+        throw_assert(is_datetime(str.c_str()));
         Varbinary::operator=(std::move(str));
         return *this;
     }

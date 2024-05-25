@@ -314,7 +314,7 @@ Response sign_up(Context& ctx) {
                          "email, password_salt, password_hash)")
             .values(
                 "?, ?, ?, ?, ?, ?, ?, ?",
-                mysql_date(),
+                utc_mysql_datetime(),
                 user_type,
                 username,
                 first_name,
@@ -383,7 +383,7 @@ Response add(Context& ctx) {
                          "email, password_salt, password_hash)")
             .values(
                 "?, ?, ?, ?, ?, ?, ?, ?",
-                mysql_date(),
+                utc_mysql_datetime(),
                 type,
                 username,
                 first_name,
@@ -540,7 +540,7 @@ Response delete_(Context& ctx, decltype(User::id) user_id) {
                 type,
                 sim::jobs::default_priority(type),
                 Job::Status::PENDING,
-                mysql_date(),
+                utc_mysql_datetime(),
                 user_id
             )
     );
@@ -595,7 +595,7 @@ Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
                 type,
                 sim::jobs::default_priority(type),
                 Job::Status::PENDING,
-                mysql_date(),
+                utc_mysql_datetime(),
                 user_id,
                 sim::jobs::MergeUsersInfo{target_user_id}.dump()
             )

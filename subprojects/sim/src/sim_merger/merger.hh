@@ -209,7 +209,7 @@ protected:
                         " with new id: ",
                         new_id,
                         "  ",
-                        mysql_date(system_clock::to_time_t(tp))
+                        utc_mysql_datetime(system_clock::to_time_t(tp))
                     );
                 } else {
                     (void)new_id; // Suppress GCC warning

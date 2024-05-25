@@ -72,7 +72,7 @@ void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
             EnumVal(OldJob::Type::DELETE_FILE),
             default_priority(OldJob::Type::DELETE_FILE),
             EnumVal(OldJob::Status::PENDING),
-            mysql_date(),
+            utc_mysql_datetime(),
             donor_problem_id_
         );
 
@@ -87,7 +87,7 @@ void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
             EnumVal(OldJob::Type::DELETE_FILE),
             default_priority(OldJob::Type::DELETE_FILE),
             EnumVal(OldJob::Status::PENDING),
-            mysql_date(),
+            utc_mysql_datetime(),
             donor_problem_id_,
             EnumVal(OldSubmission::Type::PROBLEM_SOLUTION)
         );
@@ -127,7 +127,7 @@ void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
                 EnumVal(OldJob::Status::PENDING),
                 default_priority(OldJob::Type::REJUDGE_SUBMISSION),
                 EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
-                mysql_date(),
+                utc_mysql_datetime(),
                 donor_problem_id_
             );
     }

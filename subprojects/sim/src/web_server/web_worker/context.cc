@@ -1,7 +1,6 @@
 #include "../http/response.hh"
 #include "../ui_template.hh"
 #include "context.hh"
-#include "simlib/file_path.hh"
 
 #include <chrono>
 #include <exception>
@@ -10,6 +9,7 @@
 #include <sim/random.hh>
 #include <sim/sessions/session.hh>
 #include <sim/sql/sql.hh>
+#include <simlib/file_path.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
 #include <simlib/time.hh>
@@ -49,11 +49,12 @@ void Context::open_session() {
         return; // Optimization (no mysql query) for empty or nonexistent cookie
     }
     Session s;
-    auto stmt = mysql.execute(Select("s.csrf_token, s.user_id, u.type, u.username, s.data")
-                                  .from("sessions s")
-                                  .inner_join("users u")
-                                  .on("u.id=s.user_id")
-                                  .where("s.id=? AND expires>=?", session_id, mysql_date()));
+    auto stmt =
+        mysql.execute(Select("s.csrf_token, s.user_id, u.type, u.username, s.data")
+                          .from("sessions s")
+                          .inner_join("users u")
+                          .on("u.id=s.user_id")
+                          .where("s.id=? AND expires>=?", session_id, utc_mysql_datetime()));
     stmt.res_bind(s.csrf_token, s.user_id, s.user_type, s.username, s.data);
     if (not stmt.next()) {
         // Session expired or was deleted
@@ -84,7 +85,7 @@ void Context::create_session(
     STACK_UNWINDING_MARK;
     throw_assert(not session);
     // Remove expired sessions
-    mysql.execute(DeleteFrom("sessions").where("expires<=?", mysql_date()));
+    mysql.execute(DeleteFrom("sessions").where("expires<=?", utc_mysql_datetime()));
     // Create a new session
     Session s = {
         .id = {},
@@ -97,10 +98,10 @@ void Context::create_session(
     };
     s.orig_data = s.data;
     s.csrf_token = sim::generate_random_token(decltype(s.csrf_token)::len);
-    auto expires_tp = std::chrono::system_clock::now() +
+    auto session_lifetime =
         (long_exiration ? sim::sessions::Session::LONG_SESSION_MAX_LIFETIME
                         : sim::sessions::Session::SHORT_SESSION_MAX_LIFETIME);
-    auto expires_str = mysql_date(expires_tp);
+    auto expires_str = utc_mysql_datetime(std::chrono::seconds{session_lifetime}.count());
     for (;;) {
         s.id = sim::generate_random_token(decltype(s.id)::len);
         auto stmt = mysql.execute(
@@ -120,9 +121,10 @@ void Context::create_session(
         }
     }
 
-    auto exp_time_t = long_exiration
-        ? std::optional{std::chrono::system_clock::to_time_t(expires_tp)}
-        : std::nullopt;
+    auto exp_time_t = long_exiration ? std::optional{std::chrono::system_clock::to_time_t(
+                                           std::chrono::system_clock::now() + session_lifetime
+                                       )}
+                                     : std::nullopt;
 
     cookie_changes.set("session", s.id, exp_time_t, "/", true, true);
     cookie_changes.set("csrf_token", s.csrf_token, exp_time_t, "/", false, true);

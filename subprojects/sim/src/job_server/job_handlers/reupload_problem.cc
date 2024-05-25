@@ -64,7 +64,7 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
         return set_failure();
     }
 
-    auto curr_datetime = mysql_date();
+    auto curr_datetime = utc_mysql_datetime();
     auto create_package_res = add_or_reupload_problem::create_package_with_simfile(
         job_log_holder_, mysql, input_package_path, *simfile, curr_datetime
     );

@@ -278,7 +278,7 @@ void Sim::api_contest_users() {
     }
     append("\",[");
 
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
     for (bool first = true; res.next();) {
         if (first) {
             first = false;

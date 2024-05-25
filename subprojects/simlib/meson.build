@@ -26,6 +26,15 @@ if get_option('warning_level') > '0'
         '-Wno-c++20-extensions',
         '-Wno-gnu-zero-variadic-macro-arguments',
         '-Wno-c++2b-extensions',
+        '-Wuninitialized',
+        '-Wnon-virtual-dtor',
+        '-Woverloaded-virtual',
+        '-Wduplicated-cond',
+        '-Wduplicated-branches',
+        '-Wlogical-op',
+        '-Wnull-dereference',
+        '-Wformat=2',
+        '-Wlifetime',
     ]
     foreach warning : warnings
         if cc.has_argument(warning)

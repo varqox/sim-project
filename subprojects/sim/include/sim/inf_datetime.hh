@@ -69,7 +69,7 @@ public:
     }
 
     InfDatetime& set_datetime(CStringView datetime) {
-        if (is_datetime(datetime)) {
+        if (is_datetime(datetime.c_str())) {
             type = Type::DATE;
             date = datetime;
         } else {
@@ -158,7 +158,8 @@ inline InfDatetime inf_timestamp_to_InfDatetime(StringView str) {
     } else if (str == "-inf") {
         res.set_neg_inf();
     } else {
-        res.set_datetime(from_unsafe{mysql_date(WONT_THROW(str2num<uint64_t>(str).value()))});
+        res.set_datetime(from_unsafe{utc_mysql_datetime(WONT_THROW(str2num<uint64_t>(str).value()))}
+        );
     }
 
     return res;

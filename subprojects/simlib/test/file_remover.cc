@@ -24,6 +24,7 @@ TEST(FileRemover, destructed_by_exception) {
     (void)FileDescriptor{file_path, O_CREAT};
     try {
         auto remover = FileRemover{file_path};
+        (void)remover;
         throw 0; // NOLINT
     } catch (int) { // NOLINT
     }
