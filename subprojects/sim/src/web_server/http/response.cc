@@ -7,12 +7,12 @@
 
 namespace web_server::http {
 
-void Response::set_cache(bool to_public, uint max_age, bool must_revalidate) {
+void Response::set_cache(bool to_public, uint max_age_in_seconds, bool must_revalidate) {
     time_t curr_time;
     if (time(&curr_time) == static_cast<time_t>(-1)) {
         THROW("time()", errmsg());
     }
-    curr_time += max_age;
+    curr_time += max_age_in_seconds;
     struct tm t;
     if (!gmtime_r(&curr_time, &t)) {
         THROW("gmtime_r()", errmsg());
@@ -26,7 +26,7 @@ void Response::set_cache(bool to_public, uint max_age, bool must_revalidate) {
         (to_public ? "public" : "private"),
         (must_revalidate ? "; must-revalidate" : ""),
         "; max-age=",
-        max_age
+        max_age_in_seconds
     );
 }
 

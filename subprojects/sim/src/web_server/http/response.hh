@@ -27,7 +27,7 @@ public:
 
     ~Response() = default;
 
-    void set_cache(bool to_public, uint max_age, bool must_revalidate);
+    void set_cache(bool to_public, uint max_age_in_seconds, bool must_revalidate);
 };
 
 } // namespace web_server::http
