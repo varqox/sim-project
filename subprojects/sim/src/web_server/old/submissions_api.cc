@@ -16,6 +16,7 @@
 #include <simlib/humanize.hh>
 #include <simlib/process.hh>
 #include <simlib/string_view.hh>
+#include <simlib/time.hh>
 
 using sim::InfDatetime;
 using sim::contest_problems::OldContestProblem;
@@ -969,7 +970,7 @@ void Sim::api_submission_add() {
         EnumVal(OldSubmission::Status::PENDING),
         EnumVal(OldSubmission::Status::PENDING),
         utc_mysql_datetime(),
-        utc_mysql_datetime(0)
+        utc_mysql_datetime_from_time_t(0)
     );
 
     // Create a job to judge the submission

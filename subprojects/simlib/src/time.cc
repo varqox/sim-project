@@ -2,23 +2,27 @@
 #include <simlib/errmsg.hh>
 #include <simlib/macros/throw.hh>
 #include <simlib/string_view.hh>
+#include <simlib/time.hh>
 #include <string>
 #include <sys/time.h>
 
 namespace {
 
-std::string mysql_datetime(
-    struct tm* (*time_t_to_tm)(const time_t*, struct tm*),
-    const char* time_t_to_tm_func_name,
-    time_t offset
-) {
+time_t current_time_t() {
     time_t curr_time;
     if (time(&curr_time) == static_cast<time_t>(-1)) {
         THROW("time()", errmsg());
     }
-    curr_time += offset;
+    return curr_time;
+}
+
+std::string mysql_datetime(
+    struct tm* (*time_t_to_tm)(const time_t*, struct tm*),
+    const char* time_t_to_tm_func_name,
+    time_t time
+) {
     struct tm t;
-    if (!time_t_to_tm(&curr_time, &t)) {
+    if (!time_t_to_tm(&time, &t)) {
         THROW(time_t_to_tm_func_name, "()", errmsg());
     }
     std::string res(20, '\0');
@@ -29,8 +33,14 @@ std::string mysql_datetime(
 
 } // namespace
 
-std::string utc_mysql_datetime(time_t offset) {
-    return mysql_datetime(gmtime_r, "gmtime_r", offset);
+std::string utc_mysql_datetime_with_offset(time_t offset) {
+    return mysql_datetime(gmtime_r, "gmtime_r", current_time_t() + offset);
 }
 
-std::string local_mysql_datetime() { return mysql_datetime(localtime_r, "localtime_r", 0); }
+std::string utc_mysql_datetime_from_time_t(time_t time) {
+    return mysql_datetime(gmtime_r, "gmtime_r", time);
+}
+
+std::string local_mysql_datetime() {
+    return mysql_datetime(localtime_r, "localtime_r", current_time_t());
+}

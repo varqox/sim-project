@@ -37,15 +37,28 @@ void check_datetime(
 } // namespace
 
 // NOLINTNEXTLINE
+TEST(time, utc_mysql_datetime_from_time_t) {
+    EXPECT_EQ(utc_mysql_datetime_from_time_t(0), "1970-01-01 00:00:00");
+    EXPECT_EQ(utc_mysql_datetime_from_time_t(1'717'343'210), "2024-06-02 15:46:50");
+}
+
+// NOLINTNEXTLINE
 TEST(time, utc_mysql_datetime) {
     std::this_thread::yield(); // Maximize the probability that the next instructions are executed
                                // one after the other with minimal delay
     auto utc_curr_time = utc_mysql_datetime();
     auto tp = std::chrono::system_clock::now();
-    auto utc_curr_time_plus_10 = utc_mysql_datetime(10);
-    auto tp_plus_10 = std::chrono::system_clock::now() + std::chrono::seconds{10};
 
     check_datetime(utc_curr_time, tp, timegm);
+}
+
+// NOLINTNEXTLINE
+TEST(time, utc_mysql_datetime_with_offset) {
+    std::this_thread::yield(); // Maximize the probability that the next instructions are executed
+                               // one after the other with minimal delay
+    auto utc_curr_time_plus_10 = utc_mysql_datetime_with_offset(10);
+    auto tp_plus_10 = std::chrono::system_clock::now() + std::chrono::seconds{10};
+
     check_datetime(utc_curr_time_plus_10, tp_plus_10, timegm);
 }
 

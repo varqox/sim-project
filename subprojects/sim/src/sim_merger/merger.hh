@@ -6,6 +6,7 @@
 #include <map>
 #include <sim/db/tables.hh>
 #include <sim/primary_key.hh>
+#include <simlib/time.hh>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -209,7 +210,7 @@ protected:
                         " with new id: ",
                         new_id,
                         "  ",
-                        utc_mysql_datetime(system_clock::to_time_t(tp))
+                        utc_mysql_datetime_from_time_t(system_clock::to_time_t(tp))
                     );
                 } else {
                     (void)new_id; // Suppress GCC warning

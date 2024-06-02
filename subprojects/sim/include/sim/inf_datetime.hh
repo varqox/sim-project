@@ -158,7 +158,8 @@ inline InfDatetime inf_timestamp_to_InfDatetime(StringView str) {
     } else if (str == "-inf") {
         res.set_neg_inf();
     } else {
-        res.set_datetime(from_unsafe{utc_mysql_datetime(WONT_THROW(str2num<uint64_t>(str).value()))}
+        res.set_datetime(
+            from_unsafe{utc_mysql_datetime_from_time_t(WONT_THROW(str2num<uint64_t>(str).value()))}
         );
     }
 

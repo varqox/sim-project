@@ -101,7 +101,8 @@ void Context::create_session(
     auto session_lifetime =
         (long_exiration ? sim::sessions::Session::LONG_SESSION_MAX_LIFETIME
                         : sim::sessions::Session::SHORT_SESSION_MAX_LIFETIME);
-    auto expires_str = utc_mysql_datetime(std::chrono::seconds{session_lifetime}.count());
+    auto expires_str =
+        utc_mysql_datetime_with_offset(std::chrono::seconds{session_lifetime}.count());
     for (;;) {
         s.id = sim::generate_random_token(decltype(s.id)::len);
         auto stmt = mysql.execute(

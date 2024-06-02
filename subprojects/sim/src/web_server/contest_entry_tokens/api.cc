@@ -287,7 +287,7 @@ Response delete_(Context& ctx, decltype(Contest::id) contest_id) {
             continue;
         }
 
-        ti.short_token_expiration = utc_mysql_datetime(
+        ti.short_token_expiration = utc_mysql_datetime_with_offset(
             std::chrono::seconds{ContestEntryToken::SHORT_TOKEN_MAX_LIFETIME}.count()
         );
         ctx.mysql.execute(Update("contest_entry_tokens")
