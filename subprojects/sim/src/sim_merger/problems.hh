@@ -195,14 +195,14 @@ public:
             auto old_mysql = old_mysql::ConnectionView{*mysql};
             old_mysql
                 .prepare("INSERT jobs (creator, status, priority, type, created_at,"
-                         " aux_id, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
+                         " aux_id, aux_id_2, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '', '')")
                 .bind_and_execute(
                     EnumVal(sim::jobs::OldJob::Status::PENDING),
                     default_priority(sim::jobs::OldJob::Type::MERGE_PROBLEMS),
                     EnumVal(sim::jobs::OldJob::Type::MERGE_PROBLEMS),
                     utc_mysql_datetime(),
                     src_id,
-                    sim::jobs::MergeProblemsInfo(dest_id, false).dump()
+                    dest_id
                 );
         }
 

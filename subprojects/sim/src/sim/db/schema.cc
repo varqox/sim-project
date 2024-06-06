@@ -397,6 +397,18 @@ const DbSchema& get_schema() {
                 {
                     // clang-format off
                     .create_table_sql = concat_tostr(
+                        "CREATE TABLE `merge_problems_jobs` ("
+                        "  `id` bigint(20) unsigned NOT NULL,"
+                        "  `rejudge_transferred_submissions` tinyint(1) NOT NULL,"
+                        "  PRIMARY KEY (`id`),"
+                        "  CONSTRAINT `merge_problems_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
+                    ),
+                    // clang-format on
+                },
+                {
+                    // clang-format off
+                    .create_table_sql = concat_tostr(
                         "CREATE TABLE `schema_subversion_0` ("
                         "  `x` bit(1) NOT NULL"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"

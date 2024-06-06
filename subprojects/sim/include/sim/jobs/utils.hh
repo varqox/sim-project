@@ -78,36 +78,6 @@ inline void extract_dumped(std::optional<T>& opt, StringView& dumped_str) {
     }
 }
 
-struct MergeProblemsInfo {
-    decltype(sim::problems::OldProblem::id) target_problem_id{};
-    static_assert(
-        sizeof(target_problem_id) == 8, "Changing size needs updating column info in jobs table"
-    );
-    bool rejudge_transferred_submissions{};
-
-    MergeProblemsInfo() = default;
-
-    MergeProblemsInfo(decltype(sim::problems::OldProblem::id) tpid, bool rts) noexcept
-    : target_problem_id(tpid)
-    , rejudge_transferred_submissions(rts) {}
-
-    explicit MergeProblemsInfo(StringView str) {
-        extract_dumped(target_problem_id, str);
-
-        auto mask = extract_dumped_int<uint8_t>(str);
-        rejudge_transferred_submissions = (mask & 1);
-    }
-
-    [[nodiscard]] std::string dump() const {
-        std::string res;
-        append_dumped(res, target_problem_id);
-
-        uint8_t mask = rejudge_transferred_submissions;
-        append_dumped(res, mask);
-        return res;
-    }
-};
-
 struct ChangeProblemStatementInfo {
     std::string new_statement_path;
 
@@ -116,26 +86,6 @@ struct ChangeProblemStatementInfo {
     explicit ChangeProblemStatementInfo(StringView nsp) : new_statement_path(nsp.to_string()) {}
 
     [[nodiscard]] std::string dump() const { return new_statement_path; }
-};
-
-struct MergeUsersInfo {
-    decltype(sim::users::User::id) target_user_id{};
-    static_assert(
-        sizeof(target_user_id) == 8, "Changing size needs updating column info in jobs table"
-    );
-
-    MergeUsersInfo() = default;
-
-    explicit MergeUsersInfo(decltype(sim::users::User::id) target_uid) noexcept
-    : target_user_id(target_uid) {}
-
-    explicit MergeUsersInfo(StringView str) { extract_dumped(target_user_id, str); }
-
-    [[nodiscard]] std::string dump() const {
-        std::string res;
-        append_dumped(res, target_user_id);
-        return res;
-    }
 };
 
 void restart_job(mysql::Connection& mysql, StringView job_id, bool notify_job_server);

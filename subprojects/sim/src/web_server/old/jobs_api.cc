@@ -325,12 +325,7 @@ void Sim::api_jobs() {
 
         case OldJob::Type::MERGE_PROBLEMS: {
             append("\"deleted problem\":", res[AUX_ID]);
-            sim::jobs::MergeProblemsInfo info(res[JINFO]);
-            append(",\"target problem\":", info.target_problem_id);
-            append(
-                ",\"rejudge transferred submissions\":",
-                info.rejudge_transferred_submissions ? "\"yes\"" : "\"no\""
-            );
+            append(",\"target problem\":", res[AUX_ID_2]);
             break;
         }
 

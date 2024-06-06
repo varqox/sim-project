@@ -35,28 +35,69 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "8bc9c3b96db2e66a33b007924837576af660be827ef6013ded7c7e37b8c2ddd3";
+    "0e65671c305ce9bb1a75792b079c6d646633b71f71408a8ab6d3cbe31dbd24d5";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
 ) {
     STACK_UNWINDING_MARK;
+
     // Upgrade here
-    mysql.update(
-        "ALTER TABLE jobs ADD COLUMN aux_id_2 bigint(20) unsigned DEFAULT NULL AFTER aux_id"
-    );
+
+    struct MergeProblemsInfo {
+        decltype(sim::problems::OldProblem::id) target_problem_id{};
+        static_assert(
+            sizeof(target_problem_id) == 8, "Changing size needs updating column info in jobs table"
+        );
+        bool rejudge_transferred_submissions{};
+
+        MergeProblemsInfo() = default;
+
+        MergeProblemsInfo(decltype(sim::problems::OldProblem::id) tpid, bool rts) noexcept
+        : target_problem_id(tpid)
+        , rejudge_transferred_submissions(rts) {}
+
+        explicit MergeProblemsInfo(StringView str) {
+            sim::jobs::extract_dumped(target_problem_id, str);
+
+            auto mask = sim::jobs::extract_dumped_int<uint8_t>(str);
+            rejudge_transferred_submissions = (mask & 1);
+        }
+
+        [[nodiscard]] std::string dump() const {
+            std::string res;
+            sim::jobs::append_dumped(res, target_problem_id);
+
+            uint8_t mask = rejudge_transferred_submissions;
+            sim::jobs::append_dumped(res, mask);
+            return res;
+        }
+    };
+
+    mysql.update("UNLOCK TABLES");
+    mysql.update("CREATE TABLE `merge_problems_jobs` ("
+                 "  `id` bigint(20) unsigned NOT NULL,"
+                 "  `rejudge_transferred_submissions` tinyint(1) NOT NULL,"
+                 "  PRIMARY KEY (`id`),"
+                 "  CONSTRAINT `merge_problems_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` "
+                 "(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
+                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin");
     decltype(sim::jobs::Job::id) job_id;
     decltype(sim::jobs::Job::info) job_info;
     {
         auto stmt = mysql.execute(sim::sql::Select("id, info")
                                       .from("jobs")
-                                      .where("type=?", sim::jobs::Job::Type::MERGE_USERS));
+                                      .where("type=?", sim::jobs::Job::Type::MERGE_PROBLEMS));
         stmt.res_bind(job_id, job_info);
         while (stmt.next()) {
-            auto mui = sim::jobs::MergeUsersInfo{job_info};
+            auto mpi = MergeProblemsInfo{job_info};
             mysql.execute(sim::sql::Update("jobs")
-                              .set("aux_id_2=?, info=''", mui.target_user_id)
+                              .set("aux_id_2=?, info=''", mpi.target_problem_id)
                               .where("id=?", job_id));
+            mysql.execute(
+                sim::sql::InsertInto("merge_problems_jobs (id, rejudge_transferred_submissions)")
+                    .values("?, ?", job_id, mpi.rejudge_transferred_submissions)
+            );
         }
     }
 }

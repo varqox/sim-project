@@ -93,16 +93,17 @@ struct PrimaryKeysFromJobs {
         old_mysql::Optional<decltype(OldJob::file_id)::value_type> file_id;
         sim::old_sql_fields::Datetime added_str;
         old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
+        old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id_2;
         sim::old_sql_fields::Blob<32> info;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
             "SELECT id, creator, type, file_id, "
-            "created_at, aux_id, info FROM ",
+            "created_at, aux_id, aux_id_2, info FROM ",
             job_table_name,
             " ORDER BY id"
         );
         stmt.bind_and_execute();
-        stmt.res_bind_all(id, creator, type, file_id, added_str, aux_id, info);
+        stmt.res_bind_all(id, creator, type, file_id, added_str, aux_id, aux_id_2, info);
         while (stmt.next()) {
             auto created_at = str_to_time_point(added_str.to_cstr());
 
@@ -135,14 +136,14 @@ struct PrimaryKeysFromJobs {
 
             case OldJob::Type::MERGE_PROBLEMS:
                 problems.add_id(aux_id.value(), created_at);
-                problems.add_id(sim::jobs::MergeProblemsInfo(info).target_problem_id, created_at);
+                problems.add_id(aux_id_2.value(), created_at);
                 break;
 
             case OldJob::Type::DELETE_USER: users.add_id(aux_id.value(), created_at); break;
 
             case OldJob::Type::MERGE_USERS:
                 users.add_id(aux_id.value(), created_at);
-                users.add_id(sim::jobs::MergeUsersInfo(info).target_user_id, created_at);
+                users.add_id(aux_id_2.value(), created_at);
                 break;
 
             case OldJob::Type::DELETE_CONTEST: contests.add_id(aux_id.value(), created_at); break;
