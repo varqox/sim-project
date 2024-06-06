@@ -28,7 +28,7 @@ public:
     constexpr explicit Datetime(T&& str)
     : Varbinary([&]() -> decltype(auto) {
         auto s = concat_tostr(str);
-        throw_assert(is_datetime(s));
+        throw_assert(is_datetime(s.c_str()));
         return s;
     }()) {}
 
@@ -39,7 +39,7 @@ public:
             int> = 0>
     Datetime& operator=(T&& str) {
         auto s = concat_tostr(str);
-        throw_assert(is_datetime(s));
+        throw_assert(is_datetime(s.c_str()));
         Varbinary::operator=(s);
         return *this;
     }

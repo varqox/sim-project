@@ -178,7 +178,16 @@ void Sim::static_file() {
     struct stat attr = {};
     if (stat(file_path.c_str(), &attr) != -1) {
         // Extract time of last modification
-        resp.headers["last-modified"] = date("%a, %d %b %Y %H:%M:%S GMT", attr.st_mtime);
+        time_t mtime = attr.st_mtime;
+        struct tm t;
+        if (!gmtime_r(&mtime, &t)) {
+            THROW("gmtime_r()", errmsg());
+        }
+        std::string datetime(64, '\0');
+        size_t len = strftime(datetime.data(), datetime.size(), "%a, %d %b %Y %H:%M:%S GMT", &t);
+        datetime.resize(len);
+
+        resp.headers["last-modified"] = std::move(datetime);
         resp.set_cache(true, 100 * 24 * 60 * 60, false); // 100 days
 
         // If "If-Modified-Since" header is set and its value is not lower than

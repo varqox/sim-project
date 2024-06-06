@@ -21,9 +21,7 @@ void Logger::open(FilePath filename) {
     f_ = f;
 }
 
-void Logger::Appender::flush_impl(
-    const char* format1, const char* format2, const char* format3
-) noexcept {
+void Logger::Appender::flush_impl(const char* newline_or_empty_str) noexcept {
     if (flushed_) {
         return;
     }
@@ -33,16 +31,29 @@ void Logger::Appender::flush_impl(
             try {
                 (void)fprintf(
                     logger_.f_,
-                    format1,
-                    mysql_localdate().c_str(),
+                    "[ %s ] %.*s%s",
+                    local_mysql_datetime().c_str(),
                     static_cast<int>(buff_.size),
-                    buff_.data()
+                    buff_.data(),
+                    newline_or_empty_str
                 );
             } catch (const std::exception&) {
-                (void)fprintf(logger_.f_, format2, static_cast<int>(buff_.size), buff_.data());
+                (void)fprintf(
+                    logger_.f_,
+                    "[ unknown time ] %.*s%s",
+                    static_cast<int>(buff_.size),
+                    buff_.data(),
+                    newline_or_empty_str
+                );
             }
         } else {
-            (void)fprintf(logger_.f_, format3, static_cast<int>(buff_.size), buff_.data());
+            (void)fprintf(
+                logger_.f_,
+                "%.*s%s",
+                static_cast<int>(buff_.size),
+                buff_.data(),
+                newline_or_empty_str
+            );
         }
 
         (void)fflush(logger_.f_);

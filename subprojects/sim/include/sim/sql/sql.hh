@@ -80,6 +80,10 @@ class InsertSelectOrderBy;
 
 class Update;
 template <class... Params>
+class UpdateJoin;
+template <class... Params>
+class UpdateJoinOn;
+template <class... Params>
 class UpdateSet;
 template <class... Params>
 class UpdateWhere;
@@ -121,6 +125,9 @@ class SelectFrom {
     friend class Select;
     template <class...>
     friend class SelectJoinOn;
+    friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
 
     explicit SelectFrom(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -272,6 +279,9 @@ class SelectJoinOn {
     friend class SelectFrom;
     template <class...>
     friend class SelectJoin;
+    friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
 
     explicit SelectJoinOn(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -392,6 +402,9 @@ class SelectWhere {
     friend class SelectFrom;
     template <class...>
     friend class SelectJoinOn;
+    friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
 
     explicit SelectWhere(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -429,6 +442,9 @@ class SelectGroupBy {
     friend class SelectJoinOn;
     template <class...>
     friend class SelectWhere;
+    friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
 
     explicit SelectGroupBy(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -466,6 +482,9 @@ class SelectOrderBy {
     friend class SelectWhere;
     template <class...>
     friend class SelectGroupBy;
+    friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
 
     explicit SelectOrderBy(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -503,6 +522,9 @@ class SelectLimit {
     friend class SelectGroupBy;
     template <class...>
     friend class SelectOrderBy;
+    friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
 
     explicit SelectLimit(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -532,6 +554,8 @@ class Condition {
     friend class SelectJoin;
     template <class...>
     friend class SelectJoinOn;
+    template <class...>
+    friend class UpdateJoin;
 
     explicit Condition(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -572,6 +596,218 @@ public:
 
     template <class... SetParams>
     UpdateSet<SetParams&&...> set(const std::string_view& sql_str, SetParams&&... set_params) &&;
+
+    UpdateJoin<> left_join(const std::string_view& sql_str) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    left_join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    left_join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    left_join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    left_join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    left_join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    left_join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
+
+    UpdateJoin<> right_join(const std::string_view& sql_str) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    right_join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    right_join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    right_join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    right_join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    right_join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    right_join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
+
+    UpdateJoin<> inner_join(const std::string_view& sql_str) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    inner_join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    inner_join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    inner_join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    inner_join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    inner_join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<SelectParams...>
+    inner_join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
+};
+
+template <class... Params>
+class UpdateJoin {
+    static_assert((std::is_reference_v<Params> && ... && true), "this is meant to hold references");
+
+    std::string sql;
+    std::tuple<Params...> params;
+
+    friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
+
+    explicit UpdateJoin(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
+    : sql{std::move(sql_)}
+    , params{std::move(params_)} {}
+
+public:
+    ~UpdateJoin() = default;
+    UpdateJoin(const UpdateJoin&) = delete;
+    UpdateJoin(UpdateJoin&&) = delete;
+    UpdateJoin& operator=(const UpdateJoin&) = delete;
+    UpdateJoin& operator=(UpdateJoin&&) = delete;
+
+    template <class... OnParams>
+    UpdateJoinOn<Params..., OnParams&&...>
+    on(const std::string_view& sql_str, OnParams&&... on_params) &&;
+
+    template <class... CondParams>
+    UpdateJoinOn<Params..., CondParams...> on(Condition<CondParams...>&& condition) &&;
+};
+
+template <class... Params>
+class UpdateJoinOn {
+    static_assert((std::is_reference_v<Params> && ... && true), "this is meant to hold references");
+
+    std::string sql;
+    std::tuple<Params...> params;
+
+    template <class...>
+    friend class UpdateJoin;
+
+    explicit UpdateJoinOn(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
+    : sql{std::move(sql_)}
+    , params{std::move(params_)} {}
+
+public:
+    ~UpdateJoinOn() = default;
+    UpdateJoinOn(const UpdateJoinOn&) = delete;
+    UpdateJoinOn(UpdateJoinOn&&) = delete;
+    UpdateJoinOn& operator=(const UpdateJoinOn&) = delete;
+    UpdateJoinOn& operator=(UpdateJoinOn&&) = delete;
+
+    template <class... SetParams>
+    UpdateSet<Params..., SetParams&&...>
+    set(const std::string_view& sql_str, SetParams&&... set_params) &&;
+
+    UpdateJoin<Params...> left_join(const std::string_view& sql_str) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    left_join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    left_join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    left_join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    left_join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    left_join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    left_join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
+
+    UpdateJoin<Params...> right_join(const std::string_view& sql_str) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    right_join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    right_join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    right_join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    right_join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    right_join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    right_join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
+
+    UpdateJoin<Params...> inner_join(const std::string_view& sql_str) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    inner_join(SelectFrom<SelectParams...>&& select_from, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    inner_join(SelectJoinOn<SelectParams...>&& select_join_on, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    inner_join(SelectWhere<SelectParams...>&& select_where, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    inner_join(SelectGroupBy<SelectParams...>&& select_group_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    inner_join(SelectOrderBy<SelectParams...>&& select_order_by, std::string_view table_name) &&;
+
+    template <class... SelectParams>
+    UpdateJoin<Params..., SelectParams...>
+    inner_join(SelectLimit<SelectParams...>&& select_limit, std::string_view table_name) &&;
 };
 
 template <class... Params>
@@ -582,6 +818,8 @@ class UpdateSet {
     std::tuple<Params...> params;
 
     friend class Update;
+    template <class...>
+    friend class UpdateJoinOn;
 
     explicit UpdateSet(std::string&& sql_, std::tuple<Params...>&& params_) noexcept
     : sql{std::move(sql_)}
@@ -1060,31 +1298,38 @@ DEFINE_CONVERSION_TO_SQL_WITH_PARAMS(SelectFrom)
 
 // SelectJoin
 
-template <class... Params>
-template <class... OnParams>
-SelectJoinOn<Params..., OnParams&&...>
-SelectJoin<Params...>::on(const std::string_view& sql_str, OnParams&&... on_params) && {
-    throw_assert(meta::count(sql_str, '?') == sizeof...(OnParams));
-    sql += " ON ";
-    sql += sql_str;
-    return SelectJoinOn<Params..., OnParams&&...>{
-        std::move(sql),
-        std::tuple_cat(
-            std::move(params), std::tuple<OnParams&&...>{std::forward<OnParams>(on_params)...}
-        )
-    };
-}
+#define DEFINE_ON(ResultClass, Class)                                                              \
+    template <class... Params>                                                                     \
+    template <class... OnParams> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                  \
+    ResultClass<Params..., OnParams&&...> Class<Params...>::on(                                    \
+        const std::string_view& sql_str, OnParams&&... on_params                                   \
+    )&& {                                                                                          \
+        throw_assert(meta::count(sql_str, '?') == sizeof...(OnParams));                            \
+        sql += " ON ";                                                                             \
+        sql += sql_str;                                                                            \
+        /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                           \
+        return ResultClass<Params..., OnParams&&...>{                                              \
+            std::move(sql),                                                                        \
+            std::tuple_cat(                                                                        \
+                std::move(params), std::tuple<OnParams&&...>{std::forward<OnParams>(on_params)...} \
+            )                                                                                      \
+        };                                                                                         \
+    }                                                                                              \
+                                                                                                   \
+    template <class... Params>                                                                     \
+    template <class... CondParams> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                \
+    ResultClass<Params..., CondParams...> Class<Params...>::on(                                    \
+        Condition<CondParams...>&& condition                                                       \
+    )&& {                                                                                          \
+        sql += " ON ";                                                                             \
+        sql += std::move(condition).sql;                                                           \
+        /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                           \
+        return ResultClass<Params..., CondParams...>{                                              \
+            std::move(sql), std::tuple_cat(std::move(params), std::move(condition).params)         \
+        };                                                                                         \
+    }
 
-template <class... Params>
-template <class... CondParams>
-SelectJoinOn<Params..., CondParams...>
-SelectJoin<Params...>::on(Condition<CondParams...>&& condition) && {
-    sql += " ON ";
-    sql += std::move(condition).sql;
-    return SelectJoinOn<Params..., CondParams...>{
-        std::move(sql), std::tuple_cat(std::move(params), std::move(condition).params)
-    };
-}
+DEFINE_ON(SelectJoinOn, SelectJoin)
 
 // SelectJoinOn
 
@@ -1226,6 +1471,100 @@ Update::set(const std::string_view& sql_str, SetParams&&... set_params) && {
     };
 }
 
+#define DEFINE_NON_TEMPLATE_CLASS_JOIN(ResultClass, Class, join_name, join_str) \
+    /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                            \
+    inline ResultClass<> Class::join_name(const std::string_view& sql_str)&& {  \
+        throw_assert(meta::count(sql_str, '?') == 0);                           \
+        sql += " " join_str " ";                                                \
+        sql += sql_str;                                                         \
+        /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                        \
+        return ResultClass<>{std::move(sql), std::tuple{}};                     \
+    }
+
+#define DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(ResultClass, Class, join_name, join_str, SelectType) \
+    template <class... SelectParams> /* NOLINTNEXTLINE(bugprone-macro-parentheses) */              \
+    ResultClass<SelectParams...> Class::join_name(                                                 \
+        SelectType<SelectParams...>&& select, /* NOLINT(bugprone-macro-parentheses) */             \
+        std::string_view table_name                                                                \
+    )&& {                                                                                          \
+        throw_assert(meta::count(table_name, '?') == 0);                                           \
+        sql += " " join_str " (";                                                                  \
+        sql += std::move(select).sql;                                                              \
+        sql += ") ";                                                                               \
+        sql += table_name;                                                                         \
+        /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                           \
+        return ResultClass<SelectParams...>{std::move(sql), std::move(select).params};             \
+    }
+
+DEFINE_NON_TEMPLATE_CLASS_JOIN(UpdateJoin, Update, left_join, "LEFT JOIN")
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, left_join, "LEFT JOIN", SelectFrom)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, left_join, "LEFT JOIN", SelectJoinOn)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, left_join, "LEFT JOIN", SelectWhere)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, left_join, "LEFT JOIN", SelectGroupBy)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, left_join, "LEFT JOIN", SelectOrderBy)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, left_join, "LEFT JOIN", SelectLimit)
+
+DEFINE_NON_TEMPLATE_CLASS_JOIN(UpdateJoin, Update, right_join, "RIGHT JOIN")
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, right_join, "RIGHT JOIN", SelectFrom)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, right_join, "RIGHT JOIN", SelectJoinOn)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, right_join, "RIGHT JOIN", SelectWhere)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, right_join, "RIGHT JOIN", SelectGroupBy)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, right_join, "RIGHT JOIN", SelectOrderBy)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, right_join, "RIGHT JOIN", SelectLimit)
+
+DEFINE_NON_TEMPLATE_CLASS_JOIN(UpdateJoin, Update, inner_join, "INNER JOIN")
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, inner_join, "INNER JOIN", SelectFrom)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, inner_join, "INNER JOIN", SelectJoinOn)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, inner_join, "INNER JOIN", SelectWhere)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, inner_join, "INNER JOIN", SelectGroupBy)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, inner_join, "INNER JOIN", SelectOrderBy)
+DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT(UpdateJoin, Update, inner_join, "INNER JOIN", SelectLimit)
+
+// UpdateJoin
+
+DEFINE_ON(UpdateJoinOn, UpdateJoin)
+
+// UpdateJoinOn
+
+DEFINE_JOIN(UpdateJoin, UpdateJoinOn, left_join, "LEFT JOIN")
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, left_join, "LEFT JOIN", SelectFrom)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, left_join, "LEFT JOIN", SelectJoinOn)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, left_join, "LEFT JOIN", SelectWhere)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, left_join, "LEFT JOIN", SelectGroupBy)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, left_join, "LEFT JOIN", SelectOrderBy)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, left_join, "LEFT JOIN", SelectLimit)
+
+DEFINE_JOIN(UpdateJoin, UpdateJoinOn, right_join, "RIGHT JOIN")
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, right_join, "RIGHT JOIN", SelectFrom)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, right_join, "RIGHT JOIN", SelectJoinOn)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, right_join, "RIGHT JOIN", SelectWhere)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, right_join, "RIGHT JOIN", SelectGroupBy)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, right_join, "RIGHT JOIN", SelectOrderBy)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, right_join, "RIGHT JOIN", SelectLimit)
+
+DEFINE_JOIN(UpdateJoin, UpdateJoinOn, inner_join, "INNER JOIN")
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, inner_join, "INNER JOIN", SelectFrom)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, inner_join, "INNER JOIN", SelectJoinOn)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, inner_join, "INNER JOIN", SelectWhere)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, inner_join, "INNER JOIN", SelectGroupBy)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, inner_join, "INNER JOIN", SelectOrderBy)
+DEFINE_JOIN_SELECT(UpdateJoin, UpdateJoinOn, inner_join, "INNER JOIN", SelectLimit)
+
+template <class... Params>
+template <class... SetParams>
+UpdateSet<Params..., SetParams&&...>
+UpdateJoinOn<Params...>::set(const std::string_view& sql_str, SetParams&&... set_params) && {
+    throw_assert(meta::count(sql_str, '?') == sizeof...(SetParams));
+    sql += " SET ";
+    sql += sql_str;
+    return UpdateSet<Params..., SetParams&&...>{
+        std::move(sql),
+        std::tuple_cat(
+            std::move(params), std::tuple<SetParams&&...>{std::forward<SetParams>(set_params)...}
+        )
+    };
+}
+
 // UpdateSet
 
 DEFINE_WHERE(UpdateWhere, UpdateSet)
@@ -1361,11 +1700,14 @@ DEFINE_CONVERSION_TO_SQL_WITH_PARAMS(InsertSelectOrderBy)
 #undef DEFINE_FROM
 #undef DEFINE_JOIN
 #undef DEFINE_JOIN_SELECT
+#undef DEFINE_ON
 #undef DEFINE_WHERE
 #undef DEFINE_GROUP_BY
 #undef DEFINE_ORDER_BY
 #undef DEFINE_LIMIT
 #undef DEFINE_CONVERSION_TO_SQL_WITH_PARAMS
+#undef DEFINE_NON_TEMPLATE_CLASS_JOIN
+#undef DEFINE_NON_TEMPLATE_CLASS_JOIN_SELECT
 #undef DEFINE_VALUES
 #undef DEFINE_SELECT
 

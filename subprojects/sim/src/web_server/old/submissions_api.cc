@@ -16,6 +16,7 @@
 #include <simlib/humanize.hh>
 #include <simlib/process.hh>
 #include <simlib/string_view.hh>
+#include <simlib/time.hh>
 
 using sim::InfDatetime;
 using sim::contest_problems::OldContestProblem;
@@ -428,7 +429,7 @@ void Sim::api_submissions() {
 
     append_column_names();
 
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
     while (res.next()) {
         EnumVal<OldSubmission::Type> stype{
             WONT_THROW(str2num<OldSubmission::Type::UnderlyingType>(res[STYPE]).value())
@@ -874,7 +875,7 @@ void Sim::api_submission_add() {
             return api_error403(); // Could not participate
         }
 
-        auto curr_date = mysql_date();
+        auto curr_date = utc_mysql_datetime();
         if (uint(~contest_perms & sim::contests::Permissions::ADMIN) and
             (curr_date < InfDatetime(cr_begins_str) or InfDatetime(cr_ends_str) <= curr_date))
         {
@@ -938,7 +939,7 @@ void Sim::api_submission_add() {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
-        .bind_and_execute(mysql_date());
+        .bind_and_execute(utc_mysql_datetime());
     auto file_id = old_mysql.insert_id();
     CallInDtor file_remover([file_id] { (void)unlink(sim::internal_files::old_path_of(file_id)); });
 
@@ -968,8 +969,8 @@ void Sim::api_submission_add() {
         EnumVal(slang),
         EnumVal(OldSubmission::Status::PENDING),
         EnumVal(OldSubmission::Status::PENDING),
-        mysql_date(),
-        mysql_date(0)
+        utc_mysql_datetime(),
+        utc_mysql_datetime_from_time_t(0)
     );
 
     // Create a job to judge the submission
@@ -983,7 +984,7 @@ void Sim::api_submission_add() {
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::JUDGE_SUBMISSION),
             EnumVal(OldJob::Type::JUDGE_SUBMISSION),
-            mysql_date(),
+            utc_mysql_datetime(),
             submission_id
         );
 
@@ -1043,7 +1044,7 @@ void Sim::api_submission_rejudge() {
         EnumVal(OldJob::Status::PENDING),
         default_priority(OldJob::Type::REJUDGE_SUBMISSION),
         EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
-        mysql_date(),
+        utc_mysql_datetime(),
         submissions_sid
     );
 
@@ -1137,7 +1138,7 @@ void Sim::api_submission_delete() {
             EnumVal(OldJob::Type::DELETE_FILE),
             default_priority(OldJob::Type::DELETE_FILE),
             EnumVal(OldJob::Status::PENDING),
-            mysql_date(),
+            utc_mysql_datetime(),
             submissions_sid
         );
 

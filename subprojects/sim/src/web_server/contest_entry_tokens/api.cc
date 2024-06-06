@@ -58,7 +58,7 @@ std::optional<TokensInfo> get_tokens_info_for(Context& ctx, decltype(Contest::id
     if (not stmt.next()) {
         return std::nullopt;
     }
-    ti.curr_time = mysql_date();
+    ti.curr_time = utc_mysql_datetime();
     ti.short_token_real_value = ti.short_token;
     throw_assert(ti.short_token.has_value() == ti.short_token_expiration.has_value());
     if (ti.short_token and ti.curr_time >= *ti.short_token_expiration) {
@@ -113,7 +113,7 @@ get_token_contest_info_for(Context& ctx, StringView token_or_short_token) {
                 "cet.token=? OR (cet.short_token=? AND cet.short_token_expiration>?)",
                 token_or_short_token,
                 token_or_short_token,
-                mysql_date()
+                utc_mysql_datetime()
             )
     );
     stmt.res_bind(tci.contest_id, tci.contest_name, contest_is_public, cu_mode);
@@ -287,8 +287,8 @@ Response delete_(Context& ctx, decltype(Contest::id) contest_id) {
             continue;
         }
 
-        ti.short_token_expiration = mysql_date(
-            std::chrono::system_clock::now() + ContestEntryToken::SHORT_TOKEN_MAX_LIFETIME
+        ti.short_token_expiration = utc_mysql_datetime_with_offset(
+            std::chrono::seconds{ContestEntryToken::SHORT_TOKEN_MAX_LIFETIME}.count()
         );
         ctx.mysql.execute(Update("contest_entry_tokens")
                               .set(

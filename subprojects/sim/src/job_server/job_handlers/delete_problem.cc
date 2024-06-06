@@ -50,7 +50,7 @@ void DeleteProblem::run(sim::mysql::Connection& mysql) {
             EnumVal(OldJob::Type::DELETE_FILE),
             default_priority(OldJob::Type::DELETE_FILE),
             EnumVal(OldJob::Status::PENDING),
-            mysql_date(),
+            utc_mysql_datetime(),
             problem_id_
         );
 
@@ -64,7 +64,7 @@ void DeleteProblem::run(sim::mysql::Connection& mysql) {
             EnumVal(OldJob::Type::DELETE_FILE),
             default_priority(OldJob::Type::DELETE_FILE),
             EnumVal(OldJob::Status::PENDING),
-            mysql_date(),
+            utc_mysql_datetime(),
             problem_id_
         );
 

@@ -24,10 +24,11 @@ bool Sim::session_open() {
     if (ses.id.empty()) {
         return false;
     }
-    auto stmt =
-        mysql.execute(sim::sql::Select("csrf_token, user_id, data, type, username")
-                          .from("sessions s, users u")
-                          .where("s.id=? AND expires>=? AND u.id=s.user_id", ses.id, mysql_date()));
+    auto stmt = mysql.execute(
+        sim::sql::Select("csrf_token, user_id, data, type, username")
+            .from("sessions s, users u")
+            .where("s.id=? AND expires>=? AND u.id=s.user_id", ses.id, utc_mysql_datetime())
+    );
 
     stmt.res_bind(ses.csrf_token, ses.user_id, ses.data, ses.user_type, ses.username);
 

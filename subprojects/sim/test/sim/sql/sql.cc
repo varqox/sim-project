@@ -543,7 +543,432 @@ TEST(sql, constructing_sqls_SelectOrderBy) {
     );
 }
 
-TEST(sql, constructing_sqls_Update) { SQL_EQ(Update("abc").set("a=42"), "UPDATE abc SET a=42"); }
+TEST(sql, constructing_sqls_Update) {
+    SQL_EQ(Update("abc").set("a=42"), "UPDATE abc SET a=42");
+
+    SQL_EQ(
+        Update("abc").left_join("xyz").on("x=a").set("b=y"),
+        "UPDATE abc LEFT JOIN xyz ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").left_join(Select("x, y").from("xyz"), "xy").on("x=a").set("b=y"),
+        "UPDATE abc LEFT JOIN (SELECT x, y FROM xyz) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .left_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc LEFT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .left_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc LEFT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").left_join(Select("x, y").from("xyz").where("z=4"), "xy").on("x=a").set("b=y"),
+        "UPDATE abc LEFT JOIN (SELECT x, y FROM xyz WHERE z=4) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .left_join(Select("x, y").from("xyz").group_by("z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc LEFT JOIN (SELECT x, y FROM xyz GROUP BY z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .left_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc LEFT JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").left_join(Select("x, y").from("xyz").limit("10"), "xy").on("x=a").set("b=y"),
+        "UPDATE abc LEFT JOIN (SELECT x, y FROM xyz LIMIT 10) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").right_join("xyz").on("x=a").set("b=y"),
+        "UPDATE abc RIGHT JOIN xyz ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").right_join(Select("x, y").from("xyz"), "xy").on("x=a").set("b=y"),
+        "UPDATE abc RIGHT JOIN (SELECT x, y FROM xyz) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .right_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc RIGHT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .right_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc RIGHT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .right_join(Select("x, y").from("xyz").where("z=4"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc RIGHT JOIN (SELECT x, y FROM xyz WHERE z=4) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .right_join(Select("x, y").from("xyz").group_by("z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc RIGHT JOIN (SELECT x, y FROM xyz GROUP BY z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .right_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc RIGHT JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").right_join(Select("x, y").from("xyz").limit("10"), "xy").on("x=a").set("b=y"),
+        "UPDATE abc RIGHT JOIN (SELECT x, y FROM xyz LIMIT 10) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").inner_join("xyz").on("x=a").set("b=y"),
+        "UPDATE abc INNER JOIN xyz ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").inner_join(Select("x, y").from("xyz"), "xy").on("x=a").set("b=y"),
+        "UPDATE abc INNER JOIN (SELECT x, y FROM xyz) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join(Select("x, y").from("xyz").where("z=4"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN (SELECT x, y FROM xyz WHERE z=4) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join(Select("x, y").from("xyz").group_by("z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN (SELECT x, y FROM xyz GROUP BY z) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").inner_join(Select("x, y").from("xyz").limit("10"), "xy").on("x=a").set("b=y"),
+        "UPDATE abc INNER JOIN (SELECT x, y FROM xyz LIMIT 10) xy ON x=a SET b=y"
+    );
+}
+
+TEST(sql, constructing_sqls_UpdateJoin) {
+    SQL_EQ(
+        Update("abc").inner_join("xyz").on("x=a").set("b=y"),
+        "UPDATE abc INNER JOIN xyz ON x=a SET b=y"
+    );
+    SQL_EQ(
+        Update("abc").inner_join("xyz").on(Condition("x=a")).set("b=y"),
+        "UPDATE abc INNER JOIN xyz ON x=a SET b=y"
+    );
+}
+
+TEST(sql, constructing_sqls_UpdateJoinOn) {
+    SQL_EQ(
+        Update("abc").inner_join("klm").on("a=k").set("a=42"),
+        "UPDATE abc INNER JOIN klm ON a=k SET a=42"
+    );
+
+    SQL_EQ(
+        Update("abc").inner_join("klm").on("a=k").left_join("xyz").on("x=a").set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN xyz ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .left_join(Select("x, y").from("xyz"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN (SELECT x, y FROM xyz) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .left_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) "
+        "xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .left_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) "
+        "xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .left_join(Select("x, y").from("xyz").where("z=4"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN (SELECT x, y FROM xyz WHERE z=4) xy ON x=a SET "
+        "b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .left_join(Select("x, y").from("xyz").group_by("z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN (SELECT x, y FROM xyz GROUP BY z) xy ON x=a "
+        "SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .left_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy ON x=a "
+        "SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .left_join(Select("x, y").from("xyz").limit("10"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k LEFT JOIN (SELECT x, y FROM xyz LIMIT 10) xy ON x=a SET "
+        "b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").inner_join("klm").on("a=k").right_join("xyz").on("x=a").set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN xyz ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .right_join(Select("x, y").from("xyz"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN (SELECT x, y FROM xyz) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .right_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) "
+        "xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .right_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) "
+        "xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .right_join(Select("x, y").from("xyz").where("z=4"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN (SELECT x, y FROM xyz WHERE z=4) xy ON x=a "
+        "SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .right_join(Select("x, y").from("xyz").group_by("z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN (SELECT x, y FROM xyz GROUP BY z) xy ON x=a "
+        "SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .right_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy ON "
+        "x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .right_join(Select("x, y").from("xyz").limit("10"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k RIGHT JOIN (SELECT x, y FROM xyz LIMIT 10) xy ON x=a SET "
+        "b=y"
+    );
+
+    SQL_EQ(
+        Update("abc").inner_join("klm").on("a=k").inner_join("xyz").on("x=a").set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN xyz ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .inner_join(Select("x, y").from("xyz"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN (SELECT x, y FROM xyz) xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .inner_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) "
+        "xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .inner_join(Select("x, y").from("xyz").inner_join("efg").on("e=z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN (SELECT x, y FROM xyz INNER JOIN efg ON e=z) "
+        "xy ON x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .inner_join(Select("x, y").from("xyz").where("z=4"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN (SELECT x, y FROM xyz WHERE z=4) xy ON x=a "
+        "SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .inner_join(Select("x, y").from("xyz").group_by("z"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN (SELECT x, y FROM xyz GROUP BY z) xy ON x=a "
+        "SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .inner_join(Select("x, y").from("xyz").order_by("x, y"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN (SELECT x, y FROM xyz ORDER BY x, y) xy ON "
+        "x=a SET b=y"
+    );
+
+    SQL_EQ(
+        Update("abc")
+            .inner_join("klm")
+            .on("a=k")
+            .inner_join(Select("x, y").from("xyz").limit("10"), "xy")
+            .on("x=a")
+            .set("b=y"),
+        "UPDATE abc INNER JOIN klm ON a=k INNER JOIN (SELECT x, y FROM xyz LIMIT 10) xy ON x=a SET "
+        "b=y"
+    );
+}
 
 TEST(sql, constructing_sqls_UpdateSet) {
     SQL_EQ(Update("abc").set("a=42").where("b=7"), "UPDATE abc SET a=42 WHERE b=7");
@@ -801,6 +1226,107 @@ TEST(sql, counting_parameters_Condition) { EXPECT_THROW(Condition("?"), std::run
 TEST(sql, counting_parameters_Update) {
     EXPECT_THROW(Update("?"), std::runtime_error);
     EXPECT_THROW(Update("a").set("?"), std::runtime_error);
+    EXPECT_THROW(Update("a").left_join("?"), std::runtime_error);
+    EXPECT_THROW(Update("a").left_join(Select("b").from("c"), "?"), std::runtime_error);
+    EXPECT_THROW(Update("a").left_join(Select("b").from("c").where("d"), "?"), std::runtime_error);
+    EXPECT_THROW(
+        Update("a").left_join(Select("b").from("c").group_by("d"), "?"), std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").left_join(Select("b").from("c").order_by("d"), "?"), std::runtime_error
+    );
+    EXPECT_THROW(Update("a").left_join(Select("b").from("c").limit("d"), "?"), std::runtime_error);
+    EXPECT_THROW(Update("a").right_join("?"), std::runtime_error);
+    EXPECT_THROW(Update("a").right_join(Select("b").from("c"), "?"), std::runtime_error);
+    EXPECT_THROW(Update("a").right_join(Select("b").from("c").where("d"), "?"), std::runtime_error);
+    EXPECT_THROW(
+        Update("a").right_join(Select("b").from("c").group_by("d"), "?"), std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").right_join(Select("b").from("c").order_by("d"), "?"), std::runtime_error
+    );
+    EXPECT_THROW(Update("a").right_join(Select("b").from("c").limit("d"), "?"), std::runtime_error);
+    EXPECT_THROW(Update("a").inner_join("?"), std::runtime_error);
+    EXPECT_THROW(Update("a").inner_join(Select("b").from("c"), "?"), std::runtime_error);
+    EXPECT_THROW(Update("a").inner_join(Select("b").from("c").where("d"), "?"), std::runtime_error);
+    EXPECT_THROW(
+        Update("a").inner_join(Select("b").from("c").group_by("d"), "?"), std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join(Select("b").from("c").order_by("d"), "?"), std::runtime_error
+    );
+    EXPECT_THROW(Update("a").inner_join(Select("b").from("c").limit("d"), "?"), std::runtime_error);
+}
+
+TEST(sql, counting_parameters_UpdateJoin) {
+    EXPECT_THROW(Update("a").inner_join("b").on("?"), std::runtime_error);
+}
+
+TEST(sql, counting_parameters_UpdateJoinOn) {
+    EXPECT_THROW(Update("a").inner_join("b").on("c").set("?"), std::runtime_error);
+    EXPECT_THROW(Update("a").inner_join("b").on("c").left_join("?"), std::runtime_error);
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").left_join(Select("d").from("e"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").left_join(Select("d").from("e").where("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").left_join(Select("d").from("e").group_by("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").left_join(Select("d").from("e").order_by("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").left_join(Select("d").from("e").limit("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(Update("a").inner_join("b").on("c").right_join("?"), std::runtime_error);
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").right_join(Select("d").from("e"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").right_join(Select("d").from("e").where("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").right_join(Select("d").from("e").group_by("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").right_join(Select("d").from("e").order_by("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").right_join(Select("d").from("e").limit("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(Update("a").inner_join("b").on("c").inner_join("?"), std::runtime_error);
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").inner_join(Select("d").from("e"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").inner_join(Select("d").from("e").where("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").inner_join(Select("d").from("e").group_by("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").inner_join(Select("d").from("e").order_by("f"), "?"),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        Update("a").inner_join("b").on("c").inner_join(Select("d").from("e").limit("f"), "?"),
+        std::runtime_error
+    );
 }
 
 TEST(sql, counting_parameters_UpdateSet) {

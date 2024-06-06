@@ -64,10 +64,7 @@ void job_dispatcher(
 
         case JT::DELETE_USER: job_handler = make_unique<DeleteUser>(job_id, aux_id.value()); break;
 
-        case JT::MERGE_USERS:
-            job_handler =
-                make_unique<MergeUsers>(job_id, aux_id.value(), sim::jobs::MergeUsersInfo(info));
-            break;
+        case JT::MERGE_USERS: job_handler = make_unique<MergeUsers>(job_id); break;
 
         case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
             job_handler =

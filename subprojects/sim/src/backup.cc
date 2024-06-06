@@ -162,7 +162,7 @@ int main2(int argc, char** argv) {
          "commit",
          "-q",
          "-m",
-         concat_tostr("Backup ", mysql_localdate(), " (", mysql_date(), " UTC)")}
+         concat_tostr("Backup ", local_mysql_datetime(), " (", utc_mysql_datetime(), " UTC)")}
     );
     run_command({"git", "--no-pager", "show", "--stat"});
 

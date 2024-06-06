@@ -37,7 +37,7 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
     auto pkg_path = sim::internal_files::old_path_of(problem_file_id);
 
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
-        .bind_and_execute(mysql_date());
+        .bind_and_execute(utc_mysql_datetime());
     uint64_t new_file_id = old_mysql.insert_id();
     auto new_pkg_path = sim::internal_files::old_path_of(new_file_id);
 
@@ -82,7 +82,7 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
 
     dest_zip.close(); // Write all data to the dest_zip
 
-    const auto current_date = mysql_date();
+    const auto current_date = utc_mysql_datetime();
     // Add job to delete old problem file
     old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"

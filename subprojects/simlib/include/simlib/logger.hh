@@ -94,7 +94,7 @@ public:
         }
 
         /// Deeply integrated with flush() and flush_no_nl()
-        void flush_impl(const char* format1, const char* format2, const char* format3) noexcept;
+        void flush_impl(const char* newline_or_empty_str) noexcept;
 
     public:
         Appender(const Appender&) = delete;
@@ -124,13 +124,13 @@ public:
         }
 
         void flush() noexcept {
-            flush_impl("[ %s ] %.*s\n", "[ unknown time ] %.*s\n", "%.*s\n");
+            flush_impl("\n");
             label_ = orig_label_;
         }
 
         /// Like flush() but does not append the '\n' to the log
         void flush_no_nl() noexcept {
-            flush_impl("[ %s ] %.*s", "[ unknown time ] %.*s", "%.*s");
+            flush_impl("");
             label_ = false;
         }
 

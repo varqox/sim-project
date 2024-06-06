@@ -360,7 +360,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
                 begs[i++] = ESCAPED_CHARACTER;
 
                 if (is_digit(str[i])) { // Octals
-                    i += (is_digit(str[i + 1]) ? 1 + bool(is_digit(str[i + 2])) : 0);
+                    i += (is_digit(str[i + 1]) ? 1 + (is_digit(str[i + 2]) ? 1 : 0) : 0);
                 } else if (str[i] == 'x') { // Hexadecimal
                     i += 2;
                 } else if (str[i] == 'u') { // Unicode U+nnnn

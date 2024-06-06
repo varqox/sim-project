@@ -60,7 +60,7 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
         );
     }
 
-    std::string judging_began = mysql_date();
+    std::string judging_began = utc_mysql_datetime();
 
     job_log("Judging submission ", submission_id_, " (problem: ", problem_id, ')');
     load_problem_package(sim::internal_files::old_path_of(problem_file_id));

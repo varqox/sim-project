@@ -43,7 +43,7 @@ namespace web_server::old {
 inline bool whether_to_show_full_status(
     sim::contests::Permissions cperms,
     const InfDatetime& full_results,
-    const decltype(mysql_date())& curr_mysql_date,
+    const decltype(utc_mysql_datetime())& curr_mysql_date,
     OldContestProblem::ScoreRevealing score_revealing
 ) {
     // TODO: check append_submission_status() for making it use the new function
@@ -63,7 +63,7 @@ inline bool whether_to_show_full_status(
 inline bool whether_to_show_score(
     sim::contests::Permissions cperms,
     const InfDatetime& full_results,
-    const decltype(mysql_date())& curr_mysql_date,
+    const decltype(utc_mysql_datetime())& curr_mysql_date,
     OldContestProblem::ScoreRevealing score_revealing
 ) {
     // TODO: check append_submission_status() for making it use the new function
@@ -87,7 +87,7 @@ inline bool whether_to_show_score(
 static inline InplaceBuff<32> color_class_json(
     sim::contests::Permissions cperms,
     const InfDatetime& full_results,
-    const decltype(mysql_date())& curr_mysql_date,
+    const decltype(utc_mysql_datetime())& curr_mysql_date,
     optional<OldSubmission::Status> full_status,
     optional<OldSubmission::Status> initial_status,
     OldContestProblem::ScoreRevealing score_revealing
@@ -417,7 +417,7 @@ void Sim::api_contest() {
     // We read data in several queries - transaction will make the data
     // consistent
     auto transaction = mysql.start_repeatable_read_transaction();
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
 
     auto contest_opt = sim::contests::get(
         mysql,
@@ -499,7 +499,7 @@ void Sim::api_contest_round(StringView contest_round_id) {
     // We read data in several queries - transaction will make the data
     // consistent
     auto transaction = mysql.start_repeatable_read_transaction();
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
 
     auto contest_opt = sim::contests::get(
         mysql,
@@ -586,7 +586,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
     // We read data in several queries - transaction will make the data
     // consistent
     auto transaction = mysql.start_repeatable_read_transaction();
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
 
     auto contest_opt = sim::contests::get(
         mysql,
@@ -701,7 +701,7 @@ void Sim::api_contest_create(capabilities::Contests caps_contests) {
     // Add contest
     auto old_mysql = old_mysql::ConnectionView{mysql};
     auto stmt = old_mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
-    stmt.bind_and_execute(mysql_date(), name, is_public);
+    stmt.bind_and_execute(utc_mysql_datetime(), name, is_public);
 
     auto contest_id = stmt.insert_id();
     // Add user to owners
@@ -742,7 +742,7 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     }
 
     auto transaction = mysql.start_repeatable_read_transaction();
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
 
     auto source_contest_opt = sim::contests::get(
         mysql,
@@ -808,7 +808,7 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     // Add contest
     auto old_mysql = old_mysql::ConnectionView{mysql};
     auto stmt = old_mysql.prepare("INSERT contests(created_at, name, is_public) VALUES(?, ?, ?)");
-    stmt.bind_and_execute(mysql_date(), name, is_public);
+    stmt.bind_and_execute(utc_mysql_datetime(), name, is_public);
     auto new_contest_id = stmt.insert_id();
 
     // Update contest rounds to fit into new contest
@@ -827,7 +827,7 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
                           "full_results, ranking_exposure) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
     for (auto& [key, r] : contest_rounds) {
         stmt.bind_and_execute(
-            mysql_date(),
+            utc_mysql_datetime(),
             r.contest_id,
             r.name,
             r.item,
@@ -864,7 +864,7 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     );
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
-            mysql_date(),
+            utc_mysql_datetime(),
             cp.contest_round_id,
             cp.contest_id,
             cp.problem_id,
@@ -949,7 +949,7 @@ void Sim::api_contest_delete(StringView contest_id, sim::contests::Permissions p
         EnumVal(OldJob::Status::PENDING),
         default_priority(OldJob::Type::DELETE_CONTEST),
         EnumVal(OldJob::Type::DELETE_CONTEST),
-        mysql_date(),
+        utc_mysql_datetime(),
         contest_id
     );
 
@@ -985,14 +985,14 @@ void Sim::api_contest_round_create(StringView contest_id, sim::contests::Permiss
     }
 
     // Add round
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
     auto old_mysql = old_mysql::ConnectionView{mysql};
     auto stmt = old_mysql.prepare("INSERT contest_rounds(created_at, contest_id, name, item,"
                                   " begins, ends, full_results, ranking_exposure) "
                                   "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
                                   "FROM contest_rounds WHERE contest_id=?");
     stmt.bind_and_execute(
-        mysql_date(),
+        utc_mysql_datetime(),
         contest_id,
         name,
         inf_timestamp_to_InfDatetime(begins).to_str(),
@@ -1038,7 +1038,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     }
 
     auto transaction = mysql.start_repeatable_read_transaction();
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
 
     auto source_contest_opt = sim::contests::get(
         mysql,
@@ -1118,7 +1118,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
                           "SELECT ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
                           "FROM contest_rounds WHERE contest_id=?");
     stmt.bind_and_execute(
-        mysql_date(),
+        utc_mysql_datetime(),
         contest_id,
         contest_round.name,
         contest_round.begins,
@@ -1147,7 +1147,7 @@ void Sim::api_contest_round_clone(StringView contest_id, sim::contests::Permissi
     );
     for (auto& [key, cp] : contest_problems) {
         stmt.bind_and_execute(
-            mysql_date(),
+            utc_mysql_datetime(),
             cp.contest_round_id,
             cp.contest_id,
             cp.problem_id,
@@ -1192,7 +1192,7 @@ void Sim::api_contest_round_edit(
     }
 
     // Update round
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
     auto old_mysql = old_mysql::ConnectionView{mysql};
     auto stmt = old_mysql.prepare("UPDATE contest_rounds "
                                   "SET name=?, begins=?, ends=?, full_results=?,"
@@ -1231,7 +1231,7 @@ void Sim::api_contest_round_delete(
         EnumVal(OldJob::Status::PENDING),
         default_priority(OldJob::Type::DELETE_CONTEST_ROUND),
         EnumVal(OldJob::Type::DELETE_CONTEST_ROUND),
-        mysql_date(),
+        utc_mysql_datetime(),
         contest_round_id
     );
 
@@ -1311,7 +1311,7 @@ void Sim::api_contest_problem_add(
         "Contest problem name has to be able to hold the attached problem's name"
     );
     stmt.bind_and_execute(
-        mysql_date(),
+        utc_mysql_datetime(),
         contest_round_id,
         contest_id,
         problem_id,
@@ -1345,7 +1345,7 @@ void Sim::api_contest_problem_rejudge_all_submissions(
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::REJUDGE_SUBMISSION),
             EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
-            mysql_date(),
+            utc_mysql_datetime(),
             contest_problem_id
         );
 
@@ -1404,7 +1404,7 @@ void Sim::api_contest_problem_edit(
                 EnumVal(OldJob::Status::PENDING),
                 default_priority(OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
                 EnumVal(OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM),
-                mysql_date(),
+                utc_mysql_datetime(),
                 contest_problem_id
             );
 
@@ -1451,7 +1451,7 @@ void Sim::api_contest_problem_delete(
         EnumVal(OldJob::Status::PENDING),
         default_priority(OldJob::Type::DELETE_CONTEST_PROBLEM),
         EnumVal(OldJob::Type::DELETE_CONTEST_PROBLEM),
-        mysql_date(),
+        utc_mysql_datetime(),
         contest_problem_id
     );
 
@@ -1573,7 +1573,7 @@ void Sim::api_contest_ranking(
         );
     };
 
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
 
     bool is_admin = uint(perms & sim::contests::Permissions::ADMIN);
     if (is_admin) {

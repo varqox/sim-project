@@ -87,7 +87,12 @@ void begin_ui_template(Response& resp, UiTemplateParams params) {
             "</head>"
         "<body>"
             "<script>"
-                "sim_template(", sim_template_params(params.session), ',', microtime() / 1000, ");"
+                "sim_template(",
+                    sim_template_params(params.session), ',',
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::system_clock::now().time_since_epoch()
+                    ).count(),
+                ");"
                 "document.body.appendChild(elem_with_class('div', 'notifications')).innerHTML = '", params.notifications, "';");
     // clang-format on
 }

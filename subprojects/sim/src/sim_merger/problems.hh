@@ -200,7 +200,7 @@ public:
                     EnumVal(sim::jobs::OldJob::Status::PENDING),
                     default_priority(sim::jobs::OldJob::Type::MERGE_PROBLEMS),
                     EnumVal(sim::jobs::OldJob::Type::MERGE_PROBLEMS),
-                    mysql_date(),
+                    utc_mysql_datetime(),
                     src_id,
                     sim::jobs::MergeProblemsInfo(dest_id, false).dump()
                 );
@@ -232,7 +232,7 @@ private:
                     sim::jobs::OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION
                 ),
                 EnumVal(sim::jobs::OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-                mysql_date(),
+                utc_mysql_datetime(),
                 problem_new_id
             );
     }

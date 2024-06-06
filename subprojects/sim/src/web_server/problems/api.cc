@@ -637,7 +637,7 @@ http::Response add(web_worker::Context& ctx) {
     ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, info, data)")
                           .values(
                               "?, ?, ?, ?, ?, '', ''",
-                              mysql_date(),
+                              utc_mysql_datetime(),
                               ctx.session->user_id,
                               job_type,
                               default_priority(job_type),
@@ -703,7 +703,7 @@ Response reupload(Context& ctx, decltype(Problem::id) problem_id) {
         InsertInto("jobs (created_at, creator, type, priority, status, aux_id, info, data)")
             .values(
                 "?, ?, ?, ?, ?, ?, '', ''",
-                mysql_date(),
+                utc_mysql_datetime(),
                 ctx.session->user_id,
                 job_type,
                 default_priority(job_type),

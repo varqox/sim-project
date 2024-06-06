@@ -509,7 +509,7 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::REJUDGE_SUBMISSION),
             EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
-            mysql_date(),
+            utc_mysql_datetime(),
             problems_pid
         );
 
@@ -533,7 +533,7 @@ void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
             EnumVal(OldJob::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-            mysql_date(),
+            utc_mysql_datetime(),
             problems_pid
         );
 
@@ -564,7 +564,7 @@ void Sim::api_problem_delete(sim::problems::Permissions perms) {
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::DELETE_PROBLEM),
             EnumVal(OldJob::Type::DELETE_PROBLEM),
-            mysql_date(),
+            utc_mysql_datetime(),
             problems_pid
         );
 
@@ -622,7 +622,7 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::MERGE_PROBLEMS),
             EnumVal(OldJob::Type::MERGE_PROBLEMS),
-            mysql_date(),
+            utc_mysql_datetime(),
             problems_pid,
             sim::jobs::MergeProblemsInfo(
                 WONT_THROW(str2num<decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>(
@@ -795,7 +795,7 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
-        .bind_and_execute(mysql_date());
+        .bind_and_execute(utc_mysql_datetime());
     auto job_file_id = old_mysql.insert_id();
     FileRemover job_file_remover(sim::internal_files::old_path_of(job_file_id).to_string());
 
@@ -814,7 +814,7 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::CHANGE_PROBLEM_STATEMENT),
             EnumVal(OldJob::Type::CHANGE_PROBLEM_STATEMENT),
-            mysql_date(),
+            utc_mysql_datetime(),
             problems_pid,
             cps_info.dump()
         );

@@ -336,7 +336,7 @@ void Sim::api_contest_file_add() {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
-        .bind_and_execute(mysql_date());
+        .bind_and_execute(utc_mysql_datetime());
     auto internal_file_id = old_mysql.insert_id();
 
     CallInDtor internal_file_remover([internal_file_id] {
@@ -350,7 +350,7 @@ void Sim::api_contest_file_add() {
                                   "VALUES(?,?,?,?,?,?,?,?)");
 
     decltype(OldContestFile::id) file_id;
-    auto curr_date = mysql_date();
+    auto curr_date = utc_mysql_datetime();
     throw_assert(session.has_value());
 
     do {
@@ -444,7 +444,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     if (reuploading_file) {
         auto old_mysql = old_mysql::ConnectionView{mysql};
         old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
-            .bind_and_execute(mysql_date());
+            .bind_and_execute(utc_mysql_datetime());
         internal_file_id = old_mysql.insert_id();
 
         // Move file
@@ -461,7 +461,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
                 EnumVal(OldJob::Type::DELETE_FILE),
                 default_priority(OldJob::Type::DELETE_FILE),
                 EnumVal(OldJob::Status::PENDING),
-                mysql_date(),
+                utc_mysql_datetime(),
                 contest_file_id
             );
     }
@@ -480,7 +480,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
         description,
         reuploading_file,
         file_size,
-        mysql_date(),
+        utc_mysql_datetime(),
         contest_file_id
     );
 
@@ -509,7 +509,7 @@ void Sim::api_contest_file_delete(
             EnumVal(OldJob::Type::DELETE_FILE),
             default_priority(OldJob::Type::DELETE_FILE),
             EnumVal(OldJob::Status::PENDING),
-            mysql_date(),
+            utc_mysql_datetime(),
             contest_file_id
         );
 
