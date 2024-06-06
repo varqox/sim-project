@@ -588,16 +588,18 @@ Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
     // Queue the merging job
     static constexpr auto type = Job::Type::MERGE_USERS;
     auto stmt = ctx.mysql.execute(
-        InsertInto("jobs (creator, type, priority, status, created_at, aux_id, info, data)")
+        InsertInto(
+            "jobs (creator, type, priority, status, created_at, aux_id, aux_id_2, info, data)"
+        )
             .values(
-                "?, ?, ?, ?, ?, ?, ?, ''",
+                "?, ?, ?, ?, ?, ?, ?, '', ''",
                 ctx.session.value().user_id,
                 type,
                 sim::jobs::default_priority(type),
                 Job::Status::PENDING,
                 utc_mysql_datetime(),
                 user_id,
-                sim::jobs::MergeUsersInfo{target_user_id}.dump()
+                target_user_id
             )
     );
     ctx.notify_job_server_after_commit = true;

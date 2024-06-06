@@ -54,6 +54,7 @@ struct OldJob {
     uint8_t priority;
     EnumVal<Status> status;
     std::optional<uint64_t> aux_id;
+    std::optional<uint64_t> aux_id_2;
     old_sql_fields::Blob<128> info;
     old_sql_fields::Blob<0> data;
 

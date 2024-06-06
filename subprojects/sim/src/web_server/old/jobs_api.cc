@@ -56,7 +56,7 @@ void Sim::api_jobs() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT j.id, j.created_at, j.type, j.status, j.priority, j.aux_id,"
+    qfields.append("SELECT j.id, j.created_at, j.type, j.status, j.priority, j.aux_id, j.aux_id_2,"
                    " j.info, j.creator, u.username");
     qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id WHERE TRUE"
     ); // Needed to easily
@@ -69,6 +69,7 @@ void Sim::api_jobs() {
         JSTATUS,
         PRIORITY,
         AUX_ID,
+        AUX_ID_2,
         JINFO,
         CREATOR,
         CREATOR_USERNAME,
@@ -293,8 +294,7 @@ void Sim::api_jobs() {
 
         case OldJob::Type::MERGE_USERS: {
             append("\"deleted user\":", res[AUX_ID]);
-            sim::jobs::MergeUsersInfo info(res[JINFO]);
-            append(",\"target user\":", info.target_user_id);
+            append(",\"target user\":", res[AUX_ID_2]);
             break;
         }
 

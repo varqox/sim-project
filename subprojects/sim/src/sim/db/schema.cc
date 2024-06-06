@@ -330,7 +330,8 @@ const DbSchema& get_schema() {
                         "  `type` tinyint(3) unsigned NOT NULL,"
                         "  `priority` tinyint(3) unsigned NOT NULL,"
                         "  `status` tinyint(3) unsigned NOT NULL,"
-                        "  `aux_id` bigint(20) unsigned DEFAULT NULL," // TODO: add aux_id2
+                        "  `aux_id` bigint(20) unsigned DEFAULT NULL,"
+                        "  `aux_id_2` bigint(20) unsigned DEFAULT NULL,"
                         "  `info` blob NOT NULL," // TODO: remove when becomes unneeded
                         "  `data` mediumblob NOT NULL," // TODO: rename to log
                         "  PRIMARY KEY (`id`),"

@@ -35,65 +35,30 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "15300f07c42d8eef286b95c07d2a9b6dcb591d2b9d5cdb0cb5c6ed3341e17494";
+    "8bc9c3b96db2e66a33b007924837576af660be827ef6013ded7c7e37b8c2ddd3";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
 ) {
     STACK_UNWINDING_MARK;
     // Upgrade here
-    stdlog("Renaming column");
-    mysql.update("ALTER TABLE submissions RENAME COLUMN owner TO user_id");
-
-    stdlog("Dropping owner");
-    mysql.update("ALTER TABLE submissions DROP INDEX owner");
-    for (int i = 2; i < 17; ++i) {
-        stdlog("Dropping owner_", i);
-        mysql.update(concat_tostr("ALTER TABLE submissions DROP INDEX owner_", i));
+    mysql.update(
+        "ALTER TABLE jobs ADD COLUMN aux_id_2 bigint(20) unsigned DEFAULT NULL AFTER aux_id"
+    );
+    decltype(sim::jobs::Job::id) job_id;
+    decltype(sim::jobs::Job::info) job_info;
+    {
+        auto stmt = mysql.execute(sim::sql::Select("id, info")
+                                      .from("jobs")
+                                      .where("type=?", sim::jobs::Job::Type::MERGE_USERS));
+        stmt.res_bind(job_id, job_info);
+        while (stmt.next()) {
+            auto mui = sim::jobs::MergeUsersInfo{job_info};
+            mysql.execute(sim::sql::Update("jobs")
+                              .set("aux_id_2=?, info=''", mui.target_user_id)
+                              .where("id=?", job_id));
+        }
     }
-
-    stdlog("Creating key user_id");
-    mysql.update("CREATE INDEX `user_id` ON submissions (`user_id`,`id`)");
-    stdlog("Creating key user_id_2");
-    mysql.update("CREATE INDEX `user_id_2` ON submissions (`user_id`,`type`,`id`)");
-    stdlog("Creating key user_id_3");
-    mysql.update("CREATE INDEX `user_id_3` ON submissions (`user_id`,`problem_id`,`id`)");
-    stdlog("Creating key user_id_4");
-    mysql.update("CREATE INDEX `user_id_4` ON submissions (`user_id`,`contest_problem_id`,`id`)");
-    stdlog("Creating key user_id_5");
-    mysql.update("CREATE INDEX `user_id_5` ON submissions (`user_id`,`contest_round_id`,`id`)");
-    stdlog("Creating key user_id_6");
-    mysql.update("CREATE INDEX `user_id_6` ON submissions (`user_id`,`contest_id`,`id`)");
-    stdlog("Creating key user_id_7");
-    mysql.update("CREATE INDEX `user_id_7` ON submissions (`user_id`,`contest_final`,`id`)");
-    stdlog("Creating key user_id_8");
-    mysql.update("CREATE INDEX `user_id_8` ON submissions (`user_id`,`problem_final`,`id`)");
-    stdlog("Creating key user_id_9");
-    mysql.update("CREATE INDEX `user_id_9` ON submissions (`user_id`,`problem_id`,`type`,`id`)");
-    stdlog("Creating key user_id_10");
-    mysql.update("CREATE INDEX `user_id_10` ON submissions (`user_id`,`problem_id`,`problem_final`)"
-    );
-    stdlog("Creating key user_id_11");
-    mysql.update(
-        "CREATE INDEX `user_id_11` ON submissions (`user_id`,`contest_problem_id`,`type`,`id`)"
-    );
-    stdlog("Creating key user_id_12");
-    mysql.update(
-        "CREATE INDEX `user_id_12` ON submissions (`user_id`,`contest_problem_id`,`contest_final`)"
-    );
-    stdlog("Creating key user_id_13");
-    mysql.update(
-        "CREATE INDEX `user_id_13` ON submissions (`user_id`,`contest_round_id`,`type`,`id`)"
-    );
-    stdlog("Creating key user_id_14");
-    mysql.update("CREATE INDEX `user_id_14` ON submissions "
-                 "(`user_id`,`contest_round_id`,`contest_final`,`id`)");
-    stdlog("Creating key user_id_15");
-    mysql.update("CREATE INDEX `user_id_15` ON submissions (`user_id`,`contest_id`,`type`,`id`)");
-    stdlog("Creating key user_id_16");
-    mysql.update(
-        "CREATE INDEX `user_id_16` ON submissions (`user_id`,`contest_id`,`contest_final`,`id`)"
-    );
 }
 
 enum class LockKind {
