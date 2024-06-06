@@ -6,6 +6,7 @@
 #include <sim/problem_tags/old_problem_tag.hh>
 #include <sim/problems/old_problem.hh>
 #include <sim/problems/permissions.hh>
+#include <sim/sql/sql.hh>
 #include <sim/users/user.hh>
 #include <simlib/config_file.hh>
 #include <simlib/enum_val.hh>
@@ -582,7 +583,7 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
     InplaceBuff<32> target_problem_id;
     bool rejudge_transferred_submissions =
         request.form_fields.contains("rejudge_transferred_submissions");
-    form_validate_not_blank(target_problem_id, "target_problem", "Target problem ID", is_digit_not_greater_than<std::numeric_limits<decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>::max()>);
+    form_validate_not_blank(target_problem_id, "target_problem", "Target problem ID", is_digit_not_greater_than<std::numeric_limits<decltype(sim::problems::OldProblem::id)>::max()>);
 
     if (notifications.size) {
         return api_error400(notifications);
@@ -614,9 +615,9 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
     // Queue merging job
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, aux_id_2,"
                  " info, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, ?, '')")
+                 "VALUES(?, ?, ?, ?, ?, ?, ?, '', '')")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -624,18 +625,14 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
             EnumVal(OldJob::Type::MERGE_PROBLEMS),
             utc_mysql_datetime(),
             problems_pid,
-            sim::jobs::MergeProblemsInfo(
-                WONT_THROW(str2num<decltype(sim::jobs::MergeProblemsInfo::target_problem_id)>(
-                               target_problem_id
-                )
-                               .value()),
-                rejudge_transferred_submissions
-            )
-                .dump()
+            target_problem_id
         );
+    auto job_id = old_mysql.insert_id();
+    mysql.execute(sim::sql::InsertInto("merge_problems_jobs (id, rejudge_transferred_submissions)")
+                      .values("?, ?", job_id, rejudge_transferred_submissions));
 
     sim::jobs::notify_job_server();
-    append(old_mysql.insert_id());
+    append(job_id);
 }
 
 void Sim::api_problem_edit(sim::problems::Permissions perms) {

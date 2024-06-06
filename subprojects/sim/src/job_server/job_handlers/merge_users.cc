@@ -1,12 +1,12 @@
 #include "merge_users.hh"
-#include "sim/jobs/job.hh"
-#include "sim/sql/sql.hh"
-#include "sim/submissions/submission.hh"
 
 #include <cstdint>
 #include <deque>
 #include <sim/contest_users/old_contest_user.hh>
+#include <sim/jobs/job.hh>
 #include <sim/mysql/mysql.hh>
+#include <sim/sql/sql.hh>
+#include <sim/submissions/submission.hh>
 #include <sim/submissions/update_final.hh>
 #include <sim/users/user.hh>
 #include <simlib/utilities.hh>
@@ -25,8 +25,8 @@ void MergeUsers::run(sim::mysql::Connection& mysql) {
 
     auto transaction = mysql.start_repeatable_read_transaction();
 
-    decltype(Job::aux_id) donor_user_id;
-    decltype(Job::aux_id_2) target_user_id;
+    decltype(Job::aux_id)::value_type donor_user_id;
+    decltype(Job::aux_id_2)::value_type target_user_id;
     {
         auto stmt = mysql.execute(Select("aux_id, aux_id_2").from("jobs").where("id=?", job_id_));
         stmt.res_bind(donor_user_id, target_user_id);

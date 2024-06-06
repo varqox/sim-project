@@ -56,11 +56,7 @@ void job_dispatcher(
             job_handler = make_unique<DeleteProblem>(job_id, aux_id.value());
             break;
 
-        case JT::MERGE_PROBLEMS:
-            job_handler = make_unique<MergeProblems>(
-                job_id, aux_id.value(), sim::jobs::MergeProblemsInfo(info)
-            );
-            break;
+        case JT::MERGE_PROBLEMS: job_handler = make_unique<MergeProblems>(job_id); break;
 
         case JT::DELETE_USER: job_handler = make_unique<DeleteUser>(job_id, aux_id.value()); break;
 

@@ -25,10 +25,11 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
         old_mysql::Optional<decltype(job.file_id)::value_type> m_file_id;
         old_mysql::Optional<decltype(job.creator)::value_type> m_creator;
         old_mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id;
+        old_mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id_2;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
             "SELECT id, file_id, creator, type,"
-            " priority, status, created_at, aux_id, info, data "
+            " priority, status, created_at, aux_id, aux_id_2, info, data "
             "FROM ",
             record_set.sql_table_name
         );
@@ -42,6 +43,7 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
             job.status,
             job.created_at,
             m_aux_id,
+            m_aux_id_2,
             job.info,
             job.data
         );
@@ -49,6 +51,7 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
             job.file_id = m_file_id.to_opt();
             job.creator = m_creator.to_opt();
             job.aux_id = m_aux_id.to_opt();
+            job.aux_id_2 = m_aux_id_2.to_opt();
 
             if (job.file_id) {
                 job.file_id = internal_files_.new_id(job.file_id.value(), record_set.kind);
@@ -77,17 +80,13 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
 
             case OldJob::Type::MERGE_PROBLEMS: {
                 job.aux_id = problems_.new_id(job.aux_id.value(), record_set.kind);
-                auto info = sim::jobs::MergeProblemsInfo(job.info);
-                info.target_problem_id = problems_.new_id(info.target_problem_id, record_set.kind);
-                job.info = info.dump();
+                job.aux_id_2 = problems_.new_id(job.aux_id_2.value(), record_set.kind);
                 break;
             }
 
             case OldJob::Type::MERGE_USERS: {
                 job.aux_id = users_.new_id(job.aux_id.value(), record_set.kind);
-                auto info = sim::jobs::MergeUsersInfo(job.info);
-                info.target_user_id = users_.new_id(info.target_user_id, record_set.kind);
-                job.info = info.dump();
+                job.aux_id_2 = users_.new_id(job.aux_id_2.value(), record_set.kind);
                 break;
             }
 

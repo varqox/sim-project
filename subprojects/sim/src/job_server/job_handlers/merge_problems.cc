@@ -1,157 +1,163 @@
 #include "merge_problems.hh"
 
-#include <deque>
-#include <sim/submissions/old_submission.hh>
+#include <sim/jobs/job.hh>
+#include <sim/merge_problems_jobs/merge_problems_job.hh>
+#include <sim/problems/problem.hh>
+#include <sim/sql/sql.hh>
+#include <sim/submissions/submission.hh>
 #include <sim/submissions/update_final.hh>
+#include <simlib/throw_assert.hh>
+#include <simlib/time.hh>
 
-using sim::jobs::OldJob;
-using sim::submissions::OldSubmission;
+using sim::jobs::Job;
+using sim::merge_problems_jobs::MergeProblemsJob;
+using sim::problems::Problem;
+using sim::sql::DeleteFrom;
+using sim::sql::InsertInto;
+using sim::sql::Select;
+using sim::sql::Update;
+using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
 void MergeProblems::run(sim::mysql::Connection& mysql) {
     STACK_UNWINDING_MARK;
 
-    for (;;) {
-        try {
-            run_impl(mysql);
-            break;
-        } catch (const std::exception& e) {
-            if (has_prefix(
-                    e.what(),
-                    "Deadlock found when trying to get lock; "
-                    "try restarting transaction"
-                ))
-            {
-                continue;
-            }
-
-            throw;
-        }
-    }
-}
-
-void MergeProblems::run_impl(sim::mysql::Connection& mysql) {
-    STACK_UNWINDING_MARK;
-
     auto transaction = mysql.start_repeatable_read_transaction();
-    auto old_mysql = old_mysql::ConnectionView{mysql};
+
+    decltype(Job::aux_id)::value_type donor_problem_id;
+    decltype(Job::aux_id_2)::value_type target_problem_id;
+    decltype(MergeProblemsJob::rejudge_transferred_submissions) rejudge_transferred_submissions;
+    {
+        auto stmt =
+            mysql.execute(Select("j.aux_id, j.aux_id_2, mpj.rejudge_transferred_submissions")
+                              .from("jobs j")
+                              .inner_join("merge_problems_jobs mpj")
+                              .on("mpj.id=j.id")
+                              .where("j.id=?", job_id_));
+        stmt.res_bind(donor_problem_id, target_problem_id, rejudge_transferred_submissions);
+        throw_assert(stmt.next());
+    }
 
     // Assure that both problems exist
     {
-        auto stmt = old_mysql.prepare("SELECT simfile FROM problems WHERE id=?");
-        stmt.bind_and_execute(donor_problem_id_);
-        InplaceBuff<0> simfile;
-        stmt.res_bind_all(simfile);
+        auto stmt =
+            mysql.execute(Select("simfile").from("problems").where("id=?", donor_problem_id));
+        decltype(Problem::simfile) donor_problem_simfile;
+        stmt.res_bind(donor_problem_simfile);
         if (not stmt.next()) {
-            return set_failure("Problem does not exist");
+            return set_failure("Problem to delete does not exist");
         }
 
-        job_log("Merged problem Simfile:\n", simfile);
-
-        stmt = old_mysql.prepare("SELECT 1 FROM problems WHERE id=?");
-        stmt.bind_and_execute(info_.target_problem_id);
+        job_log("Merged problem (donor) Simfile:\n", donor_problem_simfile);
+    }
+    {
+        auto stmt = mysql.execute(Select("1").from("problems").where("id=?", target_problem_id));
         int x;
-        stmt.res_bind_all(x);
+        stmt.res_bind(x);
         if (not stmt.next()) {
             return set_failure("Target problem does not exist");
         }
     }
 
     // Transfer contest problems
-    old_mysql.prepare("UPDATE contest_problems SET problem_id=? WHERE problem_id=?")
-        .bind_and_execute(info_.target_problem_id, donor_problem_id_);
+    mysql.execute(Update("contest_problems")
+                      .set("problem_id=?", target_problem_id)
+                      .where("problem_id=?", donor_problem_id));
+
+    auto current_utc_datetime = utc_mysql_datetime();
 
     // Add job to delete problem file
-    old_mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
-                 "FROM problems WHERE id=?")
-        .bind_and_execute(
-            EnumVal(OldJob::Type::DELETE_FILE),
-            default_priority(OldJob::Type::DELETE_FILE),
-            EnumVal(OldJob::Status::PENDING),
-            utc_mysql_datetime(),
-            donor_problem_id_
-        );
+    mysql.execute(
+        InsertInto("jobs(file_id, creator, type, priority, status, created_at, aux_id, info, data)")
+            .select(
+                "file_id, NULL, ?, ?, ?, ?, NULL, '', ''",
+                Job::Type::DELETE_FILE,
+                default_priority(Job::Type::DELETE_FILE),
+                Job::Status::PENDING,
+                current_utc_datetime
+            )
+            .from("problems")
+            .where("id=?", donor_problem_id)
+    );
 
     // Add jobs to delete problem solutions' files
-    old_mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
-                 "FROM submissions WHERE problem_id=? AND "
-                 "type=?")
-        .bind_and_execute(
-            EnumVal(OldJob::Type::DELETE_FILE),
-            default_priority(OldJob::Type::DELETE_FILE),
-            EnumVal(OldJob::Status::PENDING),
-            utc_mysql_datetime(),
-            donor_problem_id_,
-            EnumVal(OldSubmission::Type::PROBLEM_SOLUTION)
-        );
+    mysql.execute(
+        InsertInto("jobs(file_id, creator, type, priority, status, created_at, aux_id, info, data)")
+            .select(
+                "file_id, NULL, ?, ?, ?, ?, NULL, '', ''",
+                Job::Type::DELETE_FILE,
+                default_priority(Job::Type::DELETE_FILE),
+                Job::Status::PENDING,
+                current_utc_datetime
+            )
+            .from("submissions")
+            .where("problem_id=? AND type=?", donor_problem_id, Submission::Type::PROBLEM_SOLUTION)
+    );
 
     // Delete problem solutions
-    old_mysql
-        .prepare("DELETE FROM submissions "
-                 "WHERE problem_id=? AND type=?")
-        .bind_and_execute(donor_problem_id_, EnumVal(OldSubmission::Type::PROBLEM_SOLUTION));
+    mysql.execute(
+        DeleteFrom("submissions")
+            .where("problem_id=? AND type=?", donor_problem_id, Submission::Type::PROBLEM_SOLUTION)
+    );
 
     // Collect update finals
-    struct FTU {
-        old_mysql::Optional<uint64_t> user_id;
-        old_mysql::Optional<uint64_t> contest_problem_id;
+    struct FinalToUpdate {
+        decltype(Submission::user_id) user_id = 0;
+        decltype(Submission::contest_problem_id) contest_problem_id;
     };
 
-    std::deque<FTU> finals_to_update;
+    std::vector<FinalToUpdate> finals_to_update;
     {
-        auto stmt = old_mysql.prepare("SELECT DISTINCT user_id, contest_problem_id "
-                                      "FROM submissions WHERE problem_id=?");
-        stmt.bind_and_execute(donor_problem_id_);
-        FTU ftu_elem;
-        stmt.res_bind_all(ftu_elem.user_id, ftu_elem.contest_problem_id);
+        auto stmt = mysql.execute(Select("DISTINCT user_id, contest_problem_id")
+                                      .from("submissions")
+                                      .where("problem_id=?", donor_problem_id));
+        FinalToUpdate ftu;
+        stmt.res_bind(ftu.user_id, ftu.contest_problem_id);
         while (stmt.next()) {
-            finals_to_update.emplace_back(ftu_elem);
+            finals_to_update.emplace_back(ftu);
         }
     }
 
     // Schedule rejudge of the transferred submissions
-    if (info_.rejudge_transferred_submissions) {
-        old_mysql
-            .prepare("INSERT INTO jobs(creator, status, priority, type, created_at,"
-                     " aux_id, info, data) "
-                     "SELECT NULL, ?, ?, ?, ?, id, '', '' "
-                     "FROM submissions WHERE problem_id=? ORDER BY id")
-            .bind_and_execute(
-                EnumVal(OldJob::Status::PENDING),
-                default_priority(OldJob::Type::REJUDGE_SUBMISSION),
-                EnumVal(OldJob::Type::REJUDGE_SUBMISSION),
-                utc_mysql_datetime(),
-                donor_problem_id_
-            );
+    if (rejudge_transferred_submissions) {
+        mysql.execute(
+            InsertInto("jobs (creator, type, priority, status, created_at, aux_id, info, data)")
+                .select(
+                    "NULL, ?, ?, ?, ?, id, '', ''",
+                    Job::Type::REJUDGE_SUBMISSION,
+                    default_priority(Job::Type::REJUDGE_SUBMISSION),
+                    Job::Status::PENDING,
+                    current_utc_datetime
+                )
+                .from("submissions")
+                .where("problem_id=?", donor_problem_id)
+                .order_by("id")
+        );
     }
 
     // Transfer problem submissions that are not problem solutions
-    old_mysql.prepare("UPDATE submissions SET problem_id=? WHERE problem_id=?")
-        .bind_and_execute(info_.target_problem_id, donor_problem_id_);
+    mysql.execute(Update("submissions")
+                      .set("problem_id=?", target_problem_id)
+                      .where("problem_id=?", donor_problem_id));
 
     // Update finals (both contest and problem finals are being taken care of)
-    for (const auto& ftu_elem : finals_to_update) {
-        sim::submissions::update_final_lock(mysql, ftu_elem.user_id, info_.target_problem_id);
+    for (const auto& ftu : finals_to_update) {
+        sim::submissions::update_final_lock(mysql, ftu.user_id, target_problem_id);
         sim::submissions::update_final(
-            mysql, ftu_elem.user_id, info_.target_problem_id, ftu_elem.contest_problem_id, false
+            mysql, ftu.user_id, target_problem_id, ftu.contest_problem_id, false
         );
     }
 
     // Transfer problem tags (duplicates will not be transferred - they will be
-    // deleted on problem deletion)
-    old_mysql.prepare("UPDATE IGNORE problem_tags SET problem_id=? WHERE problem_id=?")
-        .bind_and_execute(info_.target_problem_id, donor_problem_id_);
+    // deleted on problem deletion thanks to foreign key constraints)
+    mysql.execute(Update("IGNORE problem_tags")
+                      .set("problem_id=?", target_problem_id)
+                      .where("problem_id=?", donor_problem_id));
 
     // Finally, delete the donor problem (solution and remaining tags will be
     // deleted automatically thanks to foreign key constraints)
-    old_mysql.prepare("DELETE FROM problems WHERE id=?").bind_and_execute(donor_problem_id_);
+    mysql.execute(DeleteFrom("problems").where("id=?", donor_problem_id));
 
     job_done(mysql);
     transaction.commit();
