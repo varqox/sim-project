@@ -14,7 +14,6 @@ void job_dispatcher(
     sim::jobs::OldJob::Type jtype,
     std::optional<uint64_t> file_id,
     std::optional<uint64_t> aux_id,
-    StringView info,
     StringView created_at
 );
 

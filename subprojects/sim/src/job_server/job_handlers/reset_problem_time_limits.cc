@@ -62,8 +62,8 @@ void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
     // Add job to delete old problem file
     old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems "
+                 " created_at, aux_id, data) "
+                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '' FROM problems "
                  "WHERE id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),

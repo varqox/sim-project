@@ -18,6 +18,8 @@ void DeleteProblem::run(sim::mysql::Connection& mysql) {
         auto stmt = old_mysql.prepare("SELECT 1 FROM contest_problems"
                                       " WHERE problem_id=? LIMIT 1");
         stmt.bind_and_execute(problem_id_);
+        int x;
+        stmt.res_bind_all(x);
         if (stmt.next()) {
             return set_failure("There exists a contest problem that uses (attaches) this "
                                "problem. You have to delete all of them to be able to delete "
@@ -43,8 +45,8 @@ void DeleteProblem::run(sim::mysql::Connection& mysql) {
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
+                 " created_at, aux_id, data) "
+                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, ''"
                  " FROM problems WHERE id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),
@@ -57,8 +59,8 @@ void DeleteProblem::run(sim::mysql::Connection& mysql) {
     // Add jobs to delete problem submissions' files
     old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
+                 " created_at, aux_id, data) "
+                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, ''"
                  " FROM submissions WHERE problem_id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),

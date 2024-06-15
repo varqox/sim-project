@@ -195,7 +195,7 @@ public:
             auto old_mysql = old_mysql::ConnectionView{*mysql};
             old_mysql
                 .prepare("INSERT jobs (creator, status, priority, type, created_at,"
-                         " aux_id, aux_id_2, info, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '', '')")
+                         " aux_id, aux_id_2, data) VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
                 .bind_and_execute(
                     EnumVal(sim::jobs::OldJob::Status::PENDING),
                     default_priority(sim::jobs::OldJob::Type::MERGE_PROBLEMS),
@@ -223,9 +223,8 @@ private:
     ) problem_new_id) {
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         old_mysql
-            .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
-                     " info, data) "
-                     "VALUES(NULL, ?, ?, ?, ?, ?, '', '')")
+            .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, data) "
+                     "VALUES(NULL, ?, ?, ?, ?, ?, '')")
             .bind_and_execute(
                 EnumVal(sim::jobs::OldJob::Status::PENDING),
                 default_priority(

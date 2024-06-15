@@ -533,9 +533,9 @@ Response delete_(Context& ctx, decltype(User::id) user_id) {
     // Queue the deleting job
     static constexpr auto type = Job::Type::DELETE_USER;
     auto stmt = ctx.mysql.execute(
-        InsertInto("jobs (creator, type, priority, status, created_at, aux_id, info, data)")
+        InsertInto("jobs (creator, type, priority, status, created_at, aux_id, data)")
             .values(
-                "?, ?, ?, ?, ?, ?, '', ''",
+                "?, ?, ?, ?, ?, ?, ''",
                 ctx.session.value().user_id,
                 type,
                 sim::jobs::default_priority(type),
@@ -588,11 +588,9 @@ Response merge_into_another(Context& ctx, decltype(User::id) user_id) {
     // Queue the merging job
     static constexpr auto type = Job::Type::MERGE_USERS;
     auto stmt = ctx.mysql.execute(
-        InsertInto(
-            "jobs (creator, type, priority, status, created_at, aux_id, aux_id_2, info, data)"
-        )
+        InsertInto("jobs (creator, type, priority, status, created_at, aux_id, aux_id_2, data)")
             .values(
-                "?, ?, ?, ?, ?, ?, ?, '', ''",
+                "?, ?, ?, ?, ?, ?, ?, ''",
                 ctx.session.value().user_id,
                 type,
                 sim::jobs::default_priority(type),

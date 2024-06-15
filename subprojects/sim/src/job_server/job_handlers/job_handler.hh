@@ -44,8 +44,6 @@ protected:
 
     virtual void job_done(sim::mysql::Connection& mysql);
 
-    virtual void job_done(sim::mysql::Connection& mysql, StringView new_info);
-
 public:
     JobHandler(const JobHandler&) = delete;
     JobHandler(JobHandler&&) = delete;

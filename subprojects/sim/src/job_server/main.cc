@@ -136,15 +136,14 @@ public:
         EnumVal<sim::jobs::OldJob::Type> jtype{};
         old_mysql::Optional<decltype(sim::jobs::OldJob::aux_id)::value_type> aux_id;
         uint priority = 0;
-        InplaceBuff<512> info;
         // Select jobs
         mysql.execute(sim::sql::SqlWithParams("SELECT 1")); // Reconnect to database if disconnected
         auto old_mysql = old_mysql::ConnectionView{mysql};
-        auto stmt = old_mysql.prepare("SELECT id, type, priority, aux_id, info "
+        auto stmt = old_mysql.prepare("SELECT id, type, priority, aux_id "
                                       "FROM jobs "
                                       "WHERE status=? "
                                       "ORDER BY priority DESC, id ASC LIMIT 4");
-        stmt.res_bind_all(jid, jtype, priority, aux_id, info);
+        stmt.res_bind_all(jid, jtype, priority, aux_id);
         // Sets job's status to NOTICED_PENDING
         auto mark_stmt = old_mysql.prepare("UPDATE jobs SET status=? WHERE id=?");
         // Add jobs to internal queue
@@ -693,15 +692,14 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
     old_mysql::Optional<uint64_t> file_id;
     InplaceBuff<32> created_at;
     old_mysql::Optional<uint64_t> aux_id; // TODO: normalize this column...
-    InplaceBuff<512> info;
 
     mysql.execute(sim::sql::SqlWithParams("SELECT 1")); // Reconnect to database if disconnected
     auto old_mysql = old_mysql::ConnectionView{mysql};
     {
-        auto stmt = old_mysql.prepare("SELECT file_id, created_at, type, aux_id, info "
+        auto stmt = old_mysql.prepare("SELECT file_id, created_at, type, aux_id "
                                       "FROM jobs WHERE id=? AND status!=?");
         stmt.bind_and_execute(job.id, EnumVal(sim::jobs::OldJob::Status::CANCELED));
-        stmt.res_bind_all(file_id, created_at, jtype, aux_id, info);
+        stmt.res_bind_all(file_id, created_at, jtype, aux_id);
 
         if (not stmt.next()) { // Job has been probably canceled
             return exit_procedures();
@@ -713,7 +711,7 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
         .bind_and_execute(EnumVal(sim::jobs::OldJob::Status::IN_PROGRESS), job.id);
 
     stdlog("Processing job ", job.id, "...");
-    job_server::job_dispatcher(mysql, job.id, jtype, file_id, aux_id, info, created_at);
+    job_server::job_dispatcher(mysql, job.id, jtype, file_id, aux_id, created_at);
 
     exit_procedures();
 }
@@ -1109,14 +1107,12 @@ static void clean_up_db(sim::mysql::Connection& mysql) {
         auto old_mysql = old_mysql::ConnectionView{mysql};
 
         // Fix jobs that are in progress after the job-server died
-        auto stmt = old_mysql.prepare("SELECT id, type, info FROM jobs WHERE "
-                                      "status=?");
+        auto stmt = old_mysql.prepare("SELECT id, type FROM jobs WHERE status=?");
         stmt.bind_and_execute(EnumVal(sim::jobs::OldJob::Status::IN_PROGRESS));
 
         decltype(sim::jobs::OldJob::id) job_id = 0;
         EnumVal<sim::jobs::OldJob::Type> job_type{};
-        InplaceBuff<128> job_info;
-        stmt.res_bind_all(job_id, job_type, job_info);
+        stmt.res_bind_all(job_id, job_type);
         while (stmt.next()) {
             sim::jobs::restart_job(mysql, from_unsafe{to_string(job_id)}, false);
         }

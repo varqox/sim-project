@@ -454,8 +454,8 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
 
         old_mysql
             .prepare("INSERT INTO jobs(file_id, creator, type, priority,"
-                     " status, created_at, aux_id, info, data) "
-                     "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
+                     " status, created_at, aux_id, data) "
+                     "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '' "
                      "FROM contest_files WHERE id=?")
             .bind_and_execute(
                 EnumVal(OldJob::Type::DELETE_FILE),
@@ -502,8 +502,8 @@ void Sim::api_contest_file_delete(
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
+                 " created_at, aux_id, data) "
+                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '' "
                  "FROM contest_files WHERE id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),

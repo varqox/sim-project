@@ -29,7 +29,7 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
             "SELECT id, file_id, creator, type,"
-            " priority, status, created_at, aux_id, aux_id_2, info, data "
+            " priority, status, created_at, aux_id, aux_id_2, data "
             "FROM ",
             record_set.sql_table_name
         );
@@ -44,7 +44,6 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
             job.created_at,
             m_aux_id,
             m_aux_id_2,
-            job.info,
             job.data
         );
         while (stmt.next()) {
@@ -135,8 +134,8 @@ public:
             "INSERT INTO ",
             sql_table_name(),
             "(id, file_id, creator, type, priority,"
-            " status, created_at, aux_id, info, data) "
-            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            " status, created_at, aux_id, data) "
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         ProgressBar progress_bar("Jobs saved:", new_table_.size(), 128);
@@ -152,7 +151,6 @@ public:
                 x.status,
                 x.created_at,
                 x.aux_id,
-                x.info,
                 x.data
             );
         }

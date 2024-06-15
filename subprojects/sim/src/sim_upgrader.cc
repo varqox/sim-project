@@ -2,6 +2,7 @@
 #include <exception>
 #include <fcntl.h>
 #include <memory>
+#include <sim/change_problem_statement_jobs/change_problem_statement_job.hh>
 #include <sim/db/schema.hh>
 #include <sim/jobs/job.hh>
 #include <sim/jobs/utils.hh>
@@ -35,7 +36,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "0e65671c305ce9bb1a75792b079c6d646633b71f71408a8ab6d3cbe31dbd24d5";
+    "56cfc27cf2d62cc93961f99cd39b6b51fbe7e45e5944458cf735f1d0c48e75da";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
@@ -44,62 +45,53 @@ static void do_perform_upgrade(
 
     // Upgrade here
 
-    struct MergeProblemsInfo {
-        decltype(sim::problems::OldProblem::id) target_problem_id{};
-        static_assert(
-            sizeof(target_problem_id) == 8, "Changing size needs updating column info in jobs table"
-        );
-        bool rejudge_transferred_submissions{};
+    struct ChangeProblemStatementInfo {
+        std::string new_statement_path;
 
-        MergeProblemsInfo() = default;
+        ChangeProblemStatementInfo() = default;
 
-        MergeProblemsInfo(decltype(sim::problems::OldProblem::id) tpid, bool rts) noexcept
-        : target_problem_id(tpid)
-        , rejudge_transferred_submissions(rts) {}
+        explicit ChangeProblemStatementInfo(StringView nsp) : new_statement_path(nsp.to_string()) {}
 
-        explicit MergeProblemsInfo(StringView str) {
-            sim::jobs::extract_dumped(target_problem_id, str);
-
-            auto mask = sim::jobs::extract_dumped_int<uint8_t>(str);
-            rejudge_transferred_submissions = (mask & 1);
-        }
-
-        [[nodiscard]] std::string dump() const {
-            std::string res;
-            sim::jobs::append_dumped(res, target_problem_id);
-
-            uint8_t mask = rejudge_transferred_submissions;
-            sim::jobs::append_dumped(res, mask);
-            return res;
-        }
+        [[nodiscard]] std::string dump() const { return new_statement_path; }
     };
 
     mysql.update("UNLOCK TABLES");
-    mysql.update("CREATE TABLE `merge_problems_jobs` ("
-                 "  `id` bigint(20) unsigned NOT NULL,"
-                 "  `rejudge_transferred_submissions` tinyint(1) NOT NULL,"
-                 "  PRIMARY KEY (`id`),"
-                 "  CONSTRAINT `merge_problems_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` "
-                 "(`id`) ON DELETE CASCADE ON UPDATE CASCADE"
-                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin");
+    mysql.update(concat_tostr(
+        "CREATE TABLE `change_problem_statement_jobs` ("
+        "  `id` bigint(20) unsigned NOT NULL,"
+        "  `new_statement_file_id` bigint(20) unsigned NOT NULL,"
+        "  `path_for_new_statement` varbinary(",
+        decltype(sim::change_problem_statement_jobs::ChangeProblemStatementJob::
+                     path_for_new_statement)::max_len,
+        ") NOT NULL,"
+        "  PRIMARY KEY (`id`),"
+        "  KEY `new_statement_file_id` (`new_statement_file_id`),"
+        "  CONSTRAINT `change_problem_statement_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` "
+        "(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+        "  CONSTRAINT `change_problem_statement_jobs_ibfk_2` FOREIGN KEY (`new_statement_file_id`) "
+        "REFERENCES `internal_files` (`id`) ON UPDATE CASCADE"
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
+    ));
     decltype(sim::jobs::Job::id) job_id;
-    decltype(sim::jobs::Job::info) job_info;
+    decltype(sim::jobs::Job::file_id) job_file_id;
+    std::string job_info;
     {
-        auto stmt = mysql.execute(sim::sql::Select("id, info")
-                                      .from("jobs")
-                                      .where("type=?", sim::jobs::Job::Type::MERGE_PROBLEMS));
-        stmt.res_bind(job_id, job_info);
+        auto stmt =
+            mysql.execute(sim::sql::Select("id, file_id, info")
+                              .from("jobs")
+                              .where("type=?", sim::jobs::Job::Type::CHANGE_PROBLEM_STATEMENT));
+        stmt.res_bind(job_id, job_file_id, job_info);
         while (stmt.next()) {
-            auto mpi = MergeProblemsInfo{job_info};
-            mysql.execute(sim::sql::Update("jobs")
-                              .set("aux_id_2=?, info=''", mpi.target_problem_id)
-                              .where("id=?", job_id));
+            auto cpsi = ChangeProblemStatementInfo{job_info};
             mysql.execute(
-                sim::sql::InsertInto("merge_problems_jobs (id, rejudge_transferred_submissions)")
-                    .values("?, ?", job_id, mpi.rejudge_transferred_submissions)
+                sim::sql::Update("jobs").set("file_id=NULL, info=''").where("id=?", job_id)
             );
+            mysql.execute(sim::sql::InsertInto("change_problem_statement_jobs (id, "
+                                               "new_statement_file_id, path_for_new_statement)")
+                              .values("?, ?, ?", job_id, job_file_id, cpsi.new_statement_path));
         }
     }
+    mysql.update("ALTER TABLE jobs DROP COLUMN info");
 }
 
 enum class LockKind {

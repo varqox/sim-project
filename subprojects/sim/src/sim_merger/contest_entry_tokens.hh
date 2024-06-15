@@ -4,6 +4,7 @@
 
 #include <set>
 #include <sim/contest_entry_tokens/old_contest_entry_token.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <sim/random.hh>
 
 namespace sim_merger {

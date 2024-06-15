@@ -6,6 +6,7 @@
 #include "../web_worker/context.hh"
 #include "../web_worker/web_worker.hh"
 
+#include <cstdint>
 #include <sim/contest_files/permissions.hh>
 #include <sim/contest_rounds/old_contest_round.hh>
 #include <sim/contests/old_contest.hh>
@@ -100,13 +101,9 @@ class Sim final {
 
     void api_job_download_log();
 
-    void api_job_download_uploaded_package(
-        std::optional<uint64_t> file_id, sim::jobs::OldJob::Type job_type
-    );
+    void api_job_download_uploaded_package(uint64_t job_id, sim::jobs::OldJob::Type job_type);
 
-    void api_job_download_uploaded_statement(
-        std::optional<uint64_t> file_id, sim::jobs::OldJob::Type job_type, StringView info
-    );
+    void api_job_download_uploaded_statement(uint64_t job_id, sim::jobs::OldJob::Type job_type);
 
     // problems_api.cc
     void api_problems();
