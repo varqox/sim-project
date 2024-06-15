@@ -76,21 +76,22 @@ void AddProblem::run(sim::mysql::Connection& mysql) {
     }
 
     // Add problem to database
-    auto problem_id = mysql
-                          .execute(InsertInto("problems (created_at, file_id, type, name, label, "
-                                              "simfile, owner_id, updated_at)")
-                                       .values(
-                                           "?, ?, ?, ?, ?, ?, ?, ?",
-                                           curr_datetime,
-                                           create_package_res->new_package_file_id,
-                                           add_problem_job.visibility,
-                                           simfile->name.value(),
-                                           simfile->label.value(),
-                                           simfile->dump(),
-                                           job_creator,
-                                           curr_datetime
-                                       ))
-                          .insert_id();
+    auto problem_id =
+        mysql
+            .execute(InsertInto("problems (created_at, file_id, visibility, name, label, "
+                                "simfile, owner_id, updated_at)")
+                         .values(
+                             "?, ?, ?, ?, ?, ?, ?, ?",
+                             curr_datetime,
+                             create_package_res->new_package_file_id,
+                             add_problem_job.visibility,
+                             simfile->name.value(),
+                             simfile->label.value(),
+                             simfile->dump(),
+                             job_creator,
+                             curr_datetime
+                         ))
+            .insert_id();
 
     auto solution_file_removers = add_or_reupload_problem::submit_solutions(
         job_log_holder_,

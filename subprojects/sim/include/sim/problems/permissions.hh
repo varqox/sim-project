@@ -56,7 +56,7 @@ Permissions get_permissions(
     std::optional<decltype(users::User::id)> user_id,
     std::optional<users::User::Type> user_type,
     decltype(OldProblem::owner_id) problem_owner_id,
-    decltype(OldProblem::type) problem_type
+    decltype(OldProblem::visibility) problem_visibility
 ) noexcept;
 
 template <class T>
@@ -68,18 +68,18 @@ std::optional<Permissions> get_permissions(
 ) {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT owner_id, type FROM problems WHERE id=?");
+    auto stmt = old_mysql.prepare("SELECT owner_id, visibility FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 
     old_mysql::Optional<decltype(OldProblem::owner_id)::value_type> problem_owner_id;
-    decltype(OldProblem::type) problem_type;
-    stmt.res_bind_all(problem_owner_id, problem_type);
+    decltype(OldProblem::visibility) problem_visibility;
+    stmt.res_bind_all(problem_owner_id, problem_visibility);
 
     if (not stmt.next()) {
         return std::nullopt;
     }
 
-    return get_permissions(user_id, user_type, problem_owner_id, problem_type);
+    return get_permissions(user_id, user_type, problem_owner_id, problem_visibility);
 }
 
 } // namespace sim::problems

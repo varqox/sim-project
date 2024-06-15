@@ -58,7 +58,7 @@ struct ProblemCapabilities {
 
 ProblemCapabilities problem(
     const decltype(web_server::web_worker::Context::session)& session,
-    decltype(sim::problems::Problem::type) problem_type,
+    decltype(sim::problems::Problem::visibility) problem_visibility,
     decltype(sim::problems::Problem::owner_id) problem_owner_id
 ) noexcept;
 

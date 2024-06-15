@@ -30,16 +30,17 @@ Permissions get_permissions(
     optional<decltype(User::id)> user_id,
     optional<User::Type> user_type,
     decltype(OldProblem::owner_id) problem_owner_id,
-    decltype(OldProblem::type) problem_type
+    decltype(OldProblem::visibility) problem_visibility
 ) noexcept {
     STACK_UNWINDING_MARK;
     using PERM = Permissions;
 
     if (not user_type) {
-        switch (problem_type) {
-        case OldProblem::Type::PUBLIC: return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS;
-        case OldProblem::Type::CONTEST_ONLY:
-        case OldProblem::Type::PRIVATE: return PERM::NONE;
+        switch (problem_visibility) {
+        case OldProblem::Visibility::PUBLIC:
+            return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS;
+        case OldProblem::Visibility::CONTEST_ONLY:
+        case OldProblem::Visibility::PRIVATE: return PERM::NONE;
         }
     }
 
@@ -57,26 +58,26 @@ Permissions get_permissions(
     switch (user_type.value()) {
     case User::Type::ADMIN: return admin_perms;
     case User::Type::TEACHER: {
-        switch (problem_type) {
-        case OldProblem::Type::PUBLIC:
+        switch (problem_visibility) {
+        case OldProblem::Visibility::PUBLIC:
             return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_HIDDEN_TAGS |
                 PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS | PERM::VIEW_SIMFILE | PERM::VIEW_OWNER |
                 PERM::VIEW_ADD_TIME | PERM::DOWNLOAD | PERM::SUBMIT | PERM::SUBMIT_IGNORED;
-        case OldProblem::Type::CONTEST_ONLY:
+        case OldProblem::Visibility::CONTEST_ONLY:
             return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_HIDDEN_TAGS |
                 PERM::VIEW_SIMFILE | PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::SUBMIT |
                 PERM::SUBMIT_IGNORED;
-        case OldProblem::Type::PRIVATE: return PERM::NONE;
+        case OldProblem::Visibility::PRIVATE: return PERM::NONE;
         }
         __builtin_unreachable();
     }
     case User::Type::NORMAL: {
-        switch (problem_type) {
-        case OldProblem::Type::PUBLIC:
+        switch (problem_visibility) {
+        case OldProblem::Visibility::PUBLIC:
             return PERM::VIEW | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::SUBMIT |
                 PERM::SUBMIT_IGNORED;
-        case OldProblem::Type::CONTEST_ONLY:
-        case OldProblem::Type::PRIVATE: return PERM::NONE;
+        case OldProblem::Visibility::CONTEST_ONLY:
+        case OldProblem::Visibility::PRIVATE: return PERM::NONE;
         }
         __builtin_unreachable();
     }

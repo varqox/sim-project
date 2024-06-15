@@ -36,7 +36,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "d888cb95eabc811e8bbae11c586f2df353a2b16dca720d01b2d27e419b0828fb";
+    "4f62663d33b70e32842294d1326c71d13b99c05b67a9c0ff4ddbe13972d9d1b5";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
@@ -44,14 +44,9 @@ static void do_perform_upgrade(
     STACK_UNWINDING_MARK;
 
     // Upgrade here
-    mysql.update("UNLOCK TABLES");
-
-    mysql.update("ALTER TABLE jobs CHANGE COLUMN data log mediumblob NOT NULL DEFAULT ''");
-
-    mysql.execute(sim::sql::Update("jobs")
-                      .set("aux_id=file_id")
-                      .where("type=?", sim::jobs::Job::Type::DELETE_FILE));
-    mysql.update("ALTER TABLE jobs DROP COLUMN file_id");
+    mysql.execute("ALTER TABLE problems RENAME COLUMN type TO visibility");
+    mysql.execute("ALTER TABLE problems DROP KEY type");
+    mysql.execute("CREATE INDEX visibility ON problems (visibility, id)");
 }
 
 enum class LockKind {

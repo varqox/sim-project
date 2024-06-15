@@ -222,7 +222,7 @@ Response list_users_with_type(Context& ctx, decltype(User::type) user_type) {
     return do_list_users(ctx, FIRST_QUERY_LIMIT, user_type, Condition("TRUE"));
 }
 
-Response list_users_with_type_above_id(
+Response list_users_with_type_and_above_id(
     Context& ctx, decltype(User::type) user_type, decltype(User::id) user_id
 ) {
     STACK_UNWINDING_MARK;

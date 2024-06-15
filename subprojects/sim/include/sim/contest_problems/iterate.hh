@@ -49,7 +49,7 @@ void iterate(
     auto stmt = old_mysql.prepare(
         "SELECT cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id,"
         " cp.name, cp.item, cp.method_of_choosing_final_submission, cp.score_revealing,"
-        " p.label, si.initial_status, sf.full_status, p.owner_id, p.type "
+        " p.label, si.initial_status, sf.full_status, p.owner_id, p.visibility "
         "FROM contest_problems cp ",
         (show_all_rounds ? ""
                          : "JOIN contest_rounds cr ON cr.id=cp.contest_round_id "
@@ -75,7 +75,7 @@ void iterate(
     old_mysql::Optional<EnumVal<sim::submissions::OldSubmission::Status>> m_initial_final_status;
     old_mysql::Optional<EnumVal<sim::submissions::OldSubmission::Status>> m_final_status;
     old_mysql::Optional<decltype(problems::OldProblem::owner_id)::value_type> m_problem_owner_id;
-    decltype(problems::OldProblem::type) m_problem_type;
+    decltype(problems::OldProblem::visibility) m_problem_visibility;
     stmt.res_bind_all(
         cp.id,
         cp.contest_round_id,
@@ -89,14 +89,14 @@ void iterate(
         m_initial_final_status,
         m_final_status,
         m_problem_owner_id,
-        m_problem_type
+        m_problem_visibility
     );
 
     while (stmt.next()) {
         extra_data.initial_final_submission_initial_status = m_initial_final_status;
         extra_data.final_submission_full_status = m_final_status;
         extra_data.problem_perms =
-            problems::get_permissions(user_id, user_type, m_problem_owner_id, m_problem_type);
+            problems::get_permissions(user_id, user_type, m_problem_owner_id, m_problem_visibility);
         contest_problem_processor(
             static_cast<const OldContestProblem&>(cp),
             static_cast<const ExtraIterateData&>(extra_data)
