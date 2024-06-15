@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <sim/internal_files/old_internal_file.hh>
 #include <sim/old_sql_fields/blob.hh>
 #include <sim/old_sql_fields/datetime.hh>
 #include <sim/primary_key.hh>
@@ -48,14 +47,13 @@ struct OldJob {
 
     uint64_t id;
     old_sql_fields::Datetime created_at;
-    std::optional<decltype(internal_files::OldInternalFile::id)> file_id;
     std::optional<decltype(users::User::id)> creator;
     EnumVal<Type> type;
     uint8_t priority;
     EnumVal<Status> status;
     std::optional<uint64_t> aux_id;
     std::optional<uint64_t> aux_id_2;
-    old_sql_fields::Blob<0> data;
+    old_sql_fields::Blob<0> log;
 
     static constexpr auto primary_key = PrimaryKey{&OldJob::id};
 };

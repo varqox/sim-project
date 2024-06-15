@@ -36,7 +36,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "56cfc27cf2d62cc93961f99cd39b6b51fbe7e45e5944458cf735f1d0c48e75da";
+    "d888cb95eabc811e8bbae11c586f2df353a2b16dca720d01b2d27e419b0828fb";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
@@ -44,54 +44,14 @@ static void do_perform_upgrade(
     STACK_UNWINDING_MARK;
 
     // Upgrade here
-
-    struct ChangeProblemStatementInfo {
-        std::string new_statement_path;
-
-        ChangeProblemStatementInfo() = default;
-
-        explicit ChangeProblemStatementInfo(StringView nsp) : new_statement_path(nsp.to_string()) {}
-
-        [[nodiscard]] std::string dump() const { return new_statement_path; }
-    };
-
     mysql.update("UNLOCK TABLES");
-    mysql.update(concat_tostr(
-        "CREATE TABLE `change_problem_statement_jobs` ("
-        "  `id` bigint(20) unsigned NOT NULL,"
-        "  `new_statement_file_id` bigint(20) unsigned NOT NULL,"
-        "  `path_for_new_statement` varbinary(",
-        decltype(sim::change_problem_statement_jobs::ChangeProblemStatementJob::
-                     path_for_new_statement)::max_len,
-        ") NOT NULL,"
-        "  PRIMARY KEY (`id`),"
-        "  KEY `new_statement_file_id` (`new_statement_file_id`),"
-        "  CONSTRAINT `change_problem_statement_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` "
-        "(`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
-        "  CONSTRAINT `change_problem_statement_jobs_ibfk_2` FOREIGN KEY (`new_statement_file_id`) "
-        "REFERENCES `internal_files` (`id`) ON UPDATE CASCADE"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
-    ));
-    decltype(sim::jobs::Job::id) job_id;
-    decltype(sim::jobs::Job::file_id) job_file_id;
-    std::string job_info;
-    {
-        auto stmt =
-            mysql.execute(sim::sql::Select("id, file_id, info")
-                              .from("jobs")
-                              .where("type=?", sim::jobs::Job::Type::CHANGE_PROBLEM_STATEMENT));
-        stmt.res_bind(job_id, job_file_id, job_info);
-        while (stmt.next()) {
-            auto cpsi = ChangeProblemStatementInfo{job_info};
-            mysql.execute(
-                sim::sql::Update("jobs").set("file_id=NULL, info=''").where("id=?", job_id)
-            );
-            mysql.execute(sim::sql::InsertInto("change_problem_statement_jobs (id, "
-                                               "new_statement_file_id, path_for_new_statement)")
-                              .values("?, ?, ?", job_id, job_file_id, cpsi.new_statement_path));
-        }
-    }
-    mysql.update("ALTER TABLE jobs DROP COLUMN info");
+
+    mysql.update("ALTER TABLE jobs CHANGE COLUMN data log mediumblob NOT NULL DEFAULT ''");
+
+    mysql.execute(sim::sql::Update("jobs")
+                      .set("aux_id=file_id")
+                      .where("type=?", sim::jobs::Job::Type::DELETE_FILE));
+    mysql.update("ALTER TABLE jobs DROP COLUMN file_id");
 }
 
 enum class LockKind {

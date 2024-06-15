@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <sim/internal_files/internal_file.hh>
 #include <sim/sql/fields/blob.hh>
 #include <sim/sql/fields/datetime.hh>
 #include <sim/users/user.hh>
@@ -43,14 +42,13 @@ struct Job {
 
     uint64_t id;
     sql::fields::Datetime created_at;
-    std::optional<decltype(internal_files::InternalFile::id)> file_id;
     std::optional<decltype(users::User::id)> creator;
     Type type;
     uint8_t priority;
     Status status;
     std::optional<uint64_t> aux_id;
     std::optional<uint64_t> aux_id_2;
-    sql::fields::Blob data;
+    sql::fields::Blob log;
 };
 
 // The greater, the more important

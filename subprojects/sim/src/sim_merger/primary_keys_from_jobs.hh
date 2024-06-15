@@ -91,27 +91,22 @@ struct PrimaryKeysFromJobs {
         decltype(OldJob::id) id = 0;
         old_mysql::Optional<decltype(OldJob::creator)::value_type> creator;
         EnumVal<OldJob::Type> type{};
-        old_mysql::Optional<decltype(OldJob::file_id)::value_type> file_id;
         sim::old_sql_fields::Datetime added_str;
         old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
         old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id_2;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
-            "SELECT id, creator, type, file_id, "
-            "created_at, aux_id, aux_id_2 FROM ",
+            "SELECT id, creator, type, created_at, aux_id, aux_id_2 FROM ",
             job_table_name,
             " ORDER BY id"
         );
         stmt.bind_and_execute();
-        stmt.res_bind_all(id, creator, type, file_id, added_str, aux_id, aux_id_2);
+        stmt.res_bind_all(id, creator, type, added_str, aux_id, aux_id_2);
         while (stmt.next()) {
             auto created_at = str_to_time_point(added_str.to_cstr());
 
             // Process non-type-specific ids
             jobs.add_id(id, created_at);
-            if (file_id.has_value()) {
-                internal_files.add_id(file_id.value(), created_at);
-            }
             if (creator.has_value()) {
                 users.add_id(creator.value(), created_at);
             }
@@ -119,6 +114,7 @@ struct PrimaryKeysFromJobs {
             // Process type-specific ids
             switch (type) {
             case OldJob::Type::DELETE_FILE:
+                internal_files.add_id(aux_id.value(), created_at);
                 // Id is already processed
                 break;
 

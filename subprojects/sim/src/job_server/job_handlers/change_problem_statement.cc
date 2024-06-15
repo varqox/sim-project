@@ -104,18 +104,16 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
 
     // Add job to delete the old problem file
     const auto current_datetime = utc_mysql_datetime();
-    mysql.execute(
-        InsertInto("jobs (file_id, creator, type, priority, status, created_at, aux_id, data)")
-            .select(
-                "file_id, NULL, ?, ?, ?, ?, NULL, ''",
-                Job::Type::DELETE_FILE,
-                default_priority(Job::Type::DELETE_FILE),
-                Job::Status::PENDING,
-                current_datetime
-            )
-            .from("problems")
-            .where("id=?", problem_id)
-    );
+    mysql.execute(InsertInto("jobs (creator, type, priority, status, created_at, aux_id)")
+                      .select(
+                          "NULL, ?, ?, ?, ?, file_id",
+                          Job::Type::DELETE_FILE,
+                          default_priority(Job::Type::DELETE_FILE),
+                          Job::Status::PENDING,
+                          current_datetime
+                      )
+                      .from("problems")
+                      .where("id=?", problem_id));
 
     // Update the problem with new file and simfile
     mysql.execute(Update("problems")

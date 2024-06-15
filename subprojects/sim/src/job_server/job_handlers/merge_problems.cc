@@ -68,24 +68,22 @@ void MergeProblems::run(sim::mysql::Connection& mysql) {
     auto current_utc_datetime = utc_mysql_datetime();
 
     // Add job to delete problem file
-    mysql.execute(
-        InsertInto("jobs(file_id, creator, type, priority, status, created_at, aux_id, data)")
-            .select(
-                "file_id, NULL, ?, ?, ?, ?, NULL, ''",
-                Job::Type::DELETE_FILE,
-                default_priority(Job::Type::DELETE_FILE),
-                Job::Status::PENDING,
-                current_utc_datetime
-            )
-            .from("problems")
-            .where("id=?", donor_problem_id)
-    );
+    mysql.execute(InsertInto("jobs(creator, type, priority, status, created_at, aux_id)")
+                      .select(
+                          "NULL, ?, ?, ?, ?, file_id",
+                          Job::Type::DELETE_FILE,
+                          default_priority(Job::Type::DELETE_FILE),
+                          Job::Status::PENDING,
+                          current_utc_datetime
+                      )
+                      .from("problems")
+                      .where("id=?", donor_problem_id));
 
     // Add jobs to delete problem solutions' files
     mysql.execute(
-        InsertInto("jobs(file_id, creator, type, priority, status, created_at, aux_id, data)")
+        InsertInto("jobs(creator, type, priority, status, created_at, aux_id)")
             .select(
-                "file_id, NULL, ?, ?, ?, ?, NULL, ''",
+                "NULL, ?, ?, ?, ?, file_id",
                 Job::Type::DELETE_FILE,
                 default_priority(Job::Type::DELETE_FILE),
                 Job::Status::PENDING,
@@ -121,9 +119,9 @@ void MergeProblems::run(sim::mysql::Connection& mysql) {
 
     // Schedule rejudge of the transferred submissions
     if (rejudge_transferred_submissions) {
-        mysql.execute(InsertInto("jobs (creator, type, priority, status, created_at, aux_id, data)")
+        mysql.execute(InsertInto("jobs (creator, type, priority, status, created_at, aux_id)")
                           .select(
-                              "NULL, ?, ?, ?, ?, id, ''",
+                              "NULL, ?, ?, ?, ?, id",
                               Job::Type::REJUDGE_SUBMISSION,
                               default_priority(Job::Type::REJUDGE_SUBMISSION),
                               Job::Status::PENDING,

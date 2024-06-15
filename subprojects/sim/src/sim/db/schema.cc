@@ -326,14 +326,13 @@ const DbSchema& get_schema() {
                         "CREATE TABLE `jobs` ("
                         "  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,"
                         "  `created_at` datetime NOT NULL,"
-                        "  `file_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove when becomes unneeded
                         "  `creator` bigint(20) unsigned DEFAULT NULL,"
                         "  `type` tinyint(3) unsigned NOT NULL,"
                         "  `priority` tinyint(3) unsigned NOT NULL,"
                         "  `status` tinyint(3) unsigned NOT NULL,"
                         "  `aux_id` bigint(20) unsigned DEFAULT NULL,"
                         "  `aux_id_2` bigint(20) unsigned DEFAULT NULL,"
-                        "  `data` mediumblob NOT NULL," // TODO: rename to log
+                        "  `log` mediumblob NOT NULL DEFAULT '',"
                         "  PRIMARY KEY (`id`),"
                         "  KEY `status` (`status`,`priority` DESC,`id`),"
                         "  KEY `type` (`type`,`aux_id`,`id` DESC),"

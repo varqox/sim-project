@@ -689,17 +689,16 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
     };
 
     EnumVal<sim::jobs::OldJob::Type> jtype{};
-    old_mysql::Optional<uint64_t> file_id;
     InplaceBuff<32> created_at;
     old_mysql::Optional<uint64_t> aux_id; // TODO: normalize this column...
 
     mysql.execute(sim::sql::SqlWithParams("SELECT 1")); // Reconnect to database if disconnected
     auto old_mysql = old_mysql::ConnectionView{mysql};
     {
-        auto stmt = old_mysql.prepare("SELECT file_id, created_at, type, aux_id "
+        auto stmt = old_mysql.prepare("SELECT created_at, type, aux_id "
                                       "FROM jobs WHERE id=? AND status!=?");
         stmt.bind_and_execute(job.id, EnumVal(sim::jobs::OldJob::Status::CANCELED));
-        stmt.res_bind_all(file_id, created_at, jtype, aux_id);
+        stmt.res_bind_all(created_at, jtype, aux_id);
 
         if (not stmt.next()) { // Job has been probably canceled
             return exit_procedures();
@@ -711,7 +710,7 @@ static void process_job(sim::mysql::Connection& mysql, const WorkersPool::NextJo
         .bind_and_execute(EnumVal(sim::jobs::OldJob::Status::IN_PROGRESS), job.id);
 
     stdlog("Processing job ", job.id, "...");
-    job_server::job_dispatcher(mysql, job.id, jtype, file_id, aux_id, created_at);
+    job_server::job_dispatcher(mysql, job.id, jtype, aux_id, created_at);
 
     exit_procedures();
 }

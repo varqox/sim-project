@@ -12,7 +12,6 @@ void job_dispatcher(
     sim::mysql::Connection& mysql,
     uint64_t job_id,
     sim::jobs::OldJob::Type jtype,
-    std::optional<uint64_t> file_id,
     std::optional<uint64_t> aux_id,
     StringView created_at
 );
