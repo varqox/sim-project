@@ -158,7 +158,7 @@ void Sim::api_jobs() {
                 qwhere.append(" AND creator=", session->user_id);
             }
 
-            qfields.append(", SUBSTR(data, 1, ", sim::jobs::job_log_view_max_size + 1, ')');
+            qfields.append(", SUBSTR(log, 1, ", sim::jobs::job_log_view_max_size + 1, ')');
             qwhere.append(" AND j.id", arg);
             mask |= ID_COND;
 
@@ -372,7 +372,7 @@ void Sim::api_jobs() {
         }
         append('\"');
 
-        // Append log view (whether there is more to load, data)
+        // Append log view (whether there is more to load, log)
         if (select_specified_job and uint(perms & PERM::DOWNLOAD_LOG)) {
             append(
                 ",[",
@@ -507,7 +507,7 @@ void Sim::api_job_download_log() {
 
     // Fetch the log
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT data FROM jobs WHERE id=?");
+    auto stmt = old_mysql.prepare("SELECT log FROM jobs WHERE id=?");
     stmt.bind_and_execute(jobs_jid);
     stmt.res_bind_all(resp.content);
     throw_assert(stmt.next());

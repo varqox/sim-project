@@ -73,10 +73,9 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
     }
 
     // Schedule job to delete the old problem file
-    mysql.execute(InsertInto("jobs (created_at, file_id, creator, type, priority, "
-                             "status, aux_id, data)")
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                       .select(
-                          "?, file_id, NULL, ?, ?, ?, NULL, ''",
+                          "?, NULL, ?, ?, ?, file_id",
                           curr_datetime,
                           Job::Type::DELETE_FILE,
                           default_priority(Job::Type::DELETE_FILE),
@@ -97,10 +96,9 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
                       .where("id=?", reupload_problem_job.problem_id));
 
     // Schedule jobs to delete old solutions internal files
-    mysql.execute(InsertInto("jobs (created_at, file_id, creator, type, priority, "
-                             "status, aux_id, data)")
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                       .select(
-                          "?, file_id, NULL, ?, ?, ?, NULL, ''",
+                          "?, NULL, ?, ?, ?, file_id",
                           curr_datetime,
                           Job::Type::DELETE_FILE,
                           default_priority(Job::Type::DELETE_FILE),

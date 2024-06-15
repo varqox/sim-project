@@ -61,9 +61,8 @@ void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
     const auto current_date = utc_mysql_datetime();
     // Add job to delete old problem file
     old_mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '' FROM problems "
+        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id) "
+                 "SELECT NULL, ?, ?, ?, ?, file_id FROM problems "
                  "WHERE id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),

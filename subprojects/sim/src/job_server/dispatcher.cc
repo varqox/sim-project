@@ -27,7 +27,6 @@ void job_dispatcher(
     sim::mysql::Connection& mysql,
     uint64_t job_id,
     OldJob::Type jtype,
-    std::optional<uint64_t> file_id,
     std::optional<uint64_t> aux_id,
     StringView created_at
 ) {
@@ -79,9 +78,7 @@ void job_dispatcher(
             job_handler = make_unique<DeleteContestProblem>(job_id, aux_id.value());
             break;
 
-        case JT::DELETE_FILE:
-            job_handler = make_unique<DeleteInternalFile>(job_id, file_id.value());
-            break;
+        case JT::DELETE_FILE: job_handler = make_unique<DeleteInternalFile>(job_id); break;
 
         case JT::CHANGE_PROBLEM_STATEMENT:
             job_handler = make_unique<ChangeProblemStatement>(job_id);
@@ -101,7 +98,7 @@ void job_dispatcher(
         job_handler->run(mysql);
         if (job_handler->failed()) {
             auto old_mysql = old_mysql::ConnectionView{mysql};
-            old_mysql.prepare("UPDATE jobs SET status=?, data=? WHERE id=?")
+            old_mysql.prepare("UPDATE jobs SET status=?, log=? WHERE id=?")
                 .bind_and_execute(EnumVal(OldJob::Status::FAILED), job_handler->get_log(), job_id);
         }
 
@@ -111,7 +108,7 @@ void job_dispatcher(
         auto old_mysql = old_mysql::ConnectionView{mysql};
 
         // Fail job
-        auto stmt = old_mysql.prepare("UPDATE jobs SET status=?, data=? WHERE id=?");
+        auto stmt = old_mysql.prepare("UPDATE jobs SET status=?, log=? WHERE id=?");
         if (job_handler) {
             stmt.bind_and_execute(
                 EnumVal(OldJob::Status::FAILED),

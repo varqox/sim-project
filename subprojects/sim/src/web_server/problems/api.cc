@@ -634,9 +634,9 @@ http::Response add(web_worker::Context& ctx) {
     ctx.uncommited_files_removers.emplace_back(std::move(file_remover));
 
     auto job_type = Job::Type::ADD_PROBLEM;
-    ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, data)")
+    ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status)")
                           .values(
-                              "?, ?, ?, ?, ?, ''",
+                              "?, ?, ?, ?, ?",
                               utc_mysql_datetime(),
                               ctx.session->user_id,
                               job_type,
@@ -699,9 +699,9 @@ Response reupload(Context& ctx, decltype(Problem::id) problem_id) {
     ctx.uncommited_files_removers.emplace_back(std::move(file_remover));
 
     auto job_type = Job::Type::REUPLOAD_PROBLEM;
-    ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id, data)")
+    ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                           .values(
-                              "?, ?, ?, ?, ?, ?, ''",
+                              "?, ?, ?, ?, ?, ?",
                               utc_mysql_datetime(),
                               ctx.session->user_id,
                               job_type,

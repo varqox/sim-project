@@ -193,7 +193,7 @@ void JudgeOrRejudge::run(sim::mysql::Connection& mysql) {
         );
 
         auto old_mysql = old_mysql::ConnectionView{mysql};
-        auto stmt = old_mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
+        auto stmt = old_mysql.prepare("UPDATE jobs SET log=? WHERE id=?");
         stmt.bind_and_execute(get_log(), job_id_);
         if (partial) {
             job_log_holder_.size = job_log_len;

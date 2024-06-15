@@ -1,4 +1,5 @@
 #include <chrono>
+#include <sim/internal_files/old_internal_file.hh>
 #include <sim/jobs/old_job.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/old_mysql/old_mysql.hh>
@@ -11,7 +12,6 @@
 #include <simlib/time.hh>
 #include <simlib/working_directory.hh>
 
-using sim::jobs::OldJob;
 using std::string;
 using std::vector;
 
@@ -64,7 +64,7 @@ int main2(int argc, char** argv) {
         auto es = Spawner::run(args[0], args);
         if (es.si.code != CLD_EXITED or es.si.status != 0) {
             errlog(args[0], " failed: ", es.message);
-            exit(1);
+            _exit(1);
         }
     };
 

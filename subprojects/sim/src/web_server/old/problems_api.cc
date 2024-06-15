@@ -501,8 +501,8 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, data) "
-                 "SELECT ?, ?, ?, ?, ?, id, '' "
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id) "
+                 "SELECT ?, ?, ?, ?, ?, id "
                  "FROM submissions WHERE problem_id=? ORDER BY id")
         .bind_and_execute(
             session->user_id,
@@ -525,8 +525,8 @@ void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, '')")
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id) "
+                 "VALUES(?, ?, ?, ?, ?, ?)")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -555,8 +555,8 @@ void Sim::api_problem_delete(sim::problems::Permissions perms) {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, '')")
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id) "
+                 "VALUES(?, ?, ?, ?, ?, ?)")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -612,10 +612,8 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
     // Queue merging job
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare(
-            "INSERT jobs (creator, status, priority, type, created_at, aux_id, aux_id_2, data) "
-            "VALUES(?, ?, ?, ?, ?, ?, ?, '')"
-        )
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, aux_id_2) "
+                 "VALUES(?, ?, ?, ?, ?, ?, ?)")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -799,9 +797,8 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
     }
 
     old_mysql
-        .prepare("INSERT jobs (file_id, creator, status, priority, type,"
-                 " created_at, aux_id, data) "
-                 "VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id) "
+                 "VALUES(?, ?, ?, ?, ?, ?)")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),

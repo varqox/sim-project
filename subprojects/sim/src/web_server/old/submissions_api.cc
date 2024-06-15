@@ -976,9 +976,8 @@ void Sim::api_submission_add() {
     // Create a job to judge the submission
     auto submission_id = stmt.insert_id();
     old_mysql
-        .prepare("INSERT jobs (file_id, creator, status, priority, type, created_at,"
-                 " aux_id, data) "
-                 "VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id) "
+                 "VALUES(?, ?, ?, ?, ?, ?)")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -1036,9 +1035,8 @@ void Sim::api_submission_rejudge() {
     stmt.res_bind_all(problem_id);
     throw_assert(stmt.next());
 
-    stmt = old_mysql.prepare("INSERT jobs (file_id, creator, status, priority,"
-                             " type, created_at, aux_id, data) "
-                             "VALUES(NULL, ?, ?, ?, ?, ?, ?, '')");
+    stmt = old_mysql.prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id) "
+                             "VALUES(?, ?, ?, ?, ?, ?)");
     stmt.bind_and_execute(
         session->user_id,
         EnumVal(OldJob::Status::PENDING),
@@ -1130,9 +1128,8 @@ void Sim::api_submission_delete() {
     sim::submissions::update_final_lock(mysql, user_id, problem_id);
 
     old_mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, data)"
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, ''"
+        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id)"
+                 "SELECT NULL, ?, ?, ?, ?, file_id"
                  " FROM submissions WHERE id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),

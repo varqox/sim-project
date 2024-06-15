@@ -22,21 +22,18 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
         using sim::jobs::OldJob;
 
         OldJob job;
-        old_mysql::Optional<decltype(job.file_id)::value_type> m_file_id;
         old_mysql::Optional<decltype(job.creator)::value_type> m_creator;
         old_mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id;
         old_mysql::Optional<decltype(job.aux_id)::value_type> m_aux_id_2;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
-            "SELECT id, file_id, creator, type,"
-            " priority, status, created_at, aux_id, aux_id_2, data "
+            "SELECT id, creator, type, priority, status, created_at, aux_id, aux_id_2, log "
             "FROM ",
             record_set.sql_table_name
         );
         stmt.bind_and_execute();
         stmt.res_bind_all(
             job.id,
-            m_file_id,
             m_creator,
             job.type,
             job.priority,
@@ -44,17 +41,13 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
             job.created_at,
             m_aux_id,
             m_aux_id_2,
-            job.data
+            job.log
         );
         while (stmt.next()) {
-            job.file_id = m_file_id.to_opt();
             job.creator = m_creator.to_opt();
             job.aux_id = m_aux_id.to_opt();
             job.aux_id_2 = m_aux_id_2.to_opt();
 
-            if (job.file_id) {
-                job.file_id = internal_files_.new_id(job.file_id.value(), record_set.kind);
-            }
             if (job.creator) {
                 job.creator = users_.new_id(job.creator.value(), record_set.kind);
             }
@@ -62,7 +55,7 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
             // Process type-specific ids
             switch (job.type) {
             case OldJob::Type::DELETE_FILE:
-                // Id is already processed
+                job.aux_id = internal_files_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 
             case OldJob::Type::JUDGE_SUBMISSION:
@@ -133,8 +126,8 @@ public:
         auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
-            "(id, file_id, creator, type, priority,"
-            " status, created_at, aux_id, data) "
+            "(id, creator, type, priority,"
+            " status, created_at, aux_id, aux_id_2, log) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
@@ -144,14 +137,14 @@ public:
             const auto& x = new_record.data;
             stmt.bind_and_execute(
                 x.id,
-                x.file_id,
                 x.creator,
                 x.type,
                 x.priority,
                 x.status,
                 x.created_at,
                 x.aux_id,
-                x.data
+                x.aux_id_2,
+                x.log
             );
         }
 

@@ -217,10 +217,9 @@ std::vector<FileRemover> submit_solutions(
     }
 
     // Add jobs to judge the solutions
-    mysql.execute(InsertInto("jobs (created_at, file_id, creator, type, priority, "
-                             "status, aux_id, data)")
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                       .select(
-                          "?, NULL, NULL, ?, ?, ?, id, ''",
+                          "?, NULL, ?, ?, ?, id",
                           curr_datetime,
                           Job::Type::JUDGE_SUBMISSION,
                           default_priority(Job::Type::JUDGE_SUBMISSION) + 1,

@@ -44,9 +44,8 @@ void DeleteProblem::run(sim::mysql::Connection& mysql) {
     // Add job to delete problem file
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, ''"
+        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id) "
+                 "SELECT NULL, ?, ?, ?, ?, file_id"
                  " FROM problems WHERE id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),
@@ -58,9 +57,8 @@ void DeleteProblem::run(sim::mysql::Connection& mysql) {
 
     // Add jobs to delete problem submissions' files
     old_mysql
-        .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, ''"
+        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id) "
+                 "SELECT NULL, ?, ?, ?, ?, file_id"
                  " FROM submissions WHERE problem_id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),
