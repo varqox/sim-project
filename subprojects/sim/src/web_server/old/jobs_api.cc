@@ -1,6 +1,10 @@
 #include "sim.hh"
 
+#include <sim/change_problem_statement_jobs/change_problem_statement_job.hh>
+#include <sim/internal_files/internal_file.hh>
+#include <sim/jobs/job.hh>
 #include <sim/jobs/utils.hh>
+#include <sim/sql/sql.hh>
 #include <simlib/path.hh>
 #include <simlib/time.hh>
 #include <simlib/time_format_conversions.hh>
@@ -56,8 +60,8 @@ void Sim::api_jobs() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT j.id, j.created_at, j.type, j.status, j.priority, j.aux_id, j.aux_id_2,"
-                   " j.info, j.creator, u.username");
+    qfields.append("SELECT j.id, j.created_at, j.type, j.status, j.priority, j.aux_id, j.aux_id_2, "
+                   "j.creator, u.username");
     qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id WHERE TRUE"
     ); // Needed to easily
        // append constraints
@@ -70,7 +74,6 @@ void Sim::api_jobs() {
         PRIORITY,
         AUX_ID,
         AUX_ID_2,
-        JINFO,
         CREATOR,
         CREATOR_USERNAME,
         JOB_LOG_VIEW
@@ -331,8 +334,6 @@ void Sim::api_jobs() {
 
         case OldJob::Type::CHANGE_PROBLEM_STATEMENT: {
             append("\"problem\":", res[AUX_ID]);
-            sim::jobs::ChangeProblemStatementInfo info(res[JINFO]);
-            append(",\"new statement path\":", json_stringify(info.new_statement_path));
             break;
         }
 
@@ -401,18 +402,16 @@ void Sim::api_job() {
         return api_error400();
     }
 
-    old_mysql::Optional<uint64_t> file_id;
     old_mysql::Optional<InplaceBuff<32>> jcreator;
     old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
-    InplaceBuff<256> jinfo;
     EnumVal<JT> jtype{};
     EnumVal<OldJob::Status> jstatus{};
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT file_id, creator, type, status, aux_id, info "
+    auto stmt = old_mysql.prepare("SELECT creator, type, status, aux_id "
                                   "FROM jobs WHERE id=?");
     stmt.bind_and_execute(jobs_jid);
-    stmt.res_bind_all(file_id, jcreator, jtype, jstatus, aux_id, jinfo);
+    stmt.res_bind_all(jcreator, jtype, jstatus, aux_id);
     if (not stmt.next()) {
         return api_error404();
     }
@@ -442,10 +441,14 @@ void Sim::api_job() {
         return api_job_download_log();
     }
     if (next_arg == "uploaded-package") {
-        return api_job_download_uploaded_package(file_id, jtype);
+        return api_job_download_uploaded_package(
+            str2num<decltype(sim::jobs::Job::id)>(jobs_jid).value(), jtype
+        );
     }
     if (next_arg == "uploaded-statement") {
-        return api_job_download_uploaded_statement(file_id, jtype, jinfo);
+        return api_job_download_uploaded_statement(
+            str2num<decltype(sim::jobs::Job::id)>(jobs_jid).value(), jtype
+        );
     }
     return api_error400();
 }
@@ -510,9 +513,7 @@ void Sim::api_job_download_log() {
     throw_assert(stmt.next());
 }
 
-void Sim::api_job_download_uploaded_package(
-    std::optional<uint64_t> file_id, OldJob::Type job_type
-) {
+void Sim::api_job_download_uploaded_package(uint64_t job_id, OldJob::Type job_type) {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
     using JT = OldJob::Type;
@@ -523,14 +524,21 @@ void Sim::api_job_download_uploaded_package(
         return api_error403(); // TODO: ^ that is very nasty
     }
 
-    resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=", jobs_jid, ".zip");
+    auto stmt = mysql.execute(
+        sim::sql::Select("file_id")
+            .from(job_type == JT::ADD_PROBLEM ? "add_problem_jobs" : "reupload_problem_jobs")
+            .where("id=?", job_id)
+    );
+    decltype(sim::internal_files::InternalFile::id) file_id;
+    stmt.res_bind(file_id);
+    throw_assert(stmt.next());
+
+    resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=", job_id, ".zip");
     resp.content_type = http::Response::FILE;
-    resp.content = sim::internal_files::old_path_of(file_id.value());
+    resp.content = sim::internal_files::path_of(file_id);
 }
 
-void Sim::api_job_download_uploaded_statement(
-    std::optional<uint64_t> file_id, OldJob::Type job_type, StringView info
-) {
+void Sim::api_job_download_uploaded_statement(uint64_t job_id, OldJob::Type job_type) {
     STACK_UNWINDING_MARK;
     using PERM = JobPermissions;
     using JT = OldJob::Type;
@@ -541,14 +549,22 @@ void Sim::api_job_download_uploaded_statement(
         return api_error403(); // TODO: ^ that is very nasty
     }
 
+    decltype(sim::change_problem_statement_jobs::ChangeProblemStatementJob::new_statement_file_id
+    ) new_statement_file_id;
+    decltype(sim::change_problem_statement_jobs::ChangeProblemStatementJob::path_for_new_statement
+    ) path_for_new_statement;
+    auto stmt = mysql.execute(sim::sql::Select("new_statement_file_id, path_for_new_statement")
+                                  .from("change_problem_statement_jobs")
+                                  .where("id=?", job_id));
+    stmt.res_bind(new_statement_file_id, path_for_new_statement);
+    throw_assert(stmt.next());
+
     resp.headers["Content-Disposition"] = concat_tostr(
         "attachment; filename=",
-        encode_uri(from_unsafe{path_filename(
-            from_unsafe{sim::jobs::ChangeProblemStatementInfo(info).new_statement_path}
-        )})
+        encode_uri(from_unsafe{path_filename(from_unsafe{path_for_new_statement})})
     );
     resp.content_type = http::Response::FILE;
-    resp.content = sim::internal_files::old_path_of(file_id.value());
+    resp.content = sim::internal_files::path_of(new_statement_file_id);
 }
 
 } // namespace web_server::old

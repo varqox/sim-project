@@ -1,6 +1,7 @@
 #include <map>
 #include <regex>
 #include <sim/add_problem_jobs/add_problem_job.hh>
+#include <sim/change_problem_statement_jobs/change_problem_statement_job.hh>
 #include <sim/contest_entry_tokens/contest_entry_token.hh>
 #include <sim/contest_files/contest_file.hh>
 #include <sim/contest_problems/contest_problem.hh>
@@ -332,7 +333,6 @@ const DbSchema& get_schema() {
                         "  `status` tinyint(3) unsigned NOT NULL,"
                         "  `aux_id` bigint(20) unsigned DEFAULT NULL,"
                         "  `aux_id_2` bigint(20) unsigned DEFAULT NULL,"
-                        "  `info` blob NOT NULL," // TODO: remove when becomes unneeded
                         "  `data` mediumblob NOT NULL," // TODO: rename to log
                         "  PRIMARY KEY (`id`),"
                         "  KEY `status` (`status`,`priority` DESC,`id`),"
@@ -402,6 +402,21 @@ const DbSchema& get_schema() {
                         "  `rejudge_transferred_submissions` tinyint(1) NOT NULL,"
                         "  PRIMARY KEY (`id`),"
                         "  CONSTRAINT `merge_problems_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
+                    ),
+                    // clang-format on
+                },
+                {
+                    // clang-format off
+                    .create_table_sql = concat_tostr(
+                        "CREATE TABLE `change_problem_statement_jobs` ("
+                        "  `id` bigint(20) unsigned NOT NULL,"
+                        "  `new_statement_file_id` bigint(20) unsigned NOT NULL,"
+                        "  `path_for_new_statement` varbinary(", decltype(change_problem_statement_jobs::ChangeProblemStatementJob::path_for_new_statement)::max_len, ") NOT NULL,"
+                        "  PRIMARY KEY (`id`),"
+                        "  KEY `new_statement_file_id` (`new_statement_file_id`),"
+                        "  CONSTRAINT `change_problem_statement_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
+                        "  CONSTRAINT `change_problem_statement_jobs_ibfk_2` FOREIGN KEY (`new_statement_file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
                     // clang-format on

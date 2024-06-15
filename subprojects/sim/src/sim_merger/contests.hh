@@ -3,6 +3,7 @@
 #include "merger.hh"
 
 #include <sim/contests/old_contest.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <sim/old_sql_fields/datetime.hh>
 #include <simlib/defer.hh>
 

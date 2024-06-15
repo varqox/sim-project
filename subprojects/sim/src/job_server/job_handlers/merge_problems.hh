@@ -2,8 +2,6 @@
 
 #include "job_handler.hh"
 
-#include <sim/jobs/utils.hh>
-
 namespace job_server::job_handlers {
 
 class MergeProblems final : public JobHandler {

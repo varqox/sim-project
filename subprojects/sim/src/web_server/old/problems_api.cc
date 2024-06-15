@@ -501,9 +501,8 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
-                 " info, data) "
-                 "SELECT ?, ?, ?, ?, ?, id, '', '' "
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, data) "
+                 "SELECT ?, ?, ?, ?, ?, id, '' "
                  "FROM submissions WHERE problem_id=? ORDER BY id")
         .bind_and_execute(
             session->user_id,
@@ -526,9 +525,8 @@ void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
-                 " info, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, '', '')")
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, data) "
+                 "VALUES(?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -557,9 +555,8 @@ void Sim::api_problem_delete(sim::problems::Permissions perms) {
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id,"
-                 " info, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, '', '')")
+        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, data) "
+                 "VALUES(?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -615,9 +612,10 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
     // Queue merging job
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
-        .prepare("INSERT jobs (creator, status, priority, type, created_at, aux_id, aux_id_2,"
-                 " info, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, ?, '', '')")
+        .prepare(
+            "INSERT jobs (creator, status, priority, type, created_at, aux_id, aux_id_2, data) "
+            "VALUES(?, ?, ?, ?, ?, ?, ?, '')"
+        )
         .bind_and_execute(
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
@@ -786,37 +784,40 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
         return api_error400(notifications);
     }
 
-    sim::jobs::ChangeProblemStatementInfo cps_info(statement_path);
-
     auto transaction = mysql.start_repeatable_read_transaction();
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
         .bind_and_execute(utc_mysql_datetime());
-    auto job_file_id = old_mysql.insert_id();
-    FileRemover job_file_remover(sim::internal_files::old_path_of(job_file_id).to_string());
+    auto new_statement_file_id = old_mysql.insert_id();
+    FileRemover job_file_remover(sim::internal_files::old_path_of(new_statement_file_id).to_string()
+    );
 
     // Make uploaded statement file the job's file
-    if (move(statement_file, sim::internal_files::old_path_of(job_file_id))) {
+    if (move(statement_file, sim::internal_files::old_path_of(new_statement_file_id))) {
         THROW("move()", errmsg());
     }
 
     old_mysql
         .prepare("INSERT jobs (file_id, creator, status, priority, type,"
-                 " created_at, aux_id, info, data) "
-                 "VALUES(?, ?, ?, ?, ?, ?, ?, ?, '')")
+                 " created_at, aux_id, data) "
+                 "VALUES(NULL, ?, ?, ?, ?, ?, ?, '')")
         .bind_and_execute(
-            job_file_id,
             session->user_id,
             EnumVal(OldJob::Status::PENDING),
             default_priority(OldJob::Type::CHANGE_PROBLEM_STATEMENT),
             EnumVal(OldJob::Type::CHANGE_PROBLEM_STATEMENT),
             utc_mysql_datetime(),
-            problems_pid,
-            cps_info.dump()
+            problems_pid
         );
 
     auto job_id = old_mysql.insert_id(); // Has to be retrieved before commit
+    mysql.execute(
+        sim::sql::InsertInto(
+            "change_problem_statement_jobs (id, new_statement_file_id, path_for_new_statement)"
+        )
+            .values("?, ?, ?", job_id, new_statement_file_id, statement_path)
+    );
 
     transaction.commit();
     job_file_remover.cancel();

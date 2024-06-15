@@ -293,7 +293,6 @@ gmock_dep = simlib_proj.get_variable('gmock_dep')
 
 tests = {
     'test/sim/cpp_syntax_highlighter.cc': {'args': [meson.current_source_dir() + '/test/sim/cpp_syntax_highlighter_test_cases/']},
-    'test/sim/jobs/utils.cc': {},
     'test/sim/merging/merge_ids.cc': {'priority': 10},
     'test/sim/sql/sql.cc': {},
     'test/web_server/http/form_validation.cc': {},

@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <sim/jobs/old_job.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <thread>
 
 using sim::jobs::OldJob;
@@ -28,7 +29,6 @@ void job_dispatcher(
     OldJob::Type jtype,
     std::optional<uint64_t> file_id,
     std::optional<uint64_t> aux_id,
-    StringView info,
     StringView created_at
 ) {
     STACK_UNWINDING_MARK;
@@ -84,9 +84,7 @@ void job_dispatcher(
             break;
 
         case JT::CHANGE_PROBLEM_STATEMENT:
-            job_handler = make_unique<ChangeProblemStatement>(
-                job_id, aux_id.value(), file_id.value(), sim::jobs::ChangeProblemStatementInfo(info)
-            );
+            job_handler = make_unique<ChangeProblemStatement>(job_id);
             break;
 
         case JT::JUDGE_SUBMISSION:

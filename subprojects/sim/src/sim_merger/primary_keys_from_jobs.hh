@@ -13,6 +13,7 @@
 #include <sim/internal_files/old_internal_file.hh>
 #include <sim/jobs/old_job.hh>
 #include <sim/jobs/utils.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <sim/old_sql_fields/blob.hh>
 #include <sim/old_sql_fields/datetime.hh>
 #include <sim/problem_tags/old_problem_tag.hh>
@@ -94,16 +95,15 @@ struct PrimaryKeysFromJobs {
         sim::old_sql_fields::Datetime added_str;
         old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id;
         old_mysql::Optional<decltype(OldJob::aux_id)::value_type> aux_id_2;
-        sim::old_sql_fields::Blob<32> info;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
             "SELECT id, creator, type, file_id, "
-            "created_at, aux_id, aux_id_2, info FROM ",
+            "created_at, aux_id, aux_id_2 FROM ",
             job_table_name,
             " ORDER BY id"
         );
         stmt.bind_and_execute();
-        stmt.res_bind_all(id, creator, type, file_id, added_str, aux_id, aux_id_2, info);
+        stmt.res_bind_all(id, creator, type, file_id, added_str, aux_id, aux_id_2);
         while (stmt.next()) {
             auto created_at = str_to_time_point(added_str.to_cstr());
 

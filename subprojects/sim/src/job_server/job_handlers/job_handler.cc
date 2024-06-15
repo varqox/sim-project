@@ -23,12 +23,4 @@ void JobHandler::job_done(sim::mysql::Connection& mysql) {
         .bind_and_execute(EnumVal(OldJob::Status::DONE), get_log(), job_id_);
 }
 
-void JobHandler::job_done(sim::mysql::Connection& mysql, StringView new_info) {
-    STACK_UNWINDING_MARK;
-
-    auto old_mysql = old_mysql::ConnectionView{mysql};
-    old_mysql.prepare("UPDATE jobs SET status=?, info=?, data=? WHERE id=?")
-        .bind_and_execute(EnumVal(OldJob::Status::DONE), new_info, get_log(), job_id_);
-}
-
 } // namespace job_server::job_handlers

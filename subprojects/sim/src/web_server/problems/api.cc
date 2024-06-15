@@ -634,9 +634,9 @@ http::Response add(web_worker::Context& ctx) {
     ctx.uncommited_files_removers.emplace_back(std::move(file_remover));
 
     auto job_type = Job::Type::ADD_PROBLEM;
-    ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, info, data)")
+    ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, data)")
                           .values(
-                              "?, ?, ?, ?, ?, '', ''",
+                              "?, ?, ?, ?, ?, ''",
                               utc_mysql_datetime(),
                               ctx.session->user_id,
                               job_type,
@@ -699,18 +699,16 @@ Response reupload(Context& ctx, decltype(Problem::id) problem_id) {
     ctx.uncommited_files_removers.emplace_back(std::move(file_remover));
 
     auto job_type = Job::Type::REUPLOAD_PROBLEM;
-    ctx.mysql.execute(
-        InsertInto("jobs (created_at, creator, type, priority, status, aux_id, info, data)")
-            .values(
-                "?, ?, ?, ?, ?, ?, '', ''",
-                utc_mysql_datetime(),
-                ctx.session->user_id,
-                job_type,
-                default_priority(job_type),
-                Job::Status::PENDING,
-                problem_id
-            )
-    );
+    ctx.mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id, data)")
+                          .values(
+                              "?, ?, ?, ?, ?, ?, ''",
+                              utc_mysql_datetime(),
+                              ctx.session->user_id,
+                              job_type,
+                              default_priority(job_type),
+                              Job::Status::PENDING,
+                              problem_id
+                          ));
     auto job_id = ctx.old_mysql.insert_id();
     ctx.mysql.execute(
         InsertInto("reupload_problem_jobs (id, problem_id, file_id, force_time_limits_reset, "

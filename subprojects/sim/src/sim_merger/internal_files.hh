@@ -3,6 +3,7 @@
 #include "merger.hh"
 
 #include <sim/internal_files/old_internal_file.hh>
+#include <sim/old_mysql/old_mysql.hh>
 #include <simlib/defer.hh>
 #include <simlib/file_info.hh>
 #include <simlib/file_manip.hh>

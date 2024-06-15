@@ -55,7 +55,6 @@ struct OldJob {
     EnumVal<Status> status;
     std::optional<uint64_t> aux_id;
     std::optional<uint64_t> aux_id_2;
-    old_sql_fields::Blob<128> info;
     old_sql_fields::Blob<0> data;
 
     static constexpr auto primary_key = PrimaryKey{&OldJob::id};

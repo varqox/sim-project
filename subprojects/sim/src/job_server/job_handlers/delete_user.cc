@@ -37,8 +37,8 @@ void DeleteUser::run(sim::mysql::Connection& mysql) {
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql
         .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-                 " created_at, aux_id, info, data) "
-                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
+                 " created_at, aux_id, data) "
+                 "SELECT file_id, NULL, ?, ?, ?, ?, NULL, ''"
                  " FROM submissions WHERE user_id=?")
         .bind_and_execute(
             EnumVal(OldJob::Type::DELETE_FILE),
