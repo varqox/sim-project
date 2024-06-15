@@ -51,12 +51,12 @@ list_user_problems(const decltype(Context::session)& session, decltype(User::id)
 
 ProblemCapabilities problem(
     const decltype(Context::session)& session,
-    decltype(Problem::type) problem_type,
+    decltype(Problem::visibility) problem_visibility,
     decltype(Problem::owner_id) problem_owner_id
 ) noexcept {
     bool is_owned = problem_owner_id and is_self(session, *problem_owner_id);
-    bool is_public = problem_type == sim::problems::Problem::Type::PUBLIC;
-    bool is_contest_only = problem_type == sim::problems::Problem::Type::CONTEST_ONLY;
+    bool is_public = problem_visibility == sim::problems::Problem::Visibility::PUBLIC;
+    bool is_contest_only = problem_visibility == sim::problems::Problem::Visibility::CONTEST_ONLY;
     bool view =
         is_public or is_owned or is_admin(session) or (is_teacher(session) and is_contest_only);
     return {

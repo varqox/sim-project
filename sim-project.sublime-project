@@ -2,7 +2,10 @@
 	"folders":
 	[
 		{
-			"path": "."
+			"path": ".",
+			"folder_exclude_patterns": [
+				"sim-project/sim",
+			],
 		}
 	],
 	"settings": {

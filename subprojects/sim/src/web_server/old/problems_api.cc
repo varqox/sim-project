@@ -27,10 +27,10 @@ using sim::users::User;
 
 namespace web_server::old {
 
-static constexpr const char* proiblem_type_str(OldProblem::Type type) noexcept {
-    using PT = OldProblem::Type;
+static constexpr const char* proiblem_visibility_str(OldProblem::Visibility visibility) noexcept {
+    using PT = OldProblem::Visibility;
 
-    switch (type) {
+    switch (visibility) {
     case PT::PUBLIC: return "Public";
     case PT::PRIVATE: return "Private";
     case PT::CONTEST_ONLY: return "Contest only";
@@ -49,7 +49,7 @@ void Sim::api_problems() {
 
     InplaceBuff<512> qfields;
     InplaceBuff<512> qwhere;
-    qfields.append("SELECT p.id, p.created_at, p.type, p.name, p.label, p.owner_id, "
+    qfields.append("SELECT p.id, p.created_at, p.visibility, p.name, p.label, p.owner_id, "
                    "u.username, s.full_status");
     qwhere.append(
         " FROM problems p LEFT JOIN users u ON p.owner_id=u.id "
@@ -62,7 +62,7 @@ void Sim::api_problems() {
     enum ColumnIdx {
         PID,
         CREATED_AT,
-        PTYPE,
+        VISIBILITY,
         NAME,
         LABEL,
         OWNER_ID,
@@ -79,7 +79,7 @@ void Sim::api_problems() {
     if (not uint(overall_perms & OPERMS::VIEW_ALL)) {
         if (not session.has_value()) {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
-            qwhere.append(" AND p.type=", EnumVal(OldProblem::Type::PUBLIC).to_int());
+            qwhere.append(" AND p.visibility=", EnumVal(OldProblem::Visibility::PUBLIC).to_int());
 
         } else if (session->user_type == User::Type::TEACHER) {
             throw_assert(
@@ -87,10 +87,10 @@ void Sim::api_problems() {
                 uint(overall_perms & OPERMS::VIEW_WITH_TYPE_CONTEST_ONLY)
             );
             qwhere.append(
-                " AND (p.type=",
-                EnumVal(OldProblem::Type::PUBLIC).to_int(),
-                " OR p.type=",
-                EnumVal(OldProblem::Type::CONTEST_ONLY).to_int(),
+                " AND (p.visibility=",
+                EnumVal(OldProblem::Visibility::PUBLIC).to_int(),
+                " OR p.visibility=",
+                EnumVal(OldProblem::Visibility::CONTEST_ONLY).to_int(),
                 " OR p.owner_id=",
                 session->user_id,
                 ')'
@@ -99,8 +99,8 @@ void Sim::api_problems() {
         } else {
             throw_assert(uint(overall_perms & OPERMS::VIEW_WITH_TYPE_PUBLIC));
             qwhere.append(
-                " AND (p.type=",
-                EnumVal(OldProblem::Type::PUBLIC).to_int(),
+                " AND (p.visibility=",
+                EnumVal(OldProblem::Visibility::PUBLIC).to_int(),
                 " OR p.owner_id=",
                 session->user_id,
                 ')'
@@ -121,16 +121,22 @@ void Sim::api_problems() {
         char cond = arg[0];
         StringView arg_id = StringView(arg).substr(1);
 
-        // problem type
+        // problem visibility
         if (cond == 't' and ~mask & PTYPE_COND) {
             if (arg_id == "PUB") {
-                qwhere.append(" AND p.type=", EnumVal(OldProblem::Type::PUBLIC).to_int());
+                qwhere.append(
+                    " AND p.visibility=", EnumVal(OldProblem::Visibility::PUBLIC).to_int()
+                );
             } else if (arg_id == "PRI") {
-                qwhere.append(" AND p.type=", EnumVal(OldProblem::Type::PRIVATE).to_int());
+                qwhere.append(
+                    " AND p.visibility=", EnumVal(OldProblem::Visibility::PRIVATE).to_int()
+                );
             } else if (arg_id == "CON") {
-                qwhere.append(" AND p.type=", EnumVal(OldProblem::Type::CONTEST_ONLY).to_int());
+                qwhere.append(
+                    " AND p.visibility=", EnumVal(OldProblem::Visibility::CONTEST_ONLY).to_int()
+                );
             } else {
-                return api_error400(from_unsafe{concat("Invalid problem type: ", arg_id)});
+                return api_error400(from_unsafe{concat("Invalid problem visibility: ", arg_id)});
             }
 
             mask |= PTYPE_COND;
@@ -178,7 +184,7 @@ void Sim::api_problems() {
     append("[\n{\"columns\":["
                "\"id\","
                "\"created_at\","
-               "\"type\","
+               "\"visibility\","
                "\"name\","
                "\"label\","
                "\"owner_id\","
@@ -204,8 +210,8 @@ void Sim::api_problems() {
     stmt.res_bind_all(tag_name);
 
     while (res.next()) {
-        EnumVal<OldProblem::Type> problem_type{
-            WONT_THROW(str2num<OldProblem::Type::UnderlyingType>(res[PTYPE]).value())
+        EnumVal<OldProblem::Visibility> problem_visibility{
+            WONT_THROW(str2num<OldProblem::Visibility::UnderlyingType>(res[VISIBILITY]).value())
         };
         auto problem_perms = sim::problems::get_permissions(
             (session.has_value() ? std::optional{session->user_id} : std::nullopt),
@@ -215,7 +221,7 @@ void Sim::api_problems() {
                  : decltype(OldProblem::owner_id)(WONT_THROW(
                        str2num<decltype(OldProblem::owner_id)::value_type>(res[OWNER_ID]).value()
                    ))),
-            problem_type
+            problem_visibility
         );
         using PERMS = sim::problems::Permissions;
 
@@ -229,8 +235,8 @@ void Sim::api_problems() {
             append("null,");
         }
 
-        // Type
-        append("\"", proiblem_type_str(problem_type), "\",");
+        // Visibility
+        append("\"", proiblem_visibility_str(problem_visibility), "\",");
         // Name
         append(json_stringify(res[NAME]), ',');
         // Label
@@ -388,14 +394,14 @@ void Sim::api_problem() {
     old_mysql::Optional<decltype(OldProblem::owner_id)::value_type> problem_owner_id;
     decltype(OldProblem::label) problem_label;
     decltype(OldProblem::simfile) problem_simfile;
-    decltype(OldProblem::type) problem_type;
+    decltype(OldProblem::visibility) problem_visibility;
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT file_id, owner_id, type, label, simfile "
+    auto stmt = old_mysql.prepare("SELECT file_id, owner_id, visibility, label, simfile "
                                   "FROM problems WHERE id=?");
     stmt.bind_and_execute(problems_pid);
     stmt.res_bind_all(
-        problems_file_id, problem_owner_id, problem_type, problem_label, problem_simfile
+        problems_file_id, problem_owner_id, problem_visibility, problem_label, problem_simfile
     );
     if (not stmt.next()) {
         return api_error404();
@@ -405,7 +411,7 @@ void Sim::api_problem() {
         (session.has_value() ? std::optional{session->user_id} : std::nullopt),
         (session.has_value() ? std::optional{session->user_type} : std::nullopt),
         problem_owner_id,
-        problem_type
+        problem_visibility
     );
 
     next_arg = url_args.extract_next_arg();

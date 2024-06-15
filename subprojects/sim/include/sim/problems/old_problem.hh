@@ -15,7 +15,7 @@
 namespace sim::problems {
 
 struct OldProblem {
-    ENUM_WITH_STRING_CONVERSIONS(Type, uint8_t,
+    ENUM_WITH_STRING_CONVERSIONS(Visibility, uint8_t,
         (PUBLIC, 1, "public")
         (PRIVATE, 2, "private")
         (CONTEST_ONLY, 3, "contest_only")
@@ -24,7 +24,7 @@ struct OldProblem {
     uint64_t id;
     old_sql_fields::Datetime created_at;
     decltype(internal_files::OldInternalFile::id) file_id;
-    EnumVal<Type> type;
+    EnumVal<Visibility> visibility;
     old_sql_fields::Varbinary<128> name;
     old_sql_fields::Varbinary<64> label;
     old_sql_fields::Blob<4096> simfile;

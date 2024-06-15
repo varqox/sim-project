@@ -17,7 +17,7 @@ list_users_above_id(web_worker::Context& ctx, decltype(sim::users::User::id) use
 http::Response
 list_users_with_type(web_worker::Context& ctx, decltype(sim::users::User::type) user_type);
 
-http::Response list_users_with_type_above_id(
+http::Response list_users_with_type_and_above_id(
     web_worker::Context& ctx,
     decltype(sim::users::User::type) user_type,
     decltype(sim::users::User::id) user_id

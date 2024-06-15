@@ -50,7 +50,7 @@ namespace {
 
 struct ProblemInfo {
     decltype(Problem::id) id{};
-    decltype(Problem::type) type{};
+    decltype(Problem::visibility) visibility{};
     decltype(Problem::name) name;
     decltype(Problem::label) label;
     optional<decltype(Problem::owner_id)::value_type> owner_id;
@@ -74,10 +74,10 @@ struct ProblemInfo {
         const std::vector<decltype(ProblemTag::name)>& public_tags,
         const std::vector<decltype(ProblemTag::name)>& hidden_tags
     ) {
-        const auto caps = capabilities::problem(session, type, owner_id);
+        const auto caps = capabilities::problem(session, visibility, owner_id);
         throw_assert(caps.view);
         obj.prop("id", id);
-        obj.prop("type", type);
+        obj.prop("visibility", visibility);
         obj.prop("name", name);
         obj.prop("label", label);
         if (caps.view_owner) {
@@ -149,8 +149,8 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
 
     ProblemInfo p;
     auto stmt = ctx.mysql.execute(
-        Select("p.id, p.type, p.name, p.label, p.owner_id, u.username, u.first_name, u.last_name, "
-               "p.created_at, p.updated_at, s.full_status")
+        Select("p.id, p.visibility, p.name, p.label, p.owner_id, u.username, u.first_name, "
+               "u.last_name, p.created_at, p.updated_at, s.full_status")
             .from("problems p")
             .left_join("users u")
             .on("u.id=p.owner_id")
@@ -166,7 +166,7 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
     );
     stmt.res_bind(
         p.id,
-        p.type,
+        p.visibility,
         p.name,
         p.label,
         p.owner_id,
@@ -223,45 +223,48 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
     return ctx.response_json(std::move(obj).into_str());
 }
 
-constexpr bool
-is_query_allowed(ProblemsListCapabilities caps, optional<decltype(Problem::type)> problem_type) {
-    if (not problem_type) {
+constexpr bool is_query_allowed(
+    ProblemsListCapabilities caps, optional<decltype(Problem::visibility)> problem_visibility
+) {
+    if (not problem_visibility) {
         return caps.query_all;
     }
     // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
-    switch (*problem_type) {
-    case Problem::Type::PUBLIC: return caps.query_with_type_public;
-    case Problem::Type::CONTEST_ONLY: return caps.query_with_type_contest_only;
-    case Problem::Type::PRIVATE: return caps.query_with_type_private;
+    switch (*problem_visibility) {
+    case Problem::Visibility::PUBLIC: return caps.query_with_type_public;
+    case Problem::Visibility::CONTEST_ONLY: return caps.query_with_type_contest_only;
+    case Problem::Visibility::PRIVATE: return caps.query_with_type_private;
     }
-    THROW("unexpected problem type");
+    THROW("unexpected problem visibility");
 }
 
-Condition<>
-caps_to_condition(ProblemsListCapabilities caps, optional<decltype(Problem::type)> problem_type) {
+Condition<> caps_to_condition(
+    ProblemsListCapabilities caps, optional<decltype(Problem::visibility)> problem_visibility
+) {
     optional<Condition<>> res;
-    if (caps.view_all_with_type_public and (!problem_type or problem_type == Problem::Type::PUBLIC))
-    {
-        res = std::move(res) ||
-            optional{
-                Condition(concat_tostr("p.type=", enum_to_underlying_type(Problem::Type::PUBLIC)))
-            };
-    }
-    if (caps.view_all_with_type_contest_only and
-        (!problem_type or problem_type == Problem::Type::CONTEST_ONLY))
+    if (caps.view_all_with_type_public and
+        (!problem_visibility or problem_visibility == Problem::Visibility::PUBLIC))
     {
         res = std::move(res) ||
             optional{Condition(
-                concat_tostr("p.type=", enum_to_underlying_type(Problem::Type::CONTEST_ONLY))
+                concat_tostr("p.visibility=", enum_to_underlying_type(Problem::Visibility::PUBLIC))
             )};
     }
-    if (caps.view_all_with_type_private and
-        (!problem_type or problem_type == Problem::Type::PRIVATE))
+    if (caps.view_all_with_type_contest_only and
+        (!problem_visibility or problem_visibility == Problem::Visibility::CONTEST_ONLY))
     {
         res = std::move(res) ||
-            optional{
-                Condition(concat_tostr("p.type=", enum_to_underlying_type(Problem::Type::PRIVATE)))
-            };
+            optional{Condition(concat_tostr(
+                "p.visibility=", enum_to_underlying_type(Problem::Visibility::CONTEST_ONLY)
+            ))};
+    }
+    if (caps.view_all_with_type_private and
+        (!problem_visibility or problem_visibility == Problem::Visibility::PRIVATE))
+    {
+        res = std::move(res) ||
+            optional{Condition(
+                concat_tostr("p.visibility=", enum_to_underlying_type(Problem::Visibility::PRIVATE))
+            )};
     }
     return std::move(res).value_or(Condition("FALSE"));
 }
@@ -270,13 +273,13 @@ template <class... Params>
 Response do_list_problems(
     Context& ctx,
     uint32_t limit,
-    optional<decltype(Problem::type)> problem_type,
+    optional<decltype(Problem::visibility)> problem_visibility,
     Condition<Params...>&& where_cond
 ) {
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::list_problems(ctx.session);
-    if (not is_query_allowed(caps, problem_type)) {
+    if (not is_query_allowed(caps, problem_visibility)) {
         return ctx.response_403();
     }
 
@@ -286,12 +289,14 @@ Response do_list_problems(
             ctx,
             limit,
             std::move(where_cond) &&
-                (caps_to_condition(caps, problem_type) ||
+                (caps_to_condition(caps, problem_visibility) ||
                  (Condition("p.owner_id=?", ctx.session->user_id) &&
-                  caps_to_condition(user_caps, problem_type)))
+                  caps_to_condition(user_caps, problem_visibility)))
         );
     }
-    return do_list(ctx, limit, std::move(where_cond) && caps_to_condition(caps, problem_type));
+    return do_list(
+        ctx, limit, std::move(where_cond) && caps_to_condition(caps, problem_visibility)
+    );
 }
 
 template <class... Params>
@@ -299,13 +304,13 @@ Response do_list_user_problems(
     Context& ctx,
     uint32_t limit,
     decltype(User::id) user_id,
-    optional<decltype(Problem::type)> problem_type,
+    optional<decltype(Problem::visibility)> problem_visibility,
     Condition<Params...>&& where_cond
 ) {
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::list_user_problems(ctx.session, user_id);
-    if (not is_query_allowed(caps, problem_type)) {
+    if (not is_query_allowed(caps, problem_visibility)) {
         return ctx.response_403();
     }
 
@@ -313,26 +318,27 @@ Response do_list_user_problems(
         ctx,
         limit,
         std::move(where_cond) && Condition("p.owner_id=?", user_id) &&
-            caps_to_condition(caps, problem_type)
+            caps_to_condition(caps, problem_visibility)
     );
 }
 
 optional<capabilities::ProblemCapabilities>
 get_problem_caps(Context& ctx, decltype(Problem::id) problem_id) {
     auto stmt =
-        ctx.mysql.execute(Select("type, owner_id").from("problems").where("id=?", problem_id));
-    decltype(Problem::type) type;
+        ctx.mysql.execute(Select("visibility, owner_id").from("problems").where("id=?", problem_id)
+        );
+    decltype(Problem::visibility) visibility;
     decltype(Problem::owner_id) owner_id;
-    stmt.res_bind(type, owner_id);
+    stmt.res_bind(visibility, owner_id);
     if (stmt.next()) {
-        return capabilities::problem(ctx.session, type, owner_id);
+        return capabilities::problem(ctx.session, visibility, owner_id);
     }
     return std::nullopt;
 }
 
 namespace params {
 
-constexpr ApiParam visibility{&Problem::type, "visibility", "Visibility"};
+constexpr ApiParam visibility{&Problem::visibility, "visibility", "Visibility"};
 constexpr ApiParam<bool> ignore_simfile{"ignore_simfile", "Ignore simfile"};
 constexpr ApiParam<web_server::http::SubmittedFile> package{"package", "Zipped package"};
 constexpr ApiParam name{&Problem::name, "name", "Name"};
@@ -484,16 +490,19 @@ Response list_problems_below_id(Context& ctx, decltype(Problem::id) problem_id) 
     return do_list_problems(ctx, NEXT_QUERY_LIMIT, std::nullopt, Condition("p.id<?", problem_id));
 }
 
-Response list_problems_with_type(Context& ctx, decltype(Problem::type) problem_type) {
+Response
+list_problems_with_visibility(Context& ctx, decltype(Problem::visibility) problem_visibility) {
     STACK_UNWINDING_MARK;
-    return do_list_problems(ctx, FIRST_QUERY_LIMIT, problem_type, Condition("TRUE"));
+    return do_list_problems(ctx, FIRST_QUERY_LIMIT, problem_visibility, Condition("TRUE"));
 }
 
-Response list_problems_with_type_below_id(
-    Context& ctx, decltype(Problem::type) problem_type, decltype(Problem::id) problem_id
+Response list_problems_with_visibility_and_below_id(
+    Context& ctx, decltype(Problem::visibility) problem_visibility, decltype(Problem::id) problem_id
 ) {
     STACK_UNWINDING_MARK;
-    return do_list_problems(ctx, NEXT_QUERY_LIMIT, problem_type, Condition("p.id<?", problem_id));
+    return do_list_problems(
+        ctx, NEXT_QUERY_LIMIT, problem_visibility, Condition("p.id<?", problem_id)
+    );
 }
 
 Response list_user_problems(Context& ctx, decltype(User::id) user_id) {
@@ -510,22 +519,24 @@ Response list_user_problems_below_id(
     );
 }
 
-Response list_user_problems_with_type(
-    Context& ctx, decltype(User::id) user_id, decltype(Problem::type) problem_type
+Response list_user_problems_with_visibility(
+    Context& ctx, decltype(User::id) user_id, decltype(Problem::visibility) problem_visibility
 ) {
     STACK_UNWINDING_MARK;
-    return do_list_user_problems(ctx, FIRST_QUERY_LIMIT, user_id, problem_type, Condition("TRUE"));
+    return do_list_user_problems(
+        ctx, FIRST_QUERY_LIMIT, user_id, problem_visibility, Condition("TRUE")
+    );
 }
 
-Response list_user_problems_with_type_below_id(
+Response list_user_problems_with_visibility_and_below_id(
     Context& ctx,
     decltype(User::id) user_id,
-    decltype(Problem::type) problem_type,
+    decltype(Problem::visibility) problem_visibility,
     decltype(Problem::id) problem_id
 ) {
     STACK_UNWINDING_MARK;
     return do_list_user_problems(
-        ctx, NEXT_QUERY_LIMIT, user_id, problem_type, Condition("p.id<?", problem_id)
+        ctx, NEXT_QUERY_LIMIT, user_id, problem_visibility, Condition("p.id<?", problem_id)
     );
 }
 
@@ -535,14 +546,15 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
     ProblemInfo p;
     p.id = problem_id;
     {
-        auto stmt =
-            ctx.mysql.execute(Select("type, owner_id").from("problems").where("id=?", problem_id));
-        stmt.res_bind(p.type, p.owner_id);
+        auto stmt = ctx.mysql.execute(
+            Select("visibility, owner_id").from("problems").where("id=?", problem_id)
+        );
+        stmt.res_bind(p.visibility, p.owner_id);
         if (not stmt.next()) {
             return ctx.response_404();
         }
     }
-    auto caps = capabilities::problem(ctx.session, p.type, p.owner_id);
+    auto caps = capabilities::problem(ctx.session, p.visibility, p.owner_id);
     if (not caps.view) {
         return ctx.response_403();
     }

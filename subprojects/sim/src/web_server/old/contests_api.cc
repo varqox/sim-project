@@ -1278,13 +1278,13 @@ void Sim::api_contest_problem_add(
     auto transaction = mysql.start_repeatable_read_transaction();
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
-    auto stmt = old_mysql.prepare("SELECT owner_id, type, name FROM problems WHERE id=?");
+    auto stmt = old_mysql.prepare("SELECT owner_id, visibility, name FROM problems WHERE id=?");
     stmt.bind_and_execute(problem_id);
 
     old_mysql::Optional<decltype(OldProblem::owner_id)::value_type> problem_owner_id;
-    decltype(OldProblem::type) problem_type;
+    decltype(OldProblem::visibility) problem_visibility;
     decltype(OldProblem::name) problem_name;
-    stmt.res_bind_all(problem_owner_id, problem_type, problem_name);
+    stmt.res_bind_all(problem_owner_id, problem_visibility, problem_name);
     if (not stmt.next()) {
         return api_error404(from_unsafe{concat("No problem was found with ID = ", problem_id)});
     }
@@ -1293,7 +1293,7 @@ void Sim::api_contest_problem_add(
         (session.has_value() ? optional{session->user_id} : std::nullopt),
         (session.has_value() ? optional{session->user_type} : std::nullopt),
         problem_owner_id,
-        problem_type
+        problem_visibility
     );
     if (uint(~problem_perms & sim::problems::Permissions::VIEW)) {
         return api_error403("You have no permissions to use this problem");

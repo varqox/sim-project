@@ -11,7 +11,7 @@ namespace sim::add_problem_jobs {
 struct AddProblemJob {
     decltype(jobs::Job::id) id;
     decltype(internal_files::InternalFile::id) file_id;
-    decltype(problems::Problem::type) visibility;
+    decltype(problems::Problem::visibility) visibility;
     bool force_time_limits_reset;
     bool ignore_simfile;
     decltype(problems::Problem::name) name;

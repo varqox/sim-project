@@ -119,7 +119,7 @@ function url_api_problem(problem_id) { return `/api/problem/${problem_id}`; }
 function url_api_problem_reupload(problem_id) { return `/api/problem/${problem_id}/reupload`; }
 function url_api_problems() { return '/api/problems'; }
 function url_api_problems_add() { return '/api/problems/add'; }
-function url_api_problems_with_type(problem_type) { return `/api/problems/type=/${problem_type}`; }
+function url_api_problems_with_type(problem_visibility) { return `/api/problems/visibility=/${problem_visibility}`; }
 function url_api_sign_in() { return '/api/sign_in'; }
 function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
@@ -130,7 +130,7 @@ function url_api_user_delete(user_id) { return `/api/user/${user_id}/delete`; }
 function url_api_user_edit(user_id) { return `/api/user/${user_id}/edit`; }
 function url_api_user_merge_into_another(user_id) { return `/api/user/${user_id}/merge_into_another`; }
 function url_api_user_problems(user_id) { return `/api/user/${user_id}/problems`; }
-function url_api_user_problems_with_type(user_id, problem_type) { return `/api/user/${user_id}/problems/type=/${problem_type}`; }
+function url_api_user_problems_with_type(user_id, problem_visibility) { return `/api/user/${user_id}/problems/visibility=/${problem_visibility}`; }
 function url_api_users() { return '/api/users'; }
 function url_api_users_add() { return '/api/users/add'; }
 function url_api_users_with_type(user_type) { return `/api/users/type=/${user_type}`; }
@@ -1909,7 +1909,7 @@ function ProblemsLister(elem, query_url, list_capabilties, {
 
 		const thead = document.createElement('thead');
 		thead.appendChild(elem_with_text('th', 'Id'));
-		thead.appendChild(elem_with_class_and_text('th', 'type', 'Type'));
+		thead.appendChild(elem_with_class_and_text('th', 'visibility', 'Visibility'));
 		thead.appendChild(elem_with_class_and_text('th', 'label', 'Label'));
 		thead.appendChild(elem_with_class_and_text('th', 'name_and_tags', 'Name and tags'));
 		if (show_owner_column) {
@@ -1932,7 +1932,7 @@ function ProblemsLister(elem, query_url, list_capabilties, {
 		for (const problem of list) {
 			const row = document.createElement('tr');
 			row.appendChild(elem_with_text('td', problem.id));
-			row.appendChild(elem_with_text('td', snake_case_to_user_string(problem.type)));
+			row.appendChild(elem_with_text('td', snake_case_to_user_string(problem.visibility)));
 			row.appendChild(elem_with_text('td', problem.label));
 
 			const tags_elem = elem_with_class('div', 'tags');
@@ -4956,9 +4956,9 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 			html: $('<div>', {
 				class: 'problem-info',
 				html: $('<div>', {
-					class: 'type',
-					html: $('<label>', {text: 'Type'}).add('<span>', {
-						text: problem.type[0].toLowerCase() + problem.type.slice(1)
+					class: 'visibility',
+					html: $('<label>', {text: 'Visibility'}).add('<span>', {
+						text: problem.visibility[0].toLowerCase() + problem.visibility.slice(1)
 					})
 				})
 				.add($('<div>', {

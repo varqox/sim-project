@@ -45,7 +45,7 @@ class ProblemsMerger : public Merger<sim::problems::OldProblem> {
         old_mysql::Optional<decltype(prob.owner_id)::value_type> m_owner_id;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
-            "SELECT id, file_id, type, name, label, "
+            "SELECT id, file_id, visibility, name, label, "
             "simfile, owner_id, created_at, updated_at FROM ",
             record_set.sql_table_name
         );
@@ -53,7 +53,7 @@ class ProblemsMerger : public Merger<sim::problems::OldProblem> {
         stmt.res_bind_all(
             prob.id,
             prob.file_id,
-            prob.type,
+            prob.visibility,
             prob.name,
             prob.label,
             prob.simfile,
@@ -146,7 +146,7 @@ public:
         auto stmt = old_mysql.prepare(
             "INSERT INTO ",
             sql_table_name(),
-            "(id, file_id, type, name, label, simfile,"
+            "(id, file_id, visibility, name, label, simfile,"
             " owner_id, created_at, updated_at) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
@@ -158,7 +158,7 @@ public:
             stmt.bind_and_execute(
                 x.id,
                 x.file_id,
-                x.type,
+                x.visibility,
                 x.name,
                 x.label,
                 x.simfile,
