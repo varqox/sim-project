@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <exception>
-#include <sim/merging/merge_ids.h>
+#include <sim/merging/merge_ids.hh>
 #include <sim/sql/fields/datetime.hh>
 #include <utility>
 #include <vector>
