@@ -39,7 +39,7 @@ void FileModificationMonitor::init_watching() {
     });
 
     process_unwatched_files(false);
-    // If same files couldn't be added, we will try to add them repeatedly
+    // If some files couldn't be added, we will try to add them repeatedly
     schedule_processing_unwatched_files();
 }
 

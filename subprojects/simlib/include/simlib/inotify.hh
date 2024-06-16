@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <cstdlib>
 #include <linux/limits.h>
 #include <map>
 #include <memory>
@@ -13,7 +12,6 @@
 #include <simlib/logger.hh>
 #include <simlib/string_view.hh>
 #include <sys/inotify.h>
-#include <type_traits>
 
 class WatchingLog {
 public:
@@ -108,8 +106,10 @@ public:
         assert(inserted and "Path added more than once");
         try {
             unwatched_files_.emplace(&*it);
+            schedule_processing_unwatched_files(); // Needed in case the event loop is now running.
         } catch (...) {
             added_files_.erase(it);
+            throw;
         }
     }
 
@@ -135,10 +135,10 @@ public:
     }
 
     /**
-     * @brief Watches files and directories specified via add_path() and calls
-     *   set event handler for every creation / modification (excluding rename
-     *   and deletion) event on watched files or files directly inside
-     *   watched directories
+     * @brief Watches files and directories specified via add_path() and calls set event handler
+     *   for every creation / modification (excluding rename and deletion) event on watched files or
+     *   files directly inside watched directories.
+     *   This function starts watching the added files before running the event queue.
      *
      * @errors will be thrown as std::runtime_exception with an appropriate
      *   message.
