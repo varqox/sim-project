@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cstdint>
 #include <exception>
 #include <simlib/errmsg.hh>
 #include <simlib/event_queue.hh>
