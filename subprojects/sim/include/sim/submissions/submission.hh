@@ -61,12 +61,12 @@ struct Submission {
     Language language;
     bool final_candidate;
     bool problem_final;
-    bool contest_final;
-    bool contest_initial_final;
+    bool contest_problem_final;
+    bool contest_problem_initial_final;
     Status initial_status;
     Status full_status;
     std::optional<int64_t> score;
-    sql::fields::Datetime last_judgment;
+    std::optional<sql::fields::Datetime> last_judgment_began_at;
     sql::fields::Blob initial_report;
     sql::fields::Blob final_report;
 

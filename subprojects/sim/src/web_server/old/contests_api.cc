@@ -14,7 +14,7 @@
 #include <sim/contests/old_contest.hh>
 #include <sim/contests/permissions.hh>
 #include <sim/inf_datetime.hh>
-#include <sim/jobs/utils.hh>
+#include <sim/job_server/notify.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/submissions/old_submission.hh>
 #include <simlib/from_unsafe.hh>
@@ -953,7 +953,7 @@ void Sim::api_contest_delete(StringView contest_id, sim::contests::Permissions p
         contest_id
     );
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
     append(stmt.insert_id());
 }
 
@@ -1235,7 +1235,7 @@ void Sim::api_contest_round_delete(
         contest_round_id
     );
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
 
     append(stmt.insert_id());
 }
@@ -1348,7 +1348,7 @@ void Sim::api_contest_problem_rejudge_all_submissions(
             contest_problem_id
         );
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
 }
 
 void Sim::api_contest_problem_edit(
@@ -1422,7 +1422,7 @@ void Sim::api_contest_problem_edit(
         );
 
     transaction.commit();
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
 }
 
 void Sim::api_contest_problem_delete(
@@ -1453,7 +1453,7 @@ void Sim::api_contest_problem_delete(
         contest_problem_id
     );
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
     append(stmt.insert_id());
 }
 
@@ -1511,7 +1511,7 @@ void Sim::api_contest_ranking(
         "SELECT u.id, u.first_name, u.last_name FROM submissions s JOIN "
         "users u ON s.user_id=u.id WHERE s.",
         submissions_query_id_name,
-        "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id"
+        "=? AND s.contest_problem_final=1 GROUP BY (u.id) ORDER BY u.id"
     );
     stmt.bind_and_execute(query_id);
 
@@ -1547,11 +1547,11 @@ void Sim::api_contest_ranking(
            "FROM submissions sf "
            "JOIN submissions si ON si.user_id=sf.user_id"
            " AND si.contest_problem_id=sf.contest_problem_id"
-           " AND si.contest_initial_final=1 "
+           " AND si.contest_problem_initial_final=1 "
            "JOIN contest_rounds cr ON cr.id=sf.contest_round_id ",
               std::forward<decltype(extra_cr_sql)>(extra_cr_sql), " "
            "JOIN contest_problems cp ON cp.id=sf.contest_problem_id "
-           "WHERE sf.", submissions_query_id_name, "=? AND sf.contest_final=1 "
+           "WHERE sf.", submissions_query_id_name, "=? AND sf.contest_problem_final=1 "
            "ORDER BY sf.user_id");
         // clang-format on
         stmt.bind_and_execute(

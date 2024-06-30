@@ -1,65 +1,74 @@
+#include "common.hh"
 #include "delete_contest.hh"
 
-#include <sim/jobs/old_job.hh>
-#include <sim/old_mysql/old_mysql.hh>
+#include <sim/contests/contest.hh>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/sql/sql.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/time.hh>
 
-using sim::jobs::OldJob;
+using sim::contests::Contest;
+using sim::jobs::Job;
+using sim::sql::DeleteFrom;
+using sim::sql::InsertInto;
+using sim::sql::Select;
 
 namespace job_server::job_handlers {
 
-void DeleteContest::run(sim::mysql::Connection& mysql) {
+void delete_contest(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(Job::id) job_id,
+    decltype(Contest::id) contest_id
+) {
     STACK_UNWINDING_MARK;
-
     auto transaction = mysql.start_repeatable_read_transaction();
 
     // Log some info about the deleted contest
     {
-        auto old_mysql = old_mysql::ConnectionView{mysql};
-        auto stmt = old_mysql.prepare("SELECT name FROM contests WHERE id=?");
-        stmt.bind_and_execute(contest_id_);
-        InplaceBuff<32> cname;
-        stmt.res_bind_all(cname);
-        if (not stmt.next()) {
-            return set_failure("Contest with id: ", contest_id_, " does not exist");
+        auto stmt = mysql.execute(Select("name").from("contests").where("id=?", contest_id));
+        decltype(Contest::name) contest_name;
+        stmt.res_bind(contest_name);
+        if (!stmt.next()) {
+            logger("The contest with id: ", contest_id, " does not exist");
+            mark_job_as_cancelled(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
 
-        job_log("Contest: ", cname, " (", contest_id_, ")");
+        logger("Contest: ", contest_name, " (id: ", contest_id, ")");
     }
 
-    auto old_mysql = old_mysql::ConnectionView{mysql};
+    auto current_datetime = utc_mysql_datetime();
     // Add jobs to delete submission files
-    old_mysql
-        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id)"
-                 " SELECT NULL, ?, ?, ?, ?, file_id"
-                 " FROM submissions WHERE contest_id=?")
-        .bind_and_execute(
-            EnumVal(OldJob::Type::DELETE_FILE),
-            default_priority(OldJob::Type::DELETE_FILE),
-            EnumVal(OldJob::Status::PENDING),
-            utc_mysql_datetime(),
-            contest_id_
-        );
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
+                      .select(
+                          "?, NULL, ?, ?, ?, file_id",
+                          current_datetime,
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
+                          Job::Status::PENDING
+                      )
+                      .from("submissions")
+                      .where("contest_id=?", contest_id));
 
     // Add jobs to delete contest files
-    old_mysql
-        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id)"
-                 " SELECT NULL, ?, ?, ?, ?, file_id"
-                 " FROM contest_files WHERE contest_id=?")
-        .bind_and_execute(
-            EnumVal(OldJob::Type::DELETE_FILE),
-            default_priority(OldJob::Type::DELETE_FILE),
-            EnumVal(OldJob::Status::PENDING),
-            utc_mysql_datetime(),
-            contest_id_
-        );
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
+                      .select(
+                          "?, NULL, ?, ?, ?, file_id",
+                          current_datetime,
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
+                          Job::Status::PENDING
+                      )
+                      .from("contest_files")
+                      .where("contest_id=?", contest_id));
 
-    // Delete contest (all necessary actions will take place thanks to foreign
-    // key constrains)
-    old_mysql.prepare("DELETE FROM contests WHERE id=?").bind_and_execute(contest_id_);
+    // Delete contest (all necessary actions will take place thanks to foreign key constraints)
+    mysql.execute(DeleteFrom("contests").where("id=?", contest_id));
 
-    job_done(mysql);
-
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
 }
 

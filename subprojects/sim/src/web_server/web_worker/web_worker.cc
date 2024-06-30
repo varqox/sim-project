@@ -11,7 +11,7 @@
 #include "web_worker.hh"
 
 #include <optional>
-#include <sim/jobs/utils.hh>
+#include <sim/job_server/notify.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/old_mysql/old_mysql.hh>
 #include <simlib/string_view.hh>
@@ -143,7 +143,7 @@ Response WebWorker::handler_impl(ResponseMaker&& response_maker) {
         file_remover.cancel();
     }
     if (ctx.notify_job_server_after_commit) {
-        sim::jobs::notify_job_server();
+        sim::job_server::notify_job_server();
     }
     return response;
 }

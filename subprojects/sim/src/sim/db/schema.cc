@@ -257,17 +257,18 @@ const DbSchema& get_schema() {
                         "  `contest_id` bigint(20) unsigned DEFAULT NULL,"
                         "  `type` tinyint(3) unsigned NOT NULL,"
                         "  `language` tinyint(3) unsigned NOT NULL,"
+                        "  `initial_final_candidate` tinyint(1) NOT NULL DEFAULT 0,"
                         "  `final_candidate` tinyint(1) NOT NULL DEFAULT 0,"
                         "  `problem_final` tinyint(1) NOT NULL DEFAULT 0,"
-                        "  `contest_final` tinyint(1) NOT NULL DEFAULT 0,"
-                        // Used to color problems in the problem view
-                        "  `contest_initial_final` tinyint(1) NOT NULL DEFAULT 0,"
+                        "  `contest_problem_final` tinyint(1) NOT NULL DEFAULT 0,"
+                        // Used to color problems in the contest problem view
+                        "  `contest_problem_initial_final` tinyint(1) NOT NULL DEFAULT 0,"
                         "  `initial_status` tinyint(3) unsigned NOT NULL,"
                         "  `full_status` tinyint(3) unsigned NOT NULL,"
                         "  `score` bigint(20) DEFAULT NULL,"
-                        "  `last_judgment` datetime NOT NULL," // TODO: NULL
-                        "  `initial_report` mediumblob NOT NULL," // TODO: NULL
-                        "  `final_report` mediumblob NOT NULL," // TODO: NULL
+                        "  `last_judgment_began_at` datetime DEFAULT NULL,"
+                        "  `initial_report` mediumblob NOT NULL,"
+                        "  `final_report` mediumblob NOT NULL,"
                         "  PRIMARY KEY (`id`),"
                         // Submissions API: with user_id
                         "  KEY `user_id` (`user_id`,`id`),"
@@ -276,16 +277,16 @@ const DbSchema& get_schema() {
                         "  KEY `user_id_4` (`user_id`,`contest_problem_id`,`id`),"
                         "  KEY `user_id_5` (`user_id`,`contest_round_id`,`id`),"
                         "  KEY `user_id_6` (`user_id`,`contest_id`,`id`),"
-                        "  KEY `user_id_7` (`user_id`,`contest_final`,`id`),"
+                        "  KEY `user_id_7` (`user_id`,`contest_problem_final`,`id`),"
                         "  KEY `user_id_8` (`user_id`,`problem_final`,`id`),"
                         "  KEY `user_id_9` (`user_id`,`problem_id`,`type`,`id`),"
                         "  KEY `user_id_10` (`user_id`,`problem_id`,`problem_final`),"
                         "  KEY `user_id_11` (`user_id`,`contest_problem_id`,`type`,`id`),"
-                        "  KEY `user_id_12` (`user_id`,`contest_problem_id`,`contest_final`),"
+                        "  KEY `user_id_12` (`user_id`,`contest_problem_id`,`contest_problem_final`),"
                         "  KEY `user_id_13` (`user_id`,`contest_round_id`,`type`,`id`),"
-                        "  KEY `user_id_14` (`user_id`,`contest_round_id`,`contest_final`,`id`),"
+                        "  KEY `user_id_14` (`user_id`,`contest_round_id`,`contest_problem_final`,`id`),"
                         "  KEY `user_id_15` (`user_id`,`contest_id`,`type`,`id`),"
-                        "  KEY `user_id_16` (`user_id`,`contest_id`,`contest_final`,`id`),"
+                        "  KEY `user_id_16` (`user_id`,`contest_id`,`contest_problem_final`,`id`),"
                         // Submissions API: without user_id
                         "  KEY `type` (`type`,`id`),"
                         "  KEY `problem_id` (`problem_id`,`id`),"
@@ -296,18 +297,18 @@ const DbSchema& get_schema() {
                         "  KEY `contest_problem_id_2` (`contest_problem_id`,`type`,`id`),"
                         "  KEY `contest_round_id_2` (`contest_round_id`,`type`,`id`),"
                         "  KEY `contest_id_2` (`contest_id`,`type`,`id`),"
-                        // Needed to efficiently select final submission
-                        "  KEY `final1` (`final_candidate`,`user_id`,`contest_problem_id`,`id`),"
-                        "  KEY `final2` (`final_candidate`,`user_id`,`contest_problem_id`,`score`,`full_status`,`id`),"
-                        "  KEY `final3` (`final_candidate`,`user_id`,`problem_id`,`score`,`full_status`,`id`),"
+                        // Needed to efficiently select problem final submission
+                        "  KEY `for_problem_final` (`final_candidate`,`user_id`,`problem_id`,`score` DESC,`full_status`,`id` DESC),"
+                        // Needed to efficiently select contest problem final submission
+                        "  KEY `for_contest_problem_final_latest` (`final_candidate`,`user_id`,`contest_problem_id`,`id` DESC),"
+                        "  KEY `for_contest_problem_final_by_score` (`final_candidate`,`user_id`,`contest_problem_id`,`score` DESC,`full_status`,`id` DESC),"
+                        // Needed to efficiently select contest problem initial final submission
+                        "  KEY `for_contest_initial_problem_final_latest` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`id` DESC),"
+                        "  KEY `for_contest_initial_problem_final_by_initial_status` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`initial_status`,`id` DESC),"
+                        "  KEY `for_contest_initial_problem_final_by_score_and_initial_status` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`score` DESC,`initial_status`,`id` DESC),"
+                        "  KEY `for_contest_initial_problem_final_by_score_and_full_status` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`score` DESC,`full_status`,`id` DESC),"
                         // Needed to efficiently query contest view coloring
-                        "  KEY `initial_final` (`user_id`,`contest_problem_id`,`contest_initial_final`),"
-                        // Needed to efficiently update contest view coloring
-                        //   final = last compiling: final1
-                        //   no revealing and final = best submission:
-                        "  KEY `initial_final2` (`final_candidate`,`user_id`,`contest_problem_id`,`initial_status`,`id`),"
-                        //   revealing score and final = best submission:
-                        "  KEY `initial_final3` (`final_candidate`,`user_id`,`contest_problem_id`,`score`,`initial_status`,`id`),"
+                        "  KEY `initial_final` (`user_id`,`contest_problem_id`,`contest_problem_initial_final`),"
                         // For foreign keys
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE,"
@@ -361,7 +362,7 @@ const DbSchema& get_schema() {
                         "  `fixed_time_limit_in_ns` bigint(20) unsigned DEFAULT NULL,"
                         "  `reset_scoring` tinyint(1) NOT NULL,"
                         "  `look_for_new_tests` tinyint(1) NOT NULL,"
-                        "  `added_problem_id` bigint(20) unsigned DEFAULT NULL,"
+                        "  `added_problem_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove
                         "  PRIMARY KEY (`id`),"
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `add_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
@@ -375,7 +376,7 @@ const DbSchema& get_schema() {
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `reupload_problem_jobs` ("
                         "  `id` bigint(20) unsigned NOT NULL,"
-                        "  `problem_id` bigint(20) unsigned NOT NULL,"
+                        "  `problem_id` bigint(20) unsigned NOT NULL," // TODO: remove
                         "  `file_id` bigint(20) unsigned NOT NULL,"
                         "  `force_time_limits_reset` tinyint(1) NOT NULL,"
                         "  `ignore_simfile` tinyint(1) NOT NULL,"

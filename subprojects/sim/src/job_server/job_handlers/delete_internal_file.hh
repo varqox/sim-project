@@ -1,14 +1,18 @@
 #pragma once
 
-#include "job_handler.hh"
+#include "common.hh"
+
+#include <sim/internal_files/internal_file.hh>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
 
 namespace job_server::job_handlers {
 
-class DeleteInternalFile final : public JobHandler {
-public:
-    explicit DeleteInternalFile(uint64_t job_id) : JobHandler(job_id) {}
-
-    void run(sim::mysql::Connection& mysql) final;
-};
+void delete_internal_file(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(sim::jobs::Job::id) job_id,
+    decltype(sim::internal_files::InternalFile::id) internal_file_id
+);
 
 } // namespace job_server::job_handlers

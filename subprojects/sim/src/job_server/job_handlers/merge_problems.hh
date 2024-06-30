@@ -1,17 +1,19 @@
 #pragma once
 
-#include "job_handler.hh"
+#include "common.hh"
+
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/problems/problem.hh>
 
 namespace job_server::job_handlers {
 
-class MergeProblems final : public JobHandler {
-public:
-    explicit MergeProblems(uint64_t job_id) : JobHandler(job_id) {}
-
-    void run(sim::mysql::Connection& mysql) final;
-
-private:
-    void run_impl(sim::mysql::Connection& mysql);
-};
+void merge_problems(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(sim::jobs::Job::id) job_id,
+    decltype(sim::problems::Problem::id) donor_problem_id,
+    decltype(sim::problems::Problem::id) target_problem_id
+);
 
 } // namespace job_server::job_handlers

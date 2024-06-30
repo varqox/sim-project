@@ -69,7 +69,7 @@ int main2(int argc, char** argv) {
     };
 
     // Remove temporary internal files that were not removed (e.g. a problem
-    // adding job was canceled between the first and second stage while it was
+    // adding job was cancelled between the first and second stage while it was
     // pending)
     {
         using std::chrono::system_clock;

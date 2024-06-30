@@ -65,7 +65,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(
         case JT::DELETE_CONTEST_ROUND:
         case JT::DELETE_CONTEST_PROBLEM:
         case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-        case JT::DELETE_FILE: return PERM::NONE;
+        case JT::DELETE_INTERNAL_FILE: return PERM::NONE;
         }
 
         return PERM::NONE; // Shouldn't happen
@@ -74,13 +74,12 @@ Sim::JobPermissions Sim::jobs_get_permissions(
     if (session->user_type == User::Type::ADMIN) {
         switch (job_status) {
         case JS::PENDING:
-        case JS::NOTICED_PENDING:
         case JS::IN_PROGRESS:
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
                 PERM::CANCEL;
 
         case JS::FAILED:
-        case JS::CANCELED:
+        case JS::CANCELLED:
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
                 PERM::RESTART;
 
@@ -92,7 +91,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(
     if (creator_id.has_value() and
         session->user_id == str2num<decltype(session->user_id)>(creator_id.value()))
     {
-        if (is_one_of(job_status, JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS)) {
+        if (is_one_of(job_status, JS::PENDING, JS::IN_PROGRESS)) {
             return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
         }
 

@@ -582,6 +582,12 @@ public:
 template <class... Params>
 Condition(std::string&&, Params&&...) -> Condition<Params&&...>;
 
+std::optional<Condition<>>
+operator&&(std::optional<Condition<>>&& cond1, std::optional<Condition<>>&& cond2);
+
+std::optional<Condition<>>
+operator||(std::optional<Condition<>>&& cond1, std::optional<Condition<>>&& cond2);
+
 class Update {
     std::string sql;
 
@@ -1428,10 +1434,8 @@ operator||(Condition<Params1...>&& cond1, Condition<Params2...>&& cond2) {
     };
 }
 
-template <class... Params1, class... Params2>
-std::optional<Condition<Params1..., Params2...>> operator&&(
-    std::optional<Condition<Params1...>>&& cond1, std::optional<Condition<Params2...>>&& cond2
-) {
+inline std::optional<Condition<>>
+operator&&(std::optional<Condition<>>&& cond1, std::optional<Condition<>>&& cond2) {
     if (!cond1) {
         return std::move(cond2);
     }
@@ -1441,10 +1445,8 @@ std::optional<Condition<Params1..., Params2...>> operator&&(
     return std::optional{std::move(*cond1) && std::move(*cond2)};
 }
 
-template <class... Params1, class... Params2>
-std::optional<Condition<Params1..., Params2...>> operator||(
-    std::optional<Condition<Params1...>>&& cond1, std::optional<Condition<Params2...>>&& cond2
-) {
+inline std::optional<Condition<>>
+operator||(std::optional<Condition<>>&& cond1, std::optional<Condition<>>&& cond2) {
     if (!cond1) {
         return std::move(cond2);
     }

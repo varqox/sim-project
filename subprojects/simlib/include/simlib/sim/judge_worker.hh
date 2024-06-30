@@ -316,9 +316,11 @@ public:
                 " RT: ",
                 ::to_string(judge_test_report.checker->runtime, false),
                 " ] ",
-                judge_test_report.checker->peak_memory_in_bytes >> 10
+                judge_test_report.checker->peak_memory_in_bytes >> 10,
+                " / ",
+                checker_mem_limit >> 10,
+                " KiB"
             );
-            tmplog(" / ", checker_mem_limit >> 10, " KiB");
         }
     }
 

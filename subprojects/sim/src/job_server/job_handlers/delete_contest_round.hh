@@ -1,18 +1,18 @@
 #pragma once
 
-#include "job_handler.hh"
+#include "common.hh"
+
+#include <sim/contest_rounds/contest_round.hh>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
 
 namespace job_server::job_handlers {
 
-class DeleteContestRound final : public JobHandler {
-    uint64_t contest_round_id_;
-
-public:
-    DeleteContestRound(uint64_t job_id, uint64_t contest_round_id)
-    : JobHandler(job_id)
-    , contest_round_id_(contest_round_id) {}
-
-    void run(sim::mysql::Connection& mysql) final;
-};
+void delete_contest_round(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(sim::jobs::Job::id) job_id,
+    decltype(sim::contest_rounds::ContestRound::id) contest_round_id
+);
 
 } // namespace job_server::job_handlers

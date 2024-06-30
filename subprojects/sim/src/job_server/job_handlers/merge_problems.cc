@@ -1,7 +1,9 @@
+#include "common.hh"
 #include "merge_problems.hh"
 
 #include <sim/jobs/job.hh>
 #include <sim/merge_problems_jobs/merge_problems_job.hh>
+#include <sim/mysql/mysql.hh>
 #include <sim/problems/problem.hh>
 #include <sim/sql/sql.hh>
 #include <sim/submissions/submission.hh>
@@ -20,22 +22,23 @@ using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
-void MergeProblems::run(sim::mysql::Connection& mysql) {
+void merge_problems(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(Job::id) job_id,
+    decltype(Problem::id) donor_problem_id,
+    decltype(Problem::id) target_problem_id
+) {
     STACK_UNWINDING_MARK;
 
     auto transaction = mysql.start_repeatable_read_transaction();
 
-    decltype(Job::aux_id)::value_type donor_problem_id;
-    decltype(Job::aux_id_2)::value_type target_problem_id;
     decltype(MergeProblemsJob::rejudge_transferred_submissions) rejudge_transferred_submissions;
     {
-        auto stmt =
-            mysql.execute(Select("j.aux_id, j.aux_id_2, mpj.rejudge_transferred_submissions")
-                              .from("jobs j")
-                              .inner_join("merge_problems_jobs mpj")
-                              .on("mpj.id=j.id")
-                              .where("j.id=?", job_id_));
-        stmt.res_bind(donor_problem_id, target_problem_id, rejudge_transferred_submissions);
+        auto stmt = mysql.execute(Select("rejudge_transferred_submissions")
+                                      .from("merge_problems_jobs")
+                                      .where("id=?", job_id));
+        stmt.res_bind(rejudge_transferred_submissions);
         throw_assert(stmt.next());
     }
 
@@ -45,18 +48,24 @@ void MergeProblems::run(sim::mysql::Connection& mysql) {
             mysql.execute(Select("simfile").from("problems").where("id=?", donor_problem_id));
         decltype(Problem::simfile) donor_problem_simfile;
         stmt.res_bind(donor_problem_simfile);
-        if (not stmt.next()) {
-            return set_failure("Problem to delete does not exist");
+        if (!stmt.next()) {
+            logger("Problem to delete does not exist");
+            mark_job_as_failed(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
 
-        job_log("Merged problem (donor) Simfile:\n", donor_problem_simfile);
+        logger("Simfile of the merged problem (donor):\n", donor_problem_simfile);
     }
     {
         auto stmt = mysql.execute(Select("1").from("problems").where("id=?", target_problem_id));
         int x;
         stmt.res_bind(x);
-        if (not stmt.next()) {
-            return set_failure("Target problem does not exist");
+        if (!stmt.next()) {
+            logger("Target problem does not exist");
+            mark_job_as_failed(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
     }
 
@@ -71,8 +80,8 @@ void MergeProblems::run(sim::mysql::Connection& mysql) {
     mysql.execute(InsertInto("jobs(creator, type, priority, status, created_at, aux_id)")
                       .select(
                           "NULL, ?, ?, ?, ?, file_id",
-                          Job::Type::DELETE_FILE,
-                          default_priority(Job::Type::DELETE_FILE),
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
                           Job::Status::PENDING,
                           current_utc_datetime
                       )
@@ -84,8 +93,8 @@ void MergeProblems::run(sim::mysql::Connection& mysql) {
         InsertInto("jobs(creator, type, priority, status, created_at, aux_id)")
             .select(
                 "NULL, ?, ?, ?, ?, file_id",
-                Job::Type::DELETE_FILE,
-                default_priority(Job::Type::DELETE_FILE),
+                Job::Type::DELETE_INTERNAL_FILE,
+                default_priority(Job::Type::DELETE_INTERNAL_FILE),
                 Job::Status::PENDING,
                 current_utc_datetime
             )
@@ -139,9 +148,8 @@ void MergeProblems::run(sim::mysql::Connection& mysql) {
 
     // Update finals (both contest and problem finals are being taken care of)
     for (const auto& ftu : finals_to_update) {
-        sim::submissions::update_final_lock(mysql, ftu.user_id, target_problem_id);
         sim::submissions::update_final(
-            mysql, ftu.user_id, target_problem_id, ftu.contest_problem_id, false
+            mysql, ftu.user_id, target_problem_id, ftu.contest_problem_id
         );
     }
 
@@ -155,7 +163,7 @@ void MergeProblems::run(sim::mysql::Connection& mysql) {
     // deleted automatically thanks to foreign key constraints)
     mysql.execute(DeleteFrom("problems").where("id=?", donor_problem_id));
 
-    job_done(mysql);
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
 }
 

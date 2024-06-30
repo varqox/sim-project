@@ -1,7 +1,7 @@
 #include "sim.hh"
 
 #include <sim/contest_files/old_contest_file.hh>
-#include <sim/jobs/utils.hh>
+#include <sim/job_server/notify.hh>
 #include <sim/random.hh>
 #include <simlib/call_in_destructor.hh>
 #include <simlib/file_info.hh>
@@ -457,8 +457,8 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
                      "SELECT NULL, ?, ?, ?, ?, file_id "
                      "FROM contest_files WHERE id=?")
             .bind_and_execute(
-                EnumVal(OldJob::Type::DELETE_FILE),
-                default_priority(OldJob::Type::DELETE_FILE),
+                EnumVal(OldJob::Type::DELETE_INTERNAL_FILE),
+                default_priority(OldJob::Type::DELETE_INTERNAL_FILE),
                 EnumVal(OldJob::Status::PENDING),
                 utc_mysql_datetime(),
                 contest_file_id
@@ -486,7 +486,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     transaction.commit();
     internal_file_remover.cancel();
     if (reuploading_file) {
-        sim::jobs::notify_job_server();
+        sim::job_server::notify_job_server();
     }
 }
 
@@ -504,8 +504,8 @@ void Sim::api_contest_file_delete(
                  "SELECT NULL, ?, ?, ?, ?, file_id "
                  "FROM contest_files WHERE id=?")
         .bind_and_execute(
-            EnumVal(OldJob::Type::DELETE_FILE),
-            default_priority(OldJob::Type::DELETE_FILE),
+            EnumVal(OldJob::Type::DELETE_INTERNAL_FILE),
+            default_priority(OldJob::Type::DELETE_INTERNAL_FILE),
             EnumVal(OldJob::Status::PENDING),
             utc_mysql_datetime(),
             contest_file_id
@@ -514,7 +514,7 @@ void Sim::api_contest_file_delete(
     old_mysql.prepare("DELETE FROM contest_files WHERE id=?").bind_and_execute(contest_file_id);
 
     transaction.commit();
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
 }
 
 } // namespace web_server::old

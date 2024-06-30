@@ -31,18 +31,17 @@ struct OldJob {
          "reset_problem_time_limits_using_model_solution")
         (MERGE_PROBLEMS, 14, "merge_problems")
         (REJUDGE_SUBMISSION, 15, "rejudge_submission")
-        (DELETE_FILE, 16, "delete_file")
+        (DELETE_INTERNAL_FILE, 16, "delete_file")
         (CHANGE_PROBLEM_STATEMENT, 17, "change_problem_statement")
         (MERGE_USERS, 18, "merge_users")
     );
 
     ENUM_WITH_STRING_CONVERSIONS(Status, uint8_t,
         (PENDING, 1, "pending")
-        (NOTICED_PENDING, 2, "noticed_pending")
         (IN_PROGRESS, 3, "in_progress")
         (DONE, 4, "done")
         (FAILED, 5, "failed")
-        (CANCELED, 6, "canceled")
+        (CANCELLED, 6, "cancelled")
     );
 
     uint64_t id;
@@ -63,7 +62,7 @@ constexpr uint64_t job_log_view_max_size = 128 << 10; // 128 KiB
 // The greater, the more important
 constexpr decltype(OldJob::priority) default_priority(OldJob::Type type) {
     switch (type) {
-    case OldJob::Type::DELETE_FILE: return 40;
+    case OldJob::Type::DELETE_INTERNAL_FILE: return 40;
     case OldJob::Type::DELETE_PROBLEM:
     case OldJob::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
     case OldJob::Type::DELETE_USER:
@@ -101,67 +100,20 @@ constexpr const char* to_string(OldJob::Type x) {
         return "RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION";
     case JT::MERGE_PROBLEMS: return "MERGE_PROBLEMS";
     case JT::REJUDGE_SUBMISSION: return "REJUDGE_SUBMISSION";
-    case JT::DELETE_FILE: return "DELETE_FILE";
+    case JT::DELETE_INTERNAL_FILE: return "DELETE_INTERNAL_FILE";
     case JT::CHANGE_PROBLEM_STATEMENT: return "CHANGE_PROBLEM_STATEMENT";
     case JT::MERGE_USERS: return "MERGE_USERS";
     }
     return "Unknown";
 }
 
-constexpr bool is_problem_management_job(OldJob::Type x) {
-    using JT = OldJob::Type;
-    switch (x) {
-    case JT::ADD_PROBLEM:
-    case JT::REUPLOAD_PROBLEM:
-    case JT::EDIT_PROBLEM:
-    case JT::DELETE_PROBLEM:
-    case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-    case JT::MERGE_PROBLEMS:
-    case JT::CHANGE_PROBLEM_STATEMENT: return true;
-    case JT::JUDGE_SUBMISSION:
-    case JT::REJUDGE_SUBMISSION:
-    case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
-    case JT::DELETE_USER:
-    case JT::DELETE_CONTEST:
-    case JT::DELETE_CONTEST_ROUND:
-    case JT::DELETE_CONTEST_PROBLEM:
-    case JT::DELETE_FILE:
-    case JT::MERGE_USERS: return false;
-    }
-    return false;
-}
-
-constexpr bool is_submission_job(OldJob::Type x) {
-    using JT = OldJob::Type;
-    switch (x) {
-    case JT::JUDGE_SUBMISSION:
-    case JT::REJUDGE_SUBMISSION: return true;
-    case JT::ADD_PROBLEM:
-    case JT::REUPLOAD_PROBLEM:
-    case JT::EDIT_PROBLEM:
-    case JT::DELETE_PROBLEM:
-    case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
-    case JT::DELETE_USER:
-    case JT::DELETE_CONTEST:
-    case JT::DELETE_CONTEST_ROUND:
-    case JT::DELETE_CONTEST_PROBLEM:
-    case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-    case JT::MERGE_PROBLEMS:
-    case JT::DELETE_FILE:
-    case JT::CHANGE_PROBLEM_STATEMENT:
-    case JT::MERGE_USERS: return false;
-    }
-    return false;
-}
-
 constexpr const char* to_string(OldJob::Status x) {
     switch (x) {
     case OldJob::Status::PENDING:
-    case OldJob::Status::NOTICED_PENDING: return "Pending";
     case OldJob::Status::IN_PROGRESS: return "In progress";
     case OldJob::Status::DONE: return "Done";
     case OldJob::Status::FAILED: return "Failed";
-    case OldJob::Status::CANCELED: return "Canceled";
+    case OldJob::Status::CANCELLED: return "Cancelled";
     }
     return "Unknown";
 }

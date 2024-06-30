@@ -18,7 +18,9 @@ using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
-void ReuploadProblem::run(sim::mysql::Connection& mysql) {
+void reupload_problem(
+    sim::mysql::Connection& mysql, Logger& logger, decltype(sim::jobs::Job::id) job_id
+) {
     STACK_UNWINDING_MARK;
 
     auto transaction = mysql.start_repeatable_read_transaction();
@@ -29,7 +31,7 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
         Select("file_id, problem_id, force_time_limits_reset, ignore_simfile, name, label, "
                "memory_limit_in_mib, fixed_time_limit_in_ns, reset_scoring, look_for_new_tests")
             .from("reupload_problem_jobs")
-            .where("id=?", job_id_)
+            .where("id=?", job_id)
     );
     stmt.res_bind(
         reupload_problem_job.file_id,
@@ -47,7 +49,7 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
 
     auto input_package_path = sim::internal_files::path_of(reupload_problem_job.file_id);
     auto simfile = add_or_reupload_problem::construct_simfile(
-        job_log_holder_,
+        logger,
         {
             .package_path = input_package_path,
             .name = reupload_problem_job.name,
@@ -61,24 +63,28 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
         }
     );
     if (!simfile) {
-        return set_failure();
+        mark_job_as_failed(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
 
-    auto curr_datetime = utc_mysql_datetime();
+    auto current_datetime = utc_mysql_datetime();
     auto create_package_res = add_or_reupload_problem::create_package_with_simfile(
-        job_log_holder_, mysql, input_package_path, *simfile, curr_datetime
+        mysql, logger, input_package_path, *simfile, current_datetime
     );
     if (!create_package_res) {
-        return set_failure();
+        mark_job_as_failed(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
 
     // Schedule job to delete the old problem file
     mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                       .select(
                           "?, NULL, ?, ?, ?, file_id",
-                          curr_datetime,
-                          Job::Type::DELETE_FILE,
-                          default_priority(Job::Type::DELETE_FILE),
+                          current_datetime,
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
                           Job::Status::PENDING
                       )
                       .from("problems")
@@ -91,7 +97,7 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
                           simfile->name.value(),
                           simfile->label.value(),
                           simfile->dump(),
-                          curr_datetime
+                          current_datetime
                       )
                       .where("id=?", reupload_problem_job.problem_id));
 
@@ -99,9 +105,9 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
     mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                       .select(
                           "?, NULL, ?, ?, ?, file_id",
-                          curr_datetime,
-                          Job::Type::DELETE_FILE,
-                          default_priority(Job::Type::DELETE_FILE),
+                          current_datetime,
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
                           Job::Status::PENDING
                       )
                       .from("submissions")
@@ -120,20 +126,19 @@ void ReuploadProblem::run(sim::mysql::Connection& mysql) {
 
     // Submit new solutions
     auto solution_file_removers = add_or_reupload_problem::submit_solutions(
-        job_log_holder_,
         mysql,
+        logger,
         *simfile,
         create_package_res->new_package_zip,
         create_package_res->new_package_main_dir,
         reupload_problem_job.problem_id,
-        curr_datetime
+        current_datetime
     );
 
     // Commit changes to the new package zip
     create_package_res->new_package_zip.close();
 
-    job_done(mysql);
-
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
     create_package_res->new_package_file_remover.cancel();
     for (auto& file_remover : solution_file_removers) {

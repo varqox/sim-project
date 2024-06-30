@@ -26,18 +26,17 @@ struct Job {
             "reset_problem_time_limits_using_model_solution")
         (MERGE_PROBLEMS, 14, "merge_problems")
         (REJUDGE_SUBMISSION, 15, "rejudge_submission")
-        (DELETE_FILE, 16, "delete_file")
+        (DELETE_INTERNAL_FILE, 16, "delete_internal_file")
         (CHANGE_PROBLEM_STATEMENT, 17, "change_problem_statement")
         (MERGE_USERS, 18, "merge_users")
     );
 
     ENUM_WITH_STRING_CONVERSIONS(Status, uint8_t,
         (PENDING, 1, "pending")
-        (NOTICED_PENDING, 2, "noticed_pending")
         (IN_PROGRESS, 3, "in_progress")
         (DONE, 4, "done")
         (FAILED, 5, "failed")
-        (CANCELED, 6, "canceled")
+        (CANCELLED, 6, "cancelled")
     );
 
     uint64_t id;
@@ -55,7 +54,7 @@ struct Job {
 constexpr decltype(Job::priority) default_priority(Job::Type type) {
     // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
     switch (type) {
-    case Job::Type::DELETE_FILE: return 40;
+    case Job::Type::DELETE_INTERNAL_FILE: return 40;
     case Job::Type::DELETE_PROBLEM:
     case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
     case Job::Type::DELETE_USER:
@@ -71,52 +70,6 @@ constexpr decltype(Job::priority) default_priority(Job::Type type) {
     case Job::Type::REUPLOAD_PROBLEM: return 10;
     case Job::Type::JUDGE_SUBMISSION: return 5;
     case Job::Type::REJUDGE_SUBMISSION: return 4;
-    }
-    THROW("Invalid job type");
-}
-
-constexpr bool is_problem_management_job(Job::Type type) {
-    // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
-    switch (type) {
-    case Job::Type::ADD_PROBLEM:
-    case Job::Type::REUPLOAD_PROBLEM:
-    case Job::Type::EDIT_PROBLEM:
-    case Job::Type::DELETE_PROBLEM:
-    case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-    case Job::Type::MERGE_PROBLEMS:
-    case Job::Type::CHANGE_PROBLEM_STATEMENT: return true;
-    case Job::Type::JUDGE_SUBMISSION:
-    case Job::Type::REJUDGE_SUBMISSION:
-    case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
-    case Job::Type::DELETE_USER:
-    case Job::Type::DELETE_CONTEST:
-    case Job::Type::DELETE_CONTEST_ROUND:
-    case Job::Type::DELETE_CONTEST_PROBLEM:
-    case Job::Type::DELETE_FILE:
-    case Job::Type::MERGE_USERS: return false;
-    }
-    THROW("Invalid job type");
-}
-
-constexpr bool is_submission_job(Job::Type type) {
-    // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
-    switch (type) {
-    case Job::Type::JUDGE_SUBMISSION:
-    case Job::Type::REJUDGE_SUBMISSION: return true;
-    case Job::Type::ADD_PROBLEM:
-    case Job::Type::REUPLOAD_PROBLEM:
-    case Job::Type::EDIT_PROBLEM:
-    case Job::Type::DELETE_PROBLEM:
-    case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
-    case Job::Type::DELETE_USER:
-    case Job::Type::DELETE_CONTEST:
-    case Job::Type::DELETE_CONTEST_ROUND:
-    case Job::Type::DELETE_CONTEST_PROBLEM:
-    case Job::Type::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-    case Job::Type::MERGE_PROBLEMS:
-    case Job::Type::DELETE_FILE:
-    case Job::Type::CHANGE_PROBLEM_STATEMENT:
-    case Job::Type::MERGE_USERS: return false;
     }
     THROW("Invalid job type");
 }

@@ -3853,7 +3853,7 @@ function view_job(as_oldmodal, job_id, opt_hash /*= ''*/) {
 }
 function cancel_job(job_id) {
 	oldmodal_request('Canceling job ' + job_id, $('<form>'),
-		'/api/job/' + job_id + '/cancel', 'The job has been canceled.');
+		'/api/job/' + job_id + '/cancel', 'The job has been cancelled.');
 }
 function restart_job(job_id) {
 	dialogue_oldmodal_request('Restart job', $('<label>', {

@@ -1,5 +1,6 @@
 #include "add_or_reupload_problem/add_or_reupload_problem.hh"
 #include "add_problem.hh"
+#include "common.hh"
 
 #include <sim/add_problem_jobs/add_problem_job.hh>
 #include <sim/internal_files/internal_file.hh>
@@ -8,6 +9,7 @@
 #include <sim/sql/sql.hh>
 #include <simlib/file_remover.hh>
 #include <simlib/libzip.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/time.hh>
 
 using sim::add_problem_jobs::AddProblemJob;
@@ -17,9 +19,8 @@ using sim::sql::Select;
 
 namespace job_server::job_handlers {
 
-void AddProblem::run(sim::mysql::Connection& mysql) {
+void add_problem(sim::mysql::Connection& mysql, Logger& logger, decltype(Job::id) job_id) {
     STACK_UNWINDING_MARK;
-
     auto transaction = mysql.start_repeatable_read_transaction();
 
     AddProblemJob add_problem_job;
@@ -31,7 +32,7 @@ void AddProblem::run(sim::mysql::Connection& mysql) {
             .from("add_problem_jobs apj")
             .inner_join("jobs j")
             .on("j.id=apj.id")
-            .where("apj.id=?", job_id_)
+            .where("apj.id=?", job_id)
     );
     stmt.res_bind(
         add_problem_job.file_id,
@@ -50,7 +51,7 @@ void AddProblem::run(sim::mysql::Connection& mysql) {
 
     auto input_package_path = sim::internal_files::path_of(add_problem_job.file_id);
     auto simfile = add_or_reupload_problem::construct_simfile(
-        job_log_holder_,
+        logger,
         {
             .package_path = input_package_path,
             .name = add_problem_job.name,
@@ -64,15 +65,19 @@ void AddProblem::run(sim::mysql::Connection& mysql) {
         }
     );
     if (!simfile) {
-        return set_failure();
+        mark_job_as_failed(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
 
-    auto curr_datetime = utc_mysql_datetime();
+    auto current_datetime = utc_mysql_datetime();
     auto create_package_res = add_or_reupload_problem::create_package_with_simfile(
-        job_log_holder_, mysql, input_package_path, *simfile, curr_datetime
+        mysql, logger, input_package_path, *simfile, current_datetime
     );
     if (!create_package_res) {
-        return set_failure();
+        mark_job_as_failed(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
 
     // Add problem to database
@@ -82,37 +87,36 @@ void AddProblem::run(sim::mysql::Connection& mysql) {
                                 "simfile, owner_id, updated_at)")
                          .values(
                              "?, ?, ?, ?, ?, ?, ?, ?",
-                             curr_datetime,
+                             current_datetime,
                              create_package_res->new_package_file_id,
                              add_problem_job.visibility,
                              simfile->name.value(),
                              simfile->label.value(),
                              simfile->dump(),
                              job_creator,
-                             curr_datetime
+                             current_datetime
                          ))
             .insert_id();
 
     auto solution_file_removers = add_or_reupload_problem::submit_solutions(
-        job_log_holder_,
         mysql,
+        logger,
         *simfile,
         create_package_res->new_package_zip,
         create_package_res->new_package_main_dir,
         problem_id,
-        curr_datetime
+        current_datetime
     );
 
     // Commit changes to the new package zip
     create_package_res->new_package_zip.close();
 
-    mysql.execute(sim::sql::Update("jobs").set("aux_id=?", problem_id).where("id=?", job_id_));
+    mysql.execute(sim::sql::Update("jobs").set("aux_id=?", problem_id).where("id=?", job_id));
     mysql.execute(sim::sql::Update("add_problem_jobs")
                       .set("added_problem_id=?", problem_id)
-                      .where("id=?", job_id_));
+                      .where("id=?", job_id));
 
-    job_done(mysql);
-
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
     create_package_res->new_package_file_remover.cancel();
     for (auto& file_remover : solution_file_removers) {

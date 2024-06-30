@@ -1,12 +1,16 @@
 #include "change_problem_statement.hh"
+#include "common.hh"
 
 #include <sim/change_problem_statement_jobs/change_problem_statement_job.hh>
 #include <sim/internal_files/internal_file.hh>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
 #include <sim/problems/problem.hh>
 #include <sim/sql/sql.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/file_remover.hh>
 #include <simlib/libzip.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/macros/wont_throw.hh>
 #include <simlib/path.hh>
 #include <simlib/sim/problem_package.hh>
@@ -23,22 +27,22 @@ using sim::sql::Update;
 
 namespace job_server::job_handlers {
 
-void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
+void change_problem_statement(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(Job::id) job_id,
+    decltype(Problem::id) problem_id
+) {
     STACK_UNWINDING_MARK;
 
     auto transaction = mysql.start_repeatable_read_transaction();
-    decltype(Job::aux_id)::value_type problem_id;
     decltype(ChangeProblemStatementJob::new_statement_file_id) new_statement_file_id;
     decltype(ChangeProblemStatementJob::path_for_new_statement) path_for_new_statement;
     {
-        auto stmt =
-            mysql.execute(Select("j.aux_id, cpsj.new_statement_file_id, cpsj.path_for_new_statement"
-            )
-                              .from("jobs j")
-                              .inner_join("change_problem_statement_jobs cpsj")
-                              .on("cpsj.id=j.id")
-                              .where("j.id=?", job_id_));
-        stmt.res_bind(problem_id, new_statement_file_id, path_for_new_statement);
+        auto stmt = mysql.execute(Select("new_statement_file_id, path_for_new_statement")
+                                      .from("change_problem_statement_jobs")
+                                      .where("id=?", job_id));
+        stmt.res_bind(new_statement_file_id, path_for_new_statement);
         throw_assert(stmt.next());
     }
 
@@ -51,7 +55,10 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
             mysql.execute(Select("file_id, simfile").from("problems").where("id=?", problem_id));
         stmt.res_bind(problem_file_id, simfile_as_str);
         if (!stmt.next()) {
-            return set_failure("Problem with ID = ", problem_id, " does not exist");
+            logger("The problem with id: ", problem_id, " does not exist");
+            mark_job_as_cancelled(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
 
         problem_package_path = sim::internal_files::path_of(problem_file_id);
@@ -77,7 +84,10 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
     auto new_statement_path = concat_tostr(main_dir, path_for_new_statement);
     auto simfile_path = concat_tostr(main_dir, "Simfile");
     if (new_statement_path == simfile_path) {
-        return set_failure("Invalid new statement path - it would overwrite Simfile");
+        logger("Invalid new statement path - it would overwrite Simfile");
+        mark_job_as_cancelled(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
     simfile.statement = path_for_new_statement;
 
@@ -104,13 +114,13 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
 
     // Add job to delete the old problem file
     const auto current_datetime = utc_mysql_datetime();
-    mysql.execute(InsertInto("jobs (creator, type, priority, status, created_at, aux_id)")
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                       .select(
-                          "NULL, ?, ?, ?, ?, file_id",
-                          Job::Type::DELETE_FILE,
-                          default_priority(Job::Type::DELETE_FILE),
-                          Job::Status::PENDING,
-                          current_datetime
+                          "?, NULL, ?, ?, ?, file_id",
+                          current_datetime,
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
+                          Job::Status::PENDING
                       )
                       .from("problems")
                       .where("id=?", problem_id));
@@ -125,7 +135,7 @@ void ChangeProblemStatement::run(sim::mysql::Connection& mysql) {
                       )
                       .where("id=?", problem_id));
 
-    job_done(mysql);
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
     new_problem_package_remover.cancel();
 }

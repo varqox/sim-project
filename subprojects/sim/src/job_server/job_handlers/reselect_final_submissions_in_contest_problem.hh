@@ -1,18 +1,18 @@
 #pragma once
 
-#include "job_handler.hh"
+#include "common.hh"
+
+#include <sim/contest_problems/contest_problem.hh>
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
 
 namespace job_server::job_handlers {
 
-class ReselectFinalSubmissionsInContestProblem final : public JobHandler {
-    uint64_t contest_problem_id_;
-
-public:
-    ReselectFinalSubmissionsInContestProblem(uint64_t job_id, uint64_t contest_problem_id)
-    : JobHandler(job_id)
-    , contest_problem_id_(contest_problem_id) {}
-
-    void run(sim::mysql::Connection& mysql) final;
-};
+void reselect_final_submissions_in_contest_problem(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(sim::jobs::Job::id) job_id,
+    decltype(sim::contest_problems::ContestProblem::id) contest_problem_id
+);
 
 } // namespace job_server::job_handlers

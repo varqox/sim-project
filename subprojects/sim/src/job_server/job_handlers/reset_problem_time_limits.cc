@@ -1,87 +1,140 @@
+#include "add_or_reupload_problem/add_or_reupload_problem.hh"
+#include "common.hh"
+#include "judge_logger.hh"
 #include "reset_problem_time_limits.hh"
 
-#include <sim/jobs/old_job.hh>
-#include <sim/old_mysql/old_mysql.hh>
-#include <simlib/file_remover.hh>
-#include <simlib/sim/problem_package.hh>
+#include <sim/internal_files/internal_file.hh>
+#include <sim/jobs/job.hh>
+#include <sim/judging_config.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/problems/problem.hh>
+#include <sim/sql/sql.hh>
+#include <simlib/macros/stack_unwinding.hh>
+#include <simlib/sim/conver.hh>
+#include <simlib/sim/judge_worker.hh>
+#include <simlib/time.hh>
 
-using sim::internal_files::old_path_of;
-using sim::jobs::OldJob;
+using sim::jobs::Job;
+using sim::problems::Problem;
+using sim::sql::InsertInto;
+using sim::sql::Select;
+using sim::sql::Update;
 
 namespace job_server::job_handlers {
 
-void ResetProblemTimeLimits::run(sim::mysql::Connection& mysql) {
+void reset_problem_time_limits(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(Job::id) job_id,
+    decltype(Problem::id) problem_id
+) {
     STACK_UNWINDING_MARK;
+    auto transaction = mysql.start_repeatable_read_transaction();
 
-    uint64_t problem_file_id = 0;
+    decltype(Problem::file_id) problem_file_id;
     {
-        auto old_mysql = old_mysql::ConnectionView{mysql};
-        auto stmt = old_mysql.prepare("SELECT file_id FROM problems WHERE id=?");
-        stmt.bind_and_execute(problem_id_);
-        stmt.res_bind_all(problem_file_id);
-        if (not stmt.next()) {
-            return set_failure("Problem with ID = ", problem_id_, " does not exist");
+        auto stmt = mysql.execute(Select("file_id").from("problems").where("id=?", problem_id));
+        stmt.res_bind(problem_file_id);
+        if (!stmt.next()) {
+            logger("The problem with id: ", problem_id, " does not exist");
+            mark_job_as_cancelled(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
     }
 
-    auto pkg_path = sim::internal_files::old_path_of(problem_file_id);
-    reset_package_time_limits(pkg_path);
-    if (failed()) {
+    auto input_package_path = sim::internal_files::path_of(problem_file_id);
+    sim::JudgeWorker judge_worker;
+    logger("Loading problem package...");
+    judge_worker.load_package(input_package_path, std::nullopt);
+    logger("... done.");
+
+    auto& simfile = judge_worker.simfile();
+    simfile.load_all(); // Everything is needed as we will dump it to a new Simfile file.
+    const auto& main_solution_path = simfile.solutions.at(0);
+    logger("Model solution: ", main_solution_path);
+
+    std::string compilation_errors;
+    logger("Compiling the model solution...");
+    if (judge_worker.compile_solution_from_package(
+            main_solution_path,
+            sim::filename_to_lang(main_solution_path),
+            sim::SOLUTION_COMPILATION_TIME_LIMIT,
+            sim::SOLUTION_COMPILATION_MEMORY_LIMIT,
+            &compilation_errors,
+            sim::COMPILATION_ERRORS_MAX_LENGTH
+        ))
+    {
+        logger("... failed:\n", compilation_errors);
+        mark_job_as_failed(mysql, logger, job_id);
+        transaction.commit();
         return;
     }
+    logger("... done.");
 
-    auto transaction = mysql.start_repeatable_read_transaction();
-    auto old_mysql = old_mysql::ConnectionView{mysql};
-
-    old_mysql.prepare("INSERT INTO internal_files (created_at) VALUES(?)")
-        .bind_and_execute(utc_mysql_datetime());
-    uint64_t new_file_id = old_mysql.insert_id();
-    auto new_pkg_path = sim::internal_files::old_path_of(new_file_id);
-
-    // Save Simfile to new package file
-
-    ZipFile src_zip(pkg_path, ZIP_RDONLY);
-    auto simfile_path = concat(sim::zip_package_main_dir(src_zip), "Simfile");
-
-    FileRemover new_pkg_remover(new_pkg_path.to_string());
-    ZipFile dest_zip(new_pkg_path, ZIP_CREATE | ZIP_TRUNCATE);
-
-    auto eno = src_zip.entries_no();
-    for (decltype(eno) i = 0; i < eno; ++i) {
-        auto entry_name = src_zip.get_name(i);
-        if (entry_name == simfile_path) {
-            dest_zip.file_add(simfile_path, dest_zip.source_buffer(new_simfile_));
-        } else {
-            dest_zip.file_add(entry_name, dest_zip.source_zip(src_zip, i));
-        }
+    compilation_errors = {};
+    logger("Compiling checker...");
+    if (judge_worker.compile_checker(
+            sim::CHECKER_COMPILATION_TIME_LIMIT,
+            sim::CHECKER_COMPILATION_MEMORY_LIMIT,
+            &compilation_errors,
+            sim::COMPILATION_ERRORS_MAX_LENGTH
+        ))
+    {
+        logger("... failed:\n", compilation_errors);
+        mark_job_as_failed(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
+    logger("... done.");
 
-    dest_zip.close(); // Write all data to the dest_zip
+    auto judge_logger = JudgeLogger{logger};
+    auto initial_judge_report = judge_worker.judge(false, judge_logger);
+    auto final_judge_report = judge_worker.judge(true, judge_logger);
 
-    const auto current_date = utc_mysql_datetime();
-    // Add job to delete old problem file
-    old_mysql
-        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id) "
-                 "SELECT NULL, ?, ?, ?, ?, file_id FROM problems "
-                 "WHERE id=?")
-        .bind_and_execute(
-            EnumVal(OldJob::Type::DELETE_FILE),
-            default_priority(OldJob::Type::DELETE_FILE),
-            EnumVal(OldJob::Status::PENDING),
-            current_date,
-            problem_id_
-        );
+    sim::Conver::ResetTimeLimitsOptions rtl_options;
+    rtl_options.min_time_limit = sim::MIN_TIME_LIMIT;
+    rtl_options.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
+    sim::Conver::reset_time_limits_using_jugde_reports(
+        simfile, initial_judge_report, final_judge_report, rtl_options
+    );
 
-    // Use new package as problem file
-    old_mysql
-        .prepare("UPDATE problems SET file_id=?, simfile=?, updated_at=? "
-                 "WHERE id=?")
-        .bind_and_execute(new_file_id, new_simfile_, current_date, problem_id_);
+    auto current_datetime = utc_mysql_datetime();
+    auto create_package_res = add_or_reupload_problem::create_package_with_simfile(
+        mysql, logger, input_package_path, simfile, current_datetime
+    );
+    if (!create_package_res) {
+        mark_job_as_failed(mysql, logger, job_id);
+        transaction.commit();
+        return;
+    }
+    create_package_res->new_package_zip.close();
 
-    job_done(mysql);
+    // Schedule job to delete the old problem file
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
+                      .select(
+                          "?, NULL, ?, ?, ?, file_id",
+                          current_datetime,
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
+                          Job::Status::PENDING
+                      )
+                      .from("problems")
+                      .where("id=?", problem_id));
 
+    // Update the problem
+    mysql.execute(Update("problems")
+                      .set(
+                          "file_id=?, simfile=?, updated_at=?",
+                          create_package_res->new_package_file_id,
+                          simfile.dump(),
+                          current_datetime
+                      )
+                      .where("id=?", problem_id));
+
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
-    new_pkg_remover.cancel();
+    create_package_res->new_package_file_remover.cancel();
 }
 
 } // namespace job_server::job_handlers
