@@ -34,8 +34,8 @@ struct InotifyTest {
     ~InotifyTest() { assert(checked); }
 
     void init() {
-        monitor.add_path(dir.path(), stillness_threhold);
-        monitor.add_path(file.path(), stillness_threhold);
+        monitor.add_path(dir.path(), false, stillness_threhold);
+        monitor.add_path(file.path(), false, stillness_threhold);
         monitor.set_event_handler([&](const string& path) {
             handle(path);
             if (no_more_events and fired_files.empty()) {

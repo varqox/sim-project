@@ -55,6 +55,7 @@ class FileModificationMonitor {
     struct FileInfo {
         std::string path;
         nanoseconds stillness_threshold;
+        bool notify_if_attribute_changes;
 
         friend bool operator<(const FileInfo& a, const FileInfo& b) noexcept {
             return a.path < b.path;
@@ -68,7 +69,8 @@ class FileModificationMonitor {
     bool processing_unwatched_files_is_scheduled_ = false;
 
     static constexpr auto events_requiring_handler = IN_MODIFY | // modification
-        IN_CREATE | IN_MOVED_TO; // file creation
+        IN_CREATE | IN_MOVED_TO | // file creation
+        IN_ATTRIB; // attribute change
 
     static constexpr auto all_events = events_requiring_handler | IN_MOVE_SELF | // deletion
         IN_EXCL_UNLINK; // do not monitor unlinked files
@@ -98,11 +100,19 @@ public:
      *   happening (it is useful, as saving file often takes several writes and
      *   you would want one event for that)
      */
-    void add_path(std::string path, nanoseconds stillness_threshold = nanoseconds(0)) {
+    void add_path(
+        std::string path,
+        bool notify_if_attribute_changes = false,
+        nanoseconds stillness_threshold = nanoseconds(0)
+    ) {
         STACK_UNWINDING_MARK;
 
         assert(stillness_threshold >= nanoseconds(0));
-        auto [it, inserted] = added_files_.insert({std::move(path), stillness_threshold});
+        auto [it, inserted] = added_files_.insert({
+            .path = std::move(path),
+            .stillness_threshold = stillness_threshold,
+            .notify_if_attribute_changes = notify_if_attribute_changes,
+        });
         assert(inserted and "Path added more than once");
         try {
             unwatched_files_.emplace(&*it);

@@ -1116,7 +1116,7 @@ static void watch_tex_files(const set<string>& tex_files) {
 
     FileModificationMonitor monitor;
     for (auto& path : tex_files) {
-        monitor.add_path(path, 10ms);
+        monitor.add_path(path, false, 10ms);
     }
 
     monitor.set_add_missing_files_retry_period(50ms);
