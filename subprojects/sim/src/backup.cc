@@ -152,7 +152,7 @@ int main2(int argc, char** argv) {
     run_command({"git", "config", "gc.auto", "500"});
 
     run_command({"git", "add", "--verbose", "dump.sql"});
-    run_command({"git", "add", "--verbose", "bin/", "manage"});
+    run_command({"git", "add", "--verbose", "bin/", "lib/", "manage"});
     run_command({"git", "add", "--verbose", "internal_files/"});
     run_command({"git", "add", "--verbose", "logs/"});
     run_command({"git", "add", "--verbose", "sim.conf", ".db.config"});
