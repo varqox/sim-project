@@ -112,7 +112,7 @@ constexpr bool is_sorted(const T& collection) {
 
     auto prev = b;
     while (++b != e) {
-        if (not std::less<>()(*prev, *b)) {
+        if (std::less<>()(*b, *prev)) {
             return false;
         }
 
