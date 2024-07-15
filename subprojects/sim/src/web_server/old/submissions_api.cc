@@ -810,7 +810,7 @@ void Sim::api_submission_add() {
         if (next_arg[0] == 'p' and is_digit(next_arg.substr(1)) and problem_id.empty()) {
             problem_id = next_arg.substr(1);
         } else if (has_prefix(next_arg, "cp") and is_digit(next_arg.substr(2)) and
-                not contest_problem_id.has_value())
+                   not contest_problem_id.has_value())
         {
             contest_problem_id = next_arg.substr(2);
         } else {

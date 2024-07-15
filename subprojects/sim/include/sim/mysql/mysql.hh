@@ -449,7 +449,8 @@ void Statement::bind_and_execute(Params&&... params) {
         } else if constexpr (std::is_convertible_v<const Param&, StringView>) {
             auto sv = StringView{static_cast<const Param&>(param)};
             return std::string_view{sv.data(), sv.size()};
-        } else if constexpr (std::is_same_v<decltype(param), const Param&> && std::is_trivially_copyable_v<Param>)
+        } else if constexpr (std::is_same_v<decltype(param), const Param&> &&
+                             std::is_trivially_copyable_v<Param>)
         {
             return Param{param};
         } else {

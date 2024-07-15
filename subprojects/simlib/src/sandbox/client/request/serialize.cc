@@ -284,12 +284,12 @@ SerializedReuest serialize(
         }
 
         writer.write(argv.size(), casted_as<request::argv_len_t>);
-        for (auto const& arg : argv) {
+        for (const auto& arg : argv) {
             serialize_as_null_terminated(writer, arg);
         }
 
         writer.write(options.env.size(), casted_as<request::env_len_t>);
-        for (auto const& str : options.env) {
+        for (const auto& str : options.env) {
             serialize_as_null_terminated(writer, str);
         }
 

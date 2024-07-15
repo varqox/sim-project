@@ -125,9 +125,7 @@ void EventQueue::remove_handler(handler_id_t handler_id) {
 
     std::visit(
         overloaded{
-            [&](TimedHandler& handler) {
-                timed_handlers_.erase({handler.time, handler_id});
-            },
+            [&](TimedHandler& handler) { timed_handlers_.erase({handler.time, handler_id}); },
             [&](FileHandler& handler) {
                 poll_events_[handler.poll_event_idx].fd =
                     -1; // Deactivate event. It will be removed

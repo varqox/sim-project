@@ -478,7 +478,8 @@ public:
             } else if constexpr (std::is_pointer_v<Type> and std::is_same_v<TypeNoRef, const char*>)
             {
                 return InplaceBuff<inplace_buff_size>(arg);
-            } else if constexpr (std::is_array_v<TypeNoRef> and std::is_same_v<ArrayType, const char>)
+            } else if constexpr (std::is_array_v<TypeNoRef> and
+                                 std::is_same_v<ArrayType, const char>)
             {
                 return InplaceBuff<inplace_buff_size>(arg);
             } else if constexpr (std::is_base_of_v<StringBase<const char>, TypeNoRefNoCV>) {

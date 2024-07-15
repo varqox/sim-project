@@ -104,7 +104,8 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
             { // Quiet mode
                 stdlog.open("/dev/null");
 
-            } else if (0 == strcmp(argv[i], "-r") or 0 == strcmp(argv[i], "--reset-new-problems-time-limits"))
+            } else if (0 == strcmp(argv[i], "-r") or
+                       0 == strcmp(argv[i], "--reset-new-problems-time-limits"))
             {
                 cmd_options.reset_new_problems_time_limits = true;
 

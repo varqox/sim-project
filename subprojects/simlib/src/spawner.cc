@@ -57,9 +57,7 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
     return std::visit(
         overloaded{
-            [](const WithoutTimeout& /*unused*/) {
-                return timespec{0, 0};
-            },
+            [](const WithoutTimeout& /*unused*/) { return timespec{0, 0}; },
             [&](WithTimeout& state) {
                 if (not state.timer_is_active) {
                     return timespec{0, 0};

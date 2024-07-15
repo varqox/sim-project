@@ -200,9 +200,7 @@ TEST(serialize, writer) {
         )
     );
     ASSERT_THAT(
-        [&] {
-            writer.write_flags({{true, 1}}, as<uint8_t>);
-        },
+        [&] { writer.write_flags({{true, 1}}, as<uint8_t>); },
         testing::ThrowsMessage<std::runtime_error>(
             testing::StartsWith("cannot write 1 bytes, have space only for 0 bytes")
         )
