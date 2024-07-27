@@ -7,7 +7,7 @@
 
 void FileModificationMonitor::init_watching() {
     intfy_fd_ = inotify_init1(IN_CLOEXEC);
-    if (not intfy_fd_.is_open()) {
+    if (!intfy_fd_.is_open()) {
         THROW("inotify_init1()", errmsg());
     }
 
@@ -39,7 +39,7 @@ void FileModificationMonitor::init_watching() {
     });
 
     process_unwatched_files(false);
-    // If same files couldn't be added, we will try to add them repeatedly
+    // If some files couldn't be added, we will try to add them repeatedly
     schedule_processing_unwatched_files();
 }
 
@@ -47,8 +47,8 @@ void FileModificationMonitor::process_event(const simlib_inotify_event& event) {
     const FileInfo* finfo = WONT_THROW(watched_files_.at(event.wd));
     if (event.mask & IN_IGNORED) {
         // File is no longer being watched
-        watched_files_.erase(event.wd);
         unwatched_files_.emplace(finfo);
+        watched_files_.erase(event.wd);
         schedule_processing_unwatched_files();
         return;
     }
@@ -59,11 +59,11 @@ void FileModificationMonitor::process_event(const simlib_inotify_event& event) {
             THROW("inotify_rm_watch()", errmsg());
         }
         // After removing watch IN_IGNORED event will be generated,
-        // so the file's watching state will become unwatched on that event
+        // so the file's watching state will become unwatched on that event.
         return;
     }
 
-    if (not(event.mask & events_requiring_handler)) {
+    if (!(event.mask & events_requiring_handler)) {
         THROW("read unknown event for ", finfo->path, ": mask = ", event.mask);
     }
 
@@ -85,19 +85,23 @@ void FileModificationMonitor::schedule_processing_unwatched_files() {
 
     eq_.add_repeating_handler(add_missing_files_retry_period_, [&] {
         process_unwatched_files(true);
-        if (not unwatched_files_.empty()) {
-            return continue_repeating;
+        if (unwatched_files_.empty()) {
+            processing_unwatched_files_is_scheduled_ = false;
+            return stop_repeating;
         }
 
-        processing_unwatched_files_is_scheduled_ = false;
-        return stop_repeating;
+        return continue_repeating;
     });
     processing_unwatched_files_is_scheduled_ = true;
 }
 
 void FileModificationMonitor::process_unwatched_files(bool run_modification_handler_on_success) {
     filter(unwatched_files_, [&](const FileInfo* finfo) {
-        int wd = inotify_add_watch(intfy_fd_, finfo->path.data(), all_events);
+        auto events = all_events & ~IN_ATTRIB;
+        if (finfo->notify_if_attribute_changes) {
+            events |= IN_ATTRIB;
+        }
+        int wd = inotify_add_watch(intfy_fd_, finfo->path.data(), events);
         if (wd == -1) {
             watching_log_->could_not_watch(finfo->path, errno);
             return true;

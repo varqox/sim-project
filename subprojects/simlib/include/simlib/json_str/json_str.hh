@@ -50,7 +50,8 @@ protected:
         using DT = std::decay_t<T>;
         if constexpr (std::is_same_v<DT, bool>) {
             append_raw_value(val ? "true" : "false");
-        } else if constexpr (std::is_same_v<DT, std::nullptr_t> or std::is_same_v<DT, std::nullopt_t>)
+        } else if constexpr (std::is_same_v<DT, std::nullptr_t> or
+                             std::is_same_v<DT, std::nullopt_t>)
         {
             append_raw_value("null");
         } else if constexpr (std::is_integral_v<DT>) {

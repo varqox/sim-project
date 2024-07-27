@@ -102,7 +102,7 @@ static void stop() {
 }
 
 static void restart(const CmdOptions& cmd_options) {
-    // First stop
+    // First, stop.
     stop();
 
     SimPaths paths;
@@ -156,7 +156,7 @@ static void restart(const CmdOptions& cmd_options) {
         {-1, FileDescriptor{paths.job_server, O_PATH | O_CLOEXEC}},
     }};
 
-    // Run sim upgrader
+    // Run the sim upgrader.
     {
         auto pid = fork();
         if (pid < 0) {

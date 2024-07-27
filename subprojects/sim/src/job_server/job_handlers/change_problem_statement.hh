@@ -1,14 +1,18 @@
 #pragma once
 
-#include "job_handler.hh"
+#include "common.hh"
+
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/problems/problem.hh>
 
 namespace job_server::job_handlers {
 
-class ChangeProblemStatement final : public JobHandler {
-public:
-    explicit ChangeProblemStatement(uint64_t job_id) : JobHandler(job_id) {}
-
-    void run(sim::mysql::Connection& mysql) final;
-};
+void change_problem_statement(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(sim::jobs::Job::id) job_id,
+    decltype(sim::problems::Problem::id) problem_id
+);
 
 } // namespace job_server::job_handlers

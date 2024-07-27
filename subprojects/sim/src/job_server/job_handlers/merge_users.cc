@@ -1,16 +1,17 @@
+#include "common.hh"
 #include "merge_users.hh"
 
-#include <cstdint>
-#include <deque>
-#include <sim/contest_users/old_contest_user.hh>
+#include <sim/contest_users/contest_user.hh>
 #include <sim/jobs/job.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/sql/sql.hh>
 #include <sim/submissions/submission.hh>
 #include <sim/submissions/update_final.hh>
 #include <sim/users/user.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/utilities.hh>
 
+using sim::contest_users::ContestUser;
 using sim::jobs::Job;
 using sim::sql::DeleteFrom;
 using sim::sql::InsertIgnoreInto;
@@ -20,18 +21,16 @@ using sim::users::User;
 
 namespace job_server::job_handlers {
 
-void MergeUsers::run(sim::mysql::Connection& mysql) {
+void merge_users(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(Job::id) job_id,
+    decltype(User::id) donor_user_id,
+    decltype(User::id) target_user_id
+) {
     STACK_UNWINDING_MARK;
-
     auto transaction = mysql.start_repeatable_read_transaction();
 
-    decltype(Job::aux_id)::value_type donor_user_id;
-    decltype(Job::aux_id_2)::value_type target_user_id;
-    {
-        auto stmt = mysql.execute(Select("aux_id, aux_id_2").from("jobs").where("id=?", job_id_));
-        stmt.res_bind(donor_user_id, target_user_id);
-        throw_assert(stmt.next());
-    }
     // Assure that both users exist
     decltype(User::type) donor_user_type;
     decltype(User::type) target_user_type;
@@ -41,36 +40,46 @@ void MergeUsers::run(sim::mysql::Connection& mysql) {
         decltype(User::username) donor_username;
         stmt.res_bind(donor_username, donor_user_type);
         if (!stmt.next()) {
-            return set_failure("User to delete does not exist");
+            logger("User to delete does not exist");
+            mark_job_as_cancelled(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
 
         // Logging
-        job_log("Merged user's username: ", donor_username);
-        job_log("Merged user's type: ", donor_user_type.to_str());
+        logger("Merged user's username: ", donor_username);
+        logger("Merged user's type: ", donor_user_type.to_str());
         auto target_user_stmt =
             mysql.execute(Select("type").from("users").where("id=?", target_user_id));
         target_user_stmt.res_bind(target_user_type);
         if (!target_user_stmt.next()) {
-            return set_failure("Target user does not exist");
+            logger("Target user does not exist");
+            mark_job_as_cancelled(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
     }
 
     // Transfer user type if gives more permissions
     {
-        using UT = User::Type;
-        (void)[](UT x) {
+        (void)[](User::Type x) {
+            // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
             switch (x) { // If compiler warns here, update the below static_assert
-            case UT::ADMIN:
-            case UT::TEACHER:
-            case UT::NORMAL:
-                (void)"switch is used only to make compiler warn if the UT "
-                      "gets updated";
+            case User::Type::ADMIN:
+            case User::Type::TEACHER:
+            case User::Type::NORMAL:
+                (void)"switch is used only to make compiler warn if the User::Type gets updated, "
+                      "so that you notice that the below static_assert needs updating";
             }
             // clang-format off
         };
         // clang-format on
         static_assert(
-            is_sorted(std::array{EnumVal(UT::ADMIN), EnumVal(UT::TEACHER), EnumVal(UT::NORMAL)}),
+            is_sorted(std::array{
+                EnumVal(User::Type::ADMIN),
+                EnumVal(User::Type::TEACHER),
+                EnumVal(User::Type::NORMAL),
+            }),
             "Needed by the below comparison between user types"
         );
         // Transfer donor's user-type to the target user if the donor has higher permissions
@@ -93,22 +102,24 @@ void MergeUsers::run(sim::mysql::Connection& mysql) {
 
     // Transfer contest_users
     {
-        using CUM = sim::contest_users::OldContestUser::Mode;
-        (void)[](CUM x) {
+        (void)[](ContestUser::Mode x) {
+            // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
             switch (x) { // If compiler warns here, update the below static_assert
-            case CUM::CONTESTANT:
-            case CUM::MODERATOR:
-            case CUM::OWNER:
-                (void)"switch is used only to make compiler warn if the CUM "
-                      "gets updated";
+            case ContestUser::Mode::CONTESTANT:
+            case ContestUser::Mode::MODERATOR:
+            case ContestUser::Mode::OWNER:
+                (void)"switch is used only to make compiler warn if the ContestUser::Mode gets "
+                      "updated, so that you notice that the below static_assert needs updating";
             }
             // clang-format off
         };
         // clang-format on
         static_assert(
-            is_sorted(
-                std::array{EnumVal(CUM::CONTESTANT), EnumVal(CUM::MODERATOR), EnumVal(CUM::OWNER)}
-            ),
+            is_sorted(std::array{
+                EnumVal(ContestUser::Mode::CONTESTANT),
+                EnumVal(ContestUser::Mode::MODERATOR),
+                EnumVal(ContestUser::Mode::OWNER)
+            }),
             "Needed by below SQL statement (comparison between modes)"
         );
         // Transfer donor's contest permissions to the target user if the donor has higher
@@ -160,9 +171,8 @@ void MergeUsers::run(sim::mysql::Connection& mysql) {
 
     // Update finals (both contest and problem finals are being taken care of)
     for (const auto& ftu : finals_to_update) {
-        sim::submissions::update_final_lock(mysql, target_user_id, ftu.problem_id);
         sim::submissions::update_final(
-            mysql, target_user_id, ftu.problem_id, ftu.contest_problem_id, false
+            mysql, target_user_id, ftu.problem_id, ftu.contest_problem_id
         );
     }
 
@@ -173,7 +183,7 @@ void MergeUsers::run(sim::mysql::Connection& mysql) {
     // Finally, delete the donor user
     mysql.execute(DeleteFrom("users").where("id=?", donor_user_id));
 
-    job_done(mysql);
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
 }
 

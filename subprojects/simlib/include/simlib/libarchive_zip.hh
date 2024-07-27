@@ -332,9 +332,7 @@ extract_zip(int zip_fd, int flags, UnaryFunc&& extract_entry, StringView dest_di
 
 /// Extracts zip, for details see extract() documentation
 inline void extract_zip(int zip_fd, int flags = ARCHIVE_EXTRACT_TIME, StringView dest_dir = ".") {
-    return extract_zip(
-        zip_fd, flags, [](archive_entry* /*unused*/) { return true; }, dest_dir
-    );
+    return extract_zip(zip_fd, flags, [](archive_entry* /*unused*/) { return true; }, dest_dir);
 }
 
 // Extracts zip, for details see extract() documentation
@@ -353,9 +351,7 @@ extract_zip(FilePath filename, int flags, UnaryFunc&& extract_entry, StringView 
 /// Extracts zip, for details see extract() documentation
 inline void
 extract_zip(FilePath filename, int flags = ARCHIVE_EXTRACT_TIME, StringView dest_dir = ".") {
-    return extract_zip(
-        filename, flags, [](archive_entry* /*unused*/) { return true; }, dest_dir
-    );
+    return extract_zip(filename, flags, [](archive_entry* /*unused*/) { return true; }, dest_dir);
 }
 
 /**

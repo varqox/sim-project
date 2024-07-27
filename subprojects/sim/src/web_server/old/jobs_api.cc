@@ -13,6 +13,52 @@
 using sim::jobs::OldJob;
 using sim::problems::OldProblem;
 
+constexpr bool is_problem_management_job(OldJob::Type x) {
+    using JT = OldJob::Type;
+    switch (x) {
+    case JT::ADD_PROBLEM:
+    case JT::REUPLOAD_PROBLEM:
+    case JT::EDIT_PROBLEM:
+    case JT::DELETE_PROBLEM:
+    case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+    case JT::MERGE_PROBLEMS:
+    case JT::CHANGE_PROBLEM_STATEMENT: return true;
+    case JT::JUDGE_SUBMISSION:
+    case JT::REJUDGE_SUBMISSION:
+    case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+    case JT::DELETE_USER:
+    case JT::DELETE_CONTEST:
+    case JT::DELETE_CONTEST_ROUND:
+    case JT::DELETE_CONTEST_PROBLEM:
+    case JT::DELETE_INTERNAL_FILE:
+    case JT::MERGE_USERS: return false;
+    }
+    return false;
+}
+
+constexpr bool is_submission_job(OldJob::Type x) {
+    using JT = OldJob::Type;
+    switch (x) {
+    case JT::JUDGE_SUBMISSION:
+    case JT::REJUDGE_SUBMISSION: return true;
+    case JT::ADD_PROBLEM:
+    case JT::REUPLOAD_PROBLEM:
+    case JT::EDIT_PROBLEM:
+    case JT::DELETE_PROBLEM:
+    case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+    case JT::DELETE_USER:
+    case JT::DELETE_CONTEST:
+    case JT::DELETE_CONTEST_ROUND:
+    case JT::DELETE_CONTEST_PROBLEM:
+    case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+    case JT::MERGE_PROBLEMS:
+    case JT::DELETE_INTERNAL_FILE:
+    case JT::CHANGE_PROBLEM_STATEMENT:
+    case JT::MERGE_USERS: return false;
+    }
+    return false;
+}
+
 namespace web_server::old {
 
 static constexpr const char* job_type_str(OldJob::Type type) noexcept {
@@ -35,7 +81,7 @@ static constexpr const char* job_type_str(OldJob::Type type) noexcept {
     case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
         return "Reset problem time limits using model solution";
     case JT::MERGE_PROBLEMS: return "Merge problems";
-    case JT::DELETE_FILE: return "Delete internal file";
+    case JT::DELETE_INTERNAL_FILE: return "Delete internal file";
     case JT::CHANGE_PROBLEM_STATEMENT: return "Change problem statement";
     }
 
@@ -240,12 +286,11 @@ void Sim::api_jobs() {
 
         // Status: (CSS class, text)
         switch (job_status) {
-        case OldJob::Status::PENDING:
-        case OldJob::Status::NOTICED_PENDING: append(R"(["","Pending"],)"); break;
+        case OldJob::Status::PENDING: append(R"(["","Pending"],)"); break;
         case OldJob::Status::IN_PROGRESS: append(R"(["yellow","In progress"],)"); break;
         case OldJob::Status::DONE: append(R"(["green","Done"],)"); break;
         case OldJob::Status::FAILED: append(R"(["red","Failed"],)"); break;
-        case OldJob::Status::CANCELED: append(R"(["blue","Canceled"],)"); break;
+        case OldJob::Status::CANCELLED: append(R"(["blue","Cancelled"],)"); break;
         }
 
         append(res[PRIORITY], ',');
@@ -337,7 +382,7 @@ void Sim::api_jobs() {
             break;
         }
 
-        case OldJob::Type::DELETE_FILE: // Nothing to show
+        case OldJob::Type::DELETE_INTERNAL_FILE: // Nothing to show
         case OldJob::Type::EDIT_PROBLEM: break;
         }
         append("},");
@@ -463,7 +508,7 @@ void Sim::api_job_cancel() {
 
     if (uint(~jobs_perms & PERM::CANCEL)) {
         if (uint(jobs_perms & PERM::VIEW)) {
-            return api_error400("Job has already been canceled or done");
+            return api_error400("Job has already been cancelled or done");
         }
         return api_error403();
     }
@@ -471,7 +516,7 @@ void Sim::api_job_cancel() {
     // Cancel job
     auto old_mysql = old_mysql::ConnectionView{mysql};
     old_mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-        .bind_and_execute(EnumVal(OldJob::Status::CANCELED), jobs_jid);
+        .bind_and_execute(EnumVal(OldJob::Status::CANCELLED), jobs_jid);
 }
 
 void Sim::api_job_restart() {

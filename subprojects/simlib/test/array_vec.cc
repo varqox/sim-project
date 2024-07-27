@@ -373,9 +373,7 @@ TEST(ArrayVec, template_move_constructor) {
 TEST(ArrayVec_DeathTest, template_move_constructor_terminates_if_other_is_too_big) {
     // NOLINTNEXTLINE
     EXPECT_EXIT(
-        ([] {
-            ArrayVec<int, 4> va{ArrayVec<int, 5>{1, 2, 3, 4, 5}};
-        }()),
+        ([] { ArrayVec<int, 4> va{ArrayVec<int, 5>{1, 2, 3, 4, 5}}; }()),
         testing::KilledBySignal(SIGABRT),
         ""
     );

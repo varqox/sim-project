@@ -27,7 +27,6 @@
 #include <simlib/unlinked_temporary_file.hh>
 #include <simlib/working_directory.hh>
 #include <sys/stat.h>
-#include <thread>
 #include <unistd.h>
 
 using std::string;

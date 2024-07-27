@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <cstdlib>
 #include <linux/limits.h>
 #include <map>
 #include <memory>
@@ -13,7 +12,6 @@
 #include <simlib/logger.hh>
 #include <simlib/string_view.hh>
 #include <sys/inotify.h>
-#include <type_traits>
 
 class WatchingLog {
 public:
@@ -57,6 +55,7 @@ class FileModificationMonitor {
     struct FileInfo {
         std::string path;
         nanoseconds stillness_threshold;
+        bool notify_if_attribute_changes;
 
         friend bool operator<(const FileInfo& a, const FileInfo& b) noexcept {
             return a.path < b.path;
@@ -70,7 +69,8 @@ class FileModificationMonitor {
     bool processing_unwatched_files_is_scheduled_ = false;
 
     static constexpr auto events_requiring_handler = IN_MODIFY | // modification
-        IN_CREATE | IN_MOVED_TO; // file creation
+        IN_CREATE | IN_MOVED_TO | // file creation
+        IN_ATTRIB; // attribute change
 
     static constexpr auto all_events = events_requiring_handler | IN_MOVE_SELF | // deletion
         IN_EXCL_UNLINK; // do not monitor unlinked files
@@ -100,16 +100,26 @@ public:
      *   happening (it is useful, as saving file often takes several writes and
      *   you would want one event for that)
      */
-    void add_path(std::string path, nanoseconds stillness_threshold = nanoseconds(0)) {
+    void add_path(
+        std::string path,
+        bool notify_if_attribute_changes = false,
+        nanoseconds stillness_threshold = nanoseconds(0)
+    ) {
         STACK_UNWINDING_MARK;
 
         assert(stillness_threshold >= nanoseconds(0));
-        auto [it, inserted] = added_files_.insert({std::move(path), stillness_threshold});
+        auto [it, inserted] = added_files_.insert({
+            .path = std::move(path),
+            .stillness_threshold = stillness_threshold,
+            .notify_if_attribute_changes = notify_if_attribute_changes,
+        });
         assert(inserted and "Path added more than once");
         try {
             unwatched_files_.emplace(&*it);
+            schedule_processing_unwatched_files(); // Needed in case the event loop is now running.
         } catch (...) {
             added_files_.erase(it);
+            throw;
         }
     }
 
@@ -135,10 +145,10 @@ public:
     }
 
     /**
-     * @brief Watches files and directories specified via add_path() and calls
-     *   set event handler for every creation / modification (excluding rename
-     *   and deletion) event on watched files or files directly inside
-     *   watched directories
+     * @brief Watches files and directories specified via add_path() and calls set event handler
+     *   for every creation / modification (excluding rename and deletion) event on watched files or
+     *   files directly inside watched directories.
+     *   This function starts watching the added files before running the event queue.
      *
      * @errors will be thrown as std::runtime_exception with an appropriate
      *   message.

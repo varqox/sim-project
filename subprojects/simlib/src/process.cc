@@ -1,3 +1,4 @@
+#include <cmath>
 #include <functional>
 #include <simlib/concat.hh>
 #include <simlib/directory.hh>
@@ -158,8 +159,11 @@ void kill_processes_by_exec(
 
     auto proc_uptime = get_file_contents("/proc/uptime");
     auto current_uptime = to_string(
-        str2num<double>(StringView(proc_uptime).extract_leading(not_fn(is_space<char>))).value() *
-            static_cast<double>(ticks_per_second),
+        std::round(
+            str2num<double>(StringView(proc_uptime).extract_leading(not_fn(is_space<char>)))
+                .value() *
+            static_cast<double>(ticks_per_second)
+        ),
         0
     );
 
@@ -188,7 +192,7 @@ void kill_processes_by_exec(
     // Wait for victims to terminate
     auto wait_start_time = std::chrono::system_clock::now();
     auto curr_time = wait_start_time;
-    while (curr_time < wait_start_time) {
+    for (;;) {
         // Remove dead victims
         for (size_t i = 0; i < victims.size(); ++i) {
             auto& [pid, start_time] = victims[i];
@@ -208,18 +212,19 @@ void kill_processes_by_exec(
         if (victims.empty()) {
             break;
         }
+        if (!wait_timeout) {
+            break;
+        }
 
         curr_time = std::chrono::system_clock::now();
         auto sleep_interval = 0.04s;
-        if (wait_timeout.has_value()) {
-            auto remaining_wait = *wait_timeout - (curr_time - wait_start_time);
-            if (remaining_wait <= 0s) {
-                break;
-            }
+        auto remaining_wait = *wait_timeout - (curr_time - wait_start_time);
+        if (remaining_wait <= 0s) {
+            break;
+        }
 
-            if (remaining_wait < sleep_interval) {
-                sleep_interval = remaining_wait;
-            }
+        if (remaining_wait < sleep_interval) {
+            sleep_interval = remaining_wait;
         }
 
         std::this_thread::sleep_for(sleep_interval);

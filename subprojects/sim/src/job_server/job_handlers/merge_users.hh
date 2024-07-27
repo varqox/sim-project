@@ -1,14 +1,19 @@
 #pragma once
 
-#include "job_handler.hh"
+#include "common.hh"
+
+#include <sim/jobs/job.hh>
+#include <sim/mysql/mysql.hh>
+#include <sim/users/user.hh>
 
 namespace job_server::job_handlers {
 
-class MergeUsers final : public JobHandler {
-public:
-    explicit MergeUsers(uint64_t job_id) : JobHandler(job_id) {}
-
-    void run(sim::mysql::Connection& mysql) final;
-};
+void merge_users(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(sim::jobs::Job::id) job_id,
+    decltype(sim::users::User::id) donor_user_id,
+    decltype(sim::users::User::id) target_user_id
+);
 
 } // namespace job_server::job_handlers

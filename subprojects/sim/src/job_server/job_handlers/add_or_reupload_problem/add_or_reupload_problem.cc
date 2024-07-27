@@ -1,3 +1,4 @@
+#include "../judge_logger.hh"
 #include "add_or_reupload_problem.hh"
 
 #include <chrono>
@@ -19,14 +20,7 @@ using sim::submissions::Submission;
 
 namespace job_server::job_handlers::add_or_reupload_problem {
 
-std::optional<sim::Simfile>
-construct_simfile(InplaceBuff<1 << 14>& job_log_holder, ConstructSimfileOptions&& options) {
-    auto log = [&job_log_holder](auto&&... args) {
-        return DoubleAppender<InplaceBuff<1 << 14>>(
-            stdlog, job_log_holder, std::forward<decltype(args)>(args)...
-        );
-    };
-
+std::optional<sim::Simfile> construct_simfile(Logger& logger, ConstructSimfileOptions&& options) {
     sim::Conver conver;
     conver.package_path(options.package_path);
 
@@ -55,33 +49,36 @@ construct_simfile(InplaceBuff<1 << 14>& job_log_holder, ConstructSimfileOptions&
     try {
         construction_res = conver.construct_simfile(conver_options);
     } catch (const std::exception& e) {
-        log(conver.report(), "Conver failed: ", e.what());
+        logger(conver.report(), "Conver failed: ", e.what());
         return std::nullopt;
     }
 
     if (construction_res.simfile.name.value().size() > decltype(Problem::name)::max_len) {
-        log("Problem name is too long (max allowed length: ", decltype(Problem::name)::max_len, ')'
+        logger(
+            "Problem name is too long (max allowed length: ", decltype(Problem::name)::max_len, ')'
         );
         return std::nullopt;
     }
 
     if (construction_res.simfile.label.value().size() > decltype(Problem::label)::max_len) {
-        log("Problem label is too long (max allowed length: ",
+        logger(
+            "Problem label is too long (max allowed length: ",
             decltype(Problem::label)::max_len,
-            ')');
+            ')'
+        );
         return std::nullopt;
     }
 
     switch (construction_res.status) {
     case sim::Conver::Status::COMPLETE: break;
     case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
-        log("Loading the problem package for judging the main solution...");
+        logger("Loading the problem package for judging the main solution...");
         sim::JudgeWorker judge_worker;
         judge_worker.load_package(std::move(options).package_path, construction_res.simfile.dump());
         const auto& main_solution_path = construction_res.simfile.solutions[0];
-        log("Judging the model solution: ", main_solution_path);
+        logger("Judging the model solution: ", main_solution_path);
 
-        log("Compiling solution...");
+        logger("Compiling solution...");
         std::string compilation_errors;
         if (judge_worker.compile_solution_from_package(
                 main_solution_path,
@@ -92,11 +89,12 @@ construct_simfile(InplaceBuff<1 << 14>& job_log_holder, ConstructSimfileOptions&
                 sim::COMPILATION_ERRORS_MAX_LENGTH
             ))
         {
-            log("Compilation failed:\n", compilation_errors);
+            logger(".... failed:\n", compilation_errors);
             return std::nullopt;
         }
+        logger("... done.");
 
-        log("Compiling checker...");
+        logger("Compiling checker...");
         if (judge_worker.compile_checker(
                 sim::CHECKER_COMPILATION_TIME_LIMIT,
                 sim::CHECKER_COMPILATION_MEMORY_LIMIT,
@@ -104,16 +102,14 @@ construct_simfile(InplaceBuff<1 << 14>& job_log_holder, ConstructSimfileOptions&
                 sim::COMPILATION_ERRORS_MAX_LENGTH
             ))
         {
-            log("Compilation failed:\n", compilation_errors);
+            logger(".... failed:\n", compilation_errors);
             return std::nullopt;
         }
+        logger("... done.");
 
-        log("Judging...");
-        auto logger = sim::VerboseJudgeLogger(true);
-        sim::JudgeReport initial_judge_report = judge_worker.judge(false, logger);
-        job_log_holder.append("Initial judge report: ", initial_judge_report.judge_log);
-        sim::JudgeReport final_judge_report = judge_worker.judge(true, logger);
-        job_log_holder.append("Final judge report: ", final_judge_report.judge_log);
+        auto judge_logger = JudgeLogger{logger};
+        auto initial_judge_report = judge_worker.judge(false, judge_logger);
+        auto final_judge_report = judge_worker.judge(true, judge_logger);
 
         try {
             sim::Conver::ResetTimeLimitsOptions rtl_options;
@@ -123,7 +119,7 @@ construct_simfile(InplaceBuff<1 << 14>& job_log_holder, ConstructSimfileOptions&
                 construction_res.simfile, initial_judge_report, final_judge_report, rtl_options
             );
         } catch (const std::exception& e) {
-            log("Conver failed: ", e.what());
+            logger("Conver failed: ", e.what());
             return std::nullopt;
         }
     } break;
@@ -133,25 +129,19 @@ construct_simfile(InplaceBuff<1 << 14>& job_log_holder, ConstructSimfileOptions&
 }
 
 std::optional<CreatePackageWithSimfileRes> create_package_with_simfile(
-    InplaceBuff<1 << 14>& job_log_holder,
     sim::mysql::Connection& mysql,
+    Logger& logger,
     const std::string& input_package_path,
     const sim::Simfile& simfile,
-    const std::string& curr_datetime
+    const std::string& current_datetime
 ) {
-    auto log = [&job_log_holder](auto&&... args) {
-        return DoubleAppender<InplaceBuff<1 << 14>>(
-            stdlog, job_log_holder, std::forward<decltype(args)>(args)...
-        );
-    };
-
-    log("Creating package with a new Simfile...");
-    auto new_package_file_id = sim::internal_files::new_internal_file_id(mysql, curr_datetime);
+    logger("Creating package with a new Simfile...");
+    auto new_package_file_id = sim::internal_files::new_internal_file_id(mysql, current_datetime);
     auto new_package_path = sim::internal_files::path_of(new_package_file_id);
     auto new_package_file_remover =
         FileRemover{new_package_path}; // copy() may leave the dest file on error
     if (copy(input_package_path, new_package_path)) {
-        log("copy()", errmsg());
+        logger("copy()", errmsg());
         return std::nullopt;
     }
     auto zip = ZipFile{new_package_path};
@@ -172,40 +162,32 @@ std::optional<CreatePackageWithSimfileRes> create_package_with_simfile(
 }
 
 std::vector<FileRemover> submit_solutions(
-    InplaceBuff<1 << 14>& job_log_holder,
     sim::mysql::Connection& mysql,
+    Logger& logger,
     const sim::Simfile& simfile,
     ZipFile& package_zip,
     const std::string& package_main_dir,
     decltype(sim::problems::Problem::id) problem_id,
-    const std::string& curr_datetime
+    const std::string& current_datetime
 ) {
-
-    auto log = [&job_log_holder](auto&&... args) {
-        return DoubleAppender<InplaceBuff<1 << 14>>(
-            stdlog, job_log_holder, std::forward<decltype(args)>(args)...
-        );
-    };
-
-    log("Submitting solutions...");
+    logger("Submitting solutions...");
     std::vector<FileRemover> solution_file_removers;
     for (const auto& solution : simfile.solutions) {
-        log("Submitting: ", solution);
-        auto solution_file_id = sim::internal_files::new_internal_file_id(mysql, curr_datetime);
+        logger("Submitting: ", solution);
+        auto solution_file_id = sim::internal_files::new_internal_file_id(mysql, current_datetime);
         mysql.execute(
             InsertInto("submissions (created_at, file_id, user_id, problem_id, contest_problem_id, "
                        "contest_round_id, contest_id, type, language, initial_status, full_status, "
-                       "last_judgment, initial_report, final_report)")
+                       "last_judgment_began_at, initial_report, final_report)")
                 .values(
-                    "?, ?, NULL, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, '', ''",
-                    curr_datetime,
+                    "?, ?, NULL, ?, NULL, NULL, NULL, ?, ?, ?, ?, NULL, '', ''",
+                    current_datetime,
                     solution_file_id,
                     problem_id,
                     Submission::Type::PROBLEM_SOLUTION,
                     sim::filename_to_lang(solution),
                     Submission::Status::PENDING,
-                    Submission::Status::PENDING,
-                    curr_datetime // TODO: NULL here and initial_report and final_report
+                    Submission::Status::PENDING
                 )
         );
         // Save the submission source code
@@ -220,7 +202,7 @@ std::vector<FileRemover> submit_solutions(
     mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
                       .select(
                           "?, NULL, ?, ?, ?, id",
-                          curr_datetime,
+                          current_datetime,
                           Job::Type::JUDGE_SUBMISSION,
                           default_priority(Job::Type::JUDGE_SUBMISSION) + 1,
                           Job::Status::PENDING

@@ -82,7 +82,7 @@ int main() {
     try {
         chdir_relative_to_executable_dirpath("..");
     } catch (const std::exception& e) {
-        errlog("Failed to change working directory: ", e.what());
+        errlog("Failed to change the working directory: ", e.what());
         return 1;
     }
 
@@ -90,20 +90,15 @@ int main() {
     kill_processes_by_exec({executable_path(getpid())}, std::chrono::seconds(4), true);
 
     // Loggers
-    // stdlog writes to stderr (like everything), so redirect stdout and stderr to the log file
-    if (freopen(web_server::stdlog_file.data(), "a", stdout) == nullptr ||
-        dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
-    {
-        errlog("Failed to open `", web_server::stdlog_file, '`', errmsg());
-        return 1;
+    if (freopen(web_server::stdlog_file.data(), "a", stdout) == nullptr) {
+        errlog("Failed to open: ", web_server::stdlog_file, errmsg());
     }
+    stdlog.use(stdout);
 
-    try {
-        errlog.open(web_server::errlog_file);
-    } catch (const std::exception& e) {
-        errlog("Failed to open `", web_server::errlog_file, "`: ", e.what());
-        return 1;
+    if (freopen(web_server::errlog_file.data(), "a", stderr) == nullptr) {
+        errlog("Failed to open: ", web_server::errlog_file, errmsg());
     }
+    errlog.use(stderr);
 
     // Signal control
     struct sigaction sa = {};
@@ -116,7 +111,7 @@ int main() {
 
     ConfigFile config;
     try {
-        config.add_vars("address", "workers");
+        config.add_vars("web_server_address", "web_server_workers");
 
         config.load_config_from_file("sim.conf");
     } catch (const std::exception& e) {
@@ -124,11 +119,11 @@ int main() {
         return 5;
     }
 
-    string full_address = config["address"].as_string();
-    auto workers = config["workers"].as<size_t>().value_or(0);
+    string full_address = config["web_server_address"].as_string();
+    auto workers = config["web_server_workers"].as<size_t>().value_or(0);
 
     if (workers < 1) {
-        errlog("sim.conf: Number of workers cannot be lower than 1");
+        errlog("sim.conf: Number of web_server_workers has to be an integer greater than 0");
         return 6;
     }
 

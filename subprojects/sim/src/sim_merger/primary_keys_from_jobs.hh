@@ -113,7 +113,7 @@ struct PrimaryKeysFromJobs {
 
             // Process type-specific ids
             switch (type) {
-            case OldJob::Type::DELETE_FILE:
+            case OldJob::Type::DELETE_INTERNAL_FILE:
                 internal_files.add_id(aux_id.value(), created_at);
                 // Id is already processed
                 break;

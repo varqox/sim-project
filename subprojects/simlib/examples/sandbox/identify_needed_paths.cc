@@ -84,7 +84,7 @@ bool runs_with(
                                                 .read_only = false,
                                             },
                                         };
-                                    for (auto const& mo : mount_operations) {
+                                    for (const auto& mo : mount_operations) {
                                         std::visit(
                                             overloaded{
                                                 [&](const CreateDir& cd) {

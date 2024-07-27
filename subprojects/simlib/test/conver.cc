@@ -57,7 +57,7 @@ static TestConfig load_config_from_file(FilePath file) {
     cf.load_config_from_file(file, true);
 
     auto get_var = [&](StringView name, bool error_if_unset = true) -> decltype(auto) {
-        auto const& var = cf[name];
+        const auto& var = cf[name];
         if (not var.is_set()) {
             if (error_if_unset) {
                 THROW("Variable \"", name, "\" is not set");
@@ -74,7 +74,7 @@ static TestConfig load_config_from_file(FilePath file) {
 
     auto get_optional_string = [&](const StringView& name,
                                    bool error_if_unset = true) -> optional<string> {
-        auto const& var = get_var(name, error_if_unset);
+        const auto& var = get_var(name, error_if_unset);
         if (not var.is_set() or var.as_string() == "null") {
             return std::nullopt;
         }

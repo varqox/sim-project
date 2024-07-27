@@ -1,19 +1,26 @@
+#include "common.hh"
 #include "delete_user.hh"
 
-#include <sim/jobs/old_job.hh>
+#include <sim/jobs/job.hh>
 #include <sim/mysql/mysql.hh>
-#include <sim/old_mysql/old_mysql.hh>
 #include <sim/sql/sql.hh>
-#include <sim/users/old_user.hh>
 #include <sim/users/user.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/time.hh>
 
-using sim::jobs::OldJob;
+using sim::jobs::Job;
+using sim::sql::DeleteFrom;
+using sim::sql::InsertInto;
 using sim::users::User;
 
 namespace job_server::job_handlers {
 
-void DeleteUser::run(sim::mysql::Connection& mysql) {
+void delete_user(
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(Job::id) job_id,
+    decltype(User::id) user_id
+) {
     STACK_UNWINDING_MARK;
 
     auto transaction = mysql.start_repeatable_read_transaction();
@@ -21,38 +28,37 @@ void DeleteUser::run(sim::mysql::Connection& mysql) {
     // Log some info about the deleted user
     {
         auto stmt =
-            mysql.execute(sim::sql::Select("username, type").from("users").where("id=?", user_id_));
+            mysql.execute(sim::sql::Select("username, type").from("users").where("id=?", user_id));
         decltype(User::username) username;
         decltype(User::type) user_type;
         stmt.res_bind(username, user_type);
-        if (not stmt.next()) {
-            return set_failure("User with id: ", user_id_, " does not exist");
+        if (!stmt.next()) {
+            logger("The user with id: ", user_id, " does not exist");
+            mark_job_as_cancelled(mysql, logger, job_id);
+            transaction.commit();
+            return;
         }
 
-        job_log("username: ", username);
-        job_log("type: ", user_type.to_str());
+        logger("username: ", username);
+        logger("type: ", user_type.to_str());
     }
 
     // Add jobs to delete submission files
-    auto old_mysql = old_mysql::ConnectionView{mysql};
-    old_mysql
-        .prepare("INSERT INTO jobs(creator, type, priority, status, created_at, aux_id) "
-                 "SELECT NULL, ?, ?, ?, ?, file_id"
-                 " FROM submissions WHERE user_id=?")
-        .bind_and_execute(
-            EnumVal(OldJob::Type::DELETE_FILE),
-            default_priority(OldJob::Type::DELETE_FILE),
-            EnumVal(OldJob::Status::PENDING),
-            utc_mysql_datetime(),
-            user_id_
-        );
+    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
+                      .select(
+                          "?, NULL, ?, ?, ?, file_id",
+                          utc_mysql_datetime(),
+                          Job::Type::DELETE_INTERNAL_FILE,
+                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
+                          Job::Status::PENDING
+                      )
+                      .from("submissions")
+                      .where("user_id=?", user_id));
 
-    // Delete user (all necessary actions will take place thanks to foreign key
-    // constrains)
-    old_mysql.prepare("DELETE FROM users WHERE id=?").bind_and_execute(user_id_);
+    // Delete user (all necessary actions will take place thanks to foreign key constraints)
+    mysql.execute(DeleteFrom("users").where("id=?", user_id));
 
-    job_done(mysql);
-
+    mark_job_as_done(mysql, logger, job_id);
     transaction.commit();
 }
 

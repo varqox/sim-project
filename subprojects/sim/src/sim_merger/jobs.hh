@@ -54,7 +54,7 @@ class JobsMerger : public Merger<sim::jobs::OldJob> {
 
             // Process type-specific ids
             switch (job.type) {
-            case OldJob::Type::DELETE_FILE:
+            case OldJob::Type::DELETE_INTERNAL_FILE:
                 job.aux_id = internal_files_.new_id(job.aux_id.value(), record_set.kind);
                 break;
 

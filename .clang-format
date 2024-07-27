@@ -15,9 +15,11 @@ AlignTrailingComments:
   Kind: Never
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortEnumsOnASingleLine: true
+AllowBreakBeforeNoexceptSpecifier: OnlyWithParen
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortLambdasOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
@@ -51,6 +53,7 @@ BraceWrapping:
   SplitEmptyRecord: false
   SplitEmptyNamespace: true
 BracedInitializerIndentWidth: 4
+BreakAdjacentStringLiterals: true
 BreakAfterAttributes: Never
 BreakArrays: false
 BreakBeforeBinaryOperators: None
@@ -133,6 +136,7 @@ RequiresClausePosition: OwnLine
 RequiresExpressionIndentation: OuterScope
 SeparateDefinitionBlocks: Always
 ShortNamespaceLines: 0
+SkipMacroDefinitionBody: false
 SortIncludes:    CaseSensitive
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false

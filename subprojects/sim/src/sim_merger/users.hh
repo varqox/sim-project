@@ -147,7 +147,7 @@ public:
                 stmt.res_bind_all(problem_id, contest_problem_id);
                 while (stmt.next()) {
                     sim::submissions::update_final(
-                        *mysql, user.data.id, problem_id, contest_problem_id, false
+                        *mysql, user.data.id, problem_id, contest_problem_id
                     );
                 }
             }

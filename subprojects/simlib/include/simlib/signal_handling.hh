@@ -134,7 +134,7 @@ public:
                 }
             }
 
-            for (auto const& pfd : pfds) {
+            for (const auto& pfd : pfds) {
                 assert(not(pfd.revents & (POLLHUP | POLLERR)));
             }
 

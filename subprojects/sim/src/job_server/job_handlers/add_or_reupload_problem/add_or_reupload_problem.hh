@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../common.hh"
+
 #include <cstdint>
 #include <sim/internal_files/internal_file.hh>
 #include <sim/mysql/mysql.hh>
@@ -24,8 +26,7 @@ struct ConstructSimfileOptions {
 };
 
 // Returns std::nullopt on error
-std::optional<sim::Simfile>
-construct_simfile(InplaceBuff<1 << 14>& job_log_holder, ConstructSimfileOptions&& options);
+std::optional<sim::Simfile> construct_simfile(Logger& logger, ConstructSimfileOptions&& options);
 
 struct CreatePackageWithSimfileRes {
     decltype(sim::internal_files::InternalFile::id) new_package_file_id;
@@ -35,22 +36,22 @@ struct CreatePackageWithSimfileRes {
 };
 
 std::optional<CreatePackageWithSimfileRes> create_package_with_simfile(
-    InplaceBuff<1 << 14>& job_log_holder,
     sim::mysql::Connection& mysql,
+    Logger& logger,
     const std::string& input_package_path,
     const sim::Simfile& simfile,
-    const std::string& curr_datetime
+    const std::string& current_datetime
 );
 
 // Returns solution file removers
 std::vector<FileRemover> submit_solutions(
-    InplaceBuff<1 << 14>& job_log_holder,
     sim::mysql::Connection& mysql,
+    Logger& logger,
     const sim::Simfile& simfile,
     ZipFile& package_zip,
     const std::string& package_main_dir,
     decltype(sim::problems::Problem::id) problem_id,
-    const std::string& curr_datetime
+    const std::string& current_datetime
 );
 
 } // namespace job_server::job_handlers::add_or_reupload_problem

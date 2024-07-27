@@ -478,7 +478,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 
     // Remove tests that have at most one file set
     filter(tests, [&](const auto& p) {
-        auto const& [test_name, test] = p;
+        const auto& [test_name, test] = p;
         // Warn if the test was loaded from "limits"
         if (not test.in.has_value() and test.time_limit.has_value()) {
             report_.append(

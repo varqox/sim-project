@@ -23,13 +23,15 @@ class SubmissionsMerger : public Merger<sim::submissions::OldSubmission> {
         old_mysql::Optional<decltype(s.contest_round_id)::value_type> m_contest_round_id;
         old_mysql::Optional<decltype(s.contest_id)::value_type> m_contest_id;
         old_mysql::Optional<decltype(s.score)::value_type> m_score;
+        old_mysql::Optional<decltype(s.last_judgment_began_at)::value_type>
+            m_last_judgment_began_at;
         auto old_mysql = old_mysql::ConnectionView{*mysql};
         auto stmt = old_mysql.prepare(
             "SELECT id, file_id, user_id, problem_id,"
             " contest_problem_id, contest_round_id, contest_id,"
             " type, language, final_candidate, problem_final,"
-            " contest_final, contest_initial_final, initial_status,"
-            " full_status, created_at, score, last_judgment,"
+            " contest_problem_final, contest_problem_initial_final, initial_status,"
+            " full_status, created_at, score, last_judgment_began_at,"
             " initial_report, final_report "
             "FROM ",
             record_set.sql_table_name
@@ -47,13 +49,13 @@ class SubmissionsMerger : public Merger<sim::submissions::OldSubmission> {
             s.language,
             s.final_candidate,
             s.problem_final,
-            s.contest_final,
-            s.contest_initial_final,
+            s.contest_problem_final,
+            s.contest_problem_initial_final,
             s.initial_status,
             s.full_status,
             s.created_at,
             m_score,
-            s.last_judgment,
+            m_last_judgment_began_at,
             s.initial_report,
             s.final_report
         );
@@ -63,6 +65,7 @@ class SubmissionsMerger : public Merger<sim::submissions::OldSubmission> {
             s.contest_round_id = m_contest_round_id.to_opt();
             s.contest_id = m_contest_id.to_opt();
             s.score = m_score.to_opt();
+            s.last_judgment_began_at = m_last_judgment_began_at.to_opt();
 
             s.file_id = internal_files_.new_id(s.file_id, record_set.kind);
             if (s.user_id) {
@@ -101,9 +104,9 @@ public:
             sql_table_name(),
             "(id, file_id, user_id, problem_id, contest_problem_id,"
             " contest_round_id, contest_id, type, language,"
-            " final_candidate, problem_final, contest_final,"
-            " contest_initial_final, initial_status, full_status,"
-            " created_at, score, last_judgment, initial_report,"
+            " final_candidate, problem_final, contest_problem_final,"
+            " contest_problem_initial_final, initial_status, full_status,"
+            " created_at, score, last_judgment_began_at, initial_report,"
             " final_report) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
             " ?, ?, ?, ?)"
@@ -125,13 +128,13 @@ public:
                 x.language,
                 x.final_candidate,
                 x.problem_final,
-                x.contest_final,
-                x.contest_initial_final,
+                x.contest_problem_final,
+                x.contest_problem_initial_final,
                 x.initial_status,
                 x.full_status,
                 x.created_at,
                 x.score,
-                x.last_judgment,
+                x.last_judgment_began_at,
                 x.initial_report,
                 x.final_report
             );

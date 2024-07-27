@@ -65,12 +65,12 @@ struct OldSubmission {
     EnumVal<Language> language;
     old_sql_fields::Bool final_candidate;
     old_sql_fields::Bool problem_final;
-    old_sql_fields::Bool contest_final;
-    old_sql_fields::Bool contest_initial_final;
+    old_sql_fields::Bool contest_problem_final;
+    old_sql_fields::Bool contest_problem_initial_final;
     EnumVal<Status> initial_status;
     EnumVal<Status> full_status;
     std::optional<int64_t> score;
-    old_sql_fields::Datetime last_judgment;
+    std::optional<old_sql_fields::Datetime> last_judgment_began_at;
     old_sql_fields::Blob<0> initial_report;
     old_sql_fields::Blob<0> final_report;
 

@@ -1,8 +1,7 @@
 #include "sim.hh"
 
 #include <cstdint>
-#include <sim/jobs/utils.hh>
-#include <sim/judging_config.hh>
+#include <sim/job_server/notify.hh>
 #include <sim/problem_tags/old_problem_tag.hh>
 #include <sim/problems/old_problem.hh>
 #include <sim/problems/permissions.hh>
@@ -17,7 +16,6 @@
 #include <simlib/libzip.hh>
 #include <simlib/sim/problem_package.hh>
 #include <simlib/string_view.hh>
-#include <type_traits>
 
 using sim::jobs::OldJob;
 using sim::problem_tags::OldProblemTag;
@@ -519,7 +517,7 @@ void Sim::api_problem_rejudge_all_submissions(sim::problems::Permissions perms) 
             problems_pid
         );
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
 }
 
 void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
@@ -542,7 +540,7 @@ void Sim::api_problem_reset_time_limits(sim::problems::Permissions perms) {
             problems_pid
         );
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
     append(old_mysql.insert_id());
 }
 
@@ -572,7 +570,7 @@ void Sim::api_problem_delete(sim::problems::Permissions perms) {
             problems_pid
         );
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
     append(old_mysql.insert_id());
 }
 
@@ -633,7 +631,7 @@ void Sim::api_problem_merge_into_another(sim::problems::Permissions perms) {
     mysql.execute(sim::sql::InsertInto("merge_problems_jobs (id, rejudge_transferred_submissions)")
                       .values("?, ?", job_id, rejudge_transferred_submissions));
 
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
     append(job_id);
 }
 
@@ -824,7 +822,7 @@ void Sim::api_problem_change_statement(sim::problems::Permissions perms) {
 
     transaction.commit();
     job_file_remover.cancel();
-    sim::jobs::notify_job_server();
+    sim::job_server::notify_job_server();
 
     append(job_id);
 }

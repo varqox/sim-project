@@ -115,7 +115,7 @@ def add_or_reupload_problem(action):
 	while True:
 		job_info = get_job_info(ses, host, job_id)[0]
 		status = job_info['status']['text']
-		if status in ('Done', 'Failed', 'Canceled'):
+		if status in ('Done', 'Failed', 'Cancelled'):
 			break
 		time.sleep(0.1)
 
