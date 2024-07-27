@@ -568,6 +568,10 @@ int main() {
         );
     };
 
+    // Create the notify file file if does not exist and start watching it
+    (void)FileDescriptor{
+        sim::job_server::notify_file.to_string(), O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC
+    };
     file_modification_monitor.add_path(sim::job_server::notify_file.to_string(), true);
     file_modification_monitor.set_event_handler([&](const std::string&) {
         scheudle_processing_new_jobs();
