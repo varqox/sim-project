@@ -22,19 +22,18 @@ You will need `meson` build system to be installed (on most platforms it is in t
 - libseccomp
 - libzip
 
-#### Debian
+#### Debian / Ubuntu
 
 ```sh
 sudo apt install g++ mariadb-server libmariadb-dev libseccomp-dev libzip-dev libcap-dev rustc fpc pkgconf meson
 ```
-
-Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ versions of some of the above packages are needed to build sim successfully.
+_Modern_ versions of some of the above packages are needed to build sim successfully.
 
 #### Arch Linux
 
 ```sh
 sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip libcap rust fpc meson && \
-sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql && \
+sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql && \
 sudo systemctl enable mariadb && sudo systemctl start mariadb
 ```
 
@@ -42,7 +41,7 @@ sudo systemctl enable mariadb && sudo systemctl start mariadb
 
 1. In case you installed MariaDB server for the first time, you should run:
 ```sh
-sudo mysql_secure_installation
+sudo mariadb-secure-installation
 ```
 
 2. First of all clone the repository and all its submodules
@@ -62,7 +61,7 @@ ninja -C release-build/
 
 5. <a name="create-mariadb-account"></a>Make sure that you have created a MariaDB account and a database for Sim, use command below to create an user `sim@localhost` and a database `simdb` (when asked for password, enter your mariadb root password, by default it is empty &ndash; if that does not work, try running the below command with `sudo`):
 ```sh
-mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE simdb; GRANT ALL ON simdb.* TO 'sim'@'localhost';" -u root -p
+sudo mariadb -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE simdb; GRANT ALL ON simdb.* TO 'sim'@'localhost';"
 ```
 
 6. Configure a directory for a Sim instance
@@ -122,7 +121,6 @@ Be aware that sometimes incompatible database or other inner changes won't allow
 To upgrade just type:
 ```sh
 git pull --rebase --autostash
-git submodule update --init --recursive
 meson install -C release-build
 sim/manage -b start
 ```
