@@ -160,6 +160,18 @@ For more options:
 sim/manage help
 ```
 
+## Backups
+A sim backup can be created with:
+```sh
+sim/bin/backup
+```
+Multiple backups may be created.
+
+To restore a specific backup use the `sim/bin/restore-backup` program. You may want to edit the `.db.config` file if migrating sim from another machine. To learn more run:
+```sh
+sim/bin/restore-backup
+```
+
 ## Running tests
 ```sh
 ninja -C build/ test # or other build directory
