@@ -17,6 +17,7 @@ struct ContestUser {
     decltype(users::User::id) user_id;
     decltype(contests::Contest::id) contest_id;
     Mode mode;
+    static constexpr size_t COLUMNS_NUM = 3;
 };
 
 } // namespace sim::contest_users

@@ -20,6 +20,7 @@ struct AddProblemJob {
     std::optional<uint64_t> fixed_time_limit_in_ns;
     bool reset_scoring;
     bool look_for_new_tests;
+    static constexpr size_t COLUMNS_NUM = 11;
 };
 
 } // namespace sim::add_problem_jobs
