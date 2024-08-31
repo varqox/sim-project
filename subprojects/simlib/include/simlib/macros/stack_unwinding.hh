@@ -82,9 +82,10 @@ public:
 #define STACK_UNWINDING_MARK_CONCATENATE_DETAIL(x, y) x##y
 #define STACK_UNWINDING_MARK_CONCAT(x, y) STACK_UNWINDING_MARK_CONCATENATE_DETAIL(x, y)
 
-#define STACK_UNWINDING_MARK                                                                       \
-    ::stack_unwinding::StackGuard STACK_UNWINDING_MARK_CONCAT(stack_unwind_mark_no_, __COUNTER__)( \
-        __FILE__, __LINE__, __PRETTY_FUNCTION__                                                    \
+#define STACK_UNWINDING_MARK                                         \
+    const ::stack_unwinding::StackGuard                              \
+    STACK_UNWINDING_MARK_CONCAT(stack_unwind_mark_no_, __COUNTER__)( \
+        __FILE__, __LINE__, __PRETTY_FUNCTION__                      \
     )
 
 #define ERRLOG_CATCH(...)                                                       \
@@ -96,7 +97,7 @@ public:
             "\nStack unwinding marks:\n"                                        \
         );                                                                      \
                                                                                 \
-        size_t i = 0;                                                           \
+        size_t i = 0; /* NOLINT(misc-const-correctness) */                      \
         for (auto const& mark : ::stack_unwinding::StackGuard::marks_collected) \
             tmplog('[', i++, "] ", mark.description, "\n");                     \
                                                                                 \
