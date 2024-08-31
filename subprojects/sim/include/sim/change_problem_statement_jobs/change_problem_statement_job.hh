@@ -10,6 +10,7 @@ struct ChangeProblemStatementJob {
     decltype(jobs::Job::id) id;
     decltype(internal_files::InternalFile::id) new_statement_file_id;
     sql::fields::Varbinary<256> path_for_new_statement;
+    static constexpr size_t COLUMNS_NUM = 3;
 };
 
 } // namespace sim::change_problem_statement_jobs

@@ -98,7 +98,7 @@ public:
     };
 
     /**
-     * @brief Runs @p exec with arguments @p exec_args and limits:
+     * @brief Runs @p exec with arguments @p exec_argv and limits:
      *   @p opts.time_limit and @p opts.memory_limit
      * @details @p exec is called via execvp()
      *   This function is thread-safe.
@@ -110,7 +110,7 @@ public:
      *
      *
      * @param exec path to file will be executed
-     * @param exec_args arguments passed to exec
+     * @param exec_argv arguments passed to exec
      * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
      *   descriptors to which respectively stdin, stdout, stderr of spawned
      *   process will be changed or if negative, closed;
@@ -138,7 +138,7 @@ public:
      */
     static ExitStat run(
         FilePath exec,
-        const std::vector<std::string>& exec_args,
+        const std::vector<std::string>& exec_argv,
         const Options& opts = Options(),
         const std::function<void(pid_t)>& do_in_parent_after_fork = [](pid_t /*unused*/) {}
     );
@@ -179,7 +179,7 @@ protected:
      * @details Sets limits and file descriptors specified in opts.
      *
      * @param exec filename that is to be executed
-     * @param exec_args arguments passed to exec
+     * @param exec_argv arguments passed to exec
      * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
      *   descriptors to which respectively stdin, stdout, stderr of spawned
      *   process will be changed or if negative, closed;
@@ -194,7 +194,7 @@ protected:
      */
     static void run_child(
         FilePath exec,
-        const std::vector<std::string>& exec_args,
+        const std::vector<std::string>& exec_argv,
         const Options& opts,
         int fd,
         const std::function<void()>& do_before_exec

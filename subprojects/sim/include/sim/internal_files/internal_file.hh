@@ -13,6 +13,7 @@ namespace sim::internal_files {
 struct InternalFile {
     uint64_t id;
     sql::fields::Datetime created_at;
+    static constexpr size_t COLUMNS_NUM = 2;
 };
 
 inline std::string path_of(decltype(InternalFile::id) id) {

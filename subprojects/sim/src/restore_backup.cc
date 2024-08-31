@@ -38,15 +38,15 @@ int main(int argc, char** argv) {
 
     auto revision = argv[1];
 
-    auto run_command = [](std::vector<std::string> args,
+    auto run_command = [](std::vector<std::string> argv,
                           std::optional<int> stdin_fd = std::nullopt) {
         auto es = Spawner::run(
-            args[0],
-            args,
+            argv[0],
+            argv,
             Spawner::Options(stdin_fd.value_or(STDIN_FILENO), STDOUT_FILENO, STDERR_FILENO)
         );
         if (es.si.code != CLD_EXITED || es.si.status != 0) {
-            errlog(args[0], " failed: ", es.message);
+            errlog(argv[0], " failed: ", es.message);
             _exit(1);
         }
     };

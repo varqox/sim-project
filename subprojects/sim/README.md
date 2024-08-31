@@ -149,7 +149,7 @@ meson install -C release-build
 For this, there is `manage` program in the instance's main directory.
 To start servers type:
 ```sh
-sim/manage start # or other instance's directory
+sim/manage -b start # or other instance's directory
 ```
 To stop servers:
 ```sh
@@ -170,6 +170,51 @@ Multiple backups may be created.
 To restore a specific backup use the `sim/bin/restore-backup` program. You may want to edit the `.db.config` file if migrating sim from another machine. To learn more run:
 ```sh
 sim/bin/restore-backup
+```
+
+## Merging one Sim instance into the other
+First, naming. Let's call the Sim instance that we want to merge into the main Sim instance and the one we want to merge from the other Sim instance.
+
+In case the merging fails for some reason, make a backup of the main sim instance:
+```sh
+main-sim-instance/bin/backup
+```
+
+The other sim instance has to be on the same machine as the main sim instance. If this is not the case, follow the steps below:
+
+1. Make a backup of the other instance if not already done:
+```sh
+other-sim-instance/bin/backup
+```
+
+2. Copy the other sim instance to the machine containing the main sim instance, e.g. using `rsync`.
+
+3. Create user and database for the other sim instance. E.g.
+```sh
+sudo mariadb -e "CREATE USER other_sim@localhost IDENTIFIED BY 'other_sim'; CREATE DATABASE other_simdb; GRANT ALL ON other_simdb.* TO 'other_sim'@'localhost';"
+```
+
+4. Edit file `other-sim-instance/.db.config` to use the new user and database.
+
+5. Restore the other sim instance from backup:
+```sh
+other-sim-instance/bin/restore-backup @
+```
+
+Now we have both instances on the same machine we can merge them. To do so, run:
+```sh
+main-sim-instance/bin/sim-merger path-to-other-sim-instance
+```
+
+Then restore the main instance:
+```sh
+main-sim-instance/manage start -b
+```
+
+Lastly, you can remove the other sim instance by removing files and database used, e.g.
+```sh
+rm -rf other-sim-instance/
+sudo mariadb -e "DROP DATABASE other_sim; DROP USER other_sim@localhost;"
 ```
 
 ## Running tests

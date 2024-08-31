@@ -15,6 +15,7 @@ struct Session {
     sql::fields::Blob data;
     sql::fields::Blob user_agent;
     sql::fields::Datetime expires;
+    static constexpr size_t COLUMNS_NUM = 6;
 
     static constexpr auto SHORT_SESSION_MAX_LIFETIME = std::chrono::hours{1};
     static constexpr auto LONG_SESSION_MAX_LIFETIME = std::chrono::hours{30 * 24};

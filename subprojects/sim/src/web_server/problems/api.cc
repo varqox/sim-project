@@ -659,9 +659,9 @@ http::Response add(web_worker::Context& ctx) {
     ctx.mysql.execute(
         InsertInto("add_problem_jobs (id, file_id, visibility, force_time_limits_reset, "
                    "ignore_simfile, name, label, memory_limit_in_mib, fixed_time_limit_in_ns, "
-                   "reset_scoring, look_for_new_tests, added_problem_id)")
+                   "reset_scoring, look_for_new_tests)")
             .values(
-                "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL",
+                "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
                 job_id,
                 file_id,
                 visibility,
@@ -723,13 +723,13 @@ Response reupload(Context& ctx, decltype(Problem::id) problem_id) {
                           ));
     auto job_id = ctx.old_mysql.insert_id();
     ctx.mysql.execute(
-        InsertInto("reupload_problem_jobs (id, problem_id, file_id, force_time_limits_reset, "
-                   "ignore_simfile, name, label, memory_limit_in_mib, fixed_time_limit_in_ns, "
-                   "reset_scoring, look_for_new_tests)")
+        InsertInto(
+            "reupload_problem_jobs (id, file_id, force_time_limits_reset, ignore_simfile, name, "
+            "label, memory_limit_in_mib, fixed_time_limit_in_ns, reset_scoring, look_for_new_tests)"
+        )
             .values(
-                "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
+                "?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
                 job_id,
-                problem_id,
                 file_id,
                 common_params.time_limits == params::TimeLimitsKind::RESET,
                 common_params.ignore_simfile,

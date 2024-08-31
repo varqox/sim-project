@@ -59,6 +59,7 @@ struct Submission {
     std::optional<decltype(contests::Contest::id)> contest_id;
     Type type;
     Language language;
+    bool initial_final_candidate;
     bool final_candidate;
     bool problem_final;
     bool contest_problem_final;
@@ -69,6 +70,7 @@ struct Submission {
     std::optional<sql::fields::Datetime> last_judgment_began_at;
     sql::fields::Blob initial_report;
     sql::fields::Blob final_report;
+    static constexpr size_t COLUMNS_NUM = 21;
 
     static constexpr uint64_t SOLUTION_MAX_SIZE = 100 << 10; // 100 KiB
 };

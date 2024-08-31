@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <map>
 #include <regex>
 #include <sim/add_problem_jobs/add_problem_job.hh>
@@ -6,30 +7,42 @@
 #include <sim/contest_files/contest_file.hh>
 #include <sim/contest_problems/contest_problem.hh>
 #include <sim/contest_rounds/contest_round.hh>
+#include <sim/contest_users/contest_user.hh>
 #include <sim/contests/contest.hh>
 #include <sim/db/schema.hh>
 #include <sim/db/tables.hh>
+#include <sim/merge_problems_jobs/merge_problems_job.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/problem_tags/problem_tag.hh>
 #include <sim/problems/problem.hh>
+#include <sim/reupload_problem_jobs/reupload_problem_job.hh>
 #include <sim/sessions/session.hh>
 #include <sim/sql/sql.hh>
+#include <sim/submissions/submission.hh>
 #include <simlib/ranges.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
+#include <simlib/throw_assert.hh>
 #include <string>
 #include <string_view>
 #include <vector>
 
 using sim::add_problem_jobs::AddProblemJob;
+using sim::change_problem_statement_jobs::ChangeProblemStatementJob;
 using sim::contest_entry_tokens::ContestEntryToken;
 using sim::contest_files::ContestFile;
 using sim::contest_problems::ContestProblem;
 using sim::contest_rounds::ContestRound;
+using sim::contest_users::ContestUser;
 using sim::contests::Contest;
+using sim::internal_files::InternalFile;
+using sim::jobs::Job;
+using sim::merge_problems_jobs::MergeProblemsJob;
 using sim::problem_tags::ProblemTag;
 using sim::problems::Problem;
+using sim::reupload_problem_jobs::ReuploadProblemJob;
 using sim::sessions::Session;
+using sim::submissions::Submission;
 using sim::users::User;
 using std::string;
 using std::vector;
@@ -119,8 +132,8 @@ const DbSchema& get_schema() {
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `problem_tags` ("
                         "  `problem_id` bigint(20) unsigned NOT NULL,"
-                        "  `name` varbinary(", decltype(ProblemTag::name)::max_len, ") NOT NULL,"
                         "  `is_hidden` tinyint(1) NOT NULL,"
+                        "  `name` varbinary(", decltype(ProblemTag::name)::max_len, ") NOT NULL,"
                         "  PRIMARY KEY (`problem_id`,`is_hidden`,`name`),"
                         "  KEY `name` (`name`,`problem_id`),"
                         "  CONSTRAINT `problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
@@ -362,7 +375,6 @@ const DbSchema& get_schema() {
                         "  `fixed_time_limit_in_ns` bigint(20) unsigned DEFAULT NULL,"
                         "  `reset_scoring` tinyint(1) NOT NULL,"
                         "  `look_for_new_tests` tinyint(1) NOT NULL,"
-                        "  `added_problem_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove
                         "  PRIMARY KEY (`id`),"
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `add_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
@@ -376,7 +388,6 @@ const DbSchema& get_schema() {
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `reupload_problem_jobs` ("
                         "  `id` bigint(20) unsigned NOT NULL,"
-                        "  `problem_id` bigint(20) unsigned NOT NULL," // TODO: remove
                         "  `file_id` bigint(20) unsigned NOT NULL,"
                         "  `force_time_limits_reset` tinyint(1) NOT NULL,"
                         "  `ignore_simfile` tinyint(1) NOT NULL,"
@@ -432,11 +443,78 @@ const DbSchema& get_schema() {
                 },
             },
     };
+    [[maybe_unused]] static int asserts = [] {
+        throw_assert(TABLES_NUM == schema.table_schemas.size());
+        // Assert that number of column of each table matches the declared value
+        constexpr auto table_name_to_column_number = std::array{
+            std::pair{std::string_view{"add_problem_jobs"}, AddProblemJob::COLUMNS_NUM},
+            std::pair{
+                std::string_view{"change_problem_statement_jobs"},
+                ChangeProblemStatementJob::COLUMNS_NUM
+            },
+            std::pair{std::string_view{"contest_entry_tokens"}, ContestEntryToken::COLUMNS_NUM},
+            std::pair{std::string_view{"contest_files"}, ContestFile::COLUMNS_NUM},
+            std::pair{std::string_view{"contest_problems"}, ContestProblem::COLUMNS_NUM},
+            std::pair{std::string_view{"contest_rounds"}, ContestRound::COLUMNS_NUM},
+            std::pair{std::string_view{"contest_users"}, ContestUser::COLUMNS_NUM},
+            std::pair{std::string_view{"contests"}, Contest::COLUMNS_NUM},
+            std::pair{std::string_view{"internal_files"}, InternalFile::COLUMNS_NUM},
+            std::pair{std::string_view{"jobs"}, Job::COLUMNS_NUM},
+            std::pair{std::string_view{"merge_problems_jobs"}, MergeProblemsJob::COLUMNS_NUM},
+            std::pair{std::string_view{"problem_tags"}, ProblemTag::COLUMNS_NUM},
+            std::pair{std::string_view{"problems"}, Problem::COLUMNS_NUM},
+            std::pair{std::string_view{"reupload_problem_jobs"}, ReuploadProblemJob::COLUMNS_NUM},
+            std::pair{std::string_view{"schema_subversion_0"}, size_t{1}},
+            std::pair{std::string_view{"sessions"}, Session::COLUMNS_NUM},
+            std::pair{std::string_view{"submissions"}, Submission::COLUMNS_NUM},
+            std::pair{std::string_view{"users"}, User::COLUMNS_NUM},
+        };
+        static_assert(TABLES_NUM == table_name_to_column_number.size());
+        static_assert(is_sorted(table_name_to_column_number));
+        for (const auto& table_schema : schema.table_schemas) {
+            auto table_name = [&] {
+                auto beg = table_schema.create_table_sql.find('`');
+                auto end = table_schema.create_table_sql.find('`', beg + 1);
+                return std::string_view{
+                    table_schema.create_table_sql.data() + beg + 1, end - beg - 1
+                };
+            }();
+            auto it = std::lower_bound(
+                table_name_to_column_number.begin(),
+                table_name_to_column_number.end(),
+                std::pair{table_name, size_t{0}}
+            );
+            if (it == table_name_to_column_number.end() || it->first != table_name) {
+                THROW("missing table ", table_name, " in table_name_to_column_number");
+            }
+            size_t rows = 0;
+            for (size_t beg = 0;;) {
+                auto pos = table_schema.create_table_sql.find("  `", beg);
+                if (pos == std::string::npos) {
+                    break;
+                }
+                ++rows;
+                beg = pos + 1;
+            }
+            if (it->second != rows) {
+                THROW(
+                    "invalid number of rows in table ",
+                    table_name,
+                    ": declared ",
+                    it->second,
+                    ", actual ",
+                    rows
+                );
+            }
+        }
+        return 0;
+    }();
+
     return schema;
 }
 
 string normalized(const TableSchema& table_schema) {
-    // First split table schema and extract table name
+    // First split table schema
     std::smatch parts;
     std::regex_match(
         table_schema.create_table_sql,
@@ -455,8 +533,8 @@ string normalized(const TableSchema& table_schema) {
             auto pos = unparsed.find(",  ");
             if (pos == std::string_view::npos) {
                 auto str = string{unparsed};
-                // Add comma to the last row of table definition, because it may become an earlier
-                // row during sorting
+                // Add comma to the last row of table definition, because it may become an
+                // earlier row during sorting
                 if (!has_suffix(str, ",")) {
                     str += ",";
                 }

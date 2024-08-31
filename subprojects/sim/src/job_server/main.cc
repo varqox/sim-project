@@ -347,7 +347,9 @@ void process_task(sim::mysql::Connection& mysql, const Task& task) {
                 return;
 
             case Job::Type::REUPLOAD_PROBLEM:
-                job_server::job_handlers::reupload_problem(mysql, logger, task.job_id);
+                job_server::job_handlers::reupload_problem(
+                    mysql, logger, task.job_id, task.job_aux_id.value()
+                );
                 return;
 
             case Job::Type::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:

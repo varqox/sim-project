@@ -26,6 +26,7 @@ struct Problem {
     sql::fields::Blob simfile;
     std::optional<decltype(users::User::id)> owner_id;
     sql::fields::Datetime updated_at;
+    static constexpr size_t COLUMNS_NUM = 9;
 
     static constexpr uint64_t NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MiB
 };

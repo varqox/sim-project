@@ -48,6 +48,7 @@ struct Job {
     std::optional<uint64_t> aux_id;
     std::optional<uint64_t> aux_id_2;
     sql::fields::Blob log;
+    static constexpr size_t COLUMNS_NUM = 9;
 };
 
 // The greater, the more important

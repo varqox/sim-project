@@ -38,6 +38,7 @@ struct User {
     sql::fields::Varbinary<60> email;
     sql::fields::Binary<64> password_salt; // stored in hex
     sql::fields::Binary<128> password_hash; // stored in hex
+    static constexpr size_t COLUMNS_NUM = 9;
 };
 
 constexpr decltype(User::id) SIM_ROOT_ID = 1;

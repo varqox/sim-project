@@ -13,6 +13,7 @@ struct ContestEntryToken {
     decltype(contests::Contest::id) contest_id;
     std::optional<sql::fields::Binary<8>> short_token;
     std::optional<sql::fields::Datetime> short_token_expiration;
+    static constexpr size_t COLUMNS_NUM = 4;
 
     static constexpr auto SHORT_TOKEN_MAX_LIFETIME = std::chrono::hours{1};
 };
