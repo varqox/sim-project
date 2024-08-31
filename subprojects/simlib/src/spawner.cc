@@ -202,7 +202,7 @@ bool Spawner::Timer::timeout_signal_was_sent() const noexcept {
 
 Spawner::ExitStat Spawner::run(
     FilePath exec,
-    const vector<string>& exec_args,
+    const vector<string>& exec_argv,
     const Spawner::Options& opts,
     const std::function<void(pid_t)>& do_in_parent_after_fork
 ) {
@@ -234,7 +234,7 @@ Spawner::ExitStat Spawner::run(
     }
     if (cpid == 0) {
         close(pfd[0]);
-        run_child(exec, exec_args, opts, pfd[1], [] {});
+        run_child(exec, exec_argv, opts, pfd[1], [] {});
     }
 
     close(pfd[1]);
@@ -291,7 +291,7 @@ Spawner::ExitStat Spawner::run(
 
 void Spawner::run_child(
     FilePath exec,
-    const std::vector<std::string>& exec_args,
+    const std::vector<std::string>& exec_argv,
     const Options& opts,
     int fd,
     const std::function<void()>& do_before_exec
@@ -321,8 +321,8 @@ void Spawner::run_child(
         send_error_message_and_exit(fd, "If set, memory_limit has to be greater than 0");
     }
 
-    // Convert exec_args
-    const size_t len = exec_args.size();
+    // Convert exec_argv
+    const size_t len = exec_argv.size();
     std::unique_ptr<const char*[]> args(new (std::nothrow) const char*[len + 1]);
     if (not args) {
         send_error_message_and_exit(fd, "Out of memory");
@@ -330,7 +330,7 @@ void Spawner::run_child(
 
     args[len] = nullptr;
     for (size_t i = 0; i < len; ++i) {
-        args[i] = exec_args[i].c_str();
+        args[i] = exec_argv[i].c_str();
     }
 
     // Change working directory

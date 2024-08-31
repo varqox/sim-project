@@ -34,10 +34,10 @@ int main2(int argc, char** argv) {
 
     chdir_relative_to_executable_dirpath("..");
 
-    auto run_command = [](vector<string> args) {
-        auto es = Spawner::run(args[0], args);
+    auto run_command = [](vector<string> argv) {
+        auto es = Spawner::run(argv[0], argv);
         if (es.si.code != CLD_EXITED || es.si.status != 0) {
-            errlog(args[0], " failed: ", es.message);
+            errlog(argv[0], " failed: ", es.message);
             _exit(1);
         }
     };
