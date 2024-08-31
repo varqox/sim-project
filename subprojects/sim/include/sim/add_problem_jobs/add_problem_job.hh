@@ -20,7 +20,6 @@ struct AddProblemJob {
     std::optional<uint64_t> fixed_time_limit_in_ns;
     bool reset_scoring;
     bool look_for_new_tests;
-    std::optional<decltype(problems::Problem::id)> added_problem_id;
 };
 
 } // namespace sim::add_problem_jobs

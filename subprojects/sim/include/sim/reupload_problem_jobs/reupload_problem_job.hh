@@ -9,7 +9,6 @@ namespace sim::reupload_problem_jobs {
 
 struct ReuploadProblemJob {
     decltype(jobs::Job::id) id;
-    decltype(problems::Problem::id) problem_id;
     decltype(internal_files::InternalFile::id) file_id;
     bool force_time_limits_reset;
     bool ignore_simfile;

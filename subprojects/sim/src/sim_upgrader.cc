@@ -2,7 +2,6 @@
 #include <exception>
 #include <fcntl.h>
 #include <memory>
-#include <regex>
 #include <sim/change_problem_statement_jobs/change_problem_statement_job.hh>
 #include <sim/db/schema.hh>
 #include <sim/jobs/job.hh>
@@ -40,7 +39,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "455518296186977ca9e170ee797a83f864000d71a3718b7a87c36c70810eceed";
+    "bffaa77f52297395cf099de1afdc67b919d37a5e0143a64d6f046583037915d8";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
@@ -48,177 +47,9 @@ static void do_perform_upgrade(
     STACK_UNWINDING_MARK;
 
     // Upgrade here
-    auto sim_conf_contents = get_file_contents(concat_tostr(sim_dir, "sim.conf"));
-    {
-        ConfigFile sim_conf;
-        sim_conf.add_vars("address");
-        sim_conf.load_config_from_string(sim_conf_contents);
-        const auto& var = sim_conf.get_var("address");
-        auto val_span = var.value_span();
-        auto pos = sim_conf_contents.rfind("\naddress:", val_span.beg - 1);
-        throw_assert(pos != std::string::npos);
-        sim_conf_contents = concat_tostr(
-            substring(sim_conf_contents, 0, pos),
-            "\nweb_server_address: ",
-            substring(sim_conf_contents, val_span.beg)
-        );
-    }
-    {
-        ConfigFile sim_conf;
-        sim_conf.add_vars("workers");
-        sim_conf.load_config_from_string(sim_conf_contents);
-        const auto& var = sim_conf.get_var("workers");
-        auto val_span = var.value_span();
-        auto pos = sim_conf_contents.rfind("\nworkers:", val_span.beg - 1);
-        throw_assert(pos != std::string::npos);
-        sim_conf_contents = concat_tostr(
-            substring(sim_conf_contents, 0, pos),
-            "\nweb_server_workers: ",
-            substring(sim_conf_contents, val_span.beg)
-        );
-    }
-    {
-        ConfigFile sim_conf;
-        sim_conf.add_vars("connections");
-        sim_conf.load_config_from_string(sim_conf_contents);
-        const auto& var = sim_conf.get_var("connections");
-        auto val_span = var.value_span();
-        auto pos = sim_conf_contents.rfind("\nconnections:", val_span.beg - 1);
-        throw_assert(pos != std::string::npos);
-        sim_conf_contents = concat_tostr(
-            substring(sim_conf_contents, 0, pos),
-            "\nweb_server_connections: ",
-            substring(sim_conf_contents, val_span.beg)
-        );
-    }
-    {
-        sim_conf_contents = std::regex_replace(
-            sim_conf_contents,
-            std::regex{"\n\n# Number of job server's judge workers \\(cannot be lower than 1\\)"},
-            ""
-        );
-        sim_conf_contents = std::regex_replace(
-            sim_conf_contents,
-            std::regex{"\n# Number of job server's local workers \\(cannot be lower than 1\\)"},
-            "\n# Number of job server workers (cannot be lower than 1)"
-        );
-    }
-    size_t workers = 0;
-    {
-        ConfigFile sim_conf;
-        sim_conf.add_vars("js_judge_workers");
-        sim_conf.load_config_from_string(sim_conf_contents);
-        const auto& var = sim_conf.get_var("js_judge_workers");
-        workers = var.as<size_t>().value_or(0);
-        if (workers < 1) {
-            THROW("sim.conf: Invalid number of js_judge_workers");
-        }
-        auto val_span = var.value_span();
-        auto pos = sim_conf_contents.rfind("\njs_judge_workers:", val_span.beg - 1);
-        throw_assert(pos != std::string::npos);
-        sim_conf_contents = concat_tostr(
-            substring(sim_conf_contents, 0, pos), substring(sim_conf_contents, val_span.end)
-        );
-    }
-    {
-        ConfigFile sim_conf;
-        sim_conf.add_vars("js_local_workers");
-        sim_conf.load_config_from_string(sim_conf_contents);
-        const auto& var = sim_conf.get_var("js_local_workers");
-        auto local_workers = var.as<size_t>().value_or(0);
-        if (local_workers < 1) {
-            THROW("sim.conf: Invalid number of js_local_workers");
-        }
-        workers += local_workers;
-        auto val_span = var.value_span();
-        auto pos = sim_conf_contents.rfind("\njs_local_workers:", val_span.beg - 1);
-        throw_assert(pos != std::string::npos);
-        sim_conf_contents = concat_tostr(
-            substring(sim_conf_contents, 0, pos),
-            "\njob_server_workers: ",
-            workers,
-            substring(sim_conf_contents, val_span.end)
-        );
-        stdlog(sim_conf_contents);
-    }
-    put_file_contents(concat_tostr(sim_dir, "sim.conf"), sim_conf_contents);
-
-    mysql.execute("UNLOCK TABLES");
-    mysql.execute("UPDATE jobs SET status=1 WHERE status=2");
-    mysql.execute("ALTER TABLE submissions RENAME COLUMN last_judgment TO last_judgment_began_at");
-    mysql.execute("ALTER TABLE submissions RENAME COLUMN contest_final TO contest_problem_final");
-    mysql.execute("ALTER TABLE submissions RENAME COLUMN contest_initial_final TO "
-                  "contest_problem_initial_final");
-    mysql.execute(
-        "ALTER TABLE submissions MODIFY COLUMN last_judgment_began_at datetime DEFAULT NULL"
-    );
-
-    mysql.execute("ALTER TABLE submissions ADD COLUMN initial_final_candidate tinyint(1) NOT NULL "
-                  "DEFAULT 0 AFTER language");
-    mysql.execute(sim::sql::Update("submissions")
-                      .set("initial_final_candidate=1")
-                      .where(
-                          "initial_status IN (?, ?, ?, ?, ?, ?) AND type=?",
-                          sim::submissions::Submission::Status::OK,
-                          sim::submissions::Submission::Status::WA,
-                          sim::submissions::Submission::Status::TLE,
-                          sim::submissions::Submission::Status::MLE,
-                          sim::submissions::Submission::Status::OLE,
-                          sim::submissions::Submission::Status::RTE,
-                          sim::submissions::Submission::Type::NORMAL
-                      ));
-
-    mysql.execute("DROP INDEX final1 ON submissions");
-    mysql.execute("DROP INDEX final2 ON submissions");
-    mysql.execute("DROP INDEX final3 ON submissions");
-    mysql.execute("DROP INDEX initial_final2 ON submissions");
-    mysql.execute("DROP INDEX initial_final3 ON submissions");
-    // Needed to efficiently select problem final submission
-    mysql.execute("CREATE INDEX `for_problem_final` ON submissions (`final_candidate`, `user_id`, "
-                  "`problem_id`, `score` DESC, `full_status`, `id` DESC)");
-    // Needed to efficiently select contest problem final submission
-    mysql.execute("CREATE INDEX `for_contest_problem_final_latest` ON submissions "
-                  "(`final_candidate`, `user_id`, `contest_problem_id`, `id` DESC)");
-    mysql.execute(
-        "CREATE INDEX `for_contest_problem_final_by_score` ON submissions (`final_candidate`, "
-        "`user_id`, `contest_problem_id`, `score` DESC, `full_status`, `id` DESC)"
-    );
-    // Needed to efficiently select contest problem initial final submission
-    mysql.execute("CREATE INDEX `for_contest_initial_problem_final_latest` ON submissions "
-                  "(`initial_final_candidate`, `user_id`, `contest_problem_id`, `id` DESC)");
-    mysql.execute(
-        "CREATE INDEX `for_contest_initial_problem_final_by_initial_status` ON submissions "
-        "(`initial_final_candidate`, `user_id`, `contest_problem_id`, `initial_status`, `id` DESC)"
-    );
-    mysql.execute("CREATE INDEX `for_contest_initial_problem_final_by_score_and_initial_status` ON "
-                  "submissions (`initial_final_candidate`, `user_id`, `contest_problem_id`, "
-                  "`score` DESC, `initial_status`, `id` DESC)");
-    mysql.execute("CREATE INDEX `for_contest_initial_problem_final_by_score_and_full_status` ON "
-                  "submissions (`initial_final_candidate`, `user_id`, `contest_problem_id`, "
-                  "`score` DESC, `full_status`, `id` DESC)");
-
-    auto stmt = mysql.execute(sim::sql::Select("user_id, problem_id, contest_problem_id")
-                                  .from("submissions")
-                                  .group_by("user_id, problem_id, contest_problem_id"));
-    using sim::submissions::Submission;
-    decltype(Submission::user_id) submission_user_id;
-    decltype(Submission::problem_id) submission_problem_id;
-    decltype(Submission::contest_problem_id) submission_contest_problem_id;
-    stmt.res_bind(submission_user_id, submission_problem_id, submission_contest_problem_id);
-    while (stmt.next()) {
-        stdlog(
-            "update_final(",
-            submission_user_id.value_or(0),
-            ", ",
-            submission_problem_id,
-            ", ",
-            submission_contest_problem_id.value_or(0),
-            ")"
-        );
-        sim::submissions::update_final(
-            mysql, submission_user_id, submission_problem_id, submission_contest_problem_id
-        );
-    }
+    mysql.execute("ALTER TABLE add_problem_jobs DROP COLUMN added_problem_id");
+    mysql.execute("ALTER TABLE reupload_problem_jobs DROP COLUMN problem_id");
+    mysql.execute("ALTER TABLE problem_tags MODIFY is_hidden tinyint(1) NOT NULL AFTER problem_id");
 }
 
 enum class LockKind {

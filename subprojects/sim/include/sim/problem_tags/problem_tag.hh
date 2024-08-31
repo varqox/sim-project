@@ -7,8 +7,8 @@ namespace sim::problem_tags {
 
 struct ProblemTag {
     decltype(problems::Problem::id) problem_id;
-    sql::fields::Varbinary<128> name;
     bool is_hidden; // TODO: change is_hidden: bool, to type: TagType
+    sql::fields::Varbinary<128> name;
 };
 
 } // namespace sim::problem_tags

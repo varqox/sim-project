@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <optional>

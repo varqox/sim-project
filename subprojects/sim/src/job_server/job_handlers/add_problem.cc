@@ -112,9 +112,6 @@ void add_problem(sim::mysql::Connection& mysql, Logger& logger, decltype(Job::id
     create_package_res->new_package_zip.close();
 
     mysql.execute(sim::sql::Update("jobs").set("aux_id=?", problem_id).where("id=?", job_id));
-    mysql.execute(sim::sql::Update("add_problem_jobs")
-                      .set("added_problem_id=?", problem_id)
-                      .where("id=?", job_id));
 
     mark_job_as_done(mysql, logger, job_id);
     transaction.commit();

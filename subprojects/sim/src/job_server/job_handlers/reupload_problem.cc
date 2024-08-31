@@ -2,6 +2,7 @@
 #include "reupload_problem.hh"
 
 #include <sim/jobs/job.hh>
+#include <sim/problems/problem.hh>
 #include <sim/reupload_problem_jobs/reupload_problem_job.hh>
 #include <sim/sql/sql.hh>
 #include <sim/submissions/submission.hh>
@@ -9,6 +10,7 @@
 #include <simlib/throw_assert.hh>
 
 using sim::jobs::Job;
+using sim::problems::Problem;
 using sim::reupload_problem_jobs::ReuploadProblemJob;
 using sim::sql::DeleteFrom;
 using sim::sql::InsertInto;
@@ -19,7 +21,10 @@ using sim::submissions::Submission;
 namespace job_server::job_handlers {
 
 void reupload_problem(
-    sim::mysql::Connection& mysql, Logger& logger, decltype(sim::jobs::Job::id) job_id
+    sim::mysql::Connection& mysql,
+    Logger& logger,
+    decltype(sim::jobs::Job::id) job_id,
+    decltype(Problem::id) problem_id
 ) {
     STACK_UNWINDING_MARK;
 
@@ -28,14 +33,13 @@ void reupload_problem(
     ReuploadProblemJob reupload_problem_job;
 
     auto stmt = mysql.execute(
-        Select("file_id, problem_id, force_time_limits_reset, ignore_simfile, name, label, "
+        Select("file_id, force_time_limits_reset, ignore_simfile, name, label, "
                "memory_limit_in_mib, fixed_time_limit_in_ns, reset_scoring, look_for_new_tests")
             .from("reupload_problem_jobs")
             .where("id=?", job_id)
     );
     stmt.res_bind(
         reupload_problem_job.file_id,
-        reupload_problem_job.problem_id,
         reupload_problem_job.force_time_limits_reset,
         reupload_problem_job.ignore_simfile,
         reupload_problem_job.name,
@@ -88,7 +92,7 @@ void reupload_problem(
                           Job::Status::PENDING
                       )
                       .from("problems")
-                      .where("id=?", reupload_problem_job.problem_id));
+                      .where("id=?", problem_id));
     // Update problem
     mysql.execute(Update("problems")
                       .set(
@@ -99,30 +103,26 @@ void reupload_problem(
                           simfile->dump(),
                           current_datetime
                       )
-                      .where("id=?", reupload_problem_job.problem_id));
+                      .where("id=?", problem_id));
 
     // Schedule jobs to delete old solutions internal files
-    mysql.execute(InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
-                      .select(
-                          "?, NULL, ?, ?, ?, file_id",
-                          current_datetime,
-                          Job::Type::DELETE_INTERNAL_FILE,
-                          default_priority(Job::Type::DELETE_INTERNAL_FILE),
-                          Job::Status::PENDING
-                      )
-                      .from("submissions")
-                      .where(
-                          "problem_id=? AND type=?",
-                          reupload_problem_job.problem_id,
-                          Submission::Type::PROBLEM_SOLUTION
-                      ));
+    mysql.execute(
+        InsertInto("jobs (created_at, creator, type, priority, status, aux_id)")
+            .select(
+                "?, NULL, ?, ?, ?, file_id",
+                current_datetime,
+                Job::Type::DELETE_INTERNAL_FILE,
+                default_priority(Job::Type::DELETE_INTERNAL_FILE),
+                Job::Status::PENDING
+            )
+            .from("submissions")
+            .where("problem_id=? AND type=?", problem_id, Submission::Type::PROBLEM_SOLUTION)
+    );
     // Delete old solutions' submissions
-    mysql.execute(DeleteFrom("submissions")
-                      .where(
-                          "problem_id=? AND type=?",
-                          reupload_problem_job.problem_id,
-                          Submission::Type::PROBLEM_SOLUTION
-                      ));
+    mysql.execute(
+        DeleteFrom("submissions")
+            .where("problem_id=? AND type=?", problem_id, Submission::Type::PROBLEM_SOLUTION)
+    );
 
     // Submit new solutions
     auto solution_file_removers = add_or_reupload_problem::submit_solutions(
@@ -131,7 +131,7 @@ void reupload_problem(
         *simfile,
         create_package_res->new_package_zip,
         create_package_res->new_package_main_dir,
-        reupload_problem_job.problem_id,
+        problem_id,
         current_datetime
     );
 

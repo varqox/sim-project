@@ -119,8 +119,8 @@ const DbSchema& get_schema() {
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `problem_tags` ("
                         "  `problem_id` bigint(20) unsigned NOT NULL,"
-                        "  `name` varbinary(", decltype(ProblemTag::name)::max_len, ") NOT NULL,"
                         "  `is_hidden` tinyint(1) NOT NULL,"
+                        "  `name` varbinary(", decltype(ProblemTag::name)::max_len, ") NOT NULL,"
                         "  PRIMARY KEY (`problem_id`,`is_hidden`,`name`),"
                         "  KEY `name` (`name`,`problem_id`),"
                         "  CONSTRAINT `problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`) ON DELETE CASCADE ON UPDATE CASCADE"
@@ -362,7 +362,6 @@ const DbSchema& get_schema() {
                         "  `fixed_time_limit_in_ns` bigint(20) unsigned DEFAULT NULL,"
                         "  `reset_scoring` tinyint(1) NOT NULL,"
                         "  `look_for_new_tests` tinyint(1) NOT NULL,"
-                        "  `added_problem_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove
                         "  PRIMARY KEY (`id`),"
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `add_problem_jobs_ibfk_1` FOREIGN KEY (`id`) REFERENCES `jobs` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,"
@@ -376,7 +375,6 @@ const DbSchema& get_schema() {
                     .create_table_sql = concat_tostr(
                         "CREATE TABLE `reupload_problem_jobs` ("
                         "  `id` bigint(20) unsigned NOT NULL,"
-                        "  `problem_id` bigint(20) unsigned NOT NULL," // TODO: remove
                         "  `file_id` bigint(20) unsigned NOT NULL,"
                         "  `force_time_limits_reset` tinyint(1) NOT NULL,"
                         "  `ignore_simfile` tinyint(1) NOT NULL,"
