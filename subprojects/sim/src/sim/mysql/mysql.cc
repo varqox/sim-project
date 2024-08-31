@@ -193,7 +193,12 @@ Statement::Statement(
 Statement::~Statement() noexcept(false) {
     --*connection_referencing_objects_num;
     if (stmt && mysql_stmt_close(stmt) && uncaught_exceptions == std::uncaught_exceptions()) {
-        THROW(mysql_error(conn));
+        // The problem is that it was observed that mysql_error(conn) returns no error after failed
+        // mysql_stmt_close(), so we need to check for that.
+        auto error = mysql_error(conn);
+        if (error[0] != '\0') {
+            THROW(error);
+        }
     }
 }
 

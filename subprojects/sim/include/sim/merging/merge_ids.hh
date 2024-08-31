@@ -19,7 +19,7 @@ public:
     IdIterator(IdIterator&&) = default;
     IdIterator& operator=(const IdIterator&) = default;
     IdIterator& operator=(IdIterator&&) = default;
-    virtual ~IdIterator() = default;
+    virtual ~IdIterator() noexcept(false) = default;
 
     // Returns minimal id number that ever existed or max_id_plus_one() if none existed.
     [[nodiscard]] virtual uint64_t min_id() = 0;
