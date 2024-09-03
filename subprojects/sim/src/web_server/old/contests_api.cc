@@ -920,8 +920,8 @@ void Sim::api_contest_edit(
     if (make_submitters_contestants) {
         old_mysql
             .prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "
-                     "SELECT owner, ?, ? FROM submissions "
-                     "WHERE contest_id=? GROUP BY owner")
+                     "SELECT user_id, ?, ? FROM submissions "
+                     "WHERE contest_id=? GROUP BY user_id")
             .bind_and_execute(contest_id, EnumVal(OldContestUser::Mode::CONTESTANT), contest_id);
     }
 
