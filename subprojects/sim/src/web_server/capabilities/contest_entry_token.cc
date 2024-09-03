@@ -27,7 +27,7 @@ ContestEntryToken contest_entry_token_for(
             .create = is_contest_moderator,
             .regenerate = is_contest_moderator,
             .delete_ = is_contest_moderator,
-            .use = true,
+            .use = session.has_value(),
             .view_contest_name = true,
         };
     }
