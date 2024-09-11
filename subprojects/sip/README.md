@@ -28,7 +28,7 @@ git clone https://github.com/varqox/sim-project && cd sim-project/subprojects/si
 ```
 Then setup build directory:
 ```sh
-meson setup release-build/ -Dbuildtype=release
+meson setup release-build/ -Dbuildtype=release --prefix=/usr
 ```
 And build:
 ```
@@ -88,9 +88,8 @@ ninja -C static-build/ base
 Run after building:
 ```sh
 # we will use release-build build directory, if you use other just change all release-build below
-meson install -C release-build/
-# specifying other install directory
-DESTDIR=other/install/dir/ meson install -C release-build/
+meson configure release-build --prefix=/usr
+sudo meson install -C release-build/
 ```
 
 ## Running tests
