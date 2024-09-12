@@ -489,7 +489,7 @@ def setup_daily_backup():
     completed.add(setup_daily_backup)
     if not args.daily_backup:
         raise Exception('You need to request setting up daily backup with --daily-backup')
-    if args.daily_backup_filename is not None:
+    if args.daily_backup_filename is None:
         raise Exception('You need to specify daily backup filename with --daily-backup-filename <BACKUP_FILENAME>')
 
     setup_sim()
