@@ -954,28 +954,119 @@ void SipPackage::save_template(StringView template_name) {
 static void compile_tex_file(StringView file) {
     STACK_UNWINDING_MARK;
 
+    throw_assert(!has_prefix(file, "/"));
+
     stdlog("\033[1mCompiling ", file, "\033[m");
+
+    // The package (CWD) will be mounted at /pkg
+    // Output directory will be /out
+
     // Make pdflatex look for classes and other files in the file's directory
-    auto env_texinputs = concat_tostr("TEXINPUTS=.:", path_dirpath(file), ':');
+    auto file_dirpath = path_dirpath(file);
+    auto file_filename = path_filename(file);
+    auto env_texinputs = concat_tostr("TEXINPUTS=/pkg/:/pkg/", file_dirpath, ':');
     auto env = vector<std::string_view>{
         "PATH=/usr/bin",
         env_texinputs,
     };
 
     auto sc = sandbox::spawn_supervisor();
-    auto cwd = get_cwd();
-    auto file_path = has_prefix(file, "/") ? file.to_string() : concat_tostr(cwd, file);
-    auto dest_path = concat_tostr(StringView{file_path}.without_suffix(3), "pdf");
+    auto cwd = get_cwd().to_string();
+    auto file_full_path = has_prefix(file, "/") ? file.to_string() : concat_tostr(cwd, file);
+    auto dest_path = concat_tostr(StringView{file_full_path}.without_suffix(3), "pdf");
     TemporaryFile tmp_file{"/tmp/sip-doc-output.XXXXXX"};
+
+    auto output_pdf_mount_path = concat_tostr("/../out/", file_filename.without_suffix(3), "pdf");
+
+    auto operations = std::vector<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>{
+        MountTmpfs{
+            .path = "/",
+            .max_total_size_of_files_in_bytes = 128 << 20,
+            .inode_limit = 32,
+            .read_only = false,
+        },
+        CreateDir{.path = "/../lib"},
+        CreateDir{.path = "/../lib64"},
+        CreateDir{.path = "/../out"},
+        CreateDir{.path = "/../pkg"},
+        CreateDir{.path = "/../tmp"},
+        CreateDir{.path = "/../usr"},
+        CreateDir{.path = "/../usr/bin"},
+        CreateDir{.path = "/../usr/lib"},
+        CreateDir{.path = "/../usr/share/"},
+        CreateDir{.path = "/../var"},
+        CreateDir{.path = "/../var/lib"},
+        CreateDir{.path = "/../var/lib/texmf"},
+        CreateFile{.path = output_pdf_mount_path},
+        BindMount{
+            .source = "/lib/",
+            .dest = "/../lib",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/lib64/",
+            .dest = "/../lib64",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/usr/bin/",
+            .dest = "/../usr/bin",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/usr/lib/",
+            .dest = "/../usr/lib",
+            .no_exec = false,
+        },
+        BindMount{
+            .source = "/var/lib/texmf/",
+            .dest = "/../var/lib/texmf",
+        },
+        BindMount{
+            .source = cwd,
+            .dest = "/../pkg",
+        },
+        BindMount{
+            .source = tmp_file.path(),
+            .dest = output_pdf_mount_path,
+            .read_only = false,
+        },
+    };
+
+    if (path_exists("/usr/share/texmf-dist")) {
+        operations.emplace_back(CreateDir{.path = "/../usr/share/texmf-dist"});
+        operations.emplace_back(BindMount{
+            .source = "/usr/share/texmf-dist/",
+            .dest = "/../usr/share/texmf-dist",
+        });
+    }
+    if (path_exists("/usr/share/texlive/texmf-dist")) {
+        operations.emplace_back(CreateDir{.path = "/../usr/share/texlive"});
+        operations.emplace_back(CreateDir{.path = "/../usr/share/texlive/texmf-dist"});
+        operations.emplace_back(BindMount{
+            .source = "/usr/share/texlive/texmf-dist/",
+            .dest = "/../usr/share/texlive/texmf-dist",
+        });
+    }
+    if (path_exists("/etc/texlive")) {
+        operations.emplace_back(CreateDir{.path = "/../etc"});
+        operations.emplace_back(CreateDir{.path = "/../etc/texlive"});
+        operations.emplace_back(BindMount{
+            .source = "/etc/texlive/",
+            .dest = "/../etc/texlive",
+        });
+    }
 
     // It is necessary (essential) to run latex two times
     for (int iter = 0; iter < 2; ++iter) {
-        auto res =
-        sc.await_result(sc.send_request(
-            {{"/usr/bin/pdflatex",
-              "-halt-on-error",
-              "/main.tex",
-          }},
+        auto res = sc.await_result(sc.send_request(
+            {{
+                "/usr/bin/pdflatex",
+                "-halt-on-error",
+                "-output-directory",
+                "/out",
+                concat_tostr("/pkg/", file),
+            }},
             {
                 .stdin_fd = std::nullopt,
                 .stdout_fd = STDOUT_FILENO,
@@ -990,66 +1081,7 @@ static void compile_tex_file(StringView file) {
                             },
                         .mount =
                             {
-                                .operations = {{
-                                    MountTmpfs{
-                                        .path = "/",
-                                        .max_total_size_of_files_in_bytes = 128 << 20,
-                                        .inode_limit = 32,
-                                        .read_only = false,
-                                    },
-                                    CreateDir{.path = "/../lib"},
-                                    CreateDir{.path = "/../lib64"},
-                                    CreateDir{.path = "/../tmp"},
-                                    CreateDir{.path = "/../usr"},
-                                    CreateDir{.path = "/../usr/bin"},
-                                    CreateDir{.path = "/../usr/lib"},
-                                    CreateDir{.path = "/../usr/share/"},
-                                    CreateDir{.path = "/../usr/share/texmf-dist"},
-                                    CreateDir{.path = "/../var"},
-                                    CreateDir{.path = "/../var/lib"},
-                                    CreateDir{.path = "/../var/lib/texmf"},
-                                    CreateFile{.path = "/../main.pdf"},
-                                    CreateFile{.path = "/../main.tex"},
-                                    BindMount{
-                                        .source = "/lib/",
-                                        .dest = "/../lib",
-                                        .no_exec = false,
-                                    },
-                                    BindMount{
-                                        .source = "/lib64/",
-                                        .dest = "/../lib64",
-                                        .no_exec = false,
-                                    },
-                                    BindMount{
-                                        .source = "/usr/bin/",
-                                        .dest = "/../usr/bin",
-                                        .no_exec = false,
-                                    },
-                                    BindMount{
-                                        .source = "/usr/lib/",
-                                        .dest = "/../usr/lib",
-                                        .no_exec = false,
-                                    },
-                                    BindMount{
-                                        .source = "/usr/share/texmf-dist/",
-                                        .dest = "/../usr/share/texmf-dist",
-                                        .no_exec = false,
-                                    },
-                                    BindMount{
-                                        .source = "/var/lib/texmf/",
-                                        .dest = "/../var/lib/texmf",
-                                        .no_exec = false,
-                                    },
-                                    BindMount{
-                                        .source = tmp_file.path(),
-                                        .dest = "/../main.pdf",
-                                        .read_only = false,
-                                    },
-                                    BindMount{
-                                        .source = file_path,
-                                        .dest = "/../main.tex",
-                                    },
-                                }},
+                                .operations = operations,
                                 .new_root_mount_path = "/..",
                             },
                     },
@@ -1066,11 +1098,12 @@ static void compile_tex_file(StringView file) {
                     },
                 .time_limit = LATEX_COMPILATION_TIME_LIMIT,
                 .cpu_time_limit = LATEX_COMPILATION_TIME_LIMIT,
-                .seccomp_bpf_fd = [] {
-                    auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
-                    sandbox::seccomp::allow_common_safe_syscalls(bpf);
-                    return bpf.export_to_fd();
-                }(),
+                .seccomp_bpf_fd =
+                    [] {
+                        auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
+                        sandbox::seccomp::allow_common_safe_syscalls(bpf);
+                        return bpf.export_to_fd();
+                    }(),
             }
         ));
 
