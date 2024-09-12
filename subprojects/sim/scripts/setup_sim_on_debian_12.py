@@ -508,7 +508,7 @@ User={args.user}
 NoNewPrivileges=true
 PrivateTmp=true
 BindReadOnlyPaths=/:/:rbind
-ReadWritePaths="{os.path.join(f"/home/{args.user}", args.sim_path)}/sim"
+ReadWritePaths="{os.path.join(f"/home/{args.user}", args.sim_path)}"
 
 {f"MountImages=/dev/disk/by-uuid/{args.daily_backup_to_partition}:/tmp/mnt/disk/" if args.daily_backup_to_partition is not None else ''}
 {"ReadWritePaths=/opt/sim_backups/" if args.daily_backup_to_partition is None else ''}
@@ -518,7 +518,7 @@ ReadWritePaths="{os.path.join(f"/home/{args.user}", args.sim_path)}/sim"
 ExecStartPre=!chmod 0700 /tmp/mnt/
 ExecStartPre=!mkdir --parents --mode=0700 /tmp/mnt/disk/sim_backups/
 # Run bin/backup as the unprivileged user
-ExecStart=nice "{os.path.join(f"/home/{args.user}", args.sim_path)}/sim/bin/backup"
+ExecStart=nice "{os.path.join(f"/home/{args.user}", args.sim_path)}/subprojects/sim/sim/bin/backup"
 # Copy backup to the protected backup location i.e accessible for privileged users only
 ExecStart=!sh -c '\\\\
     git init --bare /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git --initial-branch main && \\\\
@@ -532,7 +532,7 @@ ExecStart=!sh -c '\\\\
     git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config pack.windowMemory 128m && \\\\
     git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config pack.threads 1 && \\\\
     git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config gc.auto 500 && \\\\
-    nice git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git fetch "{os.path.join(f"/home/{args.user}", args.sim_path)}/sim" HEAD:HEAD --progress'
+    nice git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git fetch "{os.path.join(f"/home/{args.user}", args.sim_path)}/subprojects/sim/sim" HEAD:HEAD --progress'
 
 # To restore from backup use:
 # git --git-dir=/path/to/sim_backups/{args.daily_backup_filename}.git --work-tree=/path/to/where/to/restore/ checkout HEAD -- .
