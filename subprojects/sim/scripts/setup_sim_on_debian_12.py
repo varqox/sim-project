@@ -110,8 +110,8 @@ host: 'localhost'
 HEREDOCEND""")
     user_cmd(f"cd '{args.sim_path}/subprojects/sim' && meson install -C build/")
     # Change sim address
-    user_cmd(f"grep -P '^address:.*$' '{args.sim_path}/subprojects/sim/sim/sim.conf' -q || (echo \"\033[1;31merror: couldn't find field 'address' in the {args.sim_path}/subprojects/sim/sim/sim.conf\033[m\" && false)")
-    user_cmd(f"sed 's/^address:.*$/address: {args.sim_local_address}/' -i '{args.sim_path}/subprojects/sim/sim/sim.conf'")
+    user_cmd(f"grep -P '^web_server_address:.*$' '{args.sim_path}/subprojects/sim/sim/sim.conf' -q || (echo \"\033[1;31merror: couldn't find field 'address' in the {args.sim_path}/subprojects/sim/sim/sim.conf\033[m\" && false)")
+    user_cmd(f"sed 's/^web_server_address:.*$/web_server_address: {args.sim_local_address}/' -i '{args.sim_path}/subprojects/sim/sim/sim.conf'")
 
     print('\033[1;32m==>\033[0;1m Run sim\033[m')
     apt_install('curl')
