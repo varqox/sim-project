@@ -330,22 +330,31 @@ SupervisorConnection spawn_supervisor() {
     int sock_fd = sock_fds[0];
     int supervisor_sock_fd = sock_fds[1];
 
-    int supervisor_pidfd = 0;
-    clone_args cl_args = {};
-    cl_args.flags = CLONE_PIDFD;
-    cl_args.pidfd = reinterpret_cast<uint64_t>(&supervisor_pidfd);
-    cl_args.exit_signal = 0; // we don't need SIGCHLD
-    auto pid = syscalls::clone3(&cl_args);
+    // Sadly, we cannot use clone3() with .flags == CLONE_PIDFD because it causes malloc() to hang
+    // indefinitely occasionally in the child process if the parent process (the current process) is
+    // multi-threaded.
+    auto pid = fork();
     if (pid == -1) {
         int errnum = errno;
         (void)close(supervisor_sock_fd);
         (void)close(sock_fd);
         (void)close(supervisor_error_fd);
-        THROW("clone3()", errmsg(errnum));
+        THROW("fork()", errmsg(errnum));
     }
     if (pid == 0) {
-        // sock_fd will be closed by exec()
+        // sock_fd and pipe_opt->readable will be closed by exec()
         execute_supervisor(supervisor_error_fd, supervisor_sock_fd);
+    }
+
+    // We don't have to synchronize with the child process, because pidfd_open() works on non-reaped
+    // (even zombie) processes.
+    int supervisor_pidfd = syscalls::pidfd_open(pid, 0);
+    if (supervisor_pidfd < 0) {
+        int errnum = errno;
+        (void)close(supervisor_sock_fd);
+        (void)close(sock_fd);
+        (void)close(supervisor_error_fd);
+        THROW("pidfd_open()", errmsg(errnum));
     }
 
     // Close the supervisor's end of the socket
