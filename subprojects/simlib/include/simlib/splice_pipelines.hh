@@ -30,24 +30,15 @@ struct SplicePipelinesRes {
 
 template <size_t N>
 SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
-    struct sigaction sigaction_old;
-    if (sigaction(SIGPIPE, nullptr, &sigaction_old)) {
-        THROW("sigaction()");
+    // Ignore potential SIGPIPE
+    sigset_t sigpipe_set;
+    sigset_t old_sigmask;
+    sigemptyset(&sigpipe_set);
+    sigaddset(&sigpipe_set, SIGPIPE);
+    if (pthread_sigmask(SIG_BLOCK, &sigpipe_set, &old_sigmask)) {
+        THROW("pthread_sigmask()");
     }
-    if (sigaction_old.sa_handler != SIG_DFL && sigaction_old.sa_handler != SIG_IGN) {
-        THROW("splice_pipelines() cannot work with custom SIGPIPE handler, as it needs to ignore "
-              "potential SIGPIPE signals from splice()");
-    }
-
-    struct sigaction sigaction_ignore_sig = {};
-    sigaction_ignore_sig.sa_handler = SIG_IGN;
-    sigaction_ignore_sig.sa_flags = SA_RESTART;
-    if (sigaction(SIGPIPE, &sigaction_ignore_sig, &sigaction_old)) {
-        THROW("sigaction()", errmsg());
-    }
-    if (sigaction_old.sa_handler != SIG_DFL && sigaction_old.sa_handler != SIG_IGN) {
-        std::terminate(); // signal handler for SIGPIPE has unexpectedly changed
-    }
+    bool encoutered_sigpipe = false;
 
     std::array<pollfd, N * 2> pfds;
 
@@ -194,6 +185,7 @@ SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
                 if (sent < 0) {
                     if (errno == EPIPE) { // write end was closed after poll() returned
                         sent = 0;
+                        encoutered_sigpipe = true;
                     } else {
                         THROW("splice()", errmsg());
                     }
@@ -218,9 +210,17 @@ SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
         }
     }
 
-    // Restore the previous SIGPIPE signal handler
-    if (sigaction(SIGPIPE, &sigaction_old, nullptr)) {
-        THROW("sigaction()", errmsg());
+    // Consume potential SIGPIPE (it may not be generated if signal disposition is set to SIG_IGN)
+    if (encoutered_sigpipe) {
+        struct timespec timeout = {.tv_sec = 0, .tv_nsec = 0};
+        if (sigtimedwait(&sigpipe_set, nullptr, &timeout) == -1 && errno != EAGAIN) {
+            THROW("sigtimedwait()");
+        }
+    }
+
+    // Restore the previous thread's sigmask
+    if (pthread_sigmask(SIG_SETMASK, &old_sigmask, nullptr)) {
+        THROW("pthread_sigmask()");
     }
 
     return res;
