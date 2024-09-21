@@ -212,19 +212,6 @@ backup = executable('backup',
     install_rpath : get_option('prefix') / get_option('libdir'),
 )
 
-restore_backup = executable('restore-backup',
-    implicit_include_directories : false,
-    sources : [
-        'src/restore_backup.cc',
-    ],
-    dependencies : [
-        libsim_dep,
-        static_dep,
-    ],
-    install : _install,
-    install_rpath : get_option('prefix') / get_option('libdir'),
-)
-
 sim_server = executable('sim-server',
     implicit_include_directories : false,
     sources : [
@@ -295,7 +282,6 @@ base_targets = [
     job_server,
     libsim,
     manage,
-    restore_backup,
     setup_installation,
     sim_merger,
     sim_server,

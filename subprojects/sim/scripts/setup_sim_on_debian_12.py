@@ -494,9 +494,19 @@ def setup_daily_backup():
 
     setup_sim()
 
+    full_sim_path = args.sim_path if args.sim_path.startswith("/") else os.path.join(f"/home/{args.user}", args.sim_path)
+
+    print('\033[1;32m==>\033[0;1m Install Borg\033[m')
+    apt_install('borgbackup')
+
     print('\033[1;32m==>\033[0;1m Set up daily backup\033[m')
-    root_cmd("mkdir -p /opt/sim_backups")
-    root_cmd("chmod 700 /opt/sim_backups")
+    if args.daily_backup_to_partition is None:
+        root_cmd("mkdir -p /opt/sim_backups")
+        root_cmd("chmod 700 /opt/sim_backups")
+
+    user_cmd("mkdir --parents .cache/borg/");
+    user_cmd("mkdir --parents .config/borg/");
+
     root_cmd(f"""cat > "/etc/systemd/system/sim-backup:$(systemd-escape '{args.user}'):$(systemd-escape --path '{args.sim_path}').service" << HEREDOCEND
 [Unit]
 Description=Back up Sim and copy backup of {args.user}:{args.sim_path}
@@ -508,7 +518,9 @@ User={args.user}
 NoNewPrivileges=true
 PrivateTmp=true
 BindReadOnlyPaths=/:/:rbind
-ReadWritePaths="{os.path.join(f"/home/{args.user}", args.sim_path)}"
+ReadWritePaths="{full_sim_path}"
+ReadWritePaths="/home/{args.user}/.cache/borg/"
+ReadWritePaths="/home/{args.user}/.config/borg/"
 
 {f"MountImages=/dev/disk/by-uuid/{args.daily_backup_to_partition}:/tmp/mnt/disk/" if args.daily_backup_to_partition is not None else ''}
 {"ReadWritePaths=/opt/sim_backups/" if args.daily_backup_to_partition is None else ''}
@@ -517,27 +529,14 @@ ReadWritePaths="{os.path.join(f"/home/{args.user}", args.sim_path)}"
 # Hide backups from unprivileged users
 ExecStartPre=!chmod 0700 /tmp/mnt/
 ExecStartPre=!mkdir --parents --mode=0700 /tmp/mnt/disk/sim_backups/
-# Run bin/backup as the unprivileged user
-ExecStart=nice "{os.path.join(f"/home/{args.user}", args.sim_path)}/subprojects/sim/sim/bin/backup"
-# Copy backup to the protected backup location i.e accessible for privileged users only
-ExecStart=!sh -c '\\\\
-    git init --bare /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git --initial-branch main && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config feature.manyFiles true && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config core.bigFileThreshold 16m && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config pack.packSizeLimit 1g && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config gc.bigPackThreshold 500m && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config gc.autoPackLimit 0 && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config pack.window 0 && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config pack.deltaCacheSize 128m && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config pack.windowMemory 128m && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config pack.threads 1 && \\\\
-    git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git config gc.auto 500 && \\\\
-    nice git --git-dir=/tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.git fetch "{os.path.join(f"/home/{args.user}", args.sim_path)}/subprojects/sim/sim" HEAD:HEAD --progress'
+
+# Save backup as the unprivileged user
+ExecStart=nice '{full_sim_path}/subprojects/sim/sim/bin/backup' save
+# Save backup to the protected backup location i.e accessible for privileged users only
+ExecStart=!'{full_sim_path}/subprojects/sim/sim/bin/backup' save --to /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
 
 # To restore from backup use:
-# git --git-dir=/path/to/sim_backups/{args.daily_backup_filename}.git --work-tree=/path/to/where/to/restore/ checkout HEAD -- .
-# To check working tree against backup:
-# git --git-dir=/path/to/sim_backups/{args.daily_backup_filename}.git --work-tree=/path/to/where/to/restore/ status
+# '{full_sim_path}/subprojects/sim/sim/bin/backup' restore --from /path/to/sim/backups/{args.daily_backup_filename}.borg
 
 HEREDOCEND""")
     root_cmd(f"""cat > "/etc/systemd/system/sim-backup:$(systemd-escape '{args.user}'):$(systemd-escape --path '{args.sim_path}').timer" << HEREDOCEND

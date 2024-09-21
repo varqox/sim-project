@@ -103,7 +103,9 @@ int main(int argc, char** argv) {
         stdlog(
             "\033[1;31mMerging failed, you need to restore main sim from backup with: ",
             main_sim_path,
-            "bin/restore-backup @\033[m"
+            "bin/backup restore $(",
+            main_sim_path,
+            "bin/backup list | tail -1)\033[m"
         );
     } catch (...) {
         ERRLOG_CATCH();
@@ -111,7 +113,9 @@ int main(int argc, char** argv) {
         stdlog(
             "\033[1;31mMerging failed, you need to restore main sim from backup with: ",
             main_sim_path,
-            "bin/restore-backup @\033[m"
+            "bin/backup restore $(",
+            main_sim_path,
+            "bin/backup list | tail -1)\033[m"
         );
     }
 
