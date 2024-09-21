@@ -532,8 +532,15 @@ ExecStartPre=!mkdir --parents --mode=0700 /tmp/mnt/disk/sim_backups/
 
 # Save backup as the unprivileged user
 ExecStart=nice '{full_sim_path}/sim/bin/backup' save
+# Remove old backups as the unprivileged user
+ExecStart=borg prune --stats --progress --keep-daily 30 --keep-weekly 52 '{full_sim_path}/sim/backup.borg'
+ExecStart=borg compact --progress '{full_sim_path}/sim/backup.borg'
+
 # Save backup to the protected backup location i.e accessible for privileged users only
 ExecStart=!'{full_sim_path}/sim/bin/backup' save --to /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
+# Remove old backups
+ExecStart=!borg prune --stats --progress --keep-daily 30 --keep-weekly 52 /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
+ExecStart=!borg compact --progress /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
 
 # To restore from backup use:
 # '{full_sim_path}/sim/bin/backup' restore --from /path/to/sim/backups/{args.daily_backup_filename}.borg
