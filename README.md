@@ -34,9 +34,9 @@ By default no subproject is marked to be installed on `meson install -C build`. 
 ```sh
 meson setup build --wipe -Dbuild=sim,sip -Dinstall=sip
 ```
-This command will build `sim` and `sip` subprojects, but will mark only `sip` to be installed.
+This command will build `sim` and `sip` subprojects, but will only mark `sip` to be installed.
 
-Specifying subpojects to install is also adds them to the list of subprojects to build.
+Specifying subpojects to install also adds them to the list of subprojects to build.
 
 For detailed option description you can inspect [meson_options.txt](meson_options.txt) file.
 
