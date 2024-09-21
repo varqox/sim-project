@@ -303,24 +303,23 @@ void restore(ArgSeq::Iter begin, ArgSeq::Iter end) {
         for_each_dir_component(dir_path, [&](dirent* entry) {
             auto filename = string_view{entry->d_name};
             path += filename;
-            if (path == DEFAULT_BACKUP_REPOSITORY_PATH) {
-                return; // Don't remove default backup repository
-            }
-            bool absent = paths_present_in_backup.find(path) == paths_present_in_backup.end();
-            if (entry->d_type == DT_DIR) {
-                path += '/';
-                self(self, path);
-                path.pop_back();
-                if (absent) {
-                    stdlog("removing ", path);
-                    if (rmdir(path.c_str())) {
-                        THROW("rmdir()");
+            if (path != DEFAULT_BACKUP_REPOSITORY_PATH) {
+                bool absent = paths_present_in_backup.find(path) == paths_present_in_backup.end();
+                if (entry->d_type == DT_DIR) {
+                    path += '/';
+                    self(self, path);
+                    path.pop_back();
+                    if (absent) {
+                        stdlog("removing ", path);
+                        if (rmdir(path.c_str())) {
+                            THROW("rmdir()");
+                        }
                     }
-                }
-            } else if (absent) {
-                stdlog("removing ", path);
-                if (unlink(path.c_str())) {
-                    THROW("unlink()");
+                } else if (absent) {
+                    stdlog("removing ", path);
+                    if (unlink(path.c_str())) {
+                        THROW("unlink()");
+                    }
                 }
             }
             path.resize(path.size() - filename.size());
