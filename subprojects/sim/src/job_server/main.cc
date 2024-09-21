@@ -445,7 +445,7 @@ int main() {
 
     // Loggers
     auto open_log_file_as_fd = [&](const char* path, int dest_fd) {
-        auto fd = FileDescriptor{path, O_WRONLY | O_APPEND | O_CLOEXEC};
+        auto fd = FileDescriptor{path, O_CREAT | O_WRONLY | O_APPEND | O_CLOEXEC};
         if (!fd.is_open()) {
             errlog("Failed to open: ", path, errmsg());
             _exit(1);
