@@ -161,7 +161,7 @@ sim/manage help
 ```
 
 ## Backups
-Backups are made using [Borg](https://www.borgbackup.org/). Debian/Ubuntu package: `borgbackup`, Arch Linux package: `borg`.
+Backups are made using [restic](https://restic.net/). Debin/Ubuntu package: `restic`, Arch Linux package: `restic`.
 
 A sim backup can be created with:
 ```sh
@@ -200,7 +200,7 @@ sudo mariadb -e "CREATE USER other_sim@localhost IDENTIFIED BY 'other_sim'; CREA
 
 5. Restore the other sim instance from latest backup:
 ```sh
-other-sim-instance/bin/backup restore $(other-sim-instance/bin/backup list | tail -1)
+other-sim-instance/bin/backup restore latest
 ```
 
 Now we have both instances on the same machine we can merge them. To do so, run:

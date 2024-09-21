@@ -493,20 +493,16 @@ def setup_daily_backup():
         raise Exception('You need to specify daily backup filename with --daily-backup-filename <BACKUP_FILENAME>')
 
     setup_sim()
-    start_sim_at_boot()
 
     full_sim_path = args.sim_path if args.sim_path.startswith("/") else os.path.join(f"/home/{args.user}", args.sim_path)
 
-    print('\033[1;32m==>\033[0;1m Install Borg\033[m')
-    apt_install('borgbackup')
+    print('\033[1;32m==>\033[0;1m Install restic\033[m')
+    apt_install('restic')
 
     print('\033[1;32m==>\033[0;1m Set up daily backup\033[m')
     if args.daily_backup_to_partition is None:
         root_cmd("mkdir -p /opt/sim_backups")
         root_cmd("chmod 700 /opt/sim_backups")
-
-    user_cmd("mkdir --parents .cache/borg/");
-    user_cmd("mkdir --parents .config/borg/");
 
     root_cmd(f"""cat > "/etc/systemd/system/sim-backup:$(systemd-escape '{args.user}'):$(systemd-escape --path '{args.sim_path}').service" << HEREDOCEND
 [Unit]
@@ -520,8 +516,6 @@ NoNewPrivileges=true
 PrivateTmp=true
 BindReadOnlyPaths=/:/:rbind
 ReadWritePaths="{full_sim_path}"
-ReadWritePaths="/home/{args.user}/.cache/borg/"
-ReadWritePaths="/home/{args.user}/.config/borg/"
 
 {f"MountImages=/dev/disk/by-uuid/{args.daily_backup_to_partition}:/tmp/mnt/disk/" if args.daily_backup_to_partition is not None else ''}
 {"ReadWritePaths=/opt/sim_backups/" if args.daily_backup_to_partition is None else ''}
@@ -531,24 +525,20 @@ ReadWritePaths="/home/{args.user}/.config/borg/"
 ExecStartPre=!chmod 0700 /tmp/mnt/
 ExecStartPre=!mkdir --parents --mode=0700 /tmp/mnt/disk/sim_backups/
 
-# Stop sim to prevent sim from modifying files
-ExecStart='{full_sim_path}/sim/manage' stop
 # Save backup as the unprivileged user
-ExecStart='{full_sim_path}/sim/bin/backup' save
-# Save backup to the protected backup location i.e accessible for privileged users only
-ExecStart=!'{full_sim_path}/sim/bin/backup' save --to /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
-# Restore sim (manage start -b won't work because background processes are killed on the service exit)
-ExecStart=env XDG_RUNTIME_DIR=/run/user/$(id -u '{args.user}') systemctl --user start "start_$(systemd-escape --path '{args.sim_path}')".service
-
+ExecStart=nice '{full_sim_path}/sim/bin/backup' save
 # Remove old backups as the unprivileged user
-ExecStart=borg prune --stats --progress --keep-daily 30 --keep-weekly 52 '{full_sim_path}/sim/backup.borg'
-ExecStart=borg compact --progress '{full_sim_path}/sim/backup.borg'
+ExecStart=nice restic --repo '{full_sim_path}/sim/backup.restic' --password-command="echo sim" forget --group-by= --prune --keep-daily 30 --keep-weekly 52
+
+# Create protected backup repository if absent
+ExecStart=!sh -c 'test -e /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.restic || nice restic --repo /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.restic --password-command="echo sim" init'
+# Copy backup to the protected backup location i.e accessible for privileged users only
+ExecStart=!nice restic --repo /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.restic --password-command="echo sim" copy --from-repo '{full_sim_path}/sim/backup.restic' --from-password-command="echo sim"
 # Remove old backups
-ExecStart=!borg prune --stats --progress --keep-daily 30 --keep-weekly 52 /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
-ExecStart=!borg compact --progress /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
+ExecStart=!nice restic --repo /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.restic --password-command="echo sim" forget --group-by= --prune --keep-daily 30 --keep-weekly 52
 
 # To restore from backup use:
-# '{full_sim_path}/sim/bin/backup' restore --from /path/to/sim/backups/{args.daily_backup_filename}.borg
+# '{full_sim_path}/sim/bin/backup' restore --from /path/to/sim/backups/{args.daily_backup_filename}.restic
 
 HEREDOCEND""")
     root_cmd(f"""cat > "/etc/systemd/system/sim-backup:$(systemd-escape '{args.user}'):$(systemd-escape --path '{args.sim_path}').timer" << HEREDOCEND

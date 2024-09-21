@@ -1,8 +1,11 @@
 #include <cerrno>
+#include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <dirent.h>
 #include <fcntl.h>
 #include <iostream>
+#include <memory>
 #include <sim/internal_files/internal_file.hh>
 #include <sim/internal_files/old_internal_file.hh>
 #include <sim/mysql/mysql.hh>
@@ -10,14 +13,16 @@
 #include <simlib/concat_tostr.hh>
 #include <simlib/config_file.hh>
 #include <simlib/directory.hh>
+#include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_info.hh>
 #include <simlib/logger.hh>
+#include <simlib/sandbox/si.hh>
 #include <simlib/sim/problem_package.hh>
-#include <simlib/spawner.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
+#include <simlib/syscalls.hh>
 #include <simlib/throw_assert.hh>
 #include <simlib/to_arg_seq.hh>
 #include <simlib/working_directory.hh>
@@ -33,7 +38,7 @@ using std::vector;
 
 namespace {
 
-constexpr inline auto DEFAULT_BACKUP_REPOSITORY_PATH = string_view{"backup.borg"};
+constexpr inline auto DEFAULT_BACKUP_REPOSITORY_PATH = string_view{"backup.restic"};
 constexpr inline auto SIM_DIR_RELATIVE_TO_EXECUTABLE = string_view{".."};
 
 template <class... Args>
@@ -62,14 +67,14 @@ void help(const char* program_name) {
     printf("Usage: %s <command> [<args>]\n", program_name);
     puts("Commands:");
     puts("   list [--from <PATH_TO_REPOSITORY>]");
-    puts("            List all snapshots. Uses backup.borg from the current instance if");
+    puts("            List all snapshots. Uses backup.restic from the current instance if");
     puts("            PATH_TO_REPOSITORY is not specified.");
     puts("   save [--to <PATH_TO_REPOSITORY>]");
-    puts("            Save snapshot to the repository. Uses backup.borg from the current");
+    puts("            Save snapshot to the repository. Uses backup.restic from the current");
     puts("            instance if PATH_TO_REPOSITORY is not specified.");
     puts("   restore <SNAPSHOT_NAME> [--from <PATH_TO_REPOSITORY>]");
     puts("            Restore the specified snapshot. Use \"list\" command to get snapshot");
-    puts("            names. Uses backup.borg from the current instance if");
+    puts("            names. Uses backup.restic from the current instance if");
     puts("            PATH_TO_REPOSITORY is not specified.");
     puts("");
     puts("            WARNING: This operation is destructive -- it will overwrite files");
@@ -112,16 +117,35 @@ void run_command(
     vector<string> argv, FileDescriptor* stdin_fd = nullptr, FileDescriptor* stdout_fd = nullptr
 ) {
     throw_assert(!argv.empty());
-    auto options = Spawner::Options{};
-    if (stdin_fd) {
-        options.new_stdin_fd = *stdin_fd;
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        if (stdin_fd && dup2(*stdin_fd, STDIN_FILENO) < 0) {
+            die_with_error("dup2()", errmsg().c_str());
+        }
+        if (stdout_fd && dup2(*stdout_fd, STDOUT_FILENO) < 0) {
+            die_with_error("dup2()", errmsg().c_str());
+        }
+
+        auto new_argv = std::make_unique<char*[]>(argv.size() + 1);
+        for (size_t i = 0; i < argv.size(); ++i) {
+            new_argv[i] = argv[i].data();
+        }
+        new_argv[argv.size()] = nullptr;
+
+        execve(argv[0].c_str(), new_argv.get(), environ);
+        die_with_error("execve()", errmsg().c_str());
     }
-    if (stdout_fd) {
-        options.new_stdout_fd = *stdout_fd;
+    siginfo_t si;
+    if (syscalls::waitid(P_PID, pid, &si, WEXITED, nullptr)) {
+        die_with_error("waitid()", errmsg().c_str());
     }
-    auto es = Spawner::run(argv[0], argv, options);
-    if (es.si.code != CLD_EXITED || es.si.status != 0) {
-        die_with_error(argv[0], " failed: ", es.message);
+    if (si.si_code != CLD_EXITED || si.si_status != 0) {
+        die_with_error(
+            argv[0],
+            " failed: ",
+            sandbox::Si{.code = si.si_code, .status = si.si_status}.description()
+        );
     }
 }
 
@@ -154,7 +178,14 @@ DbConfig load_db_config() {
 
 void list(ArgSeq::Iter begin, ArgSeq::Iter end) {
     auto repository_path = parse_repository_path_and_chdir_to_sim_dir(begin, end, "--from");
-    run_command({"/usr/bin/borg", "list", "--short", repository_path});
+    run_command({
+        "/usr/bin/restic",
+        "--repo",
+        repository_path,
+        "--password-command=echo sim",
+        "snapshots",
+        "--group-by=",
+    });
 }
 
 void save(ArgSeq::Iter begin, ArgSeq::Iter end) {
@@ -230,15 +261,23 @@ void save(ArgSeq::Iter begin, ArgSeq::Iter end) {
     }
 
     if (!path_exists(repository_path)) {
-        run_command({"/usr/bin/borg", "init", "--encryption", "none", repository_path});
+        stdlog("Creating repository...");
+        run_command({
+            "/usr/bin/restic",
+            "--repo",
+            repository_path,
+            "--password-command=echo sim",
+            "init",
+        });
+        stdlog("... done.");
     }
+    stdlog("Backing up files...");
     run_command({
-        "/usr/bin/borg",
-        "create",
-        "--verbose",
-        "--stats",
-        "--progress",
-        repository_path + "::{now}",
+        "/usr/bin/restic",
+        "--repo",
+        repository_path,
+        "--password-command=echo sim",
+        "backup",
         ".db.config",
         "bin",
         "dump.sql",
@@ -249,6 +288,7 @@ void save(ArgSeq::Iter begin, ArgSeq::Iter end) {
         "sim.conf",
         "static",
     });
+    stdlog("... done.");
 }
 
 void restore(ArgSeq::Iter begin, ArgSeq::Iter end) {
@@ -266,12 +306,16 @@ void restore(ArgSeq::Iter begin, ArgSeq::Iter end) {
     // Restore all files except modifications to .db.config
     auto db_config_contents = get_file_contents(".db.config");
     stdlog("Restoring files (including database dump)...");
-    auto borg_archive = concat_tostr(repository_path, "::", snapshot_name);
+    unlink("bin/backup"); // Unlink this file to avoid EBUSY while restic tries to write to it.
     run_command({
-        "/usr/bin/borg",
-        "extract",
-        "--progress",
-        borg_archive,
+        "/usr/bin/restic",
+        "--repo",
+        repository_path,
+        "--password-command=echo sim",
+        "restore",
+        std::string{snapshot_name},
+        "--target",
+        ".",
     });
     put_file_contents(".db.config", db_config_contents);
     stdlog("... done.");
@@ -282,7 +326,19 @@ void restore(ArgSeq::Iter begin, ArgSeq::Iter end) {
     if (!out_fd.is_open()) {
         THROW("memfd_create()");
     }
-    run_command({"/usr/bin/borg", "list", "--short", borg_archive}, nullptr, &out_fd);
+    run_command(
+        {
+            "/usr/bin/restic",
+            "--repo",
+            repository_path,
+            "--password-command=echo sim",
+            "--quiet",
+            "ls",
+            std::string{snapshot_name},
+        },
+        nullptr,
+        &out_fd
+    );
 
     auto out_contents = get_file_contents(out_fd, 0, -1);
     auto paths_present_in_backup = std::set<string_view>{};
@@ -292,7 +348,8 @@ void restore(ArgSeq::Iter begin, ArgSeq::Iter end) {
             break;
         }
 
-        auto path = string_view{out_contents.data() + beg, nl_pos - beg};
+        throw_assert(out_contents[beg] == '/');
+        auto path = string_view{out_contents.data() + beg + 1, nl_pos - beg - 1};
         paths_present_in_backup.emplace(path);
         beg = nl_pos + 1;
     }
