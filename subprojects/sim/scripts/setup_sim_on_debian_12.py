@@ -493,6 +493,7 @@ def setup_daily_backup():
         raise Exception('You need to specify daily backup filename with --daily-backup-filename <BACKUP_FILENAME>')
 
     setup_sim()
+    start_sim_at_boot()
 
     full_sim_path = args.sim_path if args.sim_path.startswith("/") else os.path.join(f"/home/{args.user}", args.sim_path)
 
@@ -530,14 +531,18 @@ ReadWritePaths="/home/{args.user}/.config/borg/"
 ExecStartPre=!chmod 0700 /tmp/mnt/
 ExecStartPre=!mkdir --parents --mode=0700 /tmp/mnt/disk/sim_backups/
 
+# Stop sim to prevent sim from modifying files
+ExecStart='{full_sim_path}/sim/manage' stop
 # Save backup as the unprivileged user
-ExecStart=nice '{full_sim_path}/sim/bin/backup' save
+ExecStart='{full_sim_path}/sim/bin/backup' save
+# Save backup to the protected backup location i.e accessible for privileged users only
+ExecStart=!'{full_sim_path}/sim/bin/backup' save --to /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
+# Restore sim (manage start -b won't work because background processes are killed on the service exit)
+ExecStart=env XDG_RUNTIME_DIR=/run/user/$(id -u '{args.user}') systemctl --user start "start_$(systemd-escape --path '{args.sim_path}')".service
+
 # Remove old backups as the unprivileged user
 ExecStart=borg prune --stats --progress --keep-daily 30 --keep-weekly 52 '{full_sim_path}/sim/backup.borg'
 ExecStart=borg compact --progress '{full_sim_path}/sim/backup.borg'
-
-# Save backup to the protected backup location i.e accessible for privileged users only
-ExecStart=!'{full_sim_path}/sim/bin/backup' save --to /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
 # Remove old backups
 ExecStart=!borg prune --stats --progress --keep-daily 30 --keep-weekly 52 /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
 ExecStart=!borg compact --progress /tmp/mnt/disk/sim_backups/{args.daily_backup_filename}.borg
