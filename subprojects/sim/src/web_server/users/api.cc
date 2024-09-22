@@ -54,8 +54,7 @@ struct UserInfo {
     UserInfo& operator=(UserInfo&&) = delete;
     ~UserInfo() = default;
 
-    void append_to(const decltype(Context::session)& session, json_str::ObjectBuilder& obj) {
-        const auto caps = capabilities::user(session, id, type);
+    void append_to(const capabilities::UserCapabilities& caps, json_str::ObjectBuilder& obj) {
         throw_assert(caps.view);
         obj.prop("id", id);
         obj.prop("type", type);
@@ -102,7 +101,9 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
     obj.prop_arr("list", [&](auto& arr) {
         while (stmt.next()) {
             ++rows_num;
-            arr.val_obj([&](auto& obj) { u.append_to(ctx.session, obj); });
+            arr.val_obj([&](auto& obj) {
+                u.append_to(capabilities::user(ctx.session, u.id, u.type), obj);
+            });
         }
     });
     obj.prop("may_be_more", rows_num == limit);
@@ -252,7 +253,7 @@ Response view_user(Context& ctx, decltype(User::id) user_id) {
     }
 
     json_str::Object obj;
-    u.append_to(ctx.session, obj);
+    u.append_to(capabilities::user(ctx.session, u.id, u.type), obj);
     return ctx.response_json(std::move(obj).into_str());
 }
 

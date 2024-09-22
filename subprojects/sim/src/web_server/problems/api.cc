@@ -69,12 +69,11 @@ struct ProblemInfo {
     ~ProblemInfo() = default;
 
     void append_to(
-        const decltype(Context::session)& session,
+        const capabilities::ProblemCapabilities& caps,
         json_str::ObjectBuilder& obj,
         const std::vector<decltype(ProblemTag::name)>& public_tags,
         const std::vector<decltype(ProblemTag::name)>& hidden_tags
     ) {
-        const auto caps = capabilities::problem(session, visibility, owner_id);
         throw_assert(caps.view);
         obj.prop("id", id);
         obj.prop("visibility", visibility);
@@ -215,8 +214,14 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
         while (stmt.next()) {
             ++rows_num;
             fill_tags_for_problem(p.id);
-            arr.val_obj([&](auto& obj) { p.append_to(ctx.session, obj, public_tags, hidden_tags); }
-            );
+            arr.val_obj([&](auto& obj) {
+                p.append_to(
+                    capabilities::problem(ctx.session, p.visibility, p.owner_id),
+                    obj,
+                    public_tags,
+                    hidden_tags
+                );
+            });
         }
     });
     obj.prop("may_be_more", rows_num == limit);
@@ -602,7 +607,7 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
     }
 
     json_str::Object obj;
-    p.append_to(ctx.session, obj, public_tags, hidden_tags);
+    p.append_to(caps, obj, public_tags, hidden_tags);
     if (caps.view_simfile) {
         obj.prop("simfile", simfile);
         ConfigFile cf;

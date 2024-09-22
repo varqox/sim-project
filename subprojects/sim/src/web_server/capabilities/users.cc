@@ -3,9 +3,12 @@
 
 #include <sim/users/user.hh>
 
+using sim::users::User;
+using web_server::web_worker::Context;
+
 namespace web_server::capabilities {
 
-UsersCapabilities users(const decltype(web_worker::Context::session)& session) noexcept {
+UsersCapabilities users(const decltype(Context::session)& session) noexcept {
     return {
         .web_ui_view = is_admin(session),
         .add_user = is_admin(session),
@@ -18,7 +21,7 @@ UsersCapabilities users(const decltype(web_worker::Context::session)& session) n
     };
 }
 
-UsersListCapabilities list_users(const decltype(web_worker::Context::session)& session) noexcept {
+UsersListCapabilities list_users(const decltype(Context::session)& session) noexcept {
     return {
         .query_all = is_admin(session),
         .query_with_type_admin = is_admin(session),
@@ -31,22 +34,21 @@ UsersListCapabilities list_users(const decltype(web_worker::Context::session)& s
 }
 
 UserCapabilities user(
-    const decltype(web_worker::Context::session)& session,
-    decltype(sim::users::User::id) user_id,
-    decltype(sim::users::User::type) user_type
+    const decltype(Context::session)& session,
+    decltype(User::id) user_id,
+    decltype(User::type) user_type
 ) noexcept {
     using sim::users::SIM_ROOT_ID;
-    using Type = sim::users::User::Type;
     bool is_admin_ = is_admin(session);
     bool is_teacher_ = is_teacher(session);
     bool is_self_ = is_self(session, user_id);
     bool edit = is_self_ or (is_admin_ and user_id != SIM_ROOT_ID);
     bool make_admin =
-        (session and session->user_id == SIM_ROOT_ID) or (edit and user_type == Type::ADMIN);
+        (session and session->user_id == SIM_ROOT_ID) or (edit and user_type == User::Type::ADMIN);
     bool make_teacher =
-        (user_id != SIM_ROOT_ID) and (is_admin_ or (edit and user_type == Type::TEACHER));
+        (user_id != SIM_ROOT_ID) and (is_admin_ or (edit and user_type == User::Type::TEACHER));
     bool make_normal = (user_id != SIM_ROOT_ID) and
-        (is_admin_ or (is_teacher_ and is_self_) or (edit and user_type == Type::NORMAL));
+        (is_admin_ or (is_teacher_ and is_self_) or (edit and user_type == User::Type::NORMAL));
     return {
         .view = is_self_ or is_admin_,
         .edit = edit,
