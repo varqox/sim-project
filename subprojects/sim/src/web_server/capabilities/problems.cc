@@ -15,24 +15,25 @@ ProblemsCapabilities problems(const decltype(Context::session)& session) noexcep
     return {
         .web_ui_view = true,
         .add_problem = is_admin(session) or is_teacher(session),
-        .add_problem_with_type_private = is_admin(session) or is_teacher(session),
-        .add_problem_with_type_contest_only = is_admin(session) or is_teacher(session),
-        .add_problem_with_type_public = is_admin(session),
+        .add_problem_with_visibility_private = is_admin(session) or is_teacher(session),
+        .add_problem_with_visibility_contest_only = is_admin(session) or is_teacher(session),
+        .add_problem_with_visibility_public = is_admin(session),
     };
 }
 
 ProblemsListCapabilities list_problems(const decltype(Context::session)& session) noexcept {
     return {
         .query_all = true,
-        .query_with_type_public = true,
-        .query_with_type_contest_only = is_admin(session) or is_teacher(session) or
-            (session and list_user_problems(session, session->user_id).query_with_type_contest_only
+        .query_with_visibility_public = true,
+        .query_with_visibility_contest_only = is_admin(session) or is_teacher(session) or
+            (session and
+             list_user_problems(session, session->user_id).query_with_visibility_contest_only),
+        .query_with_visibility_private = is_admin(session) or is_teacher(session) or
+            (session and list_user_problems(session, session->user_id).query_with_visibility_private
             ),
-        .query_with_type_private = is_admin(session) or is_teacher(session) or
-            (session and list_user_problems(session, session->user_id).query_with_type_private),
-        .view_all_with_type_public = true,
-        .view_all_with_type_contest_only = is_admin(session) or is_teacher(session),
-        .view_all_with_type_private = is_admin(session),
+        .view_all_with_visibility_public = true,
+        .view_all_with_visibility_contest_only = is_admin(session) or is_teacher(session),
+        .view_all_with_visibility_private = is_admin(session),
     };
 }
 
@@ -40,12 +41,12 @@ ProblemsListCapabilities
 list_user_problems(const decltype(Context::session)& session, decltype(User::id) user_id) noexcept {
     return {
         .query_all = is_self(session, user_id) or is_admin(session),
-        .query_with_type_public = is_self(session, user_id) or is_admin(session),
-        .query_with_type_contest_only = is_self(session, user_id) or is_admin(session),
-        .query_with_type_private = is_self(session, user_id) or is_admin(session),
-        .view_all_with_type_public = is_self(session, user_id) or is_admin(session),
-        .view_all_with_type_contest_only = is_self(session, user_id) or is_admin(session),
-        .view_all_with_type_private = is_self(session, user_id) or is_admin(session),
+        .query_with_visibility_public = is_self(session, user_id) or is_admin(session),
+        .query_with_visibility_contest_only = is_self(session, user_id) or is_admin(session),
+        .query_with_visibility_private = is_self(session, user_id) or is_admin(session),
+        .view_all_with_visibility_public = is_self(session, user_id) or is_admin(session),
+        .view_all_with_visibility_contest_only = is_self(session, user_id) or is_admin(session),
+        .view_all_with_visibility_private = is_self(session, user_id) or is_admin(session),
     };
 }
 

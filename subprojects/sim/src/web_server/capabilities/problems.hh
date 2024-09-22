@@ -10,21 +10,21 @@ namespace web_server::capabilities {
 struct ProblemsCapabilities {
     bool web_ui_view : 1;
     bool add_problem : 1;
-    bool add_problem_with_type_private : 1;
-    bool add_problem_with_type_contest_only : 1;
-    bool add_problem_with_type_public : 1;
+    bool add_problem_with_visibility_private : 1;
+    bool add_problem_with_visibility_contest_only : 1;
+    bool add_problem_with_visibility_public : 1;
 };
 
 ProblemsCapabilities problems(const decltype(web_worker::Context::session)& session) noexcept;
 
 struct ProblemsListCapabilities {
     bool query_all : 1;
-    bool query_with_type_public : 1;
-    bool query_with_type_contest_only : 1;
-    bool query_with_type_private : 1;
-    bool view_all_with_type_public : 1;
-    bool view_all_with_type_contest_only : 1;
-    bool view_all_with_type_private : 1;
+    bool query_with_visibility_public : 1;
+    bool query_with_visibility_contest_only : 1;
+    bool query_with_visibility_private : 1;
+    bool view_all_with_visibility_public : 1;
+    bool view_all_with_visibility_contest_only : 1;
+    bool view_all_with_visibility_private : 1;
 };
 
 ProblemsListCapabilities list_problems(const decltype(web_worker::Context::session)& session
