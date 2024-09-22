@@ -1058,74 +1058,72 @@ static void compile_tex_file(StringView file) {
     }
 
     // It is necessary (essential) to run latex two times
-    for (int iter = 0; iter < 2; ++iter) {
-        auto res = sc.await_result(sc.send_request(
-            {{
-                "/usr/bin/sh",
-                "-c",
-                concat_tostr(
-                    "/usr/bin/pdflatex -halt-on-error -output-directory /out '/pkg/",
-                    file,
-                    "' && exec /usr/bin/pdflatex -halt-on-error -output-directory /out '/pkg/",
-                    file,
-                    '\''
-                ),
-            }},
-            {
-                .stdin_fd = std::nullopt,
-                .stdout_fd = STDOUT_FILENO,
-                .stderr_fd = STDERR_FILENO,
-                .env = env,
-                .linux_namespaces =
-                    {
-                        .user =
-                            {
-                                .inside_uid = 1000,
-                                .inside_gid = 1000,
-                            },
-                        .mount =
-                            {
-                                .operations = operations,
-                                .new_root_mount_path = "/..",
-                            },
-                    },
-                .cgroup =
-                    {
-                        .process_num_limit = 32,
-                        .memory_limit_in_bytes = 1 << 30,
-                        .swap_limit_in_bytes = 0,
-                    },
-                .prlimit =
-                    {
-                        .max_core_file_size_in_bytes = 0,
-                        .max_file_size_in_bytes = 32 << 20,
-                    },
-                .time_limit = LATEX_COMPILATION_TIME_LIMIT,
-                .cpu_time_limit = LATEX_COMPILATION_TIME_LIMIT,
-                .seccomp_bpf_fd =
-                    [] {
-                        auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
-                        sandbox::seccomp::allow_common_safe_syscalls(bpf);
-                        return bpf.export_to_fd();
-                    }(),
-            }
-        ));
-
-        auto res_ok = std::visit(
-            overloaded{
-                [](sandbox::result::Ok res_ok_) { return res_ok_; },
-                [](sandbox::result::Error res_err) -> sandbox::result::Ok {
-                    throw SipError("sandbox error: ", res_err.description);
-                }
-            },
-            std::move(res)
-        );
-
-        if (res_ok.si.code != CLD_EXITED or res_ok.si.status != 0) {
-            // During watching it is not intended to stop on compilation error
-            errlog("\033[1m", file, ": \033[1;31mcompilation failed\033[m");
-            return; // Second iteration makes no sense on compilation error
+    auto res = sc.await_result(sc.send_request(
+        {{
+            "/usr/bin/sh",
+            "-c",
+            concat_tostr(
+                "/usr/bin/pdflatex -halt-on-error -output-directory /out '/pkg/",
+                file,
+                "' && exec /usr/bin/pdflatex -halt-on-error -output-directory /out '/pkg/",
+                file,
+                '\''
+            ),
+        }},
+        {
+            .stdin_fd = std::nullopt,
+            .stdout_fd = STDOUT_FILENO,
+            .stderr_fd = STDERR_FILENO,
+            .env = env,
+            .linux_namespaces =
+                {
+                    .user =
+                        {
+                            .inside_uid = 1000,
+                            .inside_gid = 1000,
+                        },
+                    .mount =
+                        {
+                            .operations = operations,
+                            .new_root_mount_path = "/..",
+                        },
+                },
+            .cgroup =
+                {
+                    .process_num_limit = 32,
+                    .memory_limit_in_bytes = 1 << 30,
+                    .swap_limit_in_bytes = 0,
+                },
+            .prlimit =
+                {
+                    .max_core_file_size_in_bytes = 0,
+                    .max_file_size_in_bytes = 32 << 20,
+                },
+            .time_limit = LATEX_COMPILATION_TIME_LIMIT,
+            .cpu_time_limit = LATEX_COMPILATION_TIME_LIMIT,
+            .seccomp_bpf_fd =
+                [] {
+                    auto bpf = sandbox::seccomp::BpfBuilder{SCMP_ACT_ERRNO(ENOSYS)};
+                    sandbox::seccomp::allow_common_safe_syscalls(bpf);
+                    return bpf.export_to_fd();
+                }(),
         }
+    ));
+
+    auto res_ok = std::visit(
+        overloaded{
+            [](sandbox::result::Ok res_ok_) { return res_ok_; },
+            [](sandbox::result::Error res_err) -> sandbox::result::Ok {
+                throw SipError("sandbox error: ", res_err.description);
+            }
+        },
+        std::move(res)
+    );
+
+    if (res_ok.si.code != CLD_EXITED or res_ok.si.status != 0) {
+        // During watching it is not intended to stop on compilation error
+        errlog("\033[1m", file, ": \033[1;31mcompilation failed\033[m");
+        return; // Second iteration makes no sense on compilation error
     }
 
     if (move(tmp_file.path(), dest_path)) {
