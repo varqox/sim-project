@@ -1,6 +1,6 @@
 #pragma once
 
-#include "varbinary.hh"
+#include "binary.hh"
 
 #include <simlib/concat_tostr.hh>
 #include <simlib/throw_assert.hh>
@@ -11,7 +11,7 @@
 namespace sim::sql::fields {
 
 // Format: YYYY-mm-dd HH:MM:SS | # | @
-class InfDatetime : public Varbinary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
+class InfDatetime : public Binary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
     static constexpr const auto NEG_INF_STR = std::string_view{"#"};
     static constexpr const auto INF_STR = std::string_view{"@"};
 
@@ -24,14 +24,22 @@ public:
     ~InfDatetime() = default;
 
     explicit InfDatetime(std::string str)
-    : Varbinary{[&]() -> decltype(auto) {
-        throw_assert(is_datetime(str.c_str()));
+    : Binary{[&]() -> decltype(auto) {
+        // Database stores binary as bytes padded with '\0' at the end
+        while (!str.empty() && str.back() == '\0') {
+            str.pop_back();
+        }
+        throw_assert(str == NEG_INF_STR || str == INF_STR || is_datetime(str.c_str()));
         return std::move(str);
     }()} {}
 
     InfDatetime& operator=(std::string str) {
-        throw_assert(is_datetime(str.c_str()));
-        Varbinary::operator=(std::move(str));
+        // Database stores binary as bytes padded with '\0' at the end
+        while (!str.empty() && str.back() == '\0') {
+            str.pop_back();
+        }
+        throw_assert(str == NEG_INF_STR || str == INF_STR || is_datetime(str.c_str()));
+        Binary::operator=(std::move(str));
         return *this;
     }
 
