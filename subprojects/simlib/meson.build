@@ -35,6 +35,7 @@ if get_option('warning_level') > '0'
         '-Wnull-dereference',
         '-Wformat=2',
         '-Wlifetime',
+        '-Wunused-result',
     ]
     foreach warning : warnings
         if cc.has_argument(warning)

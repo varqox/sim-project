@@ -161,15 +161,17 @@ sim/manage help
 ```
 
 ## Backups
+Backups are made using [restic](https://restic.net/). Debin/Ubuntu package: `restic`, Arch Linux package: `restic`.
+
 A sim backup can be created with:
 ```sh
-sim/bin/backup
+sim/bin/backup save
 ```
 Multiple backups may be created.
 
-To restore a specific backup use the `sim/bin/restore-backup` program. You may want to edit the `.db.config` file if migrating sim from another machine. To learn more run:
+To restore a specific backup use the `sim/bin/backup restore` program. You may want to edit the `.db.config` file if migrating sim from another machine. To learn more run:
 ```sh
-sim/bin/restore-backup
+sim/bin/backup help
 ```
 
 ## Merging one Sim instance into the other
@@ -177,14 +179,14 @@ First, naming. Let's call the Sim instance that we want to merge into the main S
 
 In case the merging fails for some reason, make a backup of the main sim instance:
 ```sh
-main-sim-instance/bin/backup
+main-sim-instance/bin/backup save
 ```
 
 The other sim instance has to be on the same machine as the main sim instance. If this is not the case, follow the steps below:
 
 1. Make a backup of the other instance if not already done:
 ```sh
-other-sim-instance/bin/backup
+other-sim-instance/bin/backup save
 ```
 
 2. Copy the other sim instance to the machine containing the main sim instance, e.g. using `rsync`.
@@ -196,9 +198,9 @@ sudo mariadb -e "CREATE USER other_sim@localhost IDENTIFIED BY 'other_sim'; CREA
 
 4. Edit file `other-sim-instance/.db.config` to use the new user and database.
 
-5. Restore the other sim instance from backup:
+5. Restore the other sim instance from latest backup:
 ```sh
-other-sim-instance/bin/restore-backup @
+other-sim-instance/bin/backup restore latest
 ```
 
 Now we have both instances on the same machine we can merge them. To do so, run:

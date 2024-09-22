@@ -3,7 +3,7 @@
 #include "utils.hh"
 
 #include <sim/problems/problem.hh>
-#include <sim/users/old_user.hh>
+#include <sim/users/user.hh>
 
 using sim::problems::Problem;
 using sim::users::User;
