@@ -16,8 +16,8 @@ ContestEntryToken contest_entry_token_for(
     const Contest& caps_contest,
     std::optional<decltype(sim::contest_users::ContestUser::mode)> contest_user_mode
 ) noexcept {
-    bool is_contest_moderator = caps_contest.node.view and
-        (is_admin(session) or
+    bool is_contest_moderator = caps_contest.node.view &&
+        (is_admin(session) ||
          is_one_of(contest_user_mode, ContestUser::Mode::OWNER, ContestUser::Mode::MODERATOR));
     switch (token_kind) {
     case ContestEntryTokenKind::NORMAL:
