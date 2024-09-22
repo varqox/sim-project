@@ -144,7 +144,7 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             }
         });
         obj.prop_obj("submissions", [&](auto& obj) {
-            obj.prop("ui_view", capabilities::submissions_for(session).web_ui_view);
+            obj.prop("ui_view", capabilities::submissions(session).web_ui_view);
         });
         obj.prop_obj("users", [&](auto& obj) {
             const auto caps = capabilities::users(session);
