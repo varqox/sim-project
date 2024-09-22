@@ -188,7 +188,7 @@ Response Context::response_403(StringView content, StringView content_type) {
             );
         }
         case UT::TEACHER:
-        case UT::NORMAL: break;
+        case UT::NORMAL: return response_404();
         }
         std::terminate();
     }
