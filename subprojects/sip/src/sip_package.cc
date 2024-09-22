@@ -1061,11 +1061,15 @@ static void compile_tex_file(StringView file) {
     for (int iter = 0; iter < 2; ++iter) {
         auto res = sc.await_result(sc.send_request(
             {{
-                "/usr/bin/pdflatex",
-                "-halt-on-error",
-                "-output-directory",
-                "/out",
-                concat_tostr("/pkg/", file),
+                "/usr/bin/sh",
+                "-c",
+                concat_tostr(
+                    "/usr/bin/pdflatex -halt-on-error -output-directory /out '/pkg/",
+                    file,
+                    "' && exec /usr/bin/pdflatex -halt-on-error -output-directory /out '/pkg/",
+                    file,
+                    '\''
+                ),
             }},
             {
                 .stdin_fd = std::nullopt,
