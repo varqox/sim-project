@@ -115,38 +115,38 @@
     \sip_statement_readcell:n { #1 } % #1 is the file to read
 }
 % appends second token list to the first token list
-\cs_new_protected:Npn \sip_append_tl:NN #1 #2
+\cs_new_protected:Npn \sip_append_str:Nn #1 #2
 {
-    \tl_map_inline:Nn #2
+    \str_map_inline:Nn {#2}
     {
-        \tl_put_right:Nn #1 {##1}
+        % append current character do the #1 token list. \verb ensures the character will not be
+        % interpreted in the tabularx environment, ';' is a delimiter for \verb command to interpret the ##1 appropriately. Files may contain ';' - it works.
+        \tl_put_right:Nn #1 {\verb;##1;}
     }
 }
-% some variables
+% some local variables
 \tl_new:N \l__sip_statement_cell_content_tl
 \tl_new:N \l__sip_statement_newlines_accumulator_tl
 \ior_new:N \g_sip_statement_import_stream
 % proper implementation
 \cs_new_protected:Npn \sip_statement_readcell:n #1
 {
-    % clear the variable containing the cell contents
-    \tl_clear:N \l__sip_statement_cell_content_tl
     % start reading the file
     \ior_open:Nn \g_sip_statement_import_stream { #1 }
     % at each line ...
     \ior_str_map_inline:Nn \g_sip_statement_import_stream
     {
-        % if the line is empty
-        \tl_if_eq:nnTF {##1} {\par }
+        % if the line is empty (this is a trick to skip trailing newlines)
+        \tl_if_eq:nnTF {##1} {}
         {
             % add newline to newlines accumulator
             \tl_put_right:Nn \l__sip_statement_newlines_accumulator_tl {\linebreak}
         }
         {
             % append newlines accumulator to cell_content
-            \sip_append_tl:NN \l__sip_statement_cell_content_tl \l__sip_statement_newlines_accumulator_tl
-            % add the current line to cell_content (\verb;; prevents stripping leading spaces)
-            \tl_put_right:Nn \l__sip_statement_cell_content_tl {\verb;;##1}
+            \tl_concat:NNN \l__sip_statement_cell_content_tl \l__sip_statement_cell_content_tl \l__sip_statement_newlines_accumulator_tl
+            % add the current line to cell_content
+            \sip_append_str:Nn \l__sip_statement_cell_content_tl {##1}
             % set the newlines accumulator to single newline
             \tl_set:Nn \l__sip_statement_newlines_accumulator_tl {\linebreak}
         }

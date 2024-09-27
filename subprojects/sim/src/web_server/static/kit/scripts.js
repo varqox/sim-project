@@ -119,7 +119,7 @@ function url_api_problem(problem_id) { return `/api/problem/${problem_id}`; }
 function url_api_problem_reupload(problem_id) { return `/api/problem/${problem_id}/reupload`; }
 function url_api_problems() { return '/api/problems'; }
 function url_api_problems_add() { return '/api/problems/add'; }
-function url_api_problems_with_type(problem_visibility) { return `/api/problems/visibility=/${problem_visibility}`; }
+function url_api_problems_with_visibility(problem_visibility) { return `/api/problems/visibility=/${problem_visibility}`; }
 function url_api_sign_in() { return '/api/sign_in'; }
 function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
@@ -130,7 +130,7 @@ function url_api_user_delete(user_id) { return `/api/user/${user_id}/delete`; }
 function url_api_user_edit(user_id) { return `/api/user/${user_id}/edit`; }
 function url_api_user_merge_into_another(user_id) { return `/api/user/${user_id}/merge_into_another`; }
 function url_api_user_problems(user_id) { return `/api/user/${user_id}/problems`; }
-function url_api_user_problems_with_type(user_id, problem_visibility) { return `/api/user/${user_id}/problems/visibility=/${problem_visibility}`; }
+function url_api_user_problems_with_visibility(user_id, problem_visibility) { return `/api/user/${user_id}/problems/visibility=/${problem_visibility}`; }
 function url_api_users() { return '/api/users'; }
 function url_api_users_add() { return '/api/users/add'; }
 function url_api_users_with_type(user_type) { return `/api/users/type=/${user_type}`; }
@@ -1857,13 +1857,13 @@ async function add_problem() {
 	const view = new View(url_problems_add());
 	const form = new Form('Add problem', url_api_problems_add());
 	const type_select = form.append_select('visibility', 'Visibility');
-	if (global_capabilities.problems.add_problem_with_type_private) {
+	if (global_capabilities.problems.add_problem_with_visibility_private) {
 		type_select.append_option('private', 'Private', {selected: true});
 	}
-	if (global_capabilities.problems.add_problem_with_type_contest_only) {
+	if (global_capabilities.problems.add_problem_with_visibility_contest_only) {
 		type_select.append_option('contest_only', 'Contest only');
 	}
-	if (global_capabilities.problems.add_problem_with_type_public) {
+	if (global_capabilities.problems.add_problem_with_visibility_public) {
 		type_select.append_option('public', 'Public');
 	}
 	append_common_form_elems_for_add_problem_and_reupload_problem(form);
@@ -2002,21 +2002,21 @@ function list_problems() {
 		if (list_capabilities.query_all) {
 			tabmenu.add_tab('All', retab.bind(null, url_all_func(), list_capabilities));
 		}
-		if (list_capabilities.query_with_type_public) {
+		if (list_capabilities.query_with_visibility_public) {
 			tabmenu.add_tab('Public', retab.bind(null, url_by_type_func('public'), list_capabilities));
 		}
-		if (list_capabilities.query_with_type_contest_only) {
+		if (list_capabilities.query_with_visibility_contest_only) {
 			tabmenu.add_tab('Contest only', retab.bind(null, url_by_type_func('contest_only'), list_capabilities));
 		}
-		if (list_capabilities.query_with_type_private) {
+		if (list_capabilities.query_with_visibility_private) {
 			tabmenu.add_tab('Private', retab.bind(null, url_by_type_func('private'), list_capabilities));
 		}
 		tabmenu.build_and_append_to(elem);
 	};
 
 	const can_list_something = (list_capabilities) => {
-		return list_capabilities.query_all || list_capabilities.query_with_type_public ||
-				list_capabilities.query_with_type_contest_only || list_capabilities.query_with_type_private;
+		return list_capabilities.query_all || list_capabilities.query_with_visibility_public ||
+				list_capabilities.query_with_visibility_contest_only || list_capabilities.query_with_visibility_private;
 	};
 
 	const tabmenu = new TabMenuBuilder();
@@ -2024,7 +2024,7 @@ function list_problems() {
 		tabmenu.add_tab('All problems', retab.bind(
 			null,
 			url_api_problems,
-			url_api_problems_with_type,
+			url_api_problems_with_visibility,
 			global_capabilities.problems.list_all,
 			{
 				show_owner_column: window.signed_user_type == 'admin' || window.signed_user_type == 'teacher',
@@ -2036,7 +2036,7 @@ function list_problems() {
 		tabmenu.add_tab('My problems', retab.bind(
 			null,
 			url_api_user_problems.bind(null, signed_user_id),
-			url_api_user_problems_with_type.bind(null, signed_user_id),
+			url_api_user_problems_with_visibility.bind(null, signed_user_id),
 			global_capabilities.problems.list_my,
 			{
 				show_owner_column: false,

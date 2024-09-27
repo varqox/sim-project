@@ -236,9 +236,9 @@ constexpr bool is_query_allowed(
     }
     // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
     switch (*problem_visibility) {
-    case Problem::Visibility::PUBLIC: return caps.query_with_type_public;
-    case Problem::Visibility::CONTEST_ONLY: return caps.query_with_type_contest_only;
-    case Problem::Visibility::PRIVATE: return caps.query_with_type_private;
+    case Problem::Visibility::PUBLIC: return caps.query_with_visibility_public;
+    case Problem::Visibility::CONTEST_ONLY: return caps.query_with_visibility_contest_only;
+    case Problem::Visibility::PRIVATE: return caps.query_with_visibility_private;
     }
     THROW("unexpected problem visibility");
 }
@@ -247,7 +247,7 @@ Condition<> caps_to_condition(
     ProblemsListCapabilities caps, optional<decltype(Problem::visibility)> problem_visibility
 ) {
     optional<Condition<>> res;
-    if (caps.view_all_with_type_public and
+    if (caps.view_all_with_visibility_public and
         (!problem_visibility or problem_visibility == Problem::Visibility::PUBLIC))
     {
         res = std::move(res) ||
@@ -255,7 +255,7 @@ Condition<> caps_to_condition(
                 concat_tostr("p.visibility=", enum_to_underlying_type(Problem::Visibility::PUBLIC))
             )};
     }
-    if (caps.view_all_with_type_contest_only and
+    if (caps.view_all_with_visibility_contest_only and
         (!problem_visibility or problem_visibility == Problem::Visibility::CONTEST_ONLY))
     {
         res = std::move(res) ||
@@ -263,7 +263,7 @@ Condition<> caps_to_condition(
                 "p.visibility=", enum_to_underlying_type(Problem::Visibility::CONTEST_ONLY)
             ))};
     }
-    if (caps.view_all_with_type_private and
+    if (caps.view_all_with_visibility_private and
         (!problem_visibility or problem_visibility == Problem::Visibility::PRIVATE))
     {
         res = std::move(res) ||
@@ -629,9 +629,9 @@ http::Response add(web_worker::Context& ctx) {
 
     VALIDATE(ctx.request.form_fields, ctx.response_400,
         (visibility, params::visibility, REQUIRED_ENUM_CAPS(
-            (PRIVATE, caps.add_problem_with_type_private)
-            (CONTEST_ONLY, caps.add_problem_with_type_contest_only)
-            (PUBLIC, caps.add_problem_with_type_public)
+            (PRIVATE, caps.add_problem_with_visibility_private)
+            (CONTEST_ONLY, caps.add_problem_with_visibility_contest_only)
+            (PUBLIC, caps.add_problem_with_visibility_public)
         ))
     );
 

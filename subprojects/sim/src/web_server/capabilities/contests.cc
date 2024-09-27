@@ -10,7 +10,7 @@ Contests contests_for(const decltype(web_worker::Context::session)& session) noe
         .web_ui_view = true,
         .view_all = is_admin(session),
         .view_public = true,
-        .add_private = is_admin(session) or is_teacher(session),
+        .add_private = is_admin(session) || is_teacher(session),
         .add_public = is_admin(session),
     };
 }

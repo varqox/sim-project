@@ -1,6 +1,6 @@
 #pragma once
 
-#include "varbinary.hh"
+#include "binary.hh"
 
 #include <simlib/concat_tostr.hh>
 #include <simlib/throw_assert.hh>
@@ -11,7 +11,7 @@
 namespace sim::sql::fields {
 
 // Format: YYYY-mm-dd HH:MM:SS
-class Datetime : public Varbinary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
+class Datetime : public Binary<std::char_traits<char>::length("YYYY-mm-dd HH:MM:SS")> {
 public:
     Datetime() noexcept = default;
     Datetime(const Datetime&) = default;
@@ -21,14 +21,14 @@ public:
     ~Datetime() = default;
 
     explicit Datetime(std::string str)
-    : Varbinary{[&]() -> decltype(auto) {
+    : Binary{[&]() -> decltype(auto) {
         throw_assert(is_datetime(str.c_str()));
         return std::move(str);
     }()} {}
 
     Datetime& operator=(std::string str) {
         throw_assert(is_datetime(str.c_str()));
-        Varbinary::operator=(std::move(str));
+        Binary::operator=(std::move(str));
         return *this;
     }
 
