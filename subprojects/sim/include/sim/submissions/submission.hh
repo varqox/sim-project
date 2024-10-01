@@ -30,6 +30,7 @@ struct Submission {
         (CPP17, 4, "cpp17")
         (PYTHON, 5, "python")
         (RUST, 6, "rust")
+        (CPP20, 7, "cpp20")
     );
 
     // Initial and final values may be combined, but special not

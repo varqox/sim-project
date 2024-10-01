@@ -154,7 +154,8 @@ enum class SolutionLanguage {
     CPP11,
     CPP14,
     CPP17,
-    CPP = CPP17,
+    CPP20,
+    CPP = CPP20,
     PASCAL,
     PYTHON,
     RUST,
@@ -189,7 +190,8 @@ inline SolutionLanguage filename_to_lang(const StringView& filename) {
         // If missing one, then update above ifs
         return res;
     case SolutionLanguage::CPP11:
-    case SolutionLanguage::CPP14: break;
+    case SolutionLanguage::CPP14:
+    case SolutionLanguage::CPP17: break;
     }
 
     THROW("Should not reach here");
