@@ -4058,6 +4058,9 @@ function add_submission_impl(as_oldmodal, url, api_url, problem_field_elem, mayb
 					}).add('<option>', {
 						value: 'cpp17',
 						text: 'C++17',
+					}).add('<option>', {
+						value: 'cpp20',
+						text: 'C++20',
 						selected: true
 					}).add('<option>', {
 						value: 'pascal',

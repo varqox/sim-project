@@ -147,6 +147,7 @@ void judge_or_rejudge_submission(
         case Submission::Language::CPP11: return sim::SolutionLanguage::CPP11;
         case Submission::Language::CPP14: return sim::SolutionLanguage::CPP14;
         case Submission::Language::CPP17: return sim::SolutionLanguage::CPP17;
+        case Submission::Language::CPP20: return sim::SolutionLanguage::CPP20;
         case Submission::Language::PASCAL: return sim::SolutionLanguage::PASCAL;
         case Submission::Language::PYTHON: return sim::SolutionLanguage::PYTHON;
         case Submission::Language::RUST: return sim::SolutionLanguage::RUST;

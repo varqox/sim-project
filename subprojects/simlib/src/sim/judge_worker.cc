@@ -119,6 +119,11 @@ std::unique_ptr<judge::language_suite::Suite> lang_to_suite(SolutionLanguage lan
             judge::language_suite::Cpp_GCC::Standard::Cpp17
         );
     } break;
+    case SolutionLanguage::CPP20: {
+        return std::make_unique<judge::language_suite::Cpp_GCC>(
+            judge::language_suite::Cpp_GCC::Standard::Cpp20
+        );
+    } break;
     case SolutionLanguage::PASCAL: {
         return std::make_unique<judge::language_suite::Pascal>();
     } break;
