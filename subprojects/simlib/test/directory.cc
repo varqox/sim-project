@@ -10,15 +10,16 @@ using std::string;
 // NOLINTNEXTLINE
 TEST(directory, for_each_dir_component) {
     TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
-    Directory dir(tmp_dir.path());
-    static_assert(not std::is_convertible_v<string, Directory>);
-    static_assert(not std::is_convertible_v<DIR*, Directory>);
 
     EXPECT_EQ(create_file(concat(tmp_dir.path(), "a")), 0);
     EXPECT_EQ(create_file(concat(tmp_dir.path(), "b")), 0);
     EXPECT_EQ(create_file(concat(tmp_dir.path(), "c")), 0);
     EXPECT_EQ(create_file(concat(tmp_dir.path(), "abc")), 0);
     EXPECT_EQ(create_file(concat(tmp_dir.path(), "xyz")), 0);
+
+    Directory dir(tmp_dir.path());
+    static_assert(not std::is_convertible_v<string, Directory>);
+    static_assert(not std::is_convertible_v<DIR*, Directory>);
 
     std::set<string> files;
     for_each_dir_component(dir, [&](dirent* file) { files.emplace(file->d_name); });
