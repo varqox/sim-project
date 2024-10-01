@@ -34,6 +34,7 @@ struct OldSubmission {
         (CPP17, 4, "cpp17")
         (PYTHON, 5, "python")
         (RUST, 6, "rust")
+        (CPP20, 7, "cpp20")
     );
 
     // Initial and final values may be combined, but special not
@@ -94,6 +95,7 @@ constexpr const char* to_string(OldSubmission::Language x) {
     case OldSubmission::Language::CPP11: return "C++11";
     case OldSubmission::Language::CPP14: return "C++14";
     case OldSubmission::Language::CPP17: return "C++17";
+    case OldSubmission::Language::CPP20: return "C++20";
     case OldSubmission::Language::PASCAL: return "Pascal";
     case OldSubmission::Language::PYTHON: return "Python";
     case OldSubmission::Language::RUST: return "Rust";
@@ -106,7 +108,8 @@ constexpr const char* to_extension(OldSubmission::Language x) {
     case OldSubmission::Language::C11: return ".c";
     case OldSubmission::Language::CPP11:
     case OldSubmission::Language::CPP14:
-    case OldSubmission::Language::CPP17: return ".cpp";
+    case OldSubmission::Language::CPP17:
+    case OldSubmission::Language::CPP20: return ".cpp";
     case OldSubmission::Language::PASCAL: return ".pas";
     case OldSubmission::Language::PYTHON: return ".py";
     case OldSubmission::Language::RUST: return ".rs";
@@ -119,7 +122,8 @@ constexpr const char* to_mime(OldSubmission::Language x) {
     case OldSubmission::Language::C11: return "text/x-csrc";
     case OldSubmission::Language::CPP11:
     case OldSubmission::Language::CPP14:
-    case OldSubmission::Language::CPP17: return "text/x-c++src";
+    case OldSubmission::Language::CPP17:
+    case OldSubmission::Language::CPP20: return "text/x-c++src";
     case OldSubmission::Language::PASCAL: return "text/x-pascal";
     case OldSubmission::Language::PYTHON: return "text/x-python";
     case OldSubmission::Language::RUST: return "text/x-rust";
