@@ -153,6 +153,16 @@ void SubmissionsMerger::merge_and_save() {
         submission.contest_problem_final = false;
         submission.contest_problem_initial_final = false;
 
+        auto new_user_id = submission.user_id
+            ? std::optional{users_merger.other_id_to_new_id(*submission.user_id)}
+            : std::nullopt;
+        auto new_problem_id = problems_merger.other_id_to_new_id(submission.problem_id);
+        auto new_contest_problem_id = submission.contest_problem_id
+            ? std::optional{contest_problems_merger.other_id_to_new_id(
+                  *submission.contest_problem_id
+              )}
+            : std::nullopt;
+
         main_sim.mysql.execute(
             InsertInto("submissions (id, created_at, file_id, user_id, problem_id, "
                        "contest_problem_id, contest_round_id, contest_id, type, language, "
@@ -164,15 +174,9 @@ void SubmissionsMerger::merge_and_save() {
                     other_id_to_new_id(submission.id),
                     submission.created_at,
                     internal_files_merger.other_id_to_new_id(submission.file_id),
-                    submission.user_id
-                        ? std::optional{users_merger.other_id_to_new_id(*submission.user_id)}
-                        : std::nullopt,
-                    problems_merger.other_id_to_new_id(submission.problem_id),
-                    submission.contest_problem_id
-                        ? std::optional{contest_problems_merger.other_id_to_new_id(
-                              *submission.contest_problem_id
-                          )}
-                        : std::nullopt,
+                    new_user_id, // remapped above
+                    new_problem_id, // remapped above
+                    new_contest_problem_id, // remapped above
                     submission.contest_round_id
                         ? std::optional{contest_rounds_merger.other_id_to_new_id(
                               *submission.contest_round_id
@@ -198,7 +202,7 @@ void SubmissionsMerger::merge_and_save() {
         );
 
         sim::submissions::update_final(
-            main_sim.mysql, submission.user_id, submission.problem_id, submission.contest_problem_id
+            main_sim.mysql, new_user_id, new_problem_id, new_contest_problem_id
         );
     }
 }
