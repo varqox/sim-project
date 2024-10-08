@@ -4,11 +4,14 @@
 #include <optional>
 #include <sim/merging/merge_ids.hh>
 #include <sim/sql/sql.hh>
+#include <simlib/macros/stack_unwinding.hh>
 #include <simlib/throw_assert.hh>
 
 namespace mergers {
 
 uint64_t GenericIdIterator::max_id_plus_one() {
+    STACK_UNWINDING_MARK;
+
     if (auto_increment_value) {
         return *auto_increment_value;
     }
@@ -24,10 +27,14 @@ uint64_t GenericIdIterator::max_id_plus_one() {
 }
 
 std::optional<sim::merging::IdCreatedAt> GenericIdIterator::next_id_desc() {
+    STACK_UNWINDING_MARK;
+
     if (!last_seen_id) {
         last_seen_id = max_id_plus_one();
     }
     if (!id_select_stmt || !id_select_stmt->next()) {
+        // First, destruct the previous statement not to cause "Commands out of sync" error
+        id_select_stmt.reset();
         // Starting iterating or the current range has ended
         id_select_stmt.emplace(mysql.execute(sim::sql::Select("id, created_at")
                                                  .from(table_name)
