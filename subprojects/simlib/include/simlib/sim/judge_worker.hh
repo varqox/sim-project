@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <simlib/concat.hh>
+#include <simlib/escape_bytes_to_utf8_str.hh>
 #include <simlib/file_manip.hh>
 #include <simlib/file_path.hh>
 #include <simlib/logger.hh>
@@ -115,7 +116,7 @@ public:
 
                 // Comment
                 if (!test.comment.empty()) {
-                    back_insert(res, ' ', test.comment, '\n');
+                    back_insert(res, ' ', escape_bytes_to_utf8_str("", test.comment, ""), '\n');
                 } else {
                     res += '\n';
                 }
@@ -299,7 +300,7 @@ public:
         case JudgeReport::Test::SKIPPED: tmplog("\033[1;36mSKIPPED\033[m"); break;
         }
         if (!test_report.comment.empty()) {
-            tmplog(" (", test_report.comment, ')');
+            tmplog(" (", escape_bytes_to_utf8_str("", test_report.comment, ""), ')');
         }
 
         // Rest

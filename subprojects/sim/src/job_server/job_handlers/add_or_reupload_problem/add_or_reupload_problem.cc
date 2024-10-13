@@ -10,6 +10,7 @@
 #include <simlib/inplace_buff.hh>
 #include <simlib/logger.hh>
 #include <simlib/sim/conver.hh>
+#include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/problem_package.hh>
 #include <utility>
 
@@ -175,6 +176,21 @@ std::vector<FileRemover> submit_solutions(
     for (const auto& solution : simfile.solutions) {
         logger("Submitting: ", solution);
         auto solution_file_id = sim::internal_files::new_internal_file_id(mysql, current_datetime);
+        decltype(Submission::language) language = [&] {
+            // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
+            switch (sim::filename_to_lang(solution)) {
+            case sim::SolutionLanguage::UNKNOWN: break;
+            case sim::SolutionLanguage::C11: return Submission::Language::C11;
+            case sim::SolutionLanguage::CPP11: return Submission::Language::CPP11;
+            case sim::SolutionLanguage::CPP14: return Submission::Language::CPP14;
+            case sim::SolutionLanguage::CPP17: return Submission::Language::CPP17;
+            case sim::SolutionLanguage::CPP20: return Submission::Language::CPP20;
+            case sim::SolutionLanguage::PASCAL: return Submission::Language::PASCAL;
+            case sim::SolutionLanguage::PYTHON: return Submission::Language::PYTHON;
+            case sim::SolutionLanguage::RUST: return Submission::Language::RUST;
+            }
+            THROW("unexpected language");
+        }();
         mysql.execute(
             InsertInto("submissions (created_at, file_id, user_id, problem_id, contest_problem_id, "
                        "contest_round_id, contest_id, type, language, initial_status, full_status, "
@@ -185,7 +201,7 @@ std::vector<FileRemover> submit_solutions(
                     solution_file_id,
                     problem_id,
                     Submission::Type::PROBLEM_SOLUTION,
-                    sim::filename_to_lang(solution),
+                    language,
                     Submission::Status::PENDING,
                     Submission::Status::PENDING
                 )

@@ -187,7 +187,7 @@ public:
             if (pos != decltype(normalized_comment)::npos) {
                 normalized_comment.replace(pos, STR_TO_REPLACE.size(), " killed by signal ");
             }
-            log(" (", normalized_comment, ")");
+            log(" (", escape_bytes_to_utf8_str("", normalized_comment, ""), ")");
         }
         if (judge_test_report.checker) {
             log("  Checker: ");

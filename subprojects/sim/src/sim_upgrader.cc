@@ -12,6 +12,7 @@
 #include <sim/submissions/submission.hh>
 #include <sim/submissions/update_final.hh>
 #include <sim/users/user.hh>
+#include <simlib/am_i_root.hh>
 #include <simlib/concat.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/config_file.hh>
@@ -238,10 +239,15 @@ static int true_main(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+    if (am_i_root() != AmIRoot::NO) {
+        errlog("This program should not be run as root.");
+        return 1;
+    }
+
     try {
         return true_main(argc, argv);
     } catch (const std::exception& e) {
         ERRLOG_CATCH(e);
-        throw;
+        return 1;
     }
 }

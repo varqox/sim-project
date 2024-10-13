@@ -2,6 +2,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <fcntl.h>
+#include <simlib/am_i_root.hh>
 #include <simlib/argv_parser.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/errmsg.hh>
@@ -11,6 +12,7 @@
 #include <simlib/process.hh>
 #include <simlib/string_view.hh>
 #include <simlib/syscalls.hh>
+#include <sys/file.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <thread>
@@ -95,6 +97,16 @@ struct SimPaths {
 
 static void stop() {
     SimPaths paths;
+    // Lock the sim directory during killing to avoid situation where two instances wanting to start
+    // sim kill each other before starting sim.
+    auto sim_dir = path_dirpath(paths.manage).to_string();
+    auto sim_dir_fd = FileDescriptor{sim_dir.c_str(), O_RDONLY};
+    if (flock(sim_dir_fd, LOCK_EX)) {
+        errlog("flock()", errmsg());
+        _exit(EXIT_FAILURE);
+    }
+    // Lock is freed when the sim_dir_fd is closed
+
     // First kill manage so that it won't restart servers
     kill_processes_by_exec({paths.manage}, std::chrono::seconds(1), true);
     // Kill servers
@@ -228,6 +240,11 @@ static int run_command(const CmdOptions& cmd_options, int argc, char** argv) {
 int main(int argc, char** argv) {
     stdlog.use(stdout);
     stdlog.label(false);
+
+    if (am_i_root() != AmIRoot::NO) {
+        errlog("This program should not be run as root.");
+        return 1;
+    }
 
     auto cmd_options = parse_cmd_options(argc, argv);
     if (argc < 2) {

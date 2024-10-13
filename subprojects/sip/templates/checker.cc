@@ -12,10 +12,7 @@
 
 using namespace std;
 
-#ifdef NDEBUG
-#define my_assert(...) ((void)0)
-#else
-#define my_assert(expr)                                  \
+#define checker_assert(expr)                             \
     ((expr) ? (void)0                                    \
             : (fprintf(                                  \
                    stderr,                               \
@@ -25,8 +22,7 @@ using namespace std;
                    __PRETTY_FUNCTION__,                  \
                    #expr                                 \
                ),                                        \
-               exit(1)))
-#endif
+               _exit(1)))
 
 struct Verdict {
     ostream& out = cerr;
@@ -49,7 +45,7 @@ struct Verdict {
     // 100% points
     [[noreturn]] void ok() {
         out << "OK" << endl;
-        exit(0);
+        _exit(0);
     }
 
     // @p score * 1% points
@@ -57,7 +53,7 @@ struct Verdict {
     [[noreturn]] void ok(double score, Args&&... message) {
         out << "OK\n" << score << '\n';
         (out << ... << std::forward<Args>(message)) << endl;
-        exit(0);
+        _exit(0);
     }
 
     // 100% points
@@ -65,7 +61,7 @@ struct Verdict {
     [[noreturn]] void ok(Arg1&& message_part1, Args&&... message_part2) {
         out << "OK\n\n" << std::forward<Arg1>(message_part1);
         (out << ... << std::forward<Args>(message_part2)) << endl;
-        exit(0);
+        _exit(0);
     }
 
     // If wrong_override holds OK, then wrong_override.score * 1% points, 0%
@@ -86,7 +82,7 @@ struct Verdict {
         );
 
         (out << ... << std::forward<Args>(message)) << endl;
-        exit(0);
+        _exit(0);
     }
 } verdict;
 
@@ -111,9 +107,9 @@ struct integer {
     template <class T1, class T2>
     constexpr integer(T& val, T1 min_val, T2 max_val)
     : val([&]() -> T& {
-        my_assert(numeric_limits<T>::min() <= min_val);
-        my_assert(min_val <= max_val);
-        my_assert(max_val <= numeric_limits<T>::max());
+        checker_assert(numeric_limits<T>::min() <= min_val);
+        checker_assert(min_val <= max_val);
+        checker_assert(max_val <= numeric_limits<T>::max());
         return val;
     }())
     , min_val(min_val)
@@ -254,7 +250,7 @@ private:
     }
 
 public:
-    Scanner(FILE* file, Mode mode) : file_(file), mode_(mode) { my_assert(file != nullptr); }
+    Scanner(FILE* file, Mode mode) : file_(file), mode_(mode) { checker_assert(file != nullptr); }
 
     Scanner(const Scanner&) = delete;
     Scanner(Scanner&&) = delete;
@@ -408,20 +404,18 @@ int main(int argc, char** argv) {
     // argv[3] answer to check
     //
     // Output (to stderr):
-    // Line 1: "OK" or "WRONG"
-    // Line 2 (optional; ignored if line 1 == "WRONG" - score is set to 0
-    // anyway):
-    //   leave empty or provide a real number x from interval [0, 100], which
-    //   means that the test will get no more than x percent of its maximal
-    //   score.
-    // Line 3 and next (optional): A checker comment
+    //   Line 1: "OK" or "WRONG"
+    //   Line 2 (optional; ignored if line 1 == "WRONG" - score is set to 0 anyway):
+    //     Leave empty or provide a real number x from interval [0, 100], which means that the
+    //     solution will get no more than x percent of test's maximal score.
+    //   Line 3 and next (optional): A checker comment
 
-    my_assert(argc == 4);
+    checker_assert(argc == 4);
 
     ifstream in(argv[1]); // You can comment it out if you don't use it
-    my_assert(in.is_open());
+    checker_assert(in.is_open());
     ifstream out(argv[2]); // You can comment it out if you don't use it
-    my_assert(out.is_open());
+    checker_assert(out.is_open());
     Scanner scan(fopen(argv[3], "re"), Scanner::Mode::IGNORE_WS_BEFORE_EOF);
 
     // Do checking here...

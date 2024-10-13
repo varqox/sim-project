@@ -6,6 +6,7 @@
 #include <exception>
 #include <sim/db/schema.hh>
 #include <sim/mysql/mysql.hh>
+#include <simlib/am_i_root.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/file_path.hh>
 #include <simlib/from_unsafe.hh>
@@ -30,6 +31,11 @@ static void help(const char* program_name) {
 }
 
 int main(int argc, char** argv) {
+    if (am_i_root() != AmIRoot::NO) {
+        errlog("This program should not be run as root.");
+        return 1;
+    }
+
     if (argc != 2) {
         help(argv[0]);
         return 1;

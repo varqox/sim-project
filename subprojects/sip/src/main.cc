@@ -2,6 +2,7 @@
 #include "sip_error.hh"
 #include "sip_package.hh"
 
+#include <simlib/am_i_root.hh>
 #include <simlib/directory.hh>
 #include <simlib/proc_stat_file_contents.hh>
 #include <simlib/signal_handling.hh>
@@ -162,6 +163,11 @@ int real_main(int argc, char** argv) {
     stdlog.use(stdout);
     stdlog.label(false);
     errlog.label(false);
+
+    if (am_i_root() != AmIRoot::NO) {
+        errlog("This program should not be run as root.");
+        return 1;
+    }
 
     parse_options(argc, argv);
 
