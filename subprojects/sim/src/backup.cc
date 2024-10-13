@@ -10,6 +10,7 @@
 #include <sim/internal_files/old_internal_file.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/sql/sql.hh>
+#include <simlib/am_i_root.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/config_file.hh>
 #include <simlib/directory.hh>
@@ -414,6 +415,10 @@ void restore(ArgSeq::Iter begin, ArgSeq::Iter end) {
 } // namespace
 
 int main(int argc, char** argv) {
+    if (am_i_root() != AmIRoot::NO) {
+        die_with_error("This program should not be run as root.");
+    }
+
     try {
         auto args = to_arg_seq(argc, argv);
         if (args.begin() == args.end()) {

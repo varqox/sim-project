@@ -28,6 +28,7 @@
 #include <sim/mysql/mysql.hh>
 #include <sim/mysql/repeat_if_deadlocked.hh>
 #include <sim/sql/sql.hh>
+#include <simlib/am_i_root.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/concurrent/bounded_queue.hh>
 #include <simlib/concurrent/mutexed_value.hh>
@@ -437,6 +438,11 @@ int main() {
         chdir_relative_to_executable_dirpath("..");
     } catch (const std::exception& e) {
         errlog("Failed to change the working directory: ", e.what());
+        return 1;
+    }
+
+    if (am_i_root() != AmIRoot::NO) {
+        errlog("This program should not be run as root.");
         return 1;
     }
 

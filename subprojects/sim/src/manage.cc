@@ -2,6 +2,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <fcntl.h>
+#include <simlib/am_i_root.hh>
 #include <simlib/argv_parser.hh>
 #include <simlib/concat_tostr.hh>
 #include <simlib/errmsg.hh>
@@ -228,6 +229,11 @@ static int run_command(const CmdOptions& cmd_options, int argc, char** argv) {
 int main(int argc, char** argv) {
     stdlog.use(stdout);
     stdlog.label(false);
+
+    if (am_i_root() != AmIRoot::NO) {
+        errlog("This program should not be run as root.");
+        return 1;
+    }
 
     auto cmd_options = parse_cmd_options(argc, argv);
     if (argc < 2) {

@@ -144,6 +144,7 @@ simlib = library('simlib',
     include_directories : simlib_incdir,
     sources : [
         'src/aho_corasick.cc',
+        'src/am_i_root.cc',
         'src/config_file.cc',
         'src/escape_bytes_to_utf8_str.cc',
         'src/event_queue.cc',

@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <simlib/am_i_root.hh>
 #include <simlib/config_file.hh>
 #include <simlib/file_descriptor.hh>
 #include <simlib/process.hh>
@@ -83,6 +84,11 @@ int main() {
         chdir_relative_to_executable_dirpath("..");
     } catch (const std::exception& e) {
         errlog("Failed to change the working directory: ", e.what());
+        return 1;
+    }
+
+    if (am_i_root() != AmIRoot::NO) {
+        errlog("This program should not be run as root.");
         return 1;
     }
 
