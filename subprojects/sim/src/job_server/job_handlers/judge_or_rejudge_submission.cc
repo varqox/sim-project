@@ -15,6 +15,7 @@
 #include <sim/submissions/submission.hh>
 #include <sim/submissions/update_final.hh>
 #include <simlib/concat_tostr.hh>
+#include <simlib/escape_bytes_to_utf8_str.hh>
 #include <simlib/macros/stack_unwinding.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/string_transform.hh>
@@ -298,7 +299,7 @@ void judge_or_rejudge_submission(
                             "<li><span class=\"test-id\">",
                             html_escape(test.name),
                             "</span>",
-                            html_escape(test.comment),
+                            html_escape(escape_bytes_to_utf8_str("", test.comment, "")),
                             "</li>"
                         );
                     }

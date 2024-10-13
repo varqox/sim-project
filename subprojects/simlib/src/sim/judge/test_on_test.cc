@@ -114,7 +114,8 @@ TestReport test_on_test(TestArgs args) {
     }
 
     if (prog_res.cgroup.peak_memory_in_bytes > args.program.memory_limit_in_bytes) {
-        report.status = TestReport::Status::MemoryLimitExceeded, report.comment = "";
+        report.status = TestReport::Status::MemoryLimitExceeded;
+        report.comment = "";
         return report;
     }
 

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <simlib/concat_tostr.hh>
+#include <simlib/escape_bytes_to_utf8_str.hh>
 #include <simlib/from_unsafe.hh>
 #include <simlib/sim/judge/test_report.hh>
 #include <simlib/sim/judge_worker.hh>
@@ -80,7 +81,7 @@ public:
         case sim::JudgeReport::Test::SKIPPED: back_insert(line, "\033[1;36mSKIPPED\033[m"); break;
         }
         if (!test_report.comment.empty()) {
-            back_insert(line, " (", test_report.comment, ')');
+            back_insert(line, " (", escape_bytes_to_utf8_str("", test_report.comment, ""), ')');
         }
 
         back_insert(

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <simlib/enum_val.hh>
+#include <simlib/escape_bytes_to_utf8_str.hh>
 #include <simlib/humanize.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/simfile.hh>
@@ -98,7 +99,7 @@ public:
         }
 
         if (!test_report.comment.empty()) {
-            tmplog(" (", test_report.comment, ')');
+            tmplog(" (", escape_bytes_to_utf8_str("", test_report.comment, ""), ')');
         }
 
         // Rest
