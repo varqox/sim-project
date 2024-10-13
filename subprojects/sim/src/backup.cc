@@ -26,6 +26,7 @@
 #include <simlib/syscalls.hh>
 #include <simlib/throw_assert.hh>
 #include <simlib/to_arg_seq.hh>
+#include <simlib/utilities.hh>
 #include <simlib/working_directory.hh>
 #include <string>
 #include <string_view>
@@ -359,7 +360,7 @@ void restore(ArgSeq::Iter begin, ArgSeq::Iter end) {
         for_each_dir_component(dir_path, [&](dirent* entry) {
             auto filename = string_view{entry->d_name};
             path += filename;
-            if (path != DEFAULT_BACKUP_REPOSITORY_PATH) {
+            if (!is_one_of(path, DEFAULT_BACKUP_REPOSITORY_PATH, "bin", "lib")) {
                 bool absent = paths_present_in_backup.find(path) == paths_present_in_backup.end();
                 if (entry->d_type == DT_DIR) {
                     path += '/';
