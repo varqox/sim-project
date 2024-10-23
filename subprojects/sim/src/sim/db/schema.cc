@@ -280,8 +280,8 @@ const DbSchema& get_schema() {
                         "  `full_status` tinyint(3) unsigned NOT NULL,"
                         "  `score` bigint(20) DEFAULT NULL,"
                         "  `last_judgment_began_at` datetime DEFAULT NULL,"
-                        "  `initial_report` mediumblob NOT NULL,"
-                        "  `final_report` mediumblob NOT NULL,"
+                        "  `initial_report` mediumblob NOT NULL," // TODO: rename to initial_judgement_protocol
+                        "  `final_report` mediumblob NOT NULL," // TODO: rename to full_judgement_protocol
                         "  PRIMARY KEY (`id`),"
                         // Submissions API: with user_id
                         "  KEY `user_id` (`user_id`,`id`),"

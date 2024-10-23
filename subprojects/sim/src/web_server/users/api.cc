@@ -39,8 +39,8 @@ namespace capabilities = web_server::capabilities;
 namespace {
 
 struct UserInfo {
-    decltype(User::id) id{};
-    decltype(User::type) type{};
+    decltype(User::id) id;
+    decltype(User::type) type;
     decltype(User::username) username;
     decltype(User::first_name) first_name;
     decltype(User::last_name) last_name;
@@ -54,7 +54,7 @@ struct UserInfo {
     UserInfo& operator=(UserInfo&&) = delete;
     ~UserInfo() = default;
 
-    void append_to(const capabilities::UserCapabilities& caps, json_str::ObjectBuilder& obj) {
+    void append_to(json_str::ObjectBuilder& obj, const capabilities::UserCapabilities& caps) {
         throw_assert(caps.view);
         obj.prop("id", id);
         obj.prop("type", type);
@@ -102,7 +102,7 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
         while (stmt.next()) {
             ++rows_num;
             arr.val_obj([&](auto& obj) {
-                u.append_to(capabilities::user(ctx.session, u.id, u.type), obj);
+                u.append_to(obj, capabilities::user(ctx.session, u.id, u.type));
             });
         }
     });
@@ -253,7 +253,7 @@ Response view_user(Context& ctx, decltype(User::id) user_id) {
     }
 
     json_str::Object obj;
-    u.append_to(capabilities::user(ctx.session, u.id, u.type), obj);
+    u.append_to(obj, capabilities::user(ctx.session, u.id, u.type));
     return ctx.response_json(std::move(obj).into_str());
 }
 
