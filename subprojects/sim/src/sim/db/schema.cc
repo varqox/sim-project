@@ -322,6 +322,13 @@ const DbSchema& get_schema() {
                         "  KEY `for_contest_initial_problem_final_by_score_and_full_status` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`score` DESC,`full_status`,`id` DESC),"
                         // Needed to efficiently query contest view coloring
                         "  KEY `initial_final` (`user_id`,`contest_problem_id`,`contest_problem_initial_final`),"
+                        // For ranking
+                        "  KEY `contest_final` (`contest_id`,`contest_problem_final`),"
+                        "  KEY `contest_initial_final` (`contest_id`,`contest_problem_initial_final`),"
+                        "  KEY `contest_round_final` (`contest_round_id`,`contest_problem_final`),"
+                        "  KEY `contest_initial_round_final` (`contest_round_id`,`contest_problem_initial_final`),"
+                        "  KEY `contest_problem_final` (`contest_problem_id`,`contest_problem_final`),"
+                        "  KEY `contest_initial_problem_final` (`contest_problem_id`,`contest_problem_initial_final`),"
                         // For foreign keys
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE,"

@@ -40,7 +40,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "bffaa77f52297395cf099de1afdc67b919d37a5e0143a64d6f046583037915d8";
+    "935264658c3a283d37e125526d67102dd03f4596fdfb704d970cd227c48d8bda";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
@@ -48,9 +48,19 @@ static void do_perform_upgrade(
     STACK_UNWINDING_MARK;
 
     // Upgrade here
-    mysql.execute("ALTER TABLE add_problem_jobs DROP COLUMN added_problem_id");
-    mysql.execute("ALTER TABLE reupload_problem_jobs DROP COLUMN problem_id");
-    mysql.execute("ALTER TABLE problem_tags MODIFY is_hidden tinyint(1) NOT NULL AFTER problem_id");
+    mysql.execute(
+        "ALTER TABLE submissions ADD KEY `contest_final` (`contest_id`,`contest_problem_final`)"
+    );
+    mysql.execute("ALTER TABLE submissions ADD KEY `contest_initial_final` (`contest_id`,"
+                  "`contest_problem_initial_final`)");
+    mysql.execute("ALTER TABLE submissions ADD KEY `contest_round_final` (`contest_round_id`,"
+                  "`contest_problem_final`)");
+    mysql.execute("ALTER TABLE submissions ADD KEY `contest_initial_round_final` "
+                  "(`contest_round_id`,`contest_problem_initial_final`)");
+    mysql.execute("ALTER TABLE submissions ADD KEY `contest_problem_final` (`contest_problem_id`,"
+                  "`contest_problem_final`)");
+    mysql.execute("ALTER TABLE submissions ADD KEY `contest_initial_problem_final` "
+                  "(`contest_problem_id`,`contest_problem_initial_final`)");
 }
 
 enum class LockKind {
