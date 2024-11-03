@@ -5,6 +5,7 @@
 #include "../problems/api.hh"
 #include "../problems/ui.hh"
 #include "../submissions/api.hh"
+#include "../submissions/ui.hh"
 #include "../ui/ui.hh"
 #include "../users/api.hh"
 #include "../users/ui.hh"
@@ -142,6 +143,7 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/sign_in")(users::ui::sign_in);
     GET("/sign_out")(users::ui::sign_out);
     GET("/sign_up")(users::ui::sign_up);
+    GET("/submissions")(submissions::ui::list_submissions);
     GET("/ui/{string}/jquery.js")(ui::jquery_js);
     GET("/ui/{string}/scripts.js")(ui::scripts_js);
     GET("/ui/{string}/styles.css")(ui::styles_css);

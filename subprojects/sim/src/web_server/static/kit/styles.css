@@ -1614,62 +1614,87 @@ table.code-view > tbody > tr:last-child td {
 
 /* Submissions */
 table.submissions {
-	/*display: inline-table;*/
 	margin: 6px 0;
 }
 table.submissions th {
 	padding: 6px;
 	line-height: 20px;
 }
-table.submissions th.user {
-	/*min-width: 60px;*/
-}
-table.submissions th.full-name {
-	/*min-width: 60px;*/
-}
-table.submissions th.time {
-	min-width: 100px;
-}
-table.submissions th.problem {
-	/*min-width: 135px;*/
-}
-table.submissions th.status {
-	/*min-width: 190px;*/
-}
-table.submissions th.score {
-	/*min-width: 60px;*/
-}
-table.submissions th.type {
-	/*min-width: 60px;*/
-}
-table.submissions tr > td:first-child {
-	text-align: right;
-}
-table.submissions td > a {
-	/*white-space: nowrap;*/
-}
-table.submissions tr.ignored,
-.submission-info table tr.ignored {
+table.submissions tr.ignored {
 	background: #e5e5e5;
 	color: #444;
 }
 table.submissions td {
-	padding: 4px 16px 4px 8px;
-	line-height: 20px;
+	padding: 3px 16px 3px 8px;
 	border-top: 1px solid #bbb;
+}
+table.submissions td:first-child {
+	text-align: right;
+}
+table.submissions td.user {
+	text-align: center;
 }
 table.submissions td.status {
 	padding-left: 20px;
 	padding-right: 20px;
 	text-align: center;
 }
-table.submissions tr > td:last-child {
+
+table.old-submissions {
+	margin: 6px 0;
+}
+table.old-submissions th {
+	padding: 6px;
+	line-height: 20px;
+}
+table.old-submissions th.user {
+	/*min-width: 60px;*/
+}
+table.old-submissions th.full-name {
+	/*min-width: 60px;*/
+}
+table.old-submissions th.time {
+	min-width: 100px;
+}
+table.old-submissions th.problem {
+	/*min-width: 135px;*/
+}
+table.old-submissions th.status {
+	/*min-width: 190px;*/
+}
+table.old-submissions th.score {
+	/*min-width: 60px;*/
+}
+table.old-submissions th.type {
+	/*min-width: 60px;*/
+}
+table.old-submissions tr > td:first-child {
+	text-align: right;
+}
+table.old-submissions td > a {
+	/*white-space: nowrap;*/
+}
+table.old-submissions tr.ignored,
+.submission-info table tr.ignored {
+	background: #e5e5e5;
+	color: #444;
+}
+table.old-submissions td {
+	padding: 4px 16px 4px 8px;
+	line-height: 20px;
+	border-top: 1px solid #bbb;
+}
+table.old-submissions td.status {
+	padding-left: 20px;
+	padding-right: 20px;
+	text-align: center;
+}
+table.old-submissions tr > td:last-child {
 	/*white-space: pre;*/
 }
 
 /* Problems */
 table.problems {
-	/*display: inline-table;*/
 	margin: 6px 0;
 }
 table.problems th {
@@ -1692,12 +1717,8 @@ table.problems tr > td:first-child {
 	text-align: right;
 }
 table.problems td {
-	padding: 4px 16px 4px 8px;
-	line-height: 20px;
+	padding: 3px 16px 3px 8px;
 	border-top: 1px solid #bbb;
-}
-table.problems tr > td:last-child {
-	/*white-space: pre;*/
 }
 table.problems .name_and_tags,
 .problem-info .tags-row {
@@ -1716,7 +1737,6 @@ table.problems .tags {
 
 /* Attaching contest problems */
 table.attaching-contest-problems {
-	/*display: inline-table;*/
 	margin: 6px 0;
 }
 table.attaching-contest-problems th {
@@ -1845,25 +1865,6 @@ table.users,
 table.contest-users {
 	margin: 6px 0;
 }
-table.users th.username,
-table.contest-users th.username {
-	/*min-width: 90px;*/
-}
-table.users th.first-name,
-table.users th.last-name,
-table.contest-users th.first-name,
-table.contest-users th.last-name {
-	/*min-width: 100px;*/
-}
-table.users th.email {
-	/*min-width: 120px;*/
-}
-table.users th.type {
-	/*min-width: 90px;*/
-}
-table.contest-users th.mode {
-	/*min-width: 110px;*/
-}
 table.users th,
 table.contest-users th {
 	padding: 6px;
@@ -1871,17 +1872,12 @@ table.contest-users th {
 }
 table.users td,
 table.contest-users td {
-	padding: 4px 24px 4px 8px;
-	line-height: 20px;
+	padding: 3px 16px 3px 8px;
 	border-top: 1px solid #bbb;
 }
 table.users tr > td:first-child,
 table.contest-users tr > td:first-child {
 	text-align: right;
-}
-table.users tr > td:last-child,
-table.contest-users tr > td:last-child {
-	/*white-space: pre;*/
 }
 
 /* User-info, problem-info */
