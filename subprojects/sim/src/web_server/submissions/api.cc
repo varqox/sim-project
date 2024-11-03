@@ -191,7 +191,7 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
             .from("submissions s")
             .left_join("users u")
             .on("u.id=s.user_id")
-            .inner_join("problems p")
+            .left_join("problems p") // left_join is faster than inner_join
             .on("p.id=s.problem_id")
             .left_join("contest_problems cp")
             .on("cp.id=s.contest_problem_id")
@@ -338,7 +338,7 @@ optional<ContestProblemInfoForGettingCapabilities> get_contest_problem_info_for_
     auto stmt =
         ctx.mysql.execute(Select("cr.full_results, cu.mode")
                               .from("contest_problems cp")
-                              .inner_join("contest_rounds cr")
+                              .left_join("contest_rounds cr") // left_join is faster than inner_join
                               .on("cr.id=cp.contest_round_id")
                               .left_join("contest_users cu")
                               .on("cu.user_id=? AND cu.contest_id=cp.contest_id",
@@ -2112,7 +2112,7 @@ Response view_submission(Context& ctx, decltype(Submission::id) submission_id) {
                                      "cp.method_of_choosing_final_submission, "
                                      "cp.score_revealing, cr.full_results, cu.mode")
                                   .from("submissions s")
-                                  .inner_join("problems p")
+                                  .left_join("problems p") // left_join is faster than inner_join
                                   .on("p.id=s.problem_id")
                                   .left_join("contest_problems cp")
                                   .on("cp.id=s.contest_problem_id")
@@ -2161,7 +2161,7 @@ Response view_submission(Context& ctx, decltype(Submission::id) submission_id) {
             .from("submissions s")
             .left_join("users u")
             .on("u.id=s.user_id")
-            .inner_join("problems p")
+            .left_join("problems p") // left_join is faster than inner_join
             .on("p.id=s.problem_id")
             .left_join("contest_problems cp")
             .on("cp.id=s.contest_problem_id")
