@@ -40,7 +40,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "d9ec1b212056603054feaad1a606b234a361a838aa58cd21ee6b67f1f2460f9f";
+    "3317e654e277383a7bcec5cc93d6d8f351f3d67d0af7123e245cf37296aa9e44";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
@@ -48,112 +48,21 @@ static void do_perform_upgrade(
     STACK_UNWINDING_MARK;
 
     // Upgrade here
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_problem_final");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_2");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_3");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_4");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_5");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_6");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_7");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_8");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_9");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_10");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_11");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_12");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_13");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_14");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_15");
-    mysql.execute("ALTER TABLE submissions DROP KEY user_id_16");
-    mysql.execute("ALTER TABLE submissions DROP KEY problem_id_2");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_id_2");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_problem_id_2");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_round_id_2");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_final");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_initial_final");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_round_final");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_initial_round_final");
-    mysql.execute("ALTER TABLE submissions DROP KEY contest_initial_problem_final");
-    mysql.execute("ALTER TABLE submissions DROP KEY initial_final");
-    mysql.execute("ALTER TABLE submissions ADD KEY `problem_final` (`problem_final`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_problem_final` (`contest_problem_final`,`id`)"
+    decltype(sim::submissions::Submission::user_id) submission_user_id;
+    decltype(sim::submissions::Submission::problem_id) submission_problem_id;
+    decltype(sim::submissions::Submission::contest_problem_id) submission_contest_problem_id;
+    auto stmt = mysql.execute(
+        sim::sql::Select("UNIQUE user_id, problem_id, contest_problem_id").from("submissions")
     );
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `user_id_problem_final` (`user_id`,`problem_final`,`id`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY `user_id_contest_problem_final` "
-                  "(`user_id`,`contest_problem_final`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `user_id_type` (`user_id`,`type`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `problem_id_problem_final` "
-                  "(`problem_id`,`problem_final`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `problem_id_contest_problem_final` "
-                  "(`problem_id`,`contest_problem_final`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `problem_id_type` (`problem_id`,`type`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `problem_id_user_id` (`problem_id`,`user_id`,`id`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY `problem_id_user_id_problem_final` "
-                  "(`problem_id`,`user_id`,`problem_final`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `problem_id_user_id_contest_problem_final` "
-                  "(`problem_id`,`user_id`,`contest_problem_final`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `problem_id_user_id_type` "
-                  "(`problem_id`,`user_id`,`type`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_id_type` (`contest_id`,`type`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_id_contest_problem_final` "
-                  "(`contest_id`,`contest_problem_final`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_id_contest_problem_initial_final` "
-                  "(`contest_id`,`contest_problem_initial_final`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_id_user_id` (`contest_id`,`user_id`,`id`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_id_user_id_type` "
-                  "(`contest_id`,`user_id`,`type`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_id_user_id_contest_problem_final` "
-                  "(`contest_id`,`user_id`,`contest_problem_final`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_id_user_id_contest_problem_initial_final` "
-        "(`contest_id`,`user_id`,`contest_problem_initial_final`,`id`)"
-    );
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_round_id_type` (`contest_round_id`,`type`,`id`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_round_id_contest_problem_final` "
-                  "(`contest_round_id`,`contest_problem_final`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_round_id_contest_problem_initial_final` "
-        "(`contest_round_id`,`contest_problem_initial_final`,`id`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_round_id_user_id` "
-                  "(`contest_round_id`,`user_id`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_round_id_user_id_type` "
-                  "(`contest_round_id`,`user_id`,`type`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_round_id_user_id_contest_problem_final` "
-        "(`contest_round_id`,`user_id`,`contest_problem_final`,`id`)"
-    );
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_round_id_user_id_contest_problem_initial_final` "
-        "(`contest_round_id`,`user_id`,`contest_problem_initial_final`,`id`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_problem_id_type` "
-                  "(`contest_problem_id`,`type`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_problem_id_contest_problem_final` "
-                  "(`contest_problem_id`,`contest_problem_final`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_problem_id_contest_problem_initial_final` "
-        "(`contest_problem_id`,`contest_problem_initial_final`,`id`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_problem_id_user_id` "
-                  "(`contest_problem_id`,`user_id`,`id`)");
-    mysql.execute("ALTER TABLE submissions ADD KEY `contest_problem_id_user_id_type` "
-                  "(`contest_problem_id`,`user_id`,`type`,`id`)");
-    mysql.execute(
-        "ALTER TABLE submissions ADD KEY `contest_problem_id_user_id_contest_problem_final` "
-        "(`contest_problem_id`,`user_id`,`contest_problem_final`)"
-    );
-    mysql.execute("ALTER TABLE submissions ADD KEY "
-                  "`contest_problem_id_user_id_contest_problem_initial_final` "
-                  "(`contest_problem_id`,`user_id`,`contest_problem_initial_final`)");
+    stmt.res_bind(submission_user_id, submission_problem_id, submission_contest_problem_id);
+    while (stmt.next()) {
+        sim::submissions::update_final(
+            mysql, submission_user_id, submission_problem_id, submission_contest_problem_id
+        );
+    }
+
+    mysql.update("UNLOCK TABLES");
+    mysql.execute("RENAME TABLE schema_subversion_0 TO schema_subversion_1");
 }
 
 enum class LockKind {
