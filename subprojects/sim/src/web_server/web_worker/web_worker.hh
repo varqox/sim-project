@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../http/cookies.hh"
 #include "../http/request.hh"
 #include "../http/response.hh"
 #include "context.hh"
@@ -13,7 +12,7 @@ namespace web_server::web_worker {
 
 class WebWorker {
     using UrlDispatcher = ::http::UrlDispatcher<http::Response>;
-    sim::mysql::Connection& mysql;
+    sim::mysql::Connection& mysql; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     std::optional<http::Request> request;
     UrlDispatcher get_dispatcher;
     UrlDispatcher post_dispatcher;

@@ -123,6 +123,7 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
                 caps.add_problem_with_visibility_contest_only
             );
             obj.prop("add_problem_with_visibility_public", caps.add_problem_with_visibility_public);
+
             auto fill_with_list_caps = [&](auto& obj,
                                            const capabilities::ProblemsListCapabilities caps) {
                 obj.prop("query_all", caps.query_all);
@@ -144,7 +145,33 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             }
         });
         obj.prop_obj("submissions", [&](auto& obj) {
-            obj.prop("ui_view", capabilities::submissions_for(session).web_ui_view);
+            obj.prop("ui_view", capabilities::submissions(session).web_ui_view);
+            obj.prop_obj("list_all", [&](auto& obj) {
+                const auto caps = capabilities::list_submissions(session);
+                obj.prop("query_all", caps.query_all);
+                obj.prop("query_with_type_final", caps.query_with_type_final);
+                obj.prop("query_with_type_problem_final", caps.query_with_type_problem_final);
+                obj.prop(
+                    "query_with_type_contest_problem_final",
+                    caps.query_with_type_contest_problem_final
+                );
+                obj.prop("query_with_type_ignored", caps.query_with_type_ignored);
+                obj.prop("query_with_type_problem_solution", caps.query_with_type_problem_solution);
+            });
+            if (session) {
+                obj.prop_obj("list_my", [&](auto& obj) {
+                    const auto caps =
+                        capabilities::list_user_submissions(session, session->user_id);
+                    obj.prop("query_all", caps.query_all);
+                    obj.prop("query_with_type_final", caps.query_with_type_final);
+                    obj.prop("query_with_type_problem_final", caps.query_with_type_problem_final);
+                    obj.prop(
+                        "query_with_type_contest_problem_final",
+                        caps.query_with_type_contest_problem_final
+                    );
+                    obj.prop("query_with_type_ignored", caps.query_with_type_ignored);
+                });
+            }
         });
         obj.prop_obj("users", [&](auto& obj) {
             const auto caps = capabilities::users(session);

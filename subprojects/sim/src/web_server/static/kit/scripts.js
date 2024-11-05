@@ -123,6 +123,8 @@ function url_api_problems_with_visibility(problem_visibility) { return `/api/pro
 function url_api_sign_in() { return '/api/sign_in'; }
 function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
+function url_api_submissions() { return '/api/submissions'; }
+function url_api_submissions_with_type(submission_type) { return `/api/submissions/type=/${submission_type}`; }
 function url_api_use_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/use`; }
 function url_api_user(user_id) { return `/api/user/${user_id}`; }
 function url_api_user_change_password(user_id) { return `/api/user/${user_id}/change_password`; }
@@ -131,10 +133,15 @@ function url_api_user_edit(user_id) { return `/api/user/${user_id}/edit`; }
 function url_api_user_merge_into_another(user_id) { return `/api/user/${user_id}/merge_into_another`; }
 function url_api_user_problems(user_id) { return `/api/user/${user_id}/problems`; }
 function url_api_user_problems_with_visibility(user_id, problem_visibility) { return `/api/user/${user_id}/problems/visibility=/${problem_visibility}`; }
+function url_api_user_submissions(user_id) { return `/api/submissions/user=/${user_id}`; }
+function url_api_user_submissions_with_type(user_id, submission_type) { return `/api/submissions/user=/${user_id}/type=/${submission_type}`; }
 function url_api_users() { return '/api/users'; }
 function url_api_users_add() { return '/api/users/add'; }
 function url_api_users_with_type(user_type) { return `/api/users/type=/${user_type}`; }
 function url_change_user_password(user_id) { return `/user/${user_id}/change_password`; }
+function url_contest(contest_id) { return `/c/c${contest_id}`; }
+function url_contest_problem(contest_problem_id) { return `/c/p${contest_problem_id}`; }
+function url_contest_round(contest_round_id) { return `/c/r${contest_round_id}`; }
 function url_contests() { return '/c'; }
 function url_enter_contest(contest_entry_token) { return `/enter_contest/${contest_entry_token}`; }
 function url_jobs() { return '/jobs'; }
@@ -156,7 +163,9 @@ function url_sign_in() { return '/sign_in'; }
 function url_sign_out() { return '/sign_out'; }
 function url_sign_up() { return '/sign_up'; }
 function url_sim_logo_img() { return '/kit/img/sim-logo.png'; }
-function url_submissions() { return '/s'; }
+function url_submission(submission_id) { return `/s/${submission_id}`; }
+function url_submission_source(submission_id) { return `/s/${submission_id}#source`; }
+function url_submissions() { return '/submissions'; }
 function url_user(user_id) { return `/u/${user_id}`; }
 function url_user_delete(user_id) { return `/user/${user_id}/delete`; }
 function url_user_edit(user_id) { return `/user/${user_id}/edit`; }
@@ -237,38 +246,26 @@ function humanize_file_size(size) {
 /* ================================= Ajax ================================= */
 
 /**
- * Default values in init: {
- *      body: null,
- *      timeout: 0, // no timeout
- *      show_upload_progress: false,
- *      response_type: 'text', // accepted values: 'text', 'json'
- *      remove_previous_status: true,
- *      show_abort_button_after: 1500, // in milliseconds
- *      do_before_send: null, // function to call just before sending the request; the advantage
- *                            // of this over just calling it before calling do_xhr_with_status()
- *                            // is that it is called after 'Try again' is clicked
- *      onloadend: null, // function to call after the request completes (either by success or error)
- *      extra_http_headers: {}, // additional HTTP headers to set before sending request, format:
- *                              // extra_https_headers: {
- *                              //    'some-header': 'some value',
- *                              //    'another-header': 'another value',
- *                              // }
- *  }
- *
  * @p process_response is called with parameters response and request_status. Before @p process_response is called,
  *  the response-status is hidden, @p process_response can show it by calling `request_status.show_success(text_message)`.
  */
-function do_xhr_with_status(method, url, init, parent_elem_for_status, process_response) {
-	init.body ??= null;
-	init.timeout ??= 0;
-	init.show_upload_progress ??= false;
-	init.response_type ??= 'text';
-	init.remove_previous_status ??= true;
-	init.show_abort_button_after ??= 1500;
-	init.do_before_send ??= null;
-	init.onloadend ??= null;
-	init.extra_http_headers ??= [];
-
+function do_xhr_with_status(method, url, {
+	body = null,
+	timeout = 0, // no timeout
+	show_upload_progress = false,
+	response_type = 'text', // accepted values: 'text', 'json'
+	remove_previous_status = true,
+	show_abort_button_after = 1500, // in milliseconds
+	do_before_send = null, // function to call just before sending the request; the advantage
+	                       // of this over just calling it before calling do_xhr_with_status()
+	                       // is that it is called after 'Try again' is clicked
+	onloadend = null, // function to call after the request completes (either by success or error)
+	extra_http_headers = {}, // additional HTTP headers to set before sending request, format:
+	                         // extra_https_headers: {
+	                         //    'some-header': 'some value',
+	                         //    'another-header': 'another value',
+	                         // }
+}, parent_elem_for_status, process_response) {
 	const status_center_elem = elem_of('center', elem_request_status_pending());
 	const show_error = (msg) => {
 		const new_status = elem_request_status_error();
@@ -277,7 +274,17 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 		const try_again_btn = elem_with_text('a', 'Try again');
 		try_again_btn.addEventListener('click', () => {
 			status_center_elem.remove();
-			do_xhr_with_status(method, url, init, parent_elem_for_status, process_response);
+			do_xhr_with_status(method, url, {
+				body,
+				timeout,
+				show_upload_progress,
+				response_type,
+				remove_previous_status,
+				show_abort_button_after,
+				do_before_send,
+				onloadend,
+				extra_http_headers,
+			}, parent_elem_for_status, process_response);
 		}, {passive: true});
 		new_status.appendChild(elem_of('center', try_again_btn));
 
@@ -320,7 +327,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 		let parsed_response;
 		try {
 			parsed_response = (() => {
-				switch (init.response_type) {
+				switch (response_type) {
 					case 'text': return xhr.response;
 					case 'json': return xhr.response.length === 0 ? undefined : JSON.parse(xhr.response);
 					default:
@@ -334,7 +341,7 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 			return;
 		}
 		if (invalid_init_response_type) {
-			throw Error("Invalid init.response_type = " + init.response_type);
+			throw Error("Invalid response_type = " + response_type);
 		}
 
 		status_center_elem.style.display = 'none';
@@ -365,13 +372,13 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	xhr.ontimeout = () => {
 		show_error('Request timeout');
 	};
-	xhr.onloadend = init.onloadend?.bind(null);
+	xhr.onloadend = onloadend?.bind(null);
 
 	let bounded_progress_elem;
 	let unbounded_progress_elem;
 	let progress_elem;
 	let progress_info_elem;
-	if (init.show_upload_progress) {
+	if (show_upload_progress) {
 		xhr.upload.onprogress = (e) => {
 			// e.total can be smaller that e.loaded e.g. when we select /dev/urandom
 			if (e.lengthComputable && e.loaded <= e.total) {
@@ -391,17 +398,17 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 	}
 
 	xhr.open(method, url);
-	xhr.timeout = init.timeout;
+	xhr.timeout = timeout;
 	xhr.responseType = 'text';
-	for (const name in init.extra_http_headers) {
-		xhr.setRequestHeader(name, init.extra_http_headers[name]);
+	for (const name in extra_http_headers) {
+		xhr.setRequestHeader(name, extra_http_headers[name]);
 	}
 	// Append request-status element
-	if (init.remove_previous_status) {
+	if (remove_previous_status) {
 		try_remove_centered_request_status(parent_elem_for_status);
 	}
 	append_with_fade_in_slide_down(parent_elem_for_status, status_center_elem);
-	if (init.show_upload_progress) {
+	if (show_upload_progress) {
 		const request_progress = elem_with_class('div', 'request-progress');
 		bounded_progress_elem = request_progress.appendChild(document.createElement('progress'));
 		unbounded_progress_elem = request_progress.appendChild(document.createElement('progress'));
@@ -415,11 +422,11 @@ function do_xhr_with_status(method, url, init, parent_elem_for_status, process_r
 		xhr.abort();
 	}, {passive: true});
 	abort_btn.style.display = 'none';
-	setTimeout(() => { abort_btn.style.display = ''; }, init.show_abort_button_after);
+	setTimeout(() => { abort_btn.style.display = ''; }, show_abort_button_after);
 	status_center_elem.appendChild(elem_of('center', abort_btn));
 
-	init.do_before_send?.call(null);
-	xhr.send(init.body);
+	do_before_send?.call(null);
+	xhr.send(body);
 }
 
 function FormState(parent_state) {
@@ -1567,7 +1574,7 @@ async function change_user_password(user_id) {
 	const user = await view.get_from_api(url_api_user(user_id));
 	const is_me = (user.id === signed_user_id);
 	const title = is_me ? 'Change my password'
-	                    : 'Change password of ' + user.first_name + ' ' + user.last_name;
+	                    : 'Change password of\n' + user.first_name + ' ' + user.last_name;
 	const form = new Form(title, url_api_user_change_password(user.id));
 	if (!user.capabilities.change_password_without_old_password) {
 		form.append_input_password('old_password', 'Old password', 24, {required: false});
@@ -1583,7 +1590,7 @@ async function delete_user(user_id) {
 	const view = new View(url_user_delete(user_id));
 	const user = await view.get_from_api(url_api_user(user_id));
 	const is_me = (user.id === signed_user_id);
-	const title = is_me ? 'Delete account' : 'Delete user ' + user.id;
+	const title = is_me ? 'Delete account' : 'Delete user\n' + user.first_name + ' ' + user.last_name;
 	const form = new Form(title, url_api_user_delete(user.id), {
 		css_classes: 'with-notice',
 	});
@@ -1722,7 +1729,7 @@ function UsersLister(elem, query_url) {
 			row.appendChild(elem_with_class_and_text('td', user.type, snake_case_to_user_string(user.type)));
 
 			const td = document.createElement('td');
-			td.append.apply(td, ActionsToHTML.user(user, false));
+			td.append.apply(td, ActionsToHTML.user(user));
 			row.appendChild(td);
 			document_fragment.appendChild(row);
 		}
@@ -1889,16 +1896,13 @@ async function reupload_problem(problem_id) {
 	form.attach_to(view.content_elem);
 }
 
-function ProblemsLister(elem, query_url, list_capabilties, {
-	show_owner_column,
-	show_updated_at_column,
+function ProblemsLister(elem, query_url, {
+	show_owner_column = true,
+	show_updated_at_column = true,
 }) {
 	if (this === window) {
 		throw new Error('Call as "new ProblemsLister()", not "ProblemsLister()"');
 	}
-	show_owner_column ??= true;
-	show_updated_at_column ??= true;
-
 
 	const self = this;
 	self.process_first_api_response = (list) => {
@@ -1949,12 +1953,12 @@ function ProblemsLister(elem, query_url, list_capabilties, {
 			}
 
 			if (show_owner_column) {
-				const owner_td = row.appendChild(document.createElement('td'));
+				const td = row.appendChild(document.createElement('td'));
 				if (problem.capabilities.view_owner) {
 					if (problem.owner != null) {
-						owner_td.appendChild(a_view_button(url_user(problem.owner.id), problem.owner.username, undefined, view_user.bind(null, true, problem.owner.id))); // TODO: refactor it
+						td.appendChild(a_view_button(url_user(problem.owner.id), problem.owner.username, undefined, view_user.bind(null, true, problem.owner.id))); // TODO: refactor it
 					} else if (problem.capabilities.view_owner) {
-						owner_td.textContent = '(Deleted)';
+						td.textContent = '(Deleted)';
 					}
 				}
 			}
@@ -1964,14 +1968,7 @@ function ProblemsLister(elem, query_url, list_capabilties, {
 			}
 
 			if (problem.capabilities.view_final_submission_full_status && problem.final_submission_full_status != null) {
-				switch (problem.final_submission_full_status) {
-				case 'ok': row.classList.add('status', 'green'); break;
-				case 'wa': row.classList.add('status', 'red'); break;
-				case 'tle': row.classList.add('status', 'yellow'); break;
-				case 'mle': row.classList.add('status', 'yellow'); break;
-				case 'rte': row.classList.add('status', 'intense-red'); break;
-				default: assert(false, 'unexpected final_submission_full_status');
-				}
+				row.classList.add(...submission_status_to_css_class_list(problem.final_submission_full_status));
 			}
 
 			const td = document.createElement('td');
@@ -1992,24 +1989,24 @@ function list_problems() {
 		view.content_elem.appendChild(elem_link_with_class_to_view('btn', 'Add problem', add_problem, url_problems_add));
 	}
 
-	const retab = (url_all_func, url_by_type_func, list_capabilities, extra_params, elem) => {
-		const retab = (url, list_capabilities, elem) => {
+	const retab = (url_all_func, url_with_visibility_func, list_capabilities, extra_params, elem) => {
+		const do_retab = (url, elem) => {
 			const table = elem.appendChild(elem_with_class('table', 'problems stripped'));
-			new ProblemsLister(table, url, list_capabilities, extra_params);
+			new ProblemsLister(table, url, extra_params);
 		};
 
 		const tabmenu = new TabMenuBuilder();
 		if (list_capabilities.query_all) {
-			tabmenu.add_tab('All', retab.bind(null, url_all_func(), list_capabilities));
+			tabmenu.add_tab('All', do_retab.bind(null, url_all_func()));
 		}
 		if (list_capabilities.query_with_visibility_public) {
-			tabmenu.add_tab('Public', retab.bind(null, url_by_type_func('public'), list_capabilities));
+			tabmenu.add_tab('Public', do_retab.bind(null, url_with_visibility_func('public')));
 		}
 		if (list_capabilities.query_with_visibility_contest_only) {
-			tabmenu.add_tab('Contest only', retab.bind(null, url_by_type_func('contest_only'), list_capabilities));
+			tabmenu.add_tab('Contest only', do_retab.bind(null, url_with_visibility_func('contest_only')));
 		}
 		if (list_capabilities.query_with_visibility_private) {
-			tabmenu.add_tab('Private', retab.bind(null, url_by_type_func('private'), list_capabilities));
+			tabmenu.add_tab('Private', do_retab.bind(null, url_with_visibility_func('private')));
 		}
 		tabmenu.build_and_append_to(elem);
 	};
@@ -2041,6 +2038,241 @@ function list_problems() {
 			{
 				show_owner_column: false,
 				show_updated_at_column: window.signed_user_type == 'admin' || window.signed_user_type == 'teacher',
+			}
+		));
+	}
+	tabmenu.build_and_append_to(view.content_elem);
+}
+
+function submission_language_to_user_string(submission_language) {
+	switch (submission_language) {
+		case 'c11': return 'C11';
+		case 'cpp11': return 'C++11';
+		case 'pascal': return 'Pascal';
+		case 'cpp14': return 'C++14';
+		case 'cpp17': return 'C++17';
+		case 'python': return 'Python';
+		case 'rust': return 'Rust';
+		case 'cpp20': return 'C++20';
+		default: assert(false, 'unexpected submission_language: ' + submission_language);
+	}
+}
+
+function submission_status_to_css_class_list(submission_status) {
+	switch (submission_status) {
+		case 'ok': return ['status', 'green'];
+		case 'wa': return ['status', 'red'];
+		case 'tle': return ['status', 'yellow'];
+		case 'mle': return ['status', 'yellow'];
+		case 'ole': return ['status', 'yellow'];
+		case 'rte': return ['status', 'intense-red'];
+		case 'pending': return ['status'];
+		case 'compilation_error': return ['status', 'purple'];
+		case 'checker_compilation_error': return ['status', 'blue'];
+		case 'judge_error': return ['status', 'blue'];
+		default: assert(false, 'unexpected submission_status: ', submission_status);
+	}
+}
+
+function submission_status_to_user_string(submission_status) {
+	switch (submission_status) {
+		case 'ok': return 'OK';
+		case 'wa': return 'Wrong answer';
+		case 'tle': return 'Time limit exceeded';
+		case 'mle': return 'Memory limit exceeded';
+		case 'ole': return 'Output size limit exceeded';
+		case 'rte': return 'Runtime error';
+		case 'pending': return 'Pending';
+		case 'compilation_error': return 'Compilation error';
+		case 'checker_compilation_error': return 'Checker compilation error';
+		case 'judge_error': return 'Judge error';
+		default: assert(false, 'unexpected submission_status: ', submission_status);
+	}
+}
+
+function submission_type_to_user_string(submission, show_if_problem_final) {
+	switch (submission.type) {
+		case 'normal': {
+			let res = '';
+			if (show_if_problem_final && submission.capabilities.view_if_problem_final && submission.is_problem_final) {
+				res = 'Problem';
+			}
+			if (submission.capabilities.view_if_contest_problem_final && submission.is_contest_problem_final) {
+				if (res == '') {
+					res = 'Contest';
+				} else {
+					res += ' + contest'
+				}
+			}
+			if (!submission.capabilities.view_if_contest_problem_final && submission.capabilities.view_if_contest_problem_initial_final && submission.is_contest_problem_initial_final) {
+				if (res == '') {
+					res = 'Contest initial';
+				} else {
+					res += ' + contest initial';
+				}
+			}
+			if (res == '') {
+				return 'Normal';
+			} else {
+				res += ' final';
+				return res;
+			}
+		}
+		case 'ignored': return 'Ignored';
+		case 'problem_solution': return 'Problem solution';
+	}
+}
+
+function SubmissionsLister(elem, query_url, {
+	show_user_column = true,
+	show_if_problem_final = true,
+}) {
+	if (this === window) {
+		throw new Error('Call as "new SubmissionsLister()", not "SubmissionsLister()"');
+	}
+
+	const self = this;
+	self.process_first_api_response = (list) => {
+		if (list.length === 0) {
+			self.elem.parentNode.appendChild(elem_with_text('p', 'There are no submissions to show...'));
+			return;
+		}
+
+		const thead = document.createElement('thead');
+		thead.appendChild(elem_with_text('th', 'Id'));
+		thead.appendChild(elem_with_class_and_text('th', 'language', 'Lang'));
+		if (show_user_column) {
+			thead.appendChild(elem_with_class_and_text('th', 'user', 'User'));
+		}
+		thead.appendChild(elem_with_class_of('th', 'created_at', 'Added', elem_timezone_marker()));
+		thead.appendChild(elem_with_class_and_text('th', 'problem', 'Problem'));
+		thead.appendChild(elem_with_class_and_text('th', 'status', 'Status'));
+		thead.appendChild(elem_with_class_and_text('th', 'score', 'Score'));
+		thead.appendChild(elem_with_class_and_text('th', 'type', 'Type'));
+		thead.appendChild(elem_with_class_and_text('th', 'actions', 'Actions'));
+		self.elem.appendChild(thead);
+		self.tbody = document.createElement('tbody');
+		self.elem.appendChild(self.tbody);
+
+		self.process_api_response(list);
+	};
+	self.process_api_response = (list) => {
+		self.next_query_suffix = '/id</' + list[list.length - 1].id;
+
+		const document_fragment = document.createDocumentFragment();
+		for (const submission of list) {
+			const row = document.createElement('tr');
+			if (submission.type == 'ignored') {
+				row.classList.add('ignored');
+			}
+			row.appendChild(elem_with_text('td', submission.id));
+			row.appendChild(elem_with_text('td', submission_language_to_user_string(submission.language)));
+
+			if (show_user_column) {
+				const td = row.appendChild(elem_with_class('td', 'user'));
+				if (submission.user != null) {
+					td.appendChild(a_view_button(url_user(submission.user.id), submission.user.first_name + ' ' + submission.user.last_name, undefined, view_user.bind(null, true, submission.user.id))); // TODO: refactor it
+				} else {
+					td.textContent = 'System';
+				}
+			}
+
+			row.appendChild(elem_of('td', a_view_button(url_submission(submission.id), datetime_to_string(new Date(submission.created_at)), undefined, view_submission.bind(null, true, submission.id)))); // TODO: refactor it
+
+			if (submission.contest_problem != null) {
+				row.appendChild(elem_of('td',
+					a_view_button(url_contest(submission.contest.id), submission.contest.name, undefined, view_contest.bind(null, true, submission.contest.id)), // TODO: refactor it
+					' / ',
+					a_view_button(url_contest_round(submission.contest_round.id), submission.contest_round.name, undefined, view_contest_round.bind(null, true, submission.contest_round.id)), // TODO: refactor it
+					' / ',
+					a_view_button(url_contest_problem(submission.contest_problem.id), submission.contest_problem.name, undefined, view_contest_problem.bind(null, true, submission.contest_problem.id)), // TODO: refactor it
+				));
+			} else {
+				row.appendChild(elem_of('td', a_view_button(url_problem(submission.problem.id), submission.problem.name, undefined, view_problem.bind(null, true, submission.problem.id)))); // TODO: refactor it
+			}
+
+			const status_td = row.appendChild(document.createElement('td'));
+			if (submission.capabilities.view_full_status) {
+				status_td.textContent = submission_status_to_user_string(submission.full_status);
+				status_td.classList.add(...submission_status_to_css_class_list(submission.full_status));
+			} else {
+				status_td.textContent = 'Initial: ' + submission_status_to_user_string(submission.initial_status);
+				status_td.classList.add(...submission_status_to_css_class_list(submission.initial_status));
+			}
+
+			const score_td = row.appendChild(document.createElement('td'));
+			if (submission.capabilities.view_score) {
+				score_td.textContent = submission.score;
+			}
+
+			row.appendChild(elem_with_text('td', submission_type_to_user_string(submission, show_if_problem_final)));
+			row.appendChild(elem_of('td', ...ActionsToHTML.submission(submission)));
+			document_fragment.appendChild(row);
+		}
+		self.tbody.appendChild(document_fragment);
+	};
+
+	Lister.call(self, elem, query_url, '');
+}
+
+function append_tabbed_submissions_lister(url_all_func, url_with_type_func, list_capabilities, extra_params, elem) {
+	const retab = (url, elem) => {
+		const table = elem.appendChild(elem_with_class('table', 'submissions'));
+		new SubmissionsLister(table, url, extra_params);
+	};
+
+	const tabmenu = new TabMenuBuilder();
+	if (list_capabilities.query_all) {
+		tabmenu.add_tab('All', retab.bind(null, url_all_func()));
+	}
+	if (list_capabilities.query_with_type_final) {
+		tabmenu.add_tab('Final', retab.bind(null, url_with_type_func('final')));
+	}
+	if (list_capabilities.query_with_type_problem_final) {
+		tabmenu.add_tab('Problem final', retab.bind(null, url_with_type_func('problem_final')));
+	}
+	if (list_capabilities.query_with_type_contest_problem_final) {
+		tabmenu.add_tab('Contest final', retab.bind(null, url_with_type_func('contest_problem_final')));
+	}
+	if (list_capabilities.query_with_type_ignored) {
+		tabmenu.add_tab('Ignored', retab.bind(null, url_with_type_func('ignored')));
+	}
+	if (list_capabilities.query_with_type_problem_solution) {
+		tabmenu.add_tab('Problem solutions', retab.bind(null, url_with_type_func('problem_solution')));
+	}
+	tabmenu.build_and_append_to(elem);
+}
+
+function can_list_any_submissions(list_capabilities) {
+	return list_capabilities.query_all || list_capabilities.query_with_type_final ||
+	       list_capabilities.query_with_type_problem_final ||
+	       list_capabilities.query_with_type_contest_problem_final ||
+	       list_capabilities.query_with_type_ignored ||
+	       list_capabilities.query_with_type_problem_solution;
+}
+
+function list_submissions() {
+	const view = new View(url_submissions());
+	view.content_elem.appendChild(elem_with_text('h1', 'Submissions'));
+
+	const tabmenu = new TabMenuBuilder();
+	if (can_list_any_submissions(global_capabilities.submissions.list_all)) {
+		tabmenu.add_tab('All submissions', append_tabbed_submissions_lister.bind(
+			null,
+			url_api_submissions,
+			url_api_submissions_with_type,
+			global_capabilities.submissions.list_all,
+			{}
+		));
+	}
+	if (is_signed_in() && can_list_any_submissions(global_capabilities.submissions.list_my)) {
+		tabmenu.add_tab('My submissions', append_tabbed_submissions_lister.bind(
+			null,
+			url_api_user_submissions.bind(null, signed_user_id),
+			url_api_user_submissions_with_type.bind(null, signed_user_id),
+			global_capabilities.submissions.list_my,
+			{
+				show_user_column: false,
 			}
 		));
 	}
@@ -3354,7 +3586,104 @@ function tab_logs_view(parent_elem) {
 }
 
 /* ============================ Actions buttons ============================ */
-var ActionsToHTML = {};
+const ActionsToHTML = {};
+
+ActionsToHTML.user = function(user, viewing_user = false) {
+	let res = [];
+	if (!viewing_user && user.capabilities.view) {
+		res.push(a_view_button(url_user(user.id), 'View', 'btn-small',
+			view_user.bind(null, true, user.id)));
+	}
+	if (user.capabilities.edit) {
+		res.push(a_view_button(url_user_edit(user.id), 'Edit',
+			'btn-small blue', edit_user.bind(null, user.id)));
+	}
+	if (user.capabilities.delete) {
+		res.push(a_view_button(url_user_delete(user.id), 'Delete',
+			'btn-small red', delete_user.bind(null, user.id)));
+	}
+	if (user.capabilities.merge_into_another_user) {
+		res.push(a_view_button(url_user_merge_into_another(user.id),
+			'Merge', 'btn-small red',
+			merge_user.bind(null, user.id)));
+	}
+	if (user.capabilities.change_password || user.capabilities.change_password_without_old_password) {
+		res.push(a_view_button(url_change_user_password(user.id),
+			'Change password', 'btn-small orange',
+			change_user_password.bind(null, user.id)));
+	}
+	return res;
+};
+
+ActionsToHTML.problem = function(problem, viewing_problem = false) {
+	let res = [];
+	if (!viewing_problem && problem.capabilities.view) {
+		res.push(a_view_button(url_problem(problem.id), 'View', 'btn-small',
+			view_problem.bind(null, true, problem.id)));
+	}
+	if (problem.capabilities.view_statement) {
+		const a = elem_with_class_and_text('a', 'btn-small', 'Statement');
+		a.href = url_problem_statement(problem.id, problem.name);
+		res.push(a);
+	}
+	if (problem.capabilities.create_submission) {
+		res.push(a_view_button(url_problem_create_submission(problem.id), 'Submit',
+			'btn-small blue', add_problem_submission.bind(null, true, {id: problem.id})));
+	}
+	if (problem.capabilities.view_solutions) {
+		res.push(a_view_button(url_problem_solutions(problem.id),
+			'Solutions', 'btn-small', view_problem.bind(null, true, problem.id,
+				'#all_submissions#solutions')));
+	}
+	if (viewing_problem && problem.capabilities.download) {
+		const a = elem_with_class_and_text('a', 'btn-small', 'Download');
+		a.href = url_problem_download(problem.id);
+		res.push(a);
+	}
+	if (problem.capabilities.edit) {
+		res.push(a_view_button(url_problem_edit(problem.id), 'Edit',
+			'btn-small blue', edit_problem.bind(null, true, problem.id)));
+	}
+	if (viewing_problem && problem.capabilities.delete) {
+		res.push(a_view_button(url_problem_delete(problem.id), 'Delete',
+			'btn-small red', delete_problem.bind(null, true, problem.id)));
+	}
+	if (viewing_problem && problem.capabilities.merge) {
+		res.push(a_view_button(url_problem_merge(problem.id), 'Merge',
+			'btn-small red', merge_problem.bind(null, true, problem.id)));
+	}
+	if (viewing_problem && problem.capabilities.rejudge_all_submissions) {
+		const a = elem_with_class_and_text('a', 'btn-small blue', 'Rejudge all submissions');
+		a.addEventListener('click', rejudge_problem_submissions.bind(null, problem.id, problem.name), {passive: true});
+		res.push(a);
+	}
+	if (viewing_problem && problem.capabilities.reset_time_limits) {
+		res.push(a_view_button(url_problem_reset_time_limits(problem.id), 'Reset time limits',
+			'btn-small blue', reset_problem_time_limits.bind(null, true, problem.id)));
+	}
+	return res;
+};
+
+ActionsToHTML.submission = function(submission, viewing_submission = false) {
+	let res = [];
+	if (!viewing_submission && submission.capabilities.view) {
+		res.push(a_view_button(url_submission(submission.id), 'View', 'btn-small', view_submission.bind(null, true, submission.id)));
+	}
+	if (!viewing_submission && submission.capabilities.download) {
+		res.push(a_view_button(url_submission_source(submission.id), 'Source', 'btn-small', view_submission.bind(null, true, submission.id, '#source')));
+	}
+	if (submission.capabilities.change_type) {
+		res.push(a_view_button(undefined, 'Change type', 'btn-small orange', submission_chtype.bind(null, submission.id, submission.type)));
+	}
+	if (submission.capabilities.rejudge) {
+		res.push(a_view_button(undefined, 'Rejudge', 'btn-small blue', rejudge_submission.bind(null, submission.id)));
+	}
+	if (submission.capabilities.delete) {
+		res.push(a_view_button(undefined, 'Delete', 'btn-small red', delete_submission.bind(null, submission.id)));
+	}
+	return res;
+};
+
 ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false*/) {
 	if (job_view == undefined)
 		job_view = false;
@@ -3403,36 +3732,7 @@ ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false
 	return res;
 };
 
-ActionsToHTML.user = function(user, user_view /*= false*/) {
-	if (user_view === undefined)
-		user_view = false;
-	var res = [];
-	if (!user_view && user.capabilities.view) {
-		res.push(a_view_button(url_user(user.id), 'View', 'btn-small',
-			view_user.bind(null, true, user.id)));
-	}
-	if (user.capabilities.edit) {
-		res.push(a_view_button(url_user_edit(user.id), 'Edit',
-			'btn-small blue', edit_user.bind(null, user.id)));
-	}
-	if (user.capabilities.delete) {
-		res.push(a_view_button(url_user_delete(user.id), 'Delete',
-			'btn-small red', delete_user.bind(null, user.id)));
-	}
-	if (user.capabilities.merge_into_another_user) {
-		res.push(a_view_button(url_user_merge_into_another(user.id),
-			'Merge', 'btn-small red',
-			merge_user.bind(null, user.id)));
-	}
-	if (user.capabilities.change_password || user.capabilities.change_password_without_old_password) {
-		res.push(a_view_button(url_change_user_password(user.id),
-			'Change password', 'btn-small orange',
-			change_user_password.bind(null, user.id)));
-	}
-	return res;
-};
-
-ActionsToHTML.submission = function(submission_id, actions_str, submission_type, submission_view /*= false*/) {
+ActionsToHTML.oldsubmission = function(submission_id, actions_str, submission_type, submission_view /*= false*/) {
 	if (submission_view === undefined)
 		submission_view = false;
 
@@ -3466,68 +3766,6 @@ ActionsToHTML.submission = function(submission_id, actions_str, submission_type,
 	if (actions_str.indexOf('D') !== -1)
 		res.push(a_view_button(undefined, 'Delete', 'btn-small red',
 			delete_submission.bind(null, submission_id)));
-
-	return res;
-};
-
-ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
-	if (problem_view === undefined)
-		problem_view = false;
-
-	var res = [];
-	if (!problem_view && problem.capabilities.view) {
-		res.push(a_view_button(url_problem(problem.id), 'View', 'btn-small',
-			view_problem.bind(null, true, problem.id)));
-	}
-
-	if (problem.capabilities.view_statement) {
-		const a = elem_with_class_and_text('a', 'btn-small', 'Statement');
-		a.href = url_problem_statement(problem.id, problem.name);
-		res.push(a);
-	}
-
-	if (problem.capabilities.create_submission) {
-		res.push(a_view_button(url_problem_create_submission(problem.id), 'Submit',
-			'btn-small blue', add_problem_submission.bind(null, true, {id: problem.id})));
-	}
-
-	if (problem.capabilities.view_solutions) {
-		res.push(a_view_button(url_problem_solutions(problem.id),
-			'Solutions', 'btn-small', view_problem.bind(null, true, problem.id,
-				'#all_submissions#solutions')));
-	}
-
-	if (problem_view && problem.capabilities.download) {
-		const a = elem_with_class_and_text('a', 'btn-small', 'Download');
-		a.href = url_problem_download(problem.id);
-		res.push(a);
-	}
-
-	if (problem.capabilities.edit) {
-		res.push(a_view_button(url_problem_edit(problem.id), 'Edit',
-			'btn-small blue', edit_problem.bind(null, true, problem.id)));
-	}
-
-	if (problem_view && problem.capabilities.delete) {
-		res.push(a_view_button(url_problem_delete(problem.id), 'Delete',
-			'btn-small red', delete_problem.bind(null, true, problem.id)));
-	}
-
-	if (problem_view && problem.capabilities.merge) {
-		res.push(a_view_button(url_problem_merge(problem.id), 'Merge',
-			'btn-small red', merge_problem.bind(null, true, problem.id)));
-	}
-
-	if (problem_view && problem.capabilities.rejudge_all_submissions) {
-		const a = elem_with_class_and_text('a', 'btn-small blue', 'Rejudge all submissions');
-		a.addEventListener('click', rejudge_problem_submissions.bind(null, problem.id, problem.name), {passive: true});
-		res.push(a);
-	}
-
-	if (problem_view && problem.capabilities.reset_time_limits) {
-		res.push(a_view_button(url_problem_reset_time_limits(problem.id), 'Reset time limits',
-			'btn-small blue', reset_problem_time_limits.bind(null, true, problem.id)));
-	}
 
 	return res;
 };
@@ -4180,12 +4418,12 @@ function submission_chtype(submission_id, submission_type) {
 					$('<option>', {
 						value: 'N',
 						text: 'Normal / final',
-						selected: (submission_type !== 'Ignored' ? true : undefined)
+						selected: (submission_type !== 'Ignored' && submission_type !== 'ignored' ? true : undefined)
 					}),
 					$('<option>', {
 						value: 'I',
 						text: 'Ignored',
-						selected: (submission_type === 'Ignored' ? true : undefined)
+						selected: (submission_type === 'Ignored' || submission_type == 'ignored' ? true : undefined)
 					})
 				]
 			})
@@ -4245,7 +4483,7 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 							text: 'Submission ' + submission_id
 						}),
 						$('<div>', {
-							html: ActionsToHTML.submission(submission_id, s.actions,
+							html: ActionsToHTML.oldsubmission(submission_id, s.actions,
 								s.type, true)
 						})
 					]
@@ -4391,7 +4629,7 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 
 	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
-function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= function(){return true;}*/) {
+function OldSubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= function(){return true;}*/) {
 	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
@@ -4510,7 +4748,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 
 			// Actions
 			td = document.createElement('td');
-			td.append.apply(td, ActionsToHTML.submission(x.id, x.actions, x.type));
+			td.append.apply(td, ActionsToHTML.oldsubmission(x.id, x.actions, x.type));
 			row.appendChild(td);
 
 			this_.elem[0].querySelector('tbody').appendChild(row);
@@ -4525,8 +4763,8 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff, show_submission) {
-		var table = $('<table class="submissions"></table>').appendTo(parent_elem);
-		new SubmissionsLister(table, query_suffix + tab_qsuff, show_submission).monitor_scroll();
+		var table = $('<table class="old-submissions"></table>').appendTo(parent_elem);
+		new OldSubmissionsLister(table, query_suffix + tab_qsuff, show_submission).monitor_scroll();
 	}
 
 	var final_binding = (filter_normal_instead_of_querying_final ?

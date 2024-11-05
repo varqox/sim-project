@@ -49,14 +49,14 @@ namespace capabilities = web_server::capabilities;
 namespace {
 
 struct ProblemInfo {
-    decltype(Problem::id) id{};
-    decltype(Problem::visibility) visibility{};
+    decltype(Problem::id) id;
+    decltype(Problem::visibility) visibility;
     decltype(Problem::name) name;
     decltype(Problem::label) label;
     optional<decltype(Problem::owner_id)::value_type> owner_id;
-    optional<std::string> owner_username;
-    optional<std::string> owner_first_name;
-    optional<std::string> owner_last_name;
+    optional<decltype(User::username)> owner_username;
+    optional<decltype(User::first_name)> owner_first_name;
+    optional<decltype(User::last_name)> owner_last_name;
     decltype(Problem::created_at) created_at;
     decltype(Problem::updated_at) updated_at;
     optional<decltype(Submission::full_status)> final_submission_full_status;
@@ -69,8 +69,8 @@ struct ProblemInfo {
     ~ProblemInfo() = default;
 
     void append_to(
-        const capabilities::ProblemCapabilities& caps,
         json_str::ObjectBuilder& obj,
+        const capabilities::ProblemCapabilities& caps,
         const std::vector<decltype(ProblemTag::name)>& public_tags,
         const std::vector<decltype(ProblemTag::name)>& hidden_tags
     ) {
@@ -216,8 +216,8 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
             fill_tags_for_problem(p.id);
             arr.val_obj([&](auto& obj) {
                 p.append_to(
-                    capabilities::problem(ctx.session, p.visibility, p.owner_id),
                     obj,
+                    capabilities::problem(ctx.session, p.visibility, p.owner_id),
                     public_tags,
                     hidden_tags
                 );
@@ -607,7 +607,7 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
     }
 
     json_str::Object obj;
-    p.append_to(caps, obj, public_tags, hidden_tags);
+    p.append_to(obj, caps, public_tags, hidden_tags);
     if (caps.view_simfile) {
         obj.prop("simfile", simfile);
         ConfigFile cf;

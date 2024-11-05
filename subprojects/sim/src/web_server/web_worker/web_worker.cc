@@ -4,6 +4,8 @@
 #include "../http/response.hh"
 #include "../problems/api.hh"
 #include "../problems/ui.hh"
+#include "../submissions/api.hh"
+#include "../submissions/ui.hh"
 #include "../ui/ui.hh"
 #include "../users/api.hh"
 #include "../users/ui.hh"
@@ -44,6 +46,86 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/problems/id%3C/{u64}")(problems::api::list_problems_below_id);
     GET("/api/problems/visibility=/{custom}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_problems_with_visibility);
     GET("/api/problems/visibility=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_problems_with_visibility_and_below_id);
+    GET("/api/submission/{u64}")(submissions::api::view_submission);
+    GET("/api/submissions")(submissions::api::list_submissions);
+    GET("/api/submissions/contest=/{u64}")(submissions::api::list_contest_submissions);
+    GET("/api/submissions/contest=/{u64}/id%3C/{u64}")(submissions::api::list_contest_submissions_below_id);
+    GET("/api/submissions/contest=/{u64}/type=/contest_problem_final")(submissions::api::list_contest_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/contest=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_contest_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/contest=/{u64}/type=/ignored")(submissions::api::list_contest_submissions_with_type_ignored);
+    GET("/api/submissions/contest=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_contest_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/contest=/{u64}/user=/{u64}")(submissions::api::list_contest_and_user_submissions);
+    GET("/api/submissions/contest=/{u64}/user=/{u64}/id%3C/{u64}")(submissions::api::list_contest_and_user_submissions_below_id);
+    GET("/api/submissions/contest=/{u64}/user=/{u64}/type=/contest_problem_final")(submissions::api::list_contest_and_user_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/contest=/{u64}/user=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_contest_and_user_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/contest=/{u64}/user=/{u64}/type=/ignored")(submissions::api::list_contest_and_user_submissions_with_type_ignored);
+    GET("/api/submissions/contest=/{u64}/user=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_contest_and_user_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/contest_problem=/{u64}")(submissions::api::list_contest_problem_submissions);
+    GET("/api/submissions/contest_problem=/{u64}/id%3C/{u64}")(submissions::api::list_contest_problem_submissions_below_id);
+    GET("/api/submissions/contest_problem=/{u64}/type=/contest_problem_final")(submissions::api::list_contest_problem_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/contest_problem=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_contest_problem_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/contest_problem=/{u64}/type=/ignored")(submissions::api::list_contest_problem_submissions_with_type_ignored);
+    GET("/api/submissions/contest_problem=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_contest_problem_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/contest_problem=/{u64}/user=/{u64}")(submissions::api::list_contest_problem_and_user_submissions);
+    GET("/api/submissions/contest_problem=/{u64}/user=/{u64}/id%3C/{u64}")(submissions::api::list_contest_problem_and_user_submissions_below_id);
+    GET("/api/submissions/contest_problem=/{u64}/user=/{u64}/type=/contest_problem_final")(submissions::api::list_contest_problem_and_user_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/contest_problem=/{u64}/user=/{u64}/type=/ignored")(submissions::api::list_contest_problem_and_user_submissions_with_type_ignored);
+    GET("/api/submissions/contest_problem=/{u64}/user=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_contest_problem_and_user_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/contest_round=/{u64}")(submissions::api::list_contest_round_submissions);
+    GET("/api/submissions/contest_round=/{u64}/id%3C/{u64}")(submissions::api::list_contest_round_submissions_below_id);
+    GET("/api/submissions/contest_round=/{u64}/type=/contest_problem_final")(submissions::api::list_contest_round_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/contest_round=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_contest_round_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/contest_round=/{u64}/type=/ignored")(submissions::api::list_contest_round_submissions_with_type_ignored);
+    GET("/api/submissions/contest_round=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_contest_round_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/contest_round=/{u64}/user=/{u64}")(submissions::api::list_contest_round_and_user_submissions);
+    GET("/api/submissions/contest_round=/{u64}/user=/{u64}/id%3C/{u64}")(submissions::api::list_contest_round_and_user_submissions_below_id);
+    GET("/api/submissions/contest_round=/{u64}/user=/{u64}/type=/contest_problem_final")(submissions::api::list_contest_round_and_user_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/contest_round=/{u64}/user=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_contest_round_and_user_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/contest_round=/{u64}/user=/{u64}/type=/ignored")(submissions::api::list_contest_round_and_user_submissions_with_type_ignored);
+    GET("/api/submissions/contest_round=/{u64}/user=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_contest_round_and_user_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/id%3C/{u64}")(submissions::api::list_submissions_below_id);
+    GET("/api/submissions/problem=/{u64}")(submissions::api::list_problem_submissions);
+    GET("/api/submissions/problem=/{u64}/id%3C/{u64}")(submissions::api::list_problem_submissions_below_id);
+    GET("/api/submissions/problem=/{u64}/type=/contest_problem_final")(submissions::api::list_problem_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/problem=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_problem_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/problem=/{u64}/type=/final")(submissions::api::list_problem_submissions_with_type_final);
+    GET("/api/submissions/problem=/{u64}/type=/final/id%3C/{u64}")(submissions::api::list_problem_submissions_with_type_final_below_id);
+    GET("/api/submissions/problem=/{u64}/type=/ignored")(submissions::api::list_problem_submissions_with_type_ignored);
+    GET("/api/submissions/problem=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_problem_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/problem=/{u64}/type=/problem_final")(submissions::api::list_problem_submissions_with_type_problem_final);
+    GET("/api/submissions/problem=/{u64}/type=/problem_final/id%3C/{u64}")(submissions::api::list_problem_submissions_with_type_problem_final_below_id);
+    GET("/api/submissions/problem=/{u64}/type=/problem_solution")(submissions::api::list_problem_submissions_with_type_problem_solution);
+    GET("/api/submissions/problem=/{u64}/type=/problem_solution/id%3C/{u64}")(submissions::api::list_problem_submissions_with_type_problem_solution_below_id);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}")(submissions::api::list_problem_and_user_submissions);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/id%3C/{u64}")(submissions::api::list_problem_and_user_submissions_below_id);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/contest_problem_final")(submissions::api::list_problem_and_user_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_problem_and_user_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/final")(submissions::api::list_problem_and_user_submissions_with_type_final);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/final/id%3C/{u64}")(submissions::api::list_problem_and_user_submissions_with_type_final_below_id);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/ignored")(submissions::api::list_problem_and_user_submissions_with_type_ignored);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_problem_and_user_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/problem_final")(submissions::api::list_problem_and_user_submissions_with_type_problem_final);
+    GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/problem_final/id%3C/{u64}")(submissions::api::list_problem_and_user_submissions_with_type_problem_final_below_id);
+    GET("/api/submissions/type=/contest_problem_final")(submissions::api::list_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/type=/final")(submissions::api::list_submissions_with_type_final);
+    GET("/api/submissions/type=/final/id%3C/{u64}")(submissions::api::list_submissions_with_type_final_below_id);
+    GET("/api/submissions/type=/ignored")(submissions::api::list_submissions_with_type_ignored);
+    GET("/api/submissions/type=/ignored/id%3C/{u64}")(submissions::api::list_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/type=/problem_final")(submissions::api::list_submissions_with_type_problem_final);
+    GET("/api/submissions/type=/problem_final/id%3C/{u64}")(submissions::api::list_submissions_with_type_problem_final_below_id);
+    GET("/api/submissions/type=/problem_solution")(submissions::api::list_submissions_with_type_problem_solution);
+    GET("/api/submissions/type=/problem_solution/id%3C/{u64}")(submissions::api::list_submissions_with_type_problem_solution_below_id);
+    GET("/api/submissions/user=/{u64}")(submissions::api::list_user_submissions);
+    GET("/api/submissions/user=/{u64}/id%3C/{u64}")(submissions::api::list_user_submissions_below_id);
+    GET("/api/submissions/user=/{u64}/type=/contest_problem_final")(submissions::api::list_user_submissions_with_type_contest_problem_final);
+    GET("/api/submissions/user=/{u64}/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_user_submissions_with_type_contest_problem_final_below_id);
+    GET("/api/submissions/user=/{u64}/type=/final")(submissions::api::list_user_submissions_with_type_final);
+    GET("/api/submissions/user=/{u64}/type=/final/id%3C/{u64}")(submissions::api::list_user_submissions_with_type_final_below_id);
+    GET("/api/submissions/user=/{u64}/type=/ignored")(submissions::api::list_user_submissions_with_type_ignored);
+    GET("/api/submissions/user=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_user_submissions_with_type_ignored_below_id);
+    GET("/api/submissions/user=/{u64}/type=/problem_final")(submissions::api::list_user_submissions_with_type_problem_final);
+    GET("/api/submissions/user=/{u64}/type=/problem_final/id%3C/{u64}")(submissions::api::list_user_submissions_with_type_problem_final_below_id);
     GET("/api/user/{u64}")(users::api::view_user);
     GET("/api/user/{u64}/problems")(problems::api::list_user_problems);
     GET("/api/user/{u64}/problems/id%3C/{u64}")(problems::api::list_user_problems_below_id);
@@ -61,6 +143,7 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/sign_in")(users::ui::sign_in);
     GET("/sign_out")(users::ui::sign_out);
     GET("/sign_up")(users::ui::sign_up);
+    GET("/submissions")(submissions::ui::list_submissions);
     GET("/ui/{string}/jquery.js")(ui::jquery_js);
     GET("/ui/{string}/scripts.js")(ui::scripts_js);
     GET("/ui/{string}/styles.css")(ui::styles_css);

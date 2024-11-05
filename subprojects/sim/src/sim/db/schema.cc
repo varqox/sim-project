@@ -280,36 +280,75 @@ const DbSchema& get_schema() {
                         "  `full_status` tinyint(3) unsigned NOT NULL,"
                         "  `score` bigint(20) DEFAULT NULL,"
                         "  `last_judgment_began_at` datetime DEFAULT NULL,"
-                        "  `initial_report` mediumblob NOT NULL,"
-                        "  `final_report` mediumblob NOT NULL,"
+                        "  `initial_report` mediumblob NOT NULL," // TODO: rename to initial_judgement_protocol
+                        "  `final_report` mediumblob NOT NULL," // TODO: rename to full_judgement_protocol
+                        // Submissions API: all
                         "  PRIMARY KEY (`id`),"
+                        // Submissions API: with type
+                        "  KEY `type` (`type`,`id`),"
+                        "  KEY `problem_final` (`problem_final`,`id`),"
+                        "  KEY `contest_problem_final` (`contest_problem_final`,`id`),"
                         // Submissions API: with user_id
                         "  KEY `user_id` (`user_id`,`id`),"
-                        "  KEY `user_id_2` (`user_id`,`type`,`id`),"
-                        "  KEY `user_id_3` (`user_id`,`problem_id`,`id`),"
-                        "  KEY `user_id_4` (`user_id`,`contest_problem_id`,`id`),"
-                        "  KEY `user_id_5` (`user_id`,`contest_round_id`,`id`),"
-                        "  KEY `user_id_6` (`user_id`,`contest_id`,`id`),"
-                        "  KEY `user_id_7` (`user_id`,`contest_problem_final`,`id`),"
-                        "  KEY `user_id_8` (`user_id`,`problem_final`,`id`),"
-                        "  KEY `user_id_9` (`user_id`,`problem_id`,`type`,`id`),"
-                        "  KEY `user_id_10` (`user_id`,`problem_id`,`problem_final`),"
-                        "  KEY `user_id_11` (`user_id`,`contest_problem_id`,`type`,`id`),"
-                        "  KEY `user_id_12` (`user_id`,`contest_problem_id`,`contest_problem_final`),"
-                        "  KEY `user_id_13` (`user_id`,`contest_round_id`,`type`,`id`),"
-                        "  KEY `user_id_14` (`user_id`,`contest_round_id`,`contest_problem_final`,`id`),"
-                        "  KEY `user_id_15` (`user_id`,`contest_id`,`type`,`id`),"
-                        "  KEY `user_id_16` (`user_id`,`contest_id`,`contest_problem_final`,`id`),"
-                        // Submissions API: without user_id
-                        "  KEY `type` (`type`,`id`),"
+                        // Submissions API: with user_id and type
+                        "  KEY `user_id_type` (`user_id`,`type`,`id`),"
+                        "  KEY `user_id_problem_final` (`user_id`,`problem_final`,`id`),"
+                        "  KEY `user_id_contest_problem_final` (`user_id`,`contest_problem_final`,`id`),"
+                        // Submissions API: with problem_id
                         "  KEY `problem_id` (`problem_id`,`id`),"
-                        "  KEY `contest_problem_id` (`contest_problem_id`,`id`),"
-                        "  KEY `contest_round_id` (`contest_round_id`,`id`),"
+                        // Submissions API: with problem_id and type
+                        "  KEY `problem_id_type` (`problem_id`,`type`,`id`),"
+                        "  KEY `problem_id_problem_final` (`problem_id`,`problem_final`,`id`),"
+                        "  KEY `problem_id_contest_problem_final` (`problem_id`,`contest_problem_final`,`id`),"
+                        // Submissions API: with problem_id and user_id
+                        "  KEY `problem_id_user_id` (`problem_id`,`user_id`,`id`),"
+                        // Submissions API: with problem_id and user_id and type
+                        "  KEY `problem_id_user_id_type` (`problem_id`,`user_id`,`type`,`id`),"
+                        "  KEY `problem_id_user_id_problem_final` (`problem_id`,`user_id`,`problem_final`,`id`),"
+                        "  KEY `problem_id_user_id_contest_problem_final` (`problem_id`,`user_id`,`contest_problem_final`,`id`),"
+                        // Submissions API: with contest_id
                         "  KEY `contest_id` (`contest_id`,`id`),"
-                        "  KEY `problem_id_2` (`problem_id`,`type`,`id`),"
-                        "  KEY `contest_problem_id_2` (`contest_problem_id`,`type`,`id`),"
-                        "  KEY `contest_round_id_2` (`contest_round_id`,`type`,`id`),"
-                        "  KEY `contest_id_2` (`contest_id`,`type`,`id`),"
+                        // Submissions API: with contest_id and type
+                        "  KEY `contest_id_type` (`contest_id`,`type`,`id`),"
+                        // Submissions API: with contest_id and type + Contest ranking API
+                        "  KEY `contest_id_contest_problem_final` (`contest_id`,`contest_problem_final`,`id`),"
+                        // Contest ranking API:
+                        "  KEY `contest_id_contest_problem_initial_final` (`contest_id`,`contest_problem_initial_final`,`id`),"
+                        // Submissions API: with contest_id and user_id
+                        "  KEY `contest_id_user_id` (`contest_id`,`user_id`,`id`),"
+                        // Submissions API: with contest_id and user_id and type
+                        "  KEY `contest_id_user_id_type` (`contest_id`,`user_id`,`type`,`id`),"
+                        "  KEY `contest_id_user_id_contest_problem_final` (`contest_id`,`user_id`,`contest_problem_final`,`id`),"
+                        "  KEY `contest_id_user_id_contest_problem_initial_final` (`contest_id`,`user_id`,`contest_problem_initial_final`,`id`),"
+                        // Submissions API: with contest_round_id
+                        "  KEY `contest_round_id` (`contest_round_id`,`id`),"
+                        // Submissions API: with contest_round_id and type
+                        "  KEY `contest_round_id_type` (`contest_round_id`,`type`,`id`),"
+                        // Submissions API: with contest_round_id and type + Contest round ranking API
+                        "  KEY `contest_round_id_contest_problem_final` (`contest_round_id`,`contest_problem_final`,`id`),"
+                        // Contest round ranking API:
+                        "  KEY `contest_round_id_contest_problem_initial_final` (`contest_round_id`,`contest_problem_initial_final`,`id`),"
+                        // Submissions API: with contest_round_id and user_id
+                        "  KEY `contest_round_id_user_id` (`contest_round_id`,`user_id`,`id`),"
+                        // Submissions API: with contest_round_id and user_id and type
+                        "  KEY `contest_round_id_user_id_type` (`contest_round_id`,`user_id`,`type`,`id`),"
+                        "  KEY `contest_round_id_user_id_contest_problem_final` (`contest_round_id`,`user_id`,`contest_problem_final`,`id`),"
+                        "  KEY `contest_round_id_user_id_contest_problem_initial_final` (`contest_round_id`,`user_id`,`contest_problem_initial_final`,`id`),"
+                        // Submissions API: with contest_problem_id
+                        "  KEY `contest_problem_id` (`contest_problem_id`,`id`),"
+                        // Submissions API: with contest_problem_id and type
+                        "  KEY `contest_problem_id_type` (`contest_problem_id`,`type`,`id`),"
+                        // Submissions API: with contest_problem_id and type + Contest problem ranking API
+                        "  KEY `contest_problem_id_contest_problem_final` (`contest_problem_id`,`contest_problem_final`,`id`),"
+                        // Contest problem ranking API:
+                        "  KEY `contest_problem_id_contest_problem_initial_final` (`contest_problem_id`,`contest_problem_initial_final`,`id`),"
+                        // Submissions API: with contest_problem_id and user_id
+                        "  KEY `contest_problem_id_user_id` (`contest_problem_id`,`user_id`,`id`),"
+                        // Submissions API: with contest_problem_id and user_id and type
+                        "  KEY `contest_problem_id_user_id_type` (`contest_problem_id`,`user_id`,`type`,`id`),"
+                        // Submissions API: with contest_problem_id and user_id and type + contest / contest round / contest problem API: view coloring
+                        "  KEY `contest_problem_id_user_id_contest_problem_final` (`contest_problem_id`,`user_id`,`contest_problem_final`),"
+                        "  KEY `contest_problem_id_user_id_contest_problem_initial_final` (`contest_problem_id`,`user_id`,`contest_problem_initial_final`),"
                         // Needed to efficiently select problem final submission
                         "  KEY `for_problem_final` (`final_candidate`,`user_id`,`problem_id`,`score` DESC,`full_status`,`id` DESC),"
                         // Needed to efficiently select contest problem final submission
@@ -320,15 +359,6 @@ const DbSchema& get_schema() {
                         "  KEY `for_contest_initial_problem_final_by_initial_status` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`initial_status`,`id` DESC),"
                         "  KEY `for_contest_initial_problem_final_by_score_and_initial_status` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`score` DESC,`initial_status`,`id` DESC),"
                         "  KEY `for_contest_initial_problem_final_by_score_and_full_status` (`initial_final_candidate`,`user_id`,`contest_problem_id`,`score` DESC,`full_status`,`id` DESC),"
-                        // Needed to efficiently query contest view coloring
-                        "  KEY `initial_final` (`user_id`,`contest_problem_id`,`contest_problem_initial_final`),"
-                        // For ranking
-                        "  KEY `contest_final` (`contest_id`,`contest_problem_final`),"
-                        "  KEY `contest_initial_final` (`contest_id`,`contest_problem_initial_final`),"
-                        "  KEY `contest_round_final` (`contest_round_id`,`contest_problem_final`),"
-                        "  KEY `contest_initial_round_final` (`contest_round_id`,`contest_problem_initial_final`),"
-                        "  KEY `contest_problem_final` (`contest_problem_id`,`contest_problem_final`),"
-                        "  KEY `contest_initial_problem_final` (`contest_problem_id`,`contest_problem_initial_final`),"
                         // For foreign keys
                         "  KEY `file_id` (`file_id`),"
                         "  CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `internal_files` (`id`) ON UPDATE CASCADE,"
