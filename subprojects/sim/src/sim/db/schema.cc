@@ -472,7 +472,7 @@ const DbSchema& get_schema() {
                 {
                     // clang-format off
                     .create_table_sql = concat_tostr(
-                        "CREATE TABLE `schema_subversion_0` ("
+                        "CREATE TABLE `schema_subversion_1` ("
                         "  `x` bit(1) NOT NULL"
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"
                     ),
@@ -501,7 +501,7 @@ const DbSchema& get_schema() {
             std::pair{std::string_view{"problem_tags"}, ProblemTag::COLUMNS_NUM},
             std::pair{std::string_view{"problems"}, Problem::COLUMNS_NUM},
             std::pair{std::string_view{"reupload_problem_jobs"}, ReuploadProblemJob::COLUMNS_NUM},
-            std::pair{std::string_view{"schema_subversion_0"}, size_t{1}},
+            std::pair{std::string_view{"schema_subversion_1"}, size_t{1}},
             std::pair{std::string_view{"sessions"}, Session::COLUMNS_NUM},
             std::pair{std::string_view{"submissions"}, Submission::COLUMNS_NUM},
             std::pair{std::string_view{"users"}, User::COLUMNS_NUM},
