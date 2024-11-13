@@ -16,9 +16,13 @@
 #include <sim/job_server/notify.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/old_mysql/old_mysql.hh>
+#include <sim/problems/problem.hh>
+#include <sim/users/user.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 
+using sim::problems::Problem;
+using sim::users::User;
 using web_server::http::Request;
 using web_server::http::Response;
 
@@ -44,8 +48,8 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/problem/{u64}")(problems::api::view_problem);
     GET("/api/problems")(problems::api::list_problems);
     GET("/api/problems/id%3C/{u64}")(problems::api::list_problems_below_id);
-    GET("/api/problems/visibility=/{custom}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_problems_with_visibility);
-    GET("/api/problems/visibility=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_problems_with_visibility_and_below_id);
+    GET("/api/problems/visibility=/{custom}", decltype(Problem::visibility)::from_str)(problems::api::list_problems_with_visibility);
+    GET("/api/problems/visibility=/{custom}/id%3C/{u64}", decltype(Problem::visibility)::from_str)(problems::api::list_problems_with_visibility_and_below_id);
     GET("/api/submission/{u64}")(submissions::api::view_submission);
     GET("/api/submissions")(submissions::api::list_submissions);
     GET("/api/submissions/contest=/{u64}")(submissions::api::list_contest_submissions);
@@ -129,12 +133,12 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/user/{u64}")(users::api::view_user);
     GET("/api/user/{u64}/problems")(problems::api::list_user_problems);
     GET("/api/user/{u64}/problems/id%3C/{u64}")(problems::api::list_user_problems_below_id);
-    GET("/api/user/{u64}/problems/visibility=/{custom}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility);
-    GET("/api/user/{u64}/problems/visibility=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility_and_below_id);
+    GET("/api/user/{u64}/problems/visibility=/{custom}", decltype(Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility);
+    GET("/api/user/{u64}/problems/visibility=/{custom}/id%3C/{u64}", decltype(Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility_and_below_id);
     GET("/api/users")(users::api::list_users);
     GET("/api/users/id%3E/{u64}")(users::api::list_users_above_id);
-    GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type);
-    GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type_and_above_id);
+    GET("/api/users/type=/{custom}", decltype(User::type)::from_str)(users::api::list_users_with_type);
+    GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(User::type)::from_str)(users::api::list_users_with_type_and_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
     GET("/favicon.ico")(ui::favicon_ico);
     GET("/problem/{u64}/reupload")(problems::ui::reupload);

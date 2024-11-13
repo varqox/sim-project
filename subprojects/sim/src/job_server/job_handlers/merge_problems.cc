@@ -55,7 +55,7 @@ void merge_problems(
             return;
         }
 
-        logger("Simfile of the merged problem (donor):\n", donor_problem_simfile);
+        logger("Simfile of the donor problem:\n", donor_problem_simfile);
     }
     {
         auto stmt = mysql.execute(Select("1").from("problems").where("id=?", target_problem_id));
