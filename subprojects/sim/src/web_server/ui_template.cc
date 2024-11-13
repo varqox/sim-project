@@ -106,7 +106,7 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             obj.prop("ui_view", capabilities::contests_for(session).web_ui_view);
         });
         obj.prop_obj("jobs", [&](auto& obj) {
-            obj.prop("ui_view", capabilities::jobs_for(session).web_ui_view);
+            obj.prop("ui_view", capabilities::jobs(session).web_ui_view);
         });
         obj.prop_obj("logs", [&](auto& obj) {
             obj.prop("ui_view", capabilities::logs_for(session).view);

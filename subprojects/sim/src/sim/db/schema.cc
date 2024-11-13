@@ -384,13 +384,28 @@ const DbSchema& get_schema() {
                         "  `aux_id` bigint(20) unsigned DEFAULT NULL,"
                         "  `aux_id_2` bigint(20) unsigned DEFAULT NULL,"
                         "  `log` mediumblob NOT NULL DEFAULT '',"
+                        // Jobs API: all
                         "  PRIMARY KEY (`id`),"
-                        "  KEY `status` (`status`,`priority` DESC,`id`),"
-                        "  KEY `type` (`type`,`aux_id`,`id` DESC),"
-                        "  KEY `aux_id` (`aux_id`,`id` DESC),"
-                        "  KEY `creator` (`creator`,`id` DESC),"
-                        "  KEY `creator_2` (`creator`,`type`,`aux_id`,`id` DESC),"
-                        "  KEY `creator_3` (`creator`,`aux_id`,`id` DESC)"
+                        // Jobs API: all with status
+                        "  KEY `status` (`status`,`id`),"
+                        // Jobs API: with user_id
+                        "  KEY `creator_id` (`creator`,`id`),"
+                        // Jobs API: with user_id and status
+                        "  KEY `creator_id_status` (`creator`,`status`,`id`),"
+                        // Jobs API: with aux_id and type (problem id / submission id)
+                        "  KEY `aux_id_type` (`aux_id`,`type`,`id`),"
+                        // Jobs API: with aux_id_2 and type (problem id)
+                        "  KEY `aux_id_2_type` (`aux_id_2`,`type`,`id`),"
+                        // Jobs API: with aux_id and type (problem id / submission id) and status
+                        "  KEY `aux_id_type_status` (`aux_id`,`type`,`status`,`id`),"
+                        // Jobs API: with aux_id_2 and type (problem id) and status
+                        "  KEY `aux_id_2_type_status` (`aux_id_2`,`type`,`status`,`id`),"
+                        "  KEY `type_aux_id` (`type`,`aux_id`,`id` DESC)," // TODO: delete after refactoring backend
+                        "  KEY `aux_id` (`aux_id`,`id` DESC)," // TODO: delete after refactoring backend
+                        "  KEY `creator_type_aux_id` (`creator`,`type`,`aux_id`,`id` DESC)," // TODO: delete after refactoring backend
+                        "  KEY `creator_aux_id` (`creator`,`aux_id`,`id` DESC)," // TODO: delete after refactoring backend
+                        // For job server
+                        "  KEY `status_priority` (`status`,`priority` DESC,`id`)"
                         // Foreign keys cannot be used as we want to preserve information about who
                         // created the job and what the job was doing specifically
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin"

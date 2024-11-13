@@ -20,4 +20,11 @@ constexpr bool is_self(
     return session && session->user_id == user_id;
 }
 
+constexpr bool is_self(
+    const decltype(web_worker::Context::session)& session,
+    std::optional<decltype(sim::users::User::id)> opt_user_id
+) noexcept {
+    return session && opt_user_id && session->user_id == *opt_user_id;
+}
+
 } // namespace web_server::capabilities

@@ -41,7 +41,7 @@ struct Job {
 
     uint64_t id;
     sql::fields::Datetime created_at;
-    std::optional<decltype(users::User::id)> creator;
+    std::optional<decltype(users::User::id)> creator; // TODO: rename to creator_id
     Type type;
     uint8_t priority;
     Status status;

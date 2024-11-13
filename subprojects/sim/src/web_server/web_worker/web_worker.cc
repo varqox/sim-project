@@ -2,6 +2,7 @@
 #include "../contest_entry_tokens/ui.hh"
 #include "../http/request.hh"
 #include "../http/response.hh"
+#include "../jobs/api.hh"
 #include "../problems/api.hh"
 #include "../problems/ui.hh"
 #include "../submissions/api.hh"
@@ -14,6 +15,7 @@
 
 #include <optional>
 #include <sim/job_server/notify.hh>
+#include <sim/jobs/job.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/old_mysql/old_mysql.hh>
 #include <sim/problems/problem.hh>
@@ -21,6 +23,7 @@
 #include <simlib/string_view.hh>
 #include <type_traits>
 
+using sim::jobs::Job;
 using sim::problems::Problem;
 using sim::users::User;
 using web_server::http::Request;
@@ -45,6 +48,23 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     // clang-format off
     GET("/api/contest/{u64}/entry_tokens")(contest_entry_tokens::api::view);
     GET("/api/contest_entry_token/{string}/contest_name")(contest_entry_tokens::api::view_contest_name);
+    GET("/api/job/{u64}")(jobs::api::view_job);
+    GET("/api/jobs")(jobs::api::list_jobs);
+    GET("/api/jobs/id%3C/{u64}")(jobs::api::list_jobs_below_id);
+    GET("/api/jobs/problem=/{u64}")(jobs::api::list_problem_jobs);
+    GET("/api/jobs/problem=/{u64}/id%3C/{u64}")(jobs::api::list_problem_jobs_below_id);
+    GET("/api/jobs/problem=/{u64}/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_problem_jobs_with_status);
+    GET("/api/jobs/problem=/{u64}/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_problem_jobs_with_status_below_id);
+    GET("/api/jobs/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_jobs_with_status);
+    GET("/api/jobs/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_jobs_with_status_below_id);
+    GET("/api/jobs/submission=/{u64}")(jobs::api::list_submission_jobs);
+    GET("/api/jobs/submission=/{u64}/id%3C/{u64}")(jobs::api::list_submission_jobs_below_id);
+    GET("/api/jobs/submission=/{u64}/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_submission_jobs_with_status);
+    GET("/api/jobs/submission=/{u64}/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_submission_jobs_with_status_below_id);
+    GET("/api/jobs/user=/{u64}")(jobs::api::list_user_jobs);
+    GET("/api/jobs/user=/{u64}/id%3C/{u64}")(jobs::api::list_user_jobs_below_id);
+    GET("/api/jobs/user=/{u64}/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_user_jobs_with_status);
+    GET("/api/jobs/user=/{u64}/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_user_jobs_with_status_below_id);
     GET("/api/problem/{u64}")(problems::api::view_problem);
     GET("/api/problems")(problems::api::list_problems);
     GET("/api/problems/id%3C/{u64}")(problems::api::list_problems_below_id);
