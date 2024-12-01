@@ -136,8 +136,8 @@ function url_api_user_edit(user_id) { return `/api/user/${user_id}/edit`; }
 function url_api_user_jobs(user_id) { return `/api/jobs/user=/${user_id}`; }
 function url_api_user_jobs_with_status(user_id, status) { return `/api/jobs/user=/${user_id}/status=/${status}`; }
 function url_api_user_merge_into_another(user_id) { return `/api/user/${user_id}/merge_into_another`; }
-function url_api_user_problems(user_id) { return `/api/user/${user_id}/problems`; }
-function url_api_user_problems_with_visibility(user_id, problem_visibility) { return `/api/user/${user_id}/problems/visibility=/${problem_visibility}`; }
+function url_api_user_problems(user_id) { return `/api/problems/user=/${user_id}`; }
+function url_api_user_problems_with_visibility(user_id, problem_visibility) { return `/api/problems/user=/${user_id}/visibility=/${problem_visibility}`; }
 function url_api_user_submissions(user_id) { return `/api/submissions/user=/${user_id}`; }
 function url_api_user_submissions_with_type(user_id, submission_type) { return `/api/submissions/user=/${user_id}/type=/${submission_type}`; }
 function url_api_users() { return '/api/users'; }
