@@ -3,6 +3,7 @@
 #include "../http/request.hh"
 #include "../http/response.hh"
 #include "../jobs/api.hh"
+#include "../jobs/ui.hh"
 #include "../problems/api.hh"
 #include "../problems/ui.hh"
 #include "../submissions/api.hh"
@@ -161,6 +162,7 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(User::type)::from_str)(users::api::list_users_with_type_and_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
     GET("/favicon.ico")(ui::favicon_ico);
+    GET("/jobs")(jobs::ui::list_jobs);
     GET("/problem/{u64}/reupload")(problems::ui::reupload);
     GET("/problems")(problems::ui::list_problems);
     GET("/problems/add")(problems::ui::add);
