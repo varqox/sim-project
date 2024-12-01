@@ -131,6 +131,7 @@ static void restart(const CmdOptions& cmd_options) {
 
     struct Server {
         pid_t pid = -1;
+        const char* process_name;
         // Respawn from file desciptor to prevent running a newer executable that may require e.g.
         // new database schema, but the database is not yet upgraded
         FileDescriptor executable_fd;
@@ -153,8 +154,9 @@ static void restart(const CmdOptions& cmd_options) {
                 continue;
             }
             if (pid == 0) { // Child
-                char* empty_arr[] = {nullptr};
-                syscalls::execveat(server.executable_fd, "", empty_arr, environ, AT_EMPTY_PATH);
+                std::string argv0 = server.process_name;
+                char* argv[] = {argv0.data(), nullptr};
+                syscalls::execveat(server.executable_fd, "", argv, environ, AT_EMPTY_PATH);
                 _exit(EXIT_FAILURE); // execveat() failed
             }
             // Parent
@@ -164,8 +166,8 @@ static void restart(const CmdOptions& cmd_options) {
         }
     };
     std::array<Server, 2> servers = {{
-        {-1, FileDescriptor{paths.sim_server, O_PATH | O_CLOEXEC}},
-        {-1, FileDescriptor{paths.job_server, O_PATH | O_CLOEXEC}},
+        {-1, "sim-web-server", FileDescriptor{paths.sim_server, O_PATH | O_CLOEXEC}},
+        {-1, "sim-job-server", FileDescriptor{paths.job_server, O_PATH | O_CLOEXEC}},
     }};
 
     // Run the sim upgrader.
