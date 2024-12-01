@@ -189,18 +189,7 @@ void Sim::jobs_handle() {
         return;
     }
 
-    InplaceBuff<32> query_suffix{};
-    if (next_arg == "my") {
-        query_suffix.append("/u", session->user_id);
-    } else if (!next_arg.empty()) {
-        return error404();
-    }
-
-    /* List jobs */
-    page_template("Job queue");
-
-    append("document.body.appendChild(elem_with_text('h1', 'Jobs'));"
-           "tab_jobs_lister($('body'));");
+    return error404();
 }
 
 } // namespace web_server::old

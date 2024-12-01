@@ -1755,47 +1755,30 @@ table.attaching-contest-problems td {
 
 /* Jobs */
 table.jobs {
-	/*display: inline-table;*/
 	margin: 6px 0;
 }
 table.jobs th {
 	padding: 6px;
 	line-height: 20px;
 }
-table.jobs th.created_at {
-	min-width: 100px;
+table.jobs td {
+	padding: 3px 16px 3px 8px;
+	border-top: 1px solid #bbb;
 }
-table.jobs th.type {
-	/*min-width: 60px;*/
-}
-table.jobs th.status {
-	/*min-width: 60px;*/
-}
-table.jobs th.creator {
-	/*min-width: 60px;*/
-}
-table.jobs th.info {
-	/*min-width: 200px;*/
+table.jobs tr > td:first-child {
+	text-align: right;
 }
 table.jobs td.status {
 	padding-left: 16px;
 	padding-right: 16px;
 	text-align: center;
 }
-table.jobs td {
-	padding: 4px 16px 4px 8px;
-	line-height: 20px;
-	border-top: 1px solid #bbb;
+table.jobs td.creator {
+	text-align: center;
 }
 table.jobs td div.info {
 	display: flex;
 	flex-flow: row wrap;
-}
-table.jobs tr > td:first-child {
-	text-align: right;
-}
-table.jobs tr > td:last-child {
-	/*white-space: pre;*/
 }
 
 /* Tags */

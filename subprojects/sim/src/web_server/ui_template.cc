@@ -106,7 +106,27 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
             obj.prop("ui_view", capabilities::contests_for(session).web_ui_view);
         });
         obj.prop_obj("jobs", [&](auto& obj) {
-            obj.prop("ui_view", capabilities::jobs_for(session).web_ui_view);
+            obj.prop("ui_view", capabilities::jobs(session).web_ui_view);
+            obj.prop_obj("list_all", [&](auto& obj) {
+                const auto caps = capabilities::list_jobs(session);
+                obj.prop("query_all", caps.query_all);
+                obj.prop("query_with_status_pending", caps.query_with_status_pending);
+                obj.prop("query_with_status_in_progress", caps.query_with_status_in_progress);
+                obj.prop("query_with_status_done", caps.query_with_status_done);
+                obj.prop("query_with_status_failed", caps.query_with_status_failed);
+                obj.prop("query_with_status_cancelled", caps.query_with_status_cancelled);
+            });
+            if (session) {
+                obj.prop_obj("list_my", [&](auto& obj) {
+                    const auto caps = capabilities::list_user_jobs(session);
+                    obj.prop("query_all", caps.query_all);
+                    obj.prop("query_with_status_pending", caps.query_with_status_pending);
+                    obj.prop("query_with_status_in_progress", caps.query_with_status_in_progress);
+                    obj.prop("query_with_status_done", caps.query_with_status_done);
+                    obj.prop("query_with_status_failed", caps.query_with_status_failed);
+                    obj.prop("query_with_status_cancelled", caps.query_with_status_cancelled);
+                });
+            }
         });
         obj.prop_obj("logs", [&](auto& obj) {
             obj.prop("ui_view", capabilities::logs_for(session).view);

@@ -115,6 +115,9 @@ function url_api_contest_entry_tokens_regenerate(contest_id) { return `/api/cont
 function url_api_contest_entry_tokens_regenerate_short(contest_id) { return `/api/contest/${contest_id}/entry_tokens/regenerate_short`; }
 function url_api_contest_entry_tokens_view(contest_id) { return `/api/contest/${contest_id}/entry_tokens`; }
 function url_api_contest_name_for_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/contest_name`; }
+function url_api_job_download_log(job_id) { return `/api/download/job/${job_id}/log`; }
+function url_api_jobs() { return '/api/jobs'; }
+function url_api_jobs_with_status(status) { return `/api/jobs/status=/${status}`; }
 function url_api_problem(problem_id) { return `/api/problem/${problem_id}`; }
 function url_api_problem_reupload(problem_id) { return `/api/problem/${problem_id}/reupload`; }
 function url_api_problems() { return '/api/problems'; }
@@ -130,9 +133,11 @@ function url_api_user(user_id) { return `/api/user/${user_id}`; }
 function url_api_user_change_password(user_id) { return `/api/user/${user_id}/change_password`; }
 function url_api_user_delete(user_id) { return `/api/user/${user_id}/delete`; }
 function url_api_user_edit(user_id) { return `/api/user/${user_id}/edit`; }
+function url_api_user_jobs(user_id) { return `/api/jobs/user=/${user_id}`; }
+function url_api_user_jobs_with_status(user_id, status) { return `/api/jobs/user=/${user_id}/status=/${status}`; }
 function url_api_user_merge_into_another(user_id) { return `/api/user/${user_id}/merge_into_another`; }
-function url_api_user_problems(user_id) { return `/api/user/${user_id}/problems`; }
-function url_api_user_problems_with_visibility(user_id, problem_visibility) { return `/api/user/${user_id}/problems/visibility=/${problem_visibility}`; }
+function url_api_user_problems(user_id) { return `/api/problems/user=/${user_id}`; }
+function url_api_user_problems_with_visibility(user_id, problem_visibility) { return `/api/problems/user=/${user_id}/visibility=/${problem_visibility}`; }
 function url_api_user_submissions(user_id) { return `/api/submissions/user=/${user_id}`; }
 function url_api_user_submissions_with_type(user_id, submission_type) { return `/api/submissions/user=/${user_id}/type=/${submission_type}`; }
 function url_api_users() { return '/api/users'; }
@@ -144,6 +149,7 @@ function url_contest_problem(contest_problem_id) { return `/c/p${contest_problem
 function url_contest_round(contest_round_id) { return `/c/r${contest_round_id}`; }
 function url_contests() { return '/c'; }
 function url_enter_contest(contest_entry_token) { return `/enter_contest/${contest_entry_token}`; }
+function url_job(job_id) { return `/jobs/${job_id}`; }
 function url_jobs() { return '/jobs'; }
 function url_logs() { return '/logs'; }
 function url_main_page() { return '/'; }
@@ -2279,6 +2285,233 @@ function list_submissions() {
 	tabmenu.build_and_append_to(view.content_elem);
 }
 
+function job_type_to_user_string(job_type) {
+	switch (job_type) {
+		case 'judge_submission': return 'Judge submission';
+		case 'add_problem': return 'Add problem';
+		case 'reupload_problem': return 'Reupload problem';
+		case 'edit_problem': return 'Edit problem';
+		case 'delete_problem': return 'Delete problem';
+		case 'reselect_final_submissions_in_contest_problem': return 'Reselect final submissions in contest problem';
+		case 'delete_user': return 'Delete user';
+		case 'delete_contest': return 'Delete contest';
+		case 'delete_contest_round': return 'Delete contest round';
+		case 'delete_contest_problem': return 'Delete contest problem';
+		case 'reset_problem_time_limits_using_model_solution': return 'Reset problem time limits using model solution';
+		case 'merge_problems': return 'Merge problems';
+		case 'rejudge_submission': return 'Rejudge submission';
+		case 'delete_internal_file': return 'Delete internal file';
+		case 'change_problem_statement': return 'Change problem statement';
+		case 'merge_users': return 'Merge users';
+		default: assert(false, 'unexpected job_type: ' + job_type);
+	}
+}
+
+function job_status_to_css_class_list(job_status) {
+	switch (job_status) {
+		case 'pending': return ['status'];
+		case 'in_progress': return ['status', 'yellow'];
+		case 'done': return ['status', 'green'];
+		case 'failed': return ['status', 'red'];
+		case 'cancelled': return ['status', 'blue'];
+		default: assert(false, 'unexpected job_status: ', job_status);
+	}
+}
+
+function job_status_to_user_string(job_status) {
+	switch (job_status) {
+		case 'pending': return 'Pending';
+		case 'in_progress': return 'In progress';
+		case 'done': return 'Done';
+		case 'failed': return 'Failed';
+		case 'cancelled': return 'Cancelled';
+		default: assert(false, 'unexpected job_status: ', job_status);
+	}
+}
+function JobsLister(elem, query_url, {
+	show_creator_column = true,
+}) {
+	if (this === window) {
+		throw new Error('Call as "new JobsLister()", not "JobsLister()"');
+	}
+
+	const self = this;
+	self.process_first_api_response = (list) => {
+		if (list.length === 0) {
+			self.elem.parentNode.appendChild(elem_with_text('p', 'There are no jobs to show...'));
+			return;
+		}
+
+		const thead = document.createElement('thead');
+		thead.appendChild(elem_with_text('th', 'Id'));
+		thead.appendChild(elem_with_class_and_text('th', 'type', 'Type'));
+		thead.appendChild(elem_with_class_and_text('th', 'priority', 'Priority'));
+		thead.appendChild(elem_with_class_of('th', 'created_at', 'Created at', elem_timezone_marker()));
+		thead.appendChild(elem_with_class_and_text('th', 'status', 'Status'));
+		if (show_creator_column) {
+			thead.appendChild(elem_with_class_and_text('th', 'creator', 'Creator'));
+		}
+		thead.appendChild(elem_with_class_and_text('th', 'info', 'Info'));
+		thead.appendChild(elem_with_class_and_text('th', 'actions', 'Actions'));
+		self.elem.appendChild(thead);
+		self.tbody = document.createElement('tbody');
+		self.elem.appendChild(self.tbody);
+
+		self.process_api_response(list);
+	};
+	self.process_api_response = (list) => {
+		self.next_query_suffix = '/id</' + list[list.length - 1].id;
+
+		const document_fragment = document.createDocumentFragment();
+		for (const job of list) {
+			const row = document.createElement('tr');
+			row.appendChild(elem_with_text('td', job.id));
+			row.appendChild(elem_with_text('td', job_type_to_user_string(job.type)));
+			row.appendChild(elem_with_text('td', job.priority));
+			row.appendChild(elem_of('td', a_view_button(url_job(job.id), datetime_to_string(new Date(job.created_at)), undefined, view_job.bind(null, true, job.id)))); // TODO: refactor it
+
+			const status_td = row.appendChild(document.createElement('td'));
+			status_td.textContent = job_status_to_user_string(job.status);
+			status_td.classList.add(...job_status_to_css_class_list(job.status));
+
+			if (show_creator_column) {
+				const td = row.appendChild(elem_with_class('td', 'creator'));
+				if (job.creator != null) {
+					if (job.creator.username != null) {
+						td.appendChild(a_view_button(url_user(job.creator.id), job.creator.username, undefined, view_user.bind(null, true, job.creator.id))); // TODO: refactor it
+					} else {
+						td.textContent = `deleted (id: ${job.creator.id})`;
+					}
+				} else {
+					td.textContent = 'System';
+				}
+			}
+
+			const info_div = elem_with_class('div', 'info');
+			switch (job.type) {
+			case 'judge_submission':
+			case 'rejudge_submission':
+				info_div.appendChild(elem_with_text('label', 'submission'));
+				info_div.appendChild(a_view_button(url_submission(job.submission_id), job.submission_id, undefined, view_submission.bind(null, true, job.submission_id))); // TODO: refactor it
+				break;
+			case 'add_problem':
+			case 'reupload_problem':
+			case 'edit_problem':
+			case 'delete_problem':
+			case 'change_problem_statement':
+			case 'reset_problem_time_limits_using_model_solution':
+				info_div.appendChild(elem_with_text('label', 'problem'));
+				info_div.appendChild(a_view_button(url_submission(job.problem_id), job.problem_id, undefined, view_problem.bind(null, true, job.problem_id))); // TODO: refactor it
+				break;
+			case 'reselect_final_submissions_in_contest_problem':
+			case 'delete_contest_problem':
+				info_div.appendChild(elem_with_text('label', 'contest problem'));
+				info_div.appendChild(a_view_button(url_submission(job.contest_problem_id), job.contest_problem_id, undefined, view_contest_problem.bind(null, true, job.contest_problem_id))); // TODO: refactor it
+				break;
+			case 'delete_user':
+				info_div.appendChild(elem_with_text('label', 'user'));
+				info_div.appendChild(a_view_button(url_submission(job.user_id), job.user_id, undefined, view_user.bind(null, true, job.user_id))); // TODO: refactor it
+				break;
+			case 'delete_contest':
+				info_div.appendChild(elem_with_text('label', 'contest'));
+				info_div.appendChild(a_view_button(url_submission(job.contest_id), job.contest_id, undefined, view_contest.bind(null, true, job.contest_id))); // TODO: refactor it
+				break;
+			case 'delete_contest_round':
+				info_div.appendChild(elem_with_text('label', 'contest round'));
+				info_div.appendChild(a_view_button(url_submission(job.contest_round_id), job.contest_round_id, undefined, view_contest_round.bind(null, true, job.contest_round_id))); // TODO: refactor it
+				break;
+			case 'merge_problems':
+				info_div.appendChild(elem_with_text('label', 'donor problem'));
+				info_div.appendChild(a_view_button(url_submission(job.donor_problem_id), job.donor_problem_id, undefined, view_problem.bind(null, true, job.donor_problem_id))); // TODO: refactor it
+				info_div.appendChild(elem_with_text('label', 'target problem'));
+				info_div.appendChild(a_view_button(url_submission(job.target_problem_id), job.target_problem_id, undefined, view_problem.bind(null, true, job.target_problem_id))); // TODO: refactor it
+				break;
+			case 'delete_internal_file':
+				info_div.append(elem_with_text('label', 'internal file'), job.internal_file_id);
+				break;
+			case 'merge_users':
+				info_div.appendChild(elem_with_text('label', 'donor user'));
+				info_div.appendChild(a_view_button(url_submission(job.donor_user_id), job.donor_user_id, undefined, view_user.bind(null, true, job.donor_user_id))); // TODO: refactor it
+				info_div.appendChild(elem_with_text('label', 'target user'));
+				info_div.appendChild(a_view_button(url_submission(job.target_user_id), job.target_user_id, undefined, view_user.bind(null, true, job.target_user_id))); // TODO: refactor it
+				break;
+			default: assert(false, 'unexpected job.type: ' + job.type);
+			}
+			row.appendChild(elem_of('td', info_div));
+
+			row.appendChild(elem_of('td', ...ActionsToHTML.job(job)));
+			document_fragment.appendChild(row);
+		}
+		self.tbody.appendChild(document_fragment);
+	};
+
+	Lister.call(self, elem, query_url, '');
+}
+
+function append_tabbed_jobs_lister(url_all_func, url_with_status_func, list_capabilities, extra_params, elem) {
+	const retab = (url, elem) => {
+		const table = elem.appendChild(elem_with_class('table', 'jobs'));
+		new JobsLister(table, url, extra_params);
+	};
+
+	const tabmenu = new TabMenuBuilder();
+	if (list_capabilities.query_all) {
+		tabmenu.add_tab('All', retab.bind(null, url_all_func()));
+	}
+	if (list_capabilities.query_with_status_pending) {
+		tabmenu.add_tab('Pending', retab.bind(null, url_with_status_func('pending')));
+	}
+	if (list_capabilities.query_with_status_in_progress) {
+		tabmenu.add_tab('In progress', retab.bind(null, url_with_status_func('in_progress')));
+	}
+	if (list_capabilities.query_with_status_done) {
+		tabmenu.add_tab('Done', retab.bind(null, url_with_status_func('done')));
+	}
+	if (list_capabilities.query_with_status_failed) {
+		tabmenu.add_tab('Failed', retab.bind(null, url_with_status_func('failed')));
+	}
+	if (list_capabilities.query_with_status_cancelled) {
+		tabmenu.add_tab('Cancelled', retab.bind(null, url_with_status_func('cancelled')));
+	}
+	tabmenu.build_and_append_to(elem);
+}
+
+function can_list_any_jobs(list_capabilities) {
+	return list_capabilities.query_all || list_capabilities.query_with_status_pending ||
+	       list_capabilities.query_with_status_in_progress ||
+	       list_capabilities.query_with_status_done ||
+	       list_capabilities.query_with_status_failed ||
+	       list_capabilities.query_with_status_cancelled;
+}
+
+function list_jobs() {
+	const view = new View(url_jobs());
+	view.content_elem.appendChild(elem_with_text('h1', 'Jobs'));
+
+	const tabmenu = new TabMenuBuilder();
+	if (can_list_any_jobs(global_capabilities.jobs.list_all)) {
+		tabmenu.add_tab('All jobs', append_tabbed_jobs_lister.bind(
+			null,
+			url_api_jobs,
+			url_api_jobs_with_status,
+			global_capabilities.jobs.list_all,
+			{}
+		));
+	}
+	if (is_signed_in() && can_list_any_jobs(global_capabilities.jobs.list_my)) {
+		tabmenu.add_tab('My jobs', append_tabbed_jobs_lister.bind(
+			null,
+			url_api_user_jobs.bind(null, signed_user_id),
+			url_api_user_jobs_with_status.bind(null, signed_user_id),
+			global_capabilities.jobs.list_my,
+			{
+				show_creator_column: false,
+			}
+		));
+	}
+	tabmenu.build_and_append_to(view.content_elem);
+}
+
 ////////////////////////// The above code has gone through refactor //////////////////////////
 
 function text_to_safe_html(str) { // This is deprecated because DOM elements have innerText property (see elem_with_text() function)
@@ -3684,7 +3917,46 @@ ActionsToHTML.submission = function(submission, viewing_submission = false) {
 	return res;
 };
 
-ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false*/) {
+ActionsToHTML.job = function(job, viewing_job = false) {
+	let res = [];
+	if (!viewing_job && job.capabilities.view) {
+		res.push(a_view_button(url_job(job.id), 'View', 'btn-small', view_job.bind(null, true, job.id)));
+	}
+	if (!viewing_job && (job.capabilities.view_log || job.capabilities.download_attached_file)) {
+		const dropdown_menu = elem_with_class('div', 'dropmenu down');
+		dropdown_menu.appendChild(elem_with_class_and_text('a', 'btn-small dropmenu-toggle', 'Download'));
+
+		const ul = dropdown_menu.appendChild(document.createElement('ul'));
+		if (job.capabilities.view_log) {
+			ul.appendChild(elem_with_text('a', 'Job log')).href = url_api_job_download_log(job.id);
+		}
+		if (job.capabilities.download_attached_file) {
+			switch (job.type) {
+			case 'add_problem':
+			case 'reupload_problem':
+				ul.appendChild(elem_with_text('a', 'Uploaded package')).href = '/api/download/job/' + job.id + '/uploaded-package'; // TODO: refactor to attached_file
+				break;
+			case 'change_problem_statement':
+				ul.appendChild(elem_with_text('a', 'Uploaded statement')).href = '/api/download/job/' + job.id + '/uploaded-statement'; // TODO: refactor to attached_file
+				break;
+			}
+		}
+
+		res.push(dropdown_menu);
+	}
+	if (job.capabilities.change_priority && job.status == 'pending') {
+		// TODO: implement when changing priority will be implemented (probably blue color will be good)
+	}
+	if (job.capabilities.cancel && job.status == 'pending') {
+		res.push(a_view_button(undefined, 'Cancel', 'btn-small red', cancel_job.bind(null, job.id))); // TODO: refactor
+	}
+	if (job.capabilities.restart && (job.status == 'failed' || job.status == 'cancelled')) {
+		res.push(a_view_button(undefined, 'Restart', 'btn-small orange', restart_job.bind(null, job.id)));
+	}
+	return res;
+}
+
+ActionsToHTML.oldjob = function(job_id, actions_str, problem_id, job_view /*= false*/) {
 	if (job_view == undefined)
 		job_view = false;
 
@@ -3978,7 +4250,7 @@ function view_user(as_oldmodal, user_id, opt_hash /*= ''*/) {
 				main.append($('<div>', {
 					html: ["<h2>User's jobs</h2>", j_table]
 				}));
-				new JobsLister(j_table, '/u' + user_id).monitor_scroll();
+				new OldJobsLister(j_table, '/u' + user_id).monitor_scroll();
 			}
 		]);
 
@@ -4036,7 +4308,7 @@ function view_job(as_oldmodal, job_id, opt_hash /*= ''*/) {
 				html: $('<h1>', {
 					text: 'Job ' + job_id
 				}).add('<div>', {
-					html: ActionsToHTML.job(job_id, job.actions, job.info.problem, true)
+					html: ActionsToHTML.oldjob(job_id, job.actions, job.info.problem, true)
 				})
 			}).add('<table>', {
 				html: $('<thead>', {html: '<tr>' +
@@ -4104,7 +4376,7 @@ function restart_job(job_id) {
 		}), 'Restart job', 'btn-small orange', '/api/job/' + job_id + '/restart',
 		'The job has been restarted.', 'No, go back');
 }
-function JobsLister(elem, query_suffix /*= ''*/) {
+function OldJobsLister(elem, query_suffix /*= ''*/) {
 	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
@@ -4248,7 +4520,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.job(x.id, x.actions, info.problem)
+				html: ActionsToHTML.oldjob(x.id, x.actions, info.problem)
 			}));
 
 			this_.elem.children('tbody').append(row);
@@ -4264,7 +4536,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff) {
 		var table = $('<table class="jobs"></table>').appendTo(parent_elem);
-		new JobsLister(table, query_suffix + tab_qsuff).monitor_scroll();
+		new OldJobsLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
 
 	var tabs = [
@@ -4605,7 +4877,7 @@ function view_submission(as_oldmodal, submission_id, opt_hash /*= ''*/) {
 		if (s.actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
 				elem.append($('<table>', {class: 'jobs'}));
-				new JobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
+				new OldJobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
 			});
 
 		if (s.user_id !== null) {
@@ -5285,7 +5557,7 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 				elem.append($('<div>', {
 					html: j_table
 				}));
-				new JobsLister(j_table, '/p' + problem_id).monitor_scroll();
+				new OldJobsLister(j_table, '/p' + problem_id).monitor_scroll();
 			});
 
 		if (actions.indexOf('c') !== -1)

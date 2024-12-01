@@ -2,6 +2,8 @@
 #include "../contest_entry_tokens/ui.hh"
 #include "../http/request.hh"
 #include "../http/response.hh"
+#include "../jobs/api.hh"
+#include "../jobs/ui.hh"
 #include "../problems/api.hh"
 #include "../problems/ui.hh"
 #include "../submissions/api.hh"
@@ -14,11 +16,17 @@
 
 #include <optional>
 #include <sim/job_server/notify.hh>
+#include <sim/jobs/job.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/old_mysql/old_mysql.hh>
+#include <sim/problems/problem.hh>
+#include <sim/users/user.hh>
 #include <simlib/string_view.hh>
 #include <type_traits>
 
+using sim::jobs::Job;
+using sim::problems::Problem;
+using sim::users::User;
 using web_server::http::Request;
 using web_server::http::Response;
 
@@ -41,11 +49,32 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     // clang-format off
     GET("/api/contest/{u64}/entry_tokens")(contest_entry_tokens::api::view);
     GET("/api/contest_entry_token/{string}/contest_name")(contest_entry_tokens::api::view_contest_name);
+    GET("/api/job/{u64}")(jobs::api::view_job);
+    GET("/api/jobs")(jobs::api::list_jobs);
+    GET("/api/jobs/id%3C/{u64}")(jobs::api::list_jobs_below_id);
+    GET("/api/jobs/problem=/{u64}")(jobs::api::list_problem_jobs);
+    GET("/api/jobs/problem=/{u64}/id%3C/{u64}")(jobs::api::list_problem_jobs_below_id);
+    GET("/api/jobs/problem=/{u64}/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_problem_jobs_with_status);
+    GET("/api/jobs/problem=/{u64}/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_problem_jobs_with_status_below_id);
+    GET("/api/jobs/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_jobs_with_status);
+    GET("/api/jobs/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_jobs_with_status_below_id);
+    GET("/api/jobs/submission=/{u64}")(jobs::api::list_submission_jobs);
+    GET("/api/jobs/submission=/{u64}/id%3C/{u64}")(jobs::api::list_submission_jobs_below_id);
+    GET("/api/jobs/submission=/{u64}/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_submission_jobs_with_status);
+    GET("/api/jobs/submission=/{u64}/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_submission_jobs_with_status_below_id);
+    GET("/api/jobs/user=/{u64}")(jobs::api::list_user_jobs);
+    GET("/api/jobs/user=/{u64}/id%3C/{u64}")(jobs::api::list_user_jobs_below_id);
+    GET("/api/jobs/user=/{u64}/status=/{custom}", decltype(Job::status)::from_str)(jobs::api::list_user_jobs_with_status);
+    GET("/api/jobs/user=/{u64}/status=/{custom}/id%3C/{u64}", decltype(Job::status)::from_str)(jobs::api::list_user_jobs_with_status_below_id);
     GET("/api/problem/{u64}")(problems::api::view_problem);
     GET("/api/problems")(problems::api::list_problems);
     GET("/api/problems/id%3C/{u64}")(problems::api::list_problems_below_id);
-    GET("/api/problems/visibility=/{custom}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_problems_with_visibility);
-    GET("/api/problems/visibility=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_problems_with_visibility_and_below_id);
+    GET("/api/problems/user=/{u64}")(problems::api::list_user_problems);
+    GET("/api/problems/user=/{u64}/id%3C/{u64}")(problems::api::list_user_problems_below_id);
+    GET("/api/problems/user=/{u64}/visibility=/{custom}", decltype(Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility);
+    GET("/api/problems/user=/{u64}/visibility=/{custom}/id%3C/{u64}", decltype(Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility_and_below_id);
+    GET("/api/problems/visibility=/{custom}", decltype(Problem::visibility)::from_str)(problems::api::list_problems_with_visibility);
+    GET("/api/problems/visibility=/{custom}/id%3C/{u64}", decltype(Problem::visibility)::from_str)(problems::api::list_problems_with_visibility_and_below_id);
     GET("/api/submission/{u64}")(submissions::api::view_submission);
     GET("/api/submissions")(submissions::api::list_submissions);
     GET("/api/submissions/contest=/{u64}")(submissions::api::list_contest_submissions);
@@ -127,16 +156,13 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/submissions/user=/{u64}/type=/problem_final")(submissions::api::list_user_submissions_with_type_problem_final);
     GET("/api/submissions/user=/{u64}/type=/problem_final/id%3C/{u64}")(submissions::api::list_user_submissions_with_type_problem_final_below_id);
     GET("/api/user/{u64}")(users::api::view_user);
-    GET("/api/user/{u64}/problems")(problems::api::list_user_problems);
-    GET("/api/user/{u64}/problems/id%3C/{u64}")(problems::api::list_user_problems_below_id);
-    GET("/api/user/{u64}/problems/visibility=/{custom}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility);
-    GET("/api/user/{u64}/problems/visibility=/{custom}/id%3C/{u64}", decltype(sim::problems::Problem::visibility)::from_str)(problems::api::list_user_problems_with_visibility_and_below_id);
     GET("/api/users")(users::api::list_users);
     GET("/api/users/id%3E/{u64}")(users::api::list_users_above_id);
-    GET("/api/users/type=/{custom}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type);
-    GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(sim::users::User::type)::from_str)(users::api::list_users_with_type_and_above_id);
+    GET("/api/users/type=/{custom}", decltype(User::type)::from_str)(users::api::list_users_with_type);
+    GET("/api/users/type=/{custom}/id%3E/{u64}", decltype(User::type)::from_str)(users::api::list_users_with_type_and_above_id);
     GET("/enter_contest/{string}")(contest_entry_tokens::ui::enter_contest);
     GET("/favicon.ico")(ui::favicon_ico);
+    GET("/jobs")(jobs::ui::list_jobs);
     GET("/problem/{u64}/reupload")(problems::ui::reupload);
     GET("/problems")(problems::ui::list_problems);
     GET("/problems/add")(problems::ui::add);

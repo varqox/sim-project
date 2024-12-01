@@ -231,7 +231,7 @@ Response do_list(Context& ctx, uint32_t limit, Condition<Params...>&& where_cond
 constexpr bool is_query_allowed(
     ProblemsListCapabilities caps, optional<decltype(Problem::visibility)> problem_visibility
 ) {
-    if (not problem_visibility) {
+    if (!problem_visibility) {
         return caps.query_all;
     }
     // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
@@ -284,7 +284,7 @@ Response do_list_problems(
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::list_problems(ctx.session);
-    if (not is_query_allowed(caps, problem_visibility)) {
+    if (!is_query_allowed(caps, problem_visibility)) {
         return ctx.response_403();
     }
 
@@ -315,7 +315,7 @@ Response do_list_user_problems(
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::list_user_problems(ctx.session, user_id);
-    if (not is_query_allowed(caps, problem_visibility)) {
+    if (!is_query_allowed(caps, problem_visibility)) {
         return ctx.response_403();
     }
 
@@ -555,12 +555,12 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
             Select("visibility, owner_id").from("problems").where("id=?", problem_id)
         );
         stmt.res_bind(p.visibility, p.owner_id);
-        if (not stmt.next()) {
+        if (!stmt.next()) {
             return ctx.response_404();
         }
     }
     auto caps = capabilities::problem(ctx.session, p.visibility, p.owner_id);
-    if (not caps.view) {
+    if (!caps.view) {
         return ctx.response_403();
     }
     auto stmt = ctx.mysql.execute(
@@ -623,7 +623,7 @@ http::Response add(web_worker::Context& ctx) {
     STACK_UNWINDING_MARK;
 
     auto caps = capabilities::problems(ctx.session);
-    if (not caps.add_problem) {
+    if (!caps.add_problem) {
         return ctx.response_403();
     }
 

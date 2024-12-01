@@ -40,7 +40,7 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "3317e654e277383a7bcec5cc93d6d8f351f3d67d0af7123e245cf37296aa9e44";
+    "dfa97c2786f60a70f9954876cec40b47f26a5e89610e761f86c11121c32c6a71";
 
 static void do_perform_upgrade(
     [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
@@ -48,21 +48,28 @@ static void do_perform_upgrade(
     STACK_UNWINDING_MARK;
 
     // Upgrade here
-    decltype(sim::submissions::Submission::user_id) submission_user_id;
-    decltype(sim::submissions::Submission::problem_id) submission_problem_id;
-    decltype(sim::submissions::Submission::contest_problem_id) submission_contest_problem_id;
-    auto stmt = mysql.execute(
-        sim::sql::Select("UNIQUE user_id, problem_id, contest_problem_id").from("submissions")
+    mysql.execute("ALTER TABLE jobs DROP KEY status");
+    mysql.execute("ALTER TABLE jobs ADD KEY `status_priority` (`status`,`priority` DESC,`id`)");
+    mysql.execute("ALTER TABLE jobs DROP KEY type");
+    mysql.execute("ALTER TABLE jobs ADD KEY `type_aux_id` (`type`,`aux_id`,`id` DESC)");
+    mysql.execute("ALTER TABLE jobs DROP KEY creator");
+    mysql.execute("ALTER TABLE jobs DROP KEY creator_2");
+    mysql.execute(
+        "ALTER TABLE jobs ADD KEY `creator_type_aux_id` (`creator`,`type`,`aux_id`,`id` DESC)"
     );
-    stmt.res_bind(submission_user_id, submission_problem_id, submission_contest_problem_id);
-    while (stmt.next()) {
-        sim::submissions::update_final(
-            mysql, submission_user_id, submission_problem_id, submission_contest_problem_id
-        );
-    }
+    mysql.execute("ALTER TABLE jobs DROP KEY creator_3");
+    mysql.execute("ALTER TABLE jobs ADD KEY `creator_aux_id` (`creator`,`aux_id`,`id` DESC)");
 
-    mysql.update("UNLOCK TABLES");
-    mysql.execute("RENAME TABLE schema_subversion_0 TO schema_subversion_1");
+    mysql.execute("ALTER TABLE jobs ADD KEY `status` (`status`,`id`)");
+    mysql.execute("ALTER TABLE jobs ADD KEY `creator_id` (`creator`, `id`)");
+    mysql.execute("ALTER TABLE jobs ADD KEY `creator_id_status` (`creator`,`status`,`id`)");
+    mysql.execute("ALTER TABLE jobs ADD KEY `aux_id_type` (`aux_id`, `type`, `id`)");
+    mysql.execute("ALTER TABLE jobs ADD KEY `aux_id_2_type` (`aux_id_2`, `type`, `id`)");
+    mysql.execute("ALTER TABLE jobs ADD KEY `aux_id_type_status` (`aux_id`, `type`, `status`, `id`)"
+    );
+    mysql.execute(
+        "ALTER TABLE jobs ADD KEY `aux_id_2_type_status` (`aux_id_2`, `type`, `status`, `id`)"
+    );
 }
 
 enum class LockKind {

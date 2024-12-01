@@ -47,8 +47,8 @@ void merge_users(
         }
 
         // Logging
-        logger("Merged user's username: ", donor_username);
-        logger("Merged user's type: ", donor_user_type.to_str());
+        logger("Donor user's username: ", donor_username);
+        logger("Donor user's type: ", donor_user_type.to_str());
         auto target_user_stmt =
             mysql.execute(Select("type").from("users").where("id=?", target_user_id));
         target_user_stmt.res_bind(target_user_type);
