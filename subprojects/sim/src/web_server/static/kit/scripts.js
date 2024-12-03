@@ -2400,8 +2400,10 @@ function JobsLister(elem, query_url, {
 			case 'delete_problem':
 			case 'change_problem_statement':
 			case 'reset_problem_time_limits_using_model_solution':
-				info_div.appendChild(elem_with_text('label', 'problem'));
-				info_div.appendChild(a_view_button(url_submission(job.problem_id), job.problem_id, undefined, view_problem.bind(null, true, job.problem_id))); // TODO: refactor it
+				if (job.problem_id != null) { // Can be null for not-done add_problem job
+					info_div.appendChild(elem_with_text('label', 'problem'));
+					info_div.appendChild(a_view_button(url_submission(job.problem_id), job.problem_id, undefined, view_problem.bind(null, true, job.problem_id))); // TODO: refactor it
+				}
 				break;
 			case 'reselect_final_submissions_in_contest_problem':
 			case 'delete_contest_problem':
