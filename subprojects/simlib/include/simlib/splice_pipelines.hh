@@ -126,23 +126,8 @@ SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
             }
 
             auto ppfd = pipeline_pfds(i);
-            state.rd_state.hup |= static_cast<bool>(ppfd.readable.revents & POLLHUP);
-            state.rd_state.in |= static_cast<bool>(ppfd.readable.revents & POLLIN);
-            if (state.rd_state.hup) {
-                ppfd.readable.fd = -1; // stop listening on this file descriptor
-            } else if (state.rd_state.in) {
-                ppfd.readable.events = 0; // still listen for POLLHUP
-            }
-
-            state.wr_state.err |= static_cast<bool>(ppfd.writable.revents & POLLERR);
-            state.wr_state.out |= static_cast<bool>(ppfd.writable.revents & POLLOUT);
-            if (state.wr_state.err) {
-                ppfd.writable.fd = -1; // stop listening on this file descriptor
-            } else if (state.wr_state.out) {
-                ppfd.writable.events = 0; // still listen for POLLERR
-            }
-
             auto& pipeline = pipelines[i];
+
             auto close_pipeline = [&] {
                 if (pipeline.readable_fd.close()) {
                     THROW("close()", errmsg());
@@ -156,20 +141,63 @@ SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
                 --open_pipelines;
             };
 
+            // "|=" instead of "=" so that state is preserved across consecutive poll() calls unless
+            // explicitly reset
+            state.rd_state.hup |= static_cast<bool>(ppfd.readable.revents & POLLHUP);
+            state.rd_state.in |= static_cast<bool>(ppfd.readable.revents & POLLIN);
+            if (state.rd_state.hup) {
+                ppfd.readable.fd = -1; // stop listening on this file descriptor
+                if (!state.rd_state.in) {
+                    // No more data to read
+                    close_pipeline();
+                    continue;
+                }
+            } else if (state.rd_state.in) {
+                ppfd.readable.events = 0; // still listen for POLLHUP
+            }
+
+            // "|=" instead of "=" so that state is preserved across consecutive poll() calls unless
+            // explicitly reset
+            state.wr_state.err |= static_cast<bool>(ppfd.writable.revents & POLLERR);
+            state.wr_state.out |= static_cast<bool>(ppfd.writable.revents & POLLOUT);
             if (state.wr_state.err) {
                 // We cannot write more data
                 close_pipeline();
                 continue;
             }
-            if (state.rd_state.hup && !state.rd_state.in) {
-                // No more data to read
-                close_pipeline();
-                continue;
+            if (state.wr_state.out) {
+                ppfd.writable.events = 0; // still listen for POLLERR
             }
+
+            auto listen_again_for_pollin_and_pollout = [&] {
+                state.rd_state.in = false;
+                ppfd.readable.fd =
+                    pipeline.readable_fd; // in case state.rd_state.hup == true, we still
+                                          // need to check if there is more input to read
+                ppfd.readable.events = POLLIN;
+                state.wr_state.out = false;
+                assert(ppfd.writable.fd >= 0);
+                ppfd.writable.events = POLLOUT;
+            };
 
             if (state.rd_state.in && state.wr_state.out) {
                 if (pipeline.transferred_data_limit_in_bytes == 0) {
-                    res.transferred_data_limit_exceeded[i] = true;
+                    // There is a problem that spurious POLLIN can happen due to faulty
+                    // writev(fd, {something}, {iov_base=NULL, ...}) == EFAULT
+                    // even though subsequent read will return EAGAIN
+                    char c;
+                    auto len = read(pipeline.readable_fd, &c, sizeof(c));
+                    if (len < 0) {
+                        if (errno == EAGAIN) {
+                            listen_again_for_pollin_and_pollout();
+                            continue;
+                        }
+                        THROW("read()", errmsg());
+                    }
+                    if (len > 0) {
+                        res.transferred_data_limit_exceeded[i] = true;
+                    }
+                    // len == 0 -> no more data
                     close_pipeline();
                     continue;
                 }
@@ -183,9 +211,17 @@ SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
                     SPLICE_F_NONBLOCK | SPLICE_F_MOVE
                 );
                 if (sent < 0) {
-                    if (errno == EPIPE) { // write end was closed after poll() returned
+                    if (errno == EPIPE) { // pipe's write end was closed after the poll() returned
                         sent = 0;
                         encoutered_sigpipe = true;
+                    } else if (errno == EAGAIN) {
+                        // It is possible that:
+                        // writev(pipe, {something}, {iov_base=NULL, ...}) == EFAULT (Bad address)
+                        // is called and nothing is written to the pipe, but POLLIN event on the
+                        // second end is generated, even though read/splice will return EAGAIN
+                        // because no data is ready to be read.
+                        listen_again_for_pollin_and_pollout();
+                        continue;
                     } else {
                         THROW("splice()", errmsg());
                     }
@@ -198,14 +234,7 @@ SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
                 if (pipeline.transferred_data_limit_in_bytes) {
                     *pipeline.transferred_data_limit_in_bytes -= sent;
                 }
-                state.rd_state.in = false;
-                ppfd.readable.fd =
-                    pipeline.readable_fd; // in case state.rd_state.hup == true, we still
-                                          // need to check if there is more input to read
-                ppfd.readable.events = POLLIN;
-                state.wr_state.out = false;
-                assert(ppfd.writable.fd >= 0);
-                ppfd.writable.events = POLLOUT;
+                listen_again_for_pollin_and_pollout();
             }
         }
     }
@@ -218,7 +247,7 @@ SplicePipelinesRes<N> splice_pipelines(Pipeline (&&pipelines)[N]) {
         }
     }
 
-    // Restore the previous thread's sigmask
+    // Restore the thread's previous sigmask
     if (pthread_sigmask(SIG_SETMASK, &old_sigmask, nullptr)) {
         THROW("pthread_sigmask()");
     }
