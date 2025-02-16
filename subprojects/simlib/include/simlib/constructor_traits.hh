@@ -6,8 +6,8 @@
 namespace detail {
 
 template <class T, class... Args>
-auto test_implicitly_constructible(int
-) -> decltype(void(std::declval<void (&)(T)>()({std::declval<Args>()...})), std::true_type{});
+auto test_implicitly_constructible(int)
+    -> decltype(void(std::declval<void (&)(T)>()({std::declval<Args>()...})), std::true_type{});
 template <class T, class... Args>
 auto test_implicitly_constructible(...) -> std::false_type;
 

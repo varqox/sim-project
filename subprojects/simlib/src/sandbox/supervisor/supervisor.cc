@@ -319,7 +319,7 @@ void close_request_fds_except_result_fd_and_kill_tracee_fd(const request::Reques
     }
 }
 
-void sigpipe_handler(int /**/) noexcept {};
+void sigpipe_handler(int /**/) noexcept {}
 
 void ignore_sigpipe() noexcept {
     struct sigaction sa = {};
