@@ -25,8 +25,8 @@
 //   FOLDR(XX, (1)(2)(3,4)(5)()(6), 42)
 // expands to:
 //   XX((1), XX((2), XX((3,4), XX((5), XX((), XX((6), 42))))))
-#define FOLDR(macro, seq, ...)                                         \
-    IMPL_FOLDR_EXTRACT_RES(EXPAND(EXPAND(IMPL_FOLDR_PREPARE_PREFIX(seq \
+#define FOLDR(macro, seq, ...)                                                                  \
+    IMPL_FOLDR_EXTRACT_RES(EXPAND(EXPAND(IMPL_FOLDR_PREPARE_PREFIX(seq                          \
     ) DEFER2(IMPL_FOLDR_EVAL_USING_START)(macro, __VA_ARGS__) IMPL_FOLDR_PREPARE_SUFFIX(seq))))
 #define IMPL_FOLDR_EXTRACT_RES(...) IMPL_FOLDR_EXTRACT_RES2(__VA_ARGS__)
 #define IMPL_FOLDR_EXTRACT_RES2(macro, ...) __VA_ARGS__
@@ -37,11 +37,11 @@
 #define IMPL_FOLDR_PREPARE_PREFIX(seq) REV_CAT(_END, IMPL_FOLDR_PREPARE_PREFIX_1 seq)
 #define IMPL_FOLDR_PREPARE_PREFIX_1_END
 #define IMPL_FOLDR_PREPARE_PREFIX_2_END
-#define IMPL_FOLDR_PREPARE_PREFIX_1(...) \
+#define IMPL_FOLDR_PREPARE_PREFIX_1(...)                                 \
     IMPL_FOLDR_PREPARE_PREFIX_3(__VA_ARGS__) IMPL_FOLDR_PREPARE_PREFIX_2
-#define IMPL_FOLDR_PREPARE_PREFIX_2(...) \
+#define IMPL_FOLDR_PREPARE_PREFIX_2(...)                                 \
     IMPL_FOLDR_PREPARE_PREFIX_3(__VA_ARGS__) IMPL_FOLDR_PREPARE_PREFIX_1
-#define IMPL_FOLDR_PREPARE_PREFIX_3(...) \
+#define IMPL_FOLDR_PREPARE_PREFIX_3(...)                               \
     IMPL_FOLDR_EVAL_USING DEFER2(LPAREN)()(__VA_ARGS__)DEFER2(COMMA)()
 
 #define IMPL_FOLDR_PREPARE_SUFFIX(seq) REV_CAT(_END, IMPL_FOLDR_PREPARE_SUFFIX_1 seq)

@@ -7,8 +7,7 @@
 
 namespace job_server::job_handlers {
 
-void add_problem(
-    sim::mysql::Connection& mysql, Logger& logger, decltype(sim::jobs::Job::id) job_id
-);
+void
+add_problem(sim::mysql::Connection& mysql, Logger& logger, decltype(sim::jobs::Job::id) job_id);
 
 } // namespace job_server::job_handlers

@@ -52,9 +52,8 @@ void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Use
 }
 
 template <Phase phase>
-void serialize(
-    Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::MountTmpfs& mt
-) {
+void
+serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::MountTmpfs& mt) {
     namespace mount_tmpfs =
         communication::client_supervisor::request::linux_namespaces::mount::mount_tmpfs;
     serialize_as_null_terminated(writer, mt.path);
@@ -125,9 +124,8 @@ void serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mou
 }
 
 template <Phase phase>
-void serialize(
-    Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::CreateFile& cf
-) {
+void
+serialize(Writer<phase>& writer, const RequestOptions::LinuxNamespaces::Mount::CreateFile& cf) {
     serialize_as_null_terminated(writer, cf.path);
 
     if ((cf.mode & ACCESSPERMS) != cf.mode) {

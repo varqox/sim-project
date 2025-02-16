@@ -23,7 +23,7 @@ public:
     bool operator()(const Class& a, const Class& b) const { return compare(a.*member, b.*member); }
 };
 
-#define MEMBER_COMPARATOR(Class, member) \
+#define MEMBER_COMPARATOR(Class, member)                             \
     MemberComparator<decltype(Class::member), Class, &Class::member>
 
 template <class T, class Class, T Class::* member, class Comp = std::less<>>
@@ -59,5 +59,5 @@ public:
     }
 };
 
-#define TRANSPARENT_MEMBER_COMPARATOR(Class, member) \
+#define TRANSPARENT_MEMBER_COMPARATOR(Class, member)                            \
     TransparentMemberComparator<decltype(Class::member), Class, &Class::member>

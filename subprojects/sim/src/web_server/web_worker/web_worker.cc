@@ -32,13 +32,13 @@ using web_server::http::Response;
 
 namespace web_server::web_worker {
 
-#define GET(url, ...)                          \
-    {                                          \
-        static constexpr char url_val[] = url; \
+#define GET(url, ...)                                \
+    {                                                \
+        static constexpr char url_val[] = url;       \
         add_get_handler<url_val, ##__VA_ARGS__> REST
-#define POST(url, ...)                         \
-    {                                          \
-        static constexpr char url_val[] = url; \
+#define POST(url, ...)                                \
+    {                                                 \
+        static constexpr char url_val[] = url;        \
         add_post_handler<url_val, ##__VA_ARGS__> REST
 #define REST(func) \
     (func);        \

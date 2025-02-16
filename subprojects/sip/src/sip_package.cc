@@ -1345,9 +1345,8 @@ void SipPackage::replace_variable_in_simfile(
     reload_simfile_from_str(simfile_contents);
 }
 
-void SipPackage::replace_variable_in_simfile(
-    StringView var_name, const vector<string>& replacement
-) {
+void
+SipPackage::replace_variable_in_simfile(StringView var_name, const vector<string>& replacement) {
     STACK_UNWINDING_MARK;
 
     replace_variable_in_configfile(
@@ -1374,9 +1373,8 @@ void SipPackage::replace_variable_in_sipfile(
     reload_sipfile_from_str(sipfile_contents);
 }
 
-void SipPackage::replace_variable_in_sipfile(
-    StringView var_name, const vector<string>& replacement
-) {
+void
+SipPackage::replace_variable_in_sipfile(StringView var_name, const vector<string>& replacement) {
     STACK_UNWINDING_MARK;
 
     replace_variable_in_configfile(

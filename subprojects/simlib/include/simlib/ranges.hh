@@ -25,7 +25,7 @@ reverse_view_impl(int, T&&) -> reverse_view_impl<T&&>;
 } // namespace detail
 
 // This way it will work without with temporaries calling any constructor: e.g.
-#define reverse_view(...) \
+#define reverse_view(...)                        \
     detail::reverse_view_impl { 0, __VA_ARGS__ }
 
 namespace detail {
@@ -133,5 +133,5 @@ enumerate_view_struct(int, T&&) -> enumerate_view_struct<T&&>;
 ///     std::cout << i << ": " << x << std::endl;
 /// }
 /// ```
-#define enumerate_view(...) \
+#define enumerate_view(...)                          \
     detail::enumerate_view_struct { 0, __VA_ARGS__ }

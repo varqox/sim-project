@@ -885,9 +885,8 @@ void Sim::api_contest_clone(capabilities::Contests caps_contests) {
     append(new_contest_id);
 }
 
-void Sim::api_contest_edit(
-    StringView contest_id, sim::contests::Permissions perms, bool is_public
-) {
+void
+Sim::api_contest_edit(StringView contest_id, sim::contests::Permissions perms, bool is_public) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1351,9 +1350,8 @@ void Sim::api_contest_problem_rejudge_all_submissions(
     sim::job_server::notify_job_server();
 }
 
-void Sim::api_contest_problem_edit(
-    StringView contest_problem_id, sim::contests::Permissions perms
-) {
+void
+Sim::api_contest_problem_edit(StringView contest_problem_id, sim::contests::Permissions perms) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
@@ -1425,9 +1423,8 @@ void Sim::api_contest_problem_edit(
     sim::job_server::notify_job_server();
 }
 
-void Sim::api_contest_problem_delete(
-    StringView contest_problem_id, sim::contests::Permissions perms
-) {
+void
+Sim::api_contest_problem_delete(StringView contest_problem_id, sim::contests::Permissions perms) {
     STACK_UNWINDING_MARK;
 
     if (uint(~perms & sim::contests::Permissions::ADMIN)) {
