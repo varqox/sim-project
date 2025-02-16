@@ -504,6 +504,34 @@ Response list_submissions_with_type_problem_solution_below_id(
     );
 }
 
+Response list_submissions_with_status_judge_error(Context& ctx) {
+    STACK_UNWINDING_MARK;
+
+    auto caps = capabilities::list_submissions(ctx.session);
+    if (!caps.query_with_status_judge_error) {
+        return ctx.response_403();
+    }
+    return do_list(
+        ctx, FIRST_QUERY_LIMIT, Condition("s.full_status=?", Submission::Status::JUDGE_ERROR)
+    );
+}
+
+Response list_submissions_with_status_judge_error_below_id(
+    Context& ctx, decltype(Submission::id) submission_id
+) {
+    STACK_UNWINDING_MARK;
+
+    auto caps = capabilities::list_submissions(ctx.session);
+    if (!caps.query_with_status_judge_error) {
+        return ctx.response_403();
+    }
+    return do_list(
+        ctx,
+        NEXT_QUERY_LIMIT,
+        Condition("s.full_status=? AND s.id<?", Submission::Status::JUDGE_ERROR, submission_id)
+    );
+}
+
 Response list_user_submissions(Context& ctx, decltype(User::id) user_id) {
     STACK_UNWINDING_MARK;
 

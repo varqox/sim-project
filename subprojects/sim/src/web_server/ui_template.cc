@@ -177,6 +177,7 @@ std::string sim_template_params(const decltype(web_worker::Context::session)& se
                 );
                 obj.prop("query_with_type_ignored", caps.query_with_type_ignored);
                 obj.prop("query_with_type_problem_solution", caps.query_with_type_problem_solution);
+                obj.prop("query_with_status_judge_error", caps.query_with_status_judge_error);
             });
             if (session) {
                 obj.prop_obj("list_my", [&](auto& obj) {

@@ -135,6 +135,8 @@ WebWorker::WebWorker(sim::mysql::Connection& mysql) : mysql{mysql} {
     GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/ignored/id%3C/{u64}")(submissions::api::list_problem_and_user_submissions_with_type_ignored_below_id);
     GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/problem_final")(submissions::api::list_problem_and_user_submissions_with_type_problem_final);
     GET("/api/submissions/problem=/{u64}/user=/{u64}/type=/problem_final/id%3C/{u64}")(submissions::api::list_problem_and_user_submissions_with_type_problem_final_below_id);
+    GET("/api/submissions/status=/judge_error")(submissions::api::list_submissions_with_status_judge_error);
+    GET("/api/submissions/status=/judge_error/id%3C/{u64}")(submissions::api::list_submissions_with_status_judge_error_below_id);
     GET("/api/submissions/type=/contest_problem_final")(submissions::api::list_submissions_with_type_contest_problem_final);
     GET("/api/submissions/type=/contest_problem_final/id%3C/{u64}")(submissions::api::list_submissions_with_type_contest_problem_final_below_id);
     GET("/api/submissions/type=/final")(submissions::api::list_submissions_with_type_final);

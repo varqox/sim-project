@@ -25,6 +25,7 @@ struct SubmissionsListCapabilities {
     bool query_with_type_contest_problem_final : 1;
     bool query_with_type_ignored : 1;
     bool query_with_type_problem_solution : 1;
+    bool query_with_status_judge_error : 1;
 };
 
 SubmissionsListCapabilities list_submissions(const decltype(web_worker::Context::session)& session

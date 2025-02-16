@@ -127,6 +127,7 @@ function url_api_sign_in() { return '/api/sign_in'; }
 function url_api_sign_out() { return '/api/sign_out'; }
 function url_api_sign_up() { return '/api/sign_up'; }
 function url_api_submissions() { return '/api/submissions'; }
+function url_api_submissions_with_status(submission_status) { return `/api/submissions/status=/${submission_status}`; }
 function url_api_submissions_with_type(submission_type) { return `/api/submissions/type=/${submission_type}`; }
 function url_api_use_contest_entry_token(contest_entry_token) { return `/api/contest_entry_token/${contest_entry_token}/use`; }
 function url_api_user(user_id) { return `/api/user/${user_id}`; }
@@ -2221,7 +2222,7 @@ function SubmissionsLister(elem, query_url, {
 	Lister.call(self, elem, query_url, '');
 }
 
-function append_tabbed_submissions_lister(url_all_func, url_with_type_func, list_capabilities, extra_params, elem) {
+function append_tabbed_submissions_lister(url_all_func, url_with_type_func, url_with_status_func, list_capabilities, extra_params, elem) {
 	const retab = (url, elem) => {
 		const table = elem.appendChild(elem_with_class('table', 'submissions'));
 		new SubmissionsLister(table, url, extra_params);
@@ -2246,6 +2247,9 @@ function append_tabbed_submissions_lister(url_all_func, url_with_type_func, list
 	if (list_capabilities.query_with_type_problem_solution) {
 		tabmenu.add_tab('Problem solutions', retab.bind(null, url_with_type_func('problem_solution')));
 	}
+	if (list_capabilities.query_with_status_judge_error) {
+		tabmenu.add_tab('Judge errors', retab.bind(null, url_with_status_func('judge_error')));
+	}
 	tabmenu.build_and_append_to(elem);
 }
 
@@ -2267,6 +2271,7 @@ function list_submissions() {
 			null,
 			url_api_submissions,
 			url_api_submissions_with_type,
+			url_api_submissions_with_status,
 			global_capabilities.submissions.list_all,
 			{}
 		));
@@ -2276,6 +2281,7 @@ function list_submissions() {
 			null,
 			url_api_user_submissions.bind(null, signed_user_id),
 			url_api_user_submissions_with_type.bind(null, signed_user_id),
+			null,
 			global_capabilities.submissions.list_my,
 			{
 				show_user_column: false,
