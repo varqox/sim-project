@@ -71,12 +71,12 @@ assert_failed(const char* file, uint64_t line, const char* func, const char* exp
     _exit(1);
 }
 
-#define checker_assert(expr) \
+#define checker_assert(expr)                                                           \
     ((expr) ? (void)0 : assert_failed(__FILE__, __LINE__, __PRETTY_FUNCTION__, #expr))
 
 #define STATIC_ASSERT(cond) STATIC_ASSERT_IMPL(cond, __LINE__)
 #define STATIC_ASSERT_IMPL(cond, line) STATIC_ASSERT_IMPL2(cond, line)
-#define STATIC_ASSERT_IMPL2(cond, line) \
+#define STATIC_ASSERT_IMPL2(cond, line)                                \
     extern const char static_assertion_at_line_##line[(cond) ? 1 : -1]
 
 struct FileReader {

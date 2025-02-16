@@ -7,6 +7,8 @@
 #include <simlib/file_path.hh>
 #include <simlib/overloaded.hh>
 #include <simlib/sim/judge/language_suite/bash.hh>
+#include <simlib/sim/judge/language_suite/c_clang.hh>
+#include <simlib/sim/judge/language_suite/c_gcc.hh>
 #include <simlib/sim/judge/language_suite/python.hh>
 #include <simlib/sim/judge/test_on_interactive_test.hh>
 #include <simlib/string_view.hh>
@@ -26,7 +28,11 @@ struct Bash {
     StringView source;
 };
 
-using Source = std::variant<Python, Bash>;
+struct C {
+    StringView source;
+};
+
+using Source = std::variant<Python, Bash, C>;
 
 struct TestOnTestOptions {
     std::optional<FilePath> test_input = std::nullopt;
@@ -34,12 +40,23 @@ struct TestOnTestOptions {
     std::chrono::nanoseconds checker_cpu_time_limit = std::chrono::milliseconds{100};
 };
 
-TestReport
+static TestReport
 test_test_on_interactive_test(Source prog, Source checker, const TestOnTestOptions& options = {}) {
+    using sim::judge::language_suite::C_Clang;
+    using sim::judge::language_suite::C_GCC;
+    static constexpr auto make_c_suite = []() -> std::variant<C_GCC, C_Clang> {
+        static bool is_gcc_available = C_GCC{C_GCC::Standard::C11}.is_supported();
+        if (is_gcc_available) {
+            return C_GCC{C_GCC::Standard::C11};
+        }
+        return C_Clang{C_Clang::Standard::C11};
+    };
     static auto prog_python = sim::judge::language_suite::Python{};
     static auto prog_bash = sim::judge::language_suite::Bash{};
+    static auto prog_c = make_c_suite();
     static auto checker_python = sim::judge::language_suite::Python{};
     static auto checker_bash = sim::judge::language_suite::Bash{};
+    static auto checker_c = make_c_suite();
 
     auto empty_file = TemporaryFile{"/tmp/sim_judge_test_on_interactive_test_empty.XXXXXX"};
     return sim::judge::test_on_interactive_test({
@@ -49,6 +66,9 @@ test_test_on_interactive_test(Source prog, Source checker, const TestOnTestOptio
                 overloaded{
                     [&](const Python& /**/) -> Suite& { return prog_python; },
                     [&](const Bash& /**/) -> Suite& { return prog_bash; },
+                    [&](const C& /**/) -> Suite& {
+                        return std::visit([&](Suite& impl) -> Suite& { return impl; }, prog_c);
+                    },
                 },
                 prog
             );
@@ -61,6 +81,9 @@ test_test_on_interactive_test(Source prog, Source checker, const TestOnTestOptio
                 overloaded{
                     [&](const Python& /**/) -> Suite& { return checker_python; },
                     [&](const Bash& /**/) -> Suite& { return checker_bash; },
+                    [&](const C& /**/) -> Suite& {
+                        return std::visit([&](Suite& impl) -> Suite& { return impl; }, checker_c);
+                    },
                 },
                 checker
             );
@@ -400,4 +423,37 @@ TEST(test_on_interactive_test, prog_rte_before_checker_decides_wrong) {
     EXPECT_EQ(report.status, Status::RuntimeError);
     EXPECT_EQ(report.comment, "Runtime error: exited with 1");
     EXPECT_EQ(report.score, 0);
+}
+
+constexpr auto prog_issues_problematic_writev = C{R"(
+#include <sys/uio.h>
+#include <unistd.h>
+
+int main() {
+    // Such writev() causes poll() to return POLLIN, but then splice() fails with EAGAIN
+    struct iovec iov[2];
+    iov[0].iov_base = "x";
+    iov[0].iov_len = 1;
+    iov[1].iov_base = NULL;
+    iov[1].iov_len = 42;
+    writev(STDOUT_FILENO, iov, 2);
+    return 0;
+}
+)"};
+
+constexpr auto checker_for_problematic_writev = Python{R"(
+import sys
+prog_output = sys.stdin.read()
+if prog_output == '':
+    print("OK\n\n", file=sys.stderr)
+)"};
+
+// NOLINTNEXTLINE
+TEST(test_on_interactive_test, problematic_writev) {
+    auto report = test_test_on_interactive_test(
+        prog_issues_problematic_writev, checker_for_problematic_writev, {}
+    );
+    EXPECT_EQ(report.status, Status::OK);
+    EXPECT_EQ(report.comment, "");
+    EXPECT_EQ(report.score, 1);
 }

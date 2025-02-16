@@ -48,6 +48,12 @@ http::Response list_submissions_with_type_problem_solution_below_id(
     web_worker::Context& ctx, decltype(sim::submissions::Submission::id) submission_id
 );
 
+http::Response list_submissions_with_status_judge_error(web_worker::Context& ctx);
+
+http::Response list_submissions_with_status_judge_error_below_id(
+    web_worker::Context& ctx, decltype(sim::submissions::Submission::id) submission_id
+);
+
 http::Response
 list_user_submissions(web_worker::Context& ctx, decltype(sim::users::User::id) user_id);
 

@@ -52,6 +52,7 @@ SubmissionsListCapabilities list_submissions(const decltype(Context::session)& s
         .query_with_type_contest_problem_final = is_admin(session),
         .query_with_type_ignored = is_admin(session),
         .query_with_type_problem_solution = is_admin(session),
+        .query_with_status_judge_error = is_admin(session),
     };
 }
 
@@ -78,6 +79,7 @@ SubmissionsListCapabilities list_problem_submissions(
         .query_with_type_contest_problem_final = is_admin(session) || owns_problem,
         .query_with_type_ignored = is_admin(session) || owns_problem,
         .query_with_type_problem_solution = is_admin(session) || owns_problem,
+        .query_with_status_judge_error = false,
     };
 }
 

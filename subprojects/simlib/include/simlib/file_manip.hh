@@ -225,9 +225,8 @@ copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest) 
  * This function avoids this problem by opening the file X in a child process,
  * thus preventing the race.
  */
-void thread_fork_safe_copyat(
-    int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode
-);
+void
+thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode);
 
 /**
  * Copy function that protects from a nasty race condition that may result when

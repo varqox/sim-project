@@ -306,9 +306,8 @@ static uint current_process_threads_num() {
     return *opt;
 }
 
-void thread_fork_safe_copyat(
-    int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode
-) {
+void
+thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest, mode_t mode) {
     STACK_UNWINDING_MARK;
     if (current_process_threads_num() == 1) {
         if (copyat(src_dirfd, src, dest_dirfd, dest, mode)) {

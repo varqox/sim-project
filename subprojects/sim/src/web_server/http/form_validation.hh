@@ -208,9 +208,8 @@ validate(
 // - field set and valid -> Some(parsed_value)
 // - field not set or invalid -> None
 template <class T>
-auto validate_required(
-    ApiParam<T> api_param, const FormFields& form_fields, std::string& errors_str
-) {
+auto
+validate_required(ApiParam<T> api_param, const FormFields& form_fields, std::string& errors_str) {
     const auto str_val_opt = form_fields.get(api_param.name);
     return str_val_opt ? detail::validate(api_param, *str_val_opt, errors_str)
                        : detail::append_error(errors_str, api_param, "is not set");
@@ -221,9 +220,8 @@ auto validate_required(
 // - field set and invalid -> None
 // - field not set -> Some(None)
 template <class T>
-auto validate_optional(
-    ApiParam<T> api_param, const FormFields& form_fields, std::string& errors_str
-) {
+auto
+validate_optional(ApiParam<T> api_param, const FormFields& form_fields, std::string& errors_str) {
     const auto str_val_opt = form_fields.get(api_param.name);
     auto do_validate = [&] { return detail::validate(api_param, *str_val_opt, errors_str); };
     using ResT = std::optional<decltype(do_validate())>;
@@ -392,7 +390,7 @@ inline std::optional<std::optional<SubmittedFile>> validate_file_optional(
     IMPL_VALIDATE_DECLARE_VAR_EXTRACT_RES(                               \
         FOLDR(IMPL_VALIDATE_DECLARE_VAR, seq, form_fields, errors_str, ) \
     )
-#define IMPL_VALIDATE_DECLARE_VAR_EXTRACT_RES(...) \
+#define IMPL_VALIDATE_DECLARE_VAR_EXTRACT_RES(...)      \
     IMPL_VALIDATE_DECLARE_VAR_EXTRACT_RES2(__VA_ARGS__)
 #define IMPL_VALIDATE_DECLARE_VAR_EXTRACT_RES2(form_fields, errors_str, ...) __VA_ARGS__
 #define IMPL_VALIDATE_DECLARE_VAR(args, form_fields, errors_str, ...)                              \
@@ -413,9 +411,9 @@ inline std::optional<std::optional<SubmittedFile>> validate_file_optional(
 
 #define IMPL_VALIDATE_DECLARE_VAR_KIND_REQUIRED IMPL_VALIDATE_INITIALIZE_VAR, validate_required
 #define IMPL_VALIDATE_DECLARE_VAR_KIND_OPTIONAL IMPL_VALIDATE_INITIALIZE_VAR, validate_optional
-#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOWED_ONLY_IF(condition) \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_ALLOWED_ONLY_IF(condition)               \
     IMPL_VALIDATE_INITIALIZE_VAR_WITH_COND, validate_allowed_only_if, condition
-#define IMPL_VALIDATE_DECLARE_VAR_KIND_REQUIRED_AND_ALLOWED_ONLY_IF(condition) \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_REQUIRED_AND_ALLOWED_ONLY_IF(condition)               \
     IMPL_VALIDATE_INITIALIZE_VAR_WITH_COND, validate_required_and_allowed_only_if, condition
 #define IMPL_VALIDATE_DECLARE_VAR_KIND_REQUIRED_ENUM_CAPS(caps_seq)                 \
     IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS, caps_seq, IMPL_VALIDATE_INITIALIZE_VAR, \
@@ -429,9 +427,9 @@ inline std::optional<std::optional<SubmittedFile>> validate_file_optional(
 #define IMPL_VALIDATE_DECLARE_VAR_KIND_REQUIRED_AND_ALLOWED_ONLY_IF_ENUM_CAPS(condition, caps_seq) \
     IMPL_VALIDATE_INITIALIZE_VAR_ENUM_CAPS, caps_seq, IMPL_VALIDATE_INITIALIZE_VAR_WITH_COND,      \
         validate_required_and_allowed_only_if, condition
-#define IMPL_VALIDATE_DECLARE_VAR_KIND_FILE_REQUIRED \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_FILE_REQUIRED     \
     IMPL_VALIDATE_INITIALIZE_VAR, validate_file_required
-#define IMPL_VALIDATE_DECLARE_VAR_KIND_FILE_OPTIONAL \
+#define IMPL_VALIDATE_DECLARE_VAR_KIND_FILE_OPTIONAL     \
     IMPL_VALIDATE_INITIALIZE_VAR, validate_file_optional
 
 #define IMPL_VALIDATE_DECLARE_VAR5(form_fields, errors_str, var_name, api_param, macro, ...) \
@@ -440,9 +438,9 @@ inline std::optional<std::optional<SubmittedFile>> validate_file_optional(
 
 #define IMPL_VALIDATE_INITIALIZE_VAR(form_fields, errors_str, api_param, func) \
     ::web_server::http::func(api_param, form_fields, errors_str)
-#define IMPL_VALIDATE_INITIALIZE_VAR_WITH_COND(         \
-    form_fields, errors_str, api_param, func, condition \
-)                                                       \
+#define IMPL_VALIDATE_INITIALIZE_VAR_WITH_COND(                             \
+    form_fields, errors_str, api_param, func, condition                     \
+)                                                                           \
     ::web_server::http::func(api_param, form_fields, errors_str, condition)
 
 namespace detail {

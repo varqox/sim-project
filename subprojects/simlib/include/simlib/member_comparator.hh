@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-template <class T, class Class, T Class::*member, class Comp = std::less<T>>
+template <class T, class Class, T Class::* member, class Comp = std::less<T>>
 class MemberComparator {
     Comp compare;
 
@@ -23,10 +23,10 @@ public:
     bool operator()(const Class& a, const Class& b) const { return compare(a.*member, b.*member); }
 };
 
-#define MEMBER_COMPARATOR(Class, member) \
+#define MEMBER_COMPARATOR(Class, member)                             \
     MemberComparator<decltype(Class::member), Class, &Class::member>
 
-template <class T, class Class, T Class::*member, class Comp = std::less<>>
+template <class T, class Class, T Class::* member, class Comp = std::less<>>
 class TransparentMemberComparator {
     Comp compare;
 
@@ -59,5 +59,5 @@ public:
     }
 };
 
-#define TRANSPARENT_MEMBER_COMPARATOR(Class, member) \
+#define TRANSPARENT_MEMBER_COMPARATOR(Class, member)                            \
     TransparentMemberComparator<decltype(Class::member), Class, &Class::member>

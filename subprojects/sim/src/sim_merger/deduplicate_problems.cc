@@ -1,4 +1,3 @@
-
 #include "deduplicate_problems.hh"
 #include "progress_printer.hh"
 #include "sim_instance.hh"

@@ -245,9 +245,8 @@ void Sim::api_contest_file() {
     }
 }
 
-void Sim::api_contest_file_download(
-    StringView contest_file_id, sim::contest_files::Permissions perms
-) {
+void
+Sim::api_contest_file_download(StringView contest_file_id, sim::contest_files::Permissions perms) {
     if (uint(~perms & sim::contest_files::Permissions::DOWNLOAD)) {
         return api_error403();
     }
@@ -490,9 +489,8 @@ void Sim::api_contest_file_edit(StringView contest_file_id, sim::contest_files::
     }
 }
 
-void Sim::api_contest_file_delete(
-    StringView contest_file_id, sim::contest_files::Permissions perms
-) {
+void
+Sim::api_contest_file_delete(StringView contest_file_id, sim::contest_files::Permissions perms) {
     if (uint(~perms & sim::contest_files::Permissions::DELETE)) {
         return api_error403();
     }

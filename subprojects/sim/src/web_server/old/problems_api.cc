@@ -443,9 +443,8 @@ void Sim::api_problem() {
     return api_error400();
 }
 
-void Sim::api_statement_impl(
-    uint64_t problem_file_id, StringView problem_label, StringView simfile
-) {
+void
+Sim::api_statement_impl(uint64_t problem_file_id, StringView problem_label, StringView simfile) {
     STACK_UNWINDING_MARK;
 
     ConfigFile cf;

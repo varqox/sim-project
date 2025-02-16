@@ -288,6 +288,8 @@ const DbSchema& get_schema() {
                         "  KEY `type` (`type`,`id`),"
                         "  KEY `problem_final` (`problem_final`,`id`),"
                         "  KEY `contest_problem_final` (`contest_problem_final`,`id`),"
+                        // Submissions API: with status == JUDGE_ERROR
+                        "  KEY `full_status` (`full_status`,`id`),"
                         // Submissions API: with user_id
                         "  KEY `user_id` (`user_id`,`id`),"
                         // Submissions API: with user_id and type

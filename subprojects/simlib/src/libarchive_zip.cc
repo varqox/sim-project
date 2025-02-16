@@ -118,9 +118,8 @@ void update_add_file_to_zip(FilePath filename, StringView new_filename, FilePath
     );
 }
 
-void update_add_data_to_zip(
-    StringView data, const StringView& new_filename, FilePath zip_filename
-) {
+void
+update_add_data_to_zip(StringView data, const StringView& new_filename, FilePath zip_filename) {
     throw_assert(!new_filename.empty());
     return update_add_file_to_zip_impl(
         [&](decltype(get_cwd())& /*unused*/, FilePath dest_file) {

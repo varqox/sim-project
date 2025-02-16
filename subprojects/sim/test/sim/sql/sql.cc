@@ -11,7 +11,7 @@ using sim::sql::Select;
 using sim::sql::SqlWithParams;
 using sim::sql::Update;
 
-#define SQL_EQ(sql_expr, sql_str) \
+#define SQL_EQ(sql_expr, sql_str)                                            \
     EXPECT_EQ(SqlWithParams{sql_expr}.get_sql(), std::string_view{sql_str});
 
 // NOLINTNEXTLINE
