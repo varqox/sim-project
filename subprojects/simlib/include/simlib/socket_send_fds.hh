@@ -16,17 +16,14 @@ ssize_t send_fds(
     };
 
     // Allocate ancillary data buffer with struct cmsghdr alignment
-    union {
-        char buf[CMSG_SPACE(MAX_FDS_LEN * sizeof(*fds))];
-        struct cmsghdr align;
-    } u;
-
+    alignas(struct cmsghdr) char buf[CMSG_SPACE(MAX_FDS_LEN * sizeof(*fds))];
+    std::memset(buf, 0, sizeof(buf)); // Needed for CMSG_NXTHDR() to work correctly.
     struct msghdr msg = {
         .msg_name = nullptr,
         .msg_namelen = 0,
         .msg_iov = &iov,
         .msg_iovlen = 1,
-        .msg_control = u.buf,
+        .msg_control = buf,
         .msg_controllen = CMSG_SPACE(fds_len * sizeof(*fds)),
         .msg_flags = 0, // ignored, but set anyway
     };
