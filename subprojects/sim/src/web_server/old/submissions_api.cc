@@ -902,6 +902,8 @@ void Sim::api_submission_add() {
         slang = OldSubmission::Language::CPP17;
     } else if (slang_str == "cpp20") {
         slang = OldSubmission::Language::CPP20;
+    } else if (slang_str == "cpp23") {
+        slang = OldSubmission::Language::CPP23;
     } else if (slang_str == "pascal") {
         slang = OldSubmission::Language::PASCAL;
     } else if (slang_str == "python") {

@@ -30,3 +30,14 @@ TEST(sim_judge_compiler, cpp_clang) {
         );
     }
 }
+
+// NOLINTNEXTLINE
+TEST(sim_judge_compiler, cpp_clang_cpp23) {
+    auto suite = Cpp_Clang{Cpp_Clang::Standard::Cpp23};
+    ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/clang++"));
+    if (suite.is_supported()) {
+        test_compiled_language_suite(
+            suite, test_prog_ok, test_prog_invalid, "error: use of undeclared identifier 'p'"
+        );
+    }
+}
