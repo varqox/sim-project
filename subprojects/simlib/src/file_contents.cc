@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
 #include <sys/types.h>
