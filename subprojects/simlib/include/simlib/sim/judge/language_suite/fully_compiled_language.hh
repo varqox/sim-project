@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fcntl.h>
 #include <simlib/file_descriptor.hh>
 #include <simlib/file_path.hh>
 #include <simlib/result.hh>
@@ -17,7 +18,11 @@ protected:
     FileDescriptor compiler_seccomp_bpf_fd;
 
 private:
-    TemporaryFile executable_tmp_file{"/tmp/sim_fully_compiled_language_suite_executable.XXXXXX"};
+    TemporaryFile executable_tmp_file{
+        "/tmp/sim_fully_compiled_language_suite_executable.XXXXXX",
+        // Some linkers (e.g. lld used by Rust since 1.90) do not do "chmod +x" by themselves.
+        S_IRUSR | S_IWUSR | S_IXUSR, /* -rwx------ */
+    };
     bool executable_file_is_ready = false;
 
 protected:

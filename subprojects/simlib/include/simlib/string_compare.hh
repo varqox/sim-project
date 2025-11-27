@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
 #include <utility>
