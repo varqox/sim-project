@@ -1412,17 +1412,17 @@ void SipPackage::create_default_sipfile() {
 
     stdlog("Creating Sipfile...").flush_no_nl();
     // clang-format off
-	const auto default_sipfile_contents = concat_tostr(
-	   "default_time_limit: ", to_string(DEFAULT_TIME_LIMIT), "\n"
-	   "static: [\n"
-	       "\t# Here provide tests that are \"hard-coded\"\n"
-	       "\t# Syntax: <test-range>\n"
-	   "]\n",
-	   "base_seed: ", to_string(base_seed), "\n"
-	   "gen: [\n"
-	       "\t# Here provide rules to generate tests\n"
-	       "\t# Syntax: <test-range> <generator> [generator arguments]\n"
-	   "]\n");
+    const auto default_sipfile_contents = concat_tostr(
+       "default_time_limit: ", to_string(DEFAULT_TIME_LIMIT), "\n"
+       "static: [\n"
+           "\t# Here provide tests that are \"hard-coded\"\n"
+           "\t# Syntax: <test-range>\n"
+       "]\n",
+       "base_seed: ", to_string(base_seed), "\n"
+       "gen: [\n"
+           "\t# Here provide rules to generate tests\n"
+           "\t# Syntax: <test-range> <generator> [generator arguments]\n"
+       "]\n");
     // clang-format on
 
     reload_sipfile_from_str(default_sipfile_contents);
