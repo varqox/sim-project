@@ -21,8 +21,19 @@ int main() {
 )";
 
 // NOLINTNEXTLINE
-TEST(sim_judge_compiler, cpp_gcc) {
+TEST(sim_judge_compiler, cpp_gcc_cpp20) {
     auto suite = Cpp_GCC{Cpp_GCC::Standard::Cpp20};
+    ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/g++"));
+    if (suite.is_supported()) {
+        test_compiled_language_suite(
+            suite, test_prog_ok, test_prog_invalid, "error: 'p' was not declared in this scope"
+        );
+    }
+}
+
+// NOLINTNEXTLINE
+TEST(sim_judge_compiler, cpp_gcc_cpp23) {
+    auto suite = Cpp_GCC{Cpp_GCC::Standard::Cpp23};
     ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/g++"));
     if (suite.is_supported()) {
         test_compiled_language_suite(
