@@ -53,7 +53,7 @@ std::string_view test_name() {
     return test_name;
 }
 
-std::mt19937_64& generator() {
+std::mt19937_64& random_generator() {
     static std::mt19937_64 generator{[] {
         auto seed_str = getenv("SIP_TEST_SEED");
         if (not seed_str) {
@@ -74,14 +74,14 @@ std::mt19937_64& generator() {
 
 inline int64_t rd(int64_t min_val, int64_t max_val) {
     assert(min_val <= max_val);
-    return std::uniform_int_distribution{min_val, max_val}(generator());
+    return std::uniform_int_distribution{min_val, max_val}(random_generator());
 }
 
 int main(int main_argc, const char** main_argv) {
     args_parser::argc = main_argc;
     args_parser::argv = main_argv;
     // main_argv[0] command (ignored)
-    // main_argv[1..] generator arguments
+    // main_argv[1..] random generator arguments
     // stdout = a valid test input for solution
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
