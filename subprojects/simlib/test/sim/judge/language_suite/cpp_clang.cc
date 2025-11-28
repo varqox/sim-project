@@ -21,7 +21,7 @@ int main() {
 )";
 
 // NOLINTNEXTLINE
-TEST(sim_judge_compiler, cpp_clang) {
+TEST(sim_judge_compiler, cpp_clang_cpp20) {
     auto suite = Cpp_Clang{Cpp_Clang::Standard::Cpp20};
     ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/clang++"));
     if (suite.is_supported()) {
