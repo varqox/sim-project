@@ -185,6 +185,7 @@ std::vector<FileRemover> submit_solutions(
             case sim::SolutionLanguage::CPP14: return Submission::Language::CPP14;
             case sim::SolutionLanguage::CPP17: return Submission::Language::CPP17;
             case sim::SolutionLanguage::CPP20: return Submission::Language::CPP20;
+            case sim::SolutionLanguage::CPP23: return Submission::Language::CPP23;
             case sim::SolutionLanguage::PASCAL: return Submission::Language::PASCAL;
             case sim::SolutionLanguage::PYTHON: return Submission::Language::PYTHON;
             case sim::SolutionLanguage::RUST: return Submission::Language::RUST;
