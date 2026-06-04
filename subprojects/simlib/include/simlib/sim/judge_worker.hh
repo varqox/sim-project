@@ -151,7 +151,8 @@ public:
 enum class SolutionLanguage {
     UNKNOWN,
     C11,
-    C = C11,
+    C23,
+    C = C23,
     CPP11,
     CPP14,
     CPP17,
@@ -191,6 +192,7 @@ inline SolutionLanguage filename_to_lang(const StringView& filename) {
     case SolutionLanguage::RUST:
         // If missing one, then update above ifs
         return res;
+    case SolutionLanguage::C11:
     case SolutionLanguage::CPP11:
     case SolutionLanguage::CPP14:
     case SolutionLanguage::CPP17:

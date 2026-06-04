@@ -145,6 +145,7 @@ void judge_or_rejudge_submission(
         // NOLINTNEXTLINE(bugprone-switch-missing-default-case)
         switch (submission_language) {
         case Submission::Language::C11: return sim::SolutionLanguage::C11;
+        case Submission::Language::C23: return sim::SolutionLanguage::C23;
         case Submission::Language::CPP11: return sim::SolutionLanguage::CPP11;
         case Submission::Language::CPP14: return sim::SolutionLanguage::CPP14;
         case Submission::Language::CPP17: return sim::SolutionLanguage::CPP17;

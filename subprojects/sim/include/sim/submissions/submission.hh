@@ -32,6 +32,7 @@ struct Submission {
         (RUST, 6, "rust")
         (CPP20, 7, "cpp20")
         (CPP23, 8, "cpp23")
+        (C23, 9, "c23")
     );
 
     // Initial and final values may be combined, but special not

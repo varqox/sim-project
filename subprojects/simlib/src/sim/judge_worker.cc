@@ -104,6 +104,11 @@ std::unique_ptr<judge::language_suite::Suite> lang_to_suite(SolutionLanguage lan
             judge::language_suite::C_GCC::Standard::C11
         );
     } break;
+    case SolutionLanguage::C23: {
+        return std::make_unique<judge::language_suite::C_GCC>(
+            judge::language_suite::C_GCC::Standard::C23
+        );
+    } break;
     case SolutionLanguage::CPP11: {
         return std::make_unique<judge::language_suite::Cpp_GCC>(
             judge::language_suite::Cpp_GCC::Standard::Cpp11
