@@ -21,8 +21,19 @@ int main() {
 )";
 
 // NOLINTNEXTLINE
-TEST(sim_judge_compiler, c_gcc) {
+TEST(sim_judge_compiler, c_gcc_c11) {
     auto suite = C_GCC{C_GCC::Standard::C11};
+    ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/gcc"));
+    if (suite.is_supported()) {
+        test_compiled_language_suite(
+            suite, test_prog_ok, test_prog_invalid, "error: 'p' undeclared"
+        );
+    }
+}
+
+// NOLINTNEXTLINE
+TEST(sim_judge_compiler, c_gcc_c23) {
+    auto suite = C_GCC{C_GCC::Standard::C23};
     ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/gcc"));
     if (suite.is_supported()) {
         test_compiled_language_suite(

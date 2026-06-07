@@ -2062,6 +2062,7 @@ function submission_language_to_user_string(submission_language) {
 		case 'rust': return 'Rust';
 		case 'cpp20': return 'C++20';
 		case 'cpp23': return 'C++23';
+		case 'c23': return 'C23';
 		default: assert(false, 'unexpected submission_language: ' + submission_language);
 	}
 }
@@ -4568,6 +4569,9 @@ function add_submission_impl(as_oldmodal, url, api_url, problem_field_elem, mayb
 					html: $('<option>', {
 						value: 'c11',
 						text: 'C11'
+					}).add('<option>', {
+						value: 'c23',
+						text: 'C23',
 					}).add('<option>', {
 						value: 'cpp11',
 						text: 'C++11',

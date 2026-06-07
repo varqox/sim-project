@@ -23,8 +23,10 @@ public:
     enum class Standard {
         C11,
         C17,
+        C23,
         Gnu11,
         Gnu17,
+        Gnu23,
     };
 
     explicit C_Clang(Standard standard);

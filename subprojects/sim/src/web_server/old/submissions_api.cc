@@ -894,6 +894,8 @@ void Sim::api_submission_add() {
     auto slang_str = request.form_fields.get("language");
     if (slang_str == "c11") {
         slang = OldSubmission::Language::C11;
+    } else if (slang_str == "c23") {
+        slang = OldSubmission::Language::C23;
     } else if (slang_str == "cpp11") {
         slang = OldSubmission::Language::CPP11;
     } else if (slang_str == "cpp14") {

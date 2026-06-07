@@ -21,8 +21,19 @@ int main() {
 )";
 
 // NOLINTNEXTLINE
-TEST(sim_judge_compiler, c_clang) {
+TEST(sim_judge_compiler, c_clang_c11) {
     auto suite = C_Clang{C_Clang::Standard::C11};
+    ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/clang"));
+    if (suite.is_supported()) {
+        test_compiled_language_suite(
+            suite, test_prog_ok, test_prog_invalid, "error: use of undeclared identifier 'p'"
+        );
+    }
+}
+
+// NOLINTNEXTLINE
+TEST(sim_judge_compiler, c_clang_c23) {
+    auto suite = C_Clang{C_Clang::Standard::C23};
     ASSERT_EQ(suite.is_supported(), path_exists("/usr/bin/clang"));
     if (suite.is_supported()) {
         test_compiled_language_suite(

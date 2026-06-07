@@ -30,8 +30,10 @@ C_Clang::C_Clang(Standard standard)
     switch (standard) {
     case Standard::C11: return "-std=c11";
     case Standard::C17: return "-std=c17";
+    case Standard::C23: return "-std=c23";
     case Standard::Gnu11: return "-std=gnu11";
     case Standard::Gnu17: return "-std=gnu17";
+    case Standard::Gnu23: return "-std=gnu23";
     }
     __builtin_unreachable();
 }()) {}

@@ -181,6 +181,7 @@ std::vector<FileRemover> submit_solutions(
             switch (sim::filename_to_lang(solution)) {
             case sim::SolutionLanguage::UNKNOWN: break;
             case sim::SolutionLanguage::C11: return Submission::Language::C11;
+            case sim::SolutionLanguage::C23: return Submission::Language::C23;
             case sim::SolutionLanguage::CPP11: return Submission::Language::CPP11;
             case sim::SolutionLanguage::CPP14: return Submission::Language::CPP14;
             case sim::SolutionLanguage::CPP17: return Submission::Language::CPP17;

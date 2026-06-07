@@ -36,6 +36,7 @@ struct OldSubmission {
         (RUST, 6, "rust")
         (CPP20, 7, "cpp20")
         (CPP23, 8, "cpp23")
+        (C23, 9, "c23")
     );
 
     // Initial and final values may be combined, but special not
@@ -93,6 +94,7 @@ constexpr const char* to_string(OldSubmission::Type x) {
 constexpr const char* to_string(OldSubmission::Language x) {
     switch (x) {
     case OldSubmission::Language::C11: return "C11";
+    case OldSubmission::Language::C23: return "C23";
     case OldSubmission::Language::CPP11: return "C++11";
     case OldSubmission::Language::CPP14: return "C++14";
     case OldSubmission::Language::CPP17: return "C++17";
@@ -107,7 +109,8 @@ constexpr const char* to_string(OldSubmission::Language x) {
 
 constexpr const char* to_extension(OldSubmission::Language x) {
     switch (x) {
-    case OldSubmission::Language::C11: return ".c";
+    case OldSubmission::Language::C11:
+    case OldSubmission::Language::C23: return ".c";
     case OldSubmission::Language::CPP11:
     case OldSubmission::Language::CPP14:
     case OldSubmission::Language::CPP17:
@@ -122,7 +125,8 @@ constexpr const char* to_extension(OldSubmission::Language x) {
 
 constexpr const char* to_mime(OldSubmission::Language x) {
     switch (x) {
-    case OldSubmission::Language::C11: return "text/x-csrc";
+    case OldSubmission::Language::C11:
+    case OldSubmission::Language::C23: return "text/x-csrc";
     case OldSubmission::Language::CPP11:
     case OldSubmission::Language::CPP14:
     case OldSubmission::Language::CPP17:
