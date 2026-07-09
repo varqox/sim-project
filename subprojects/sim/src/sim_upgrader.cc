@@ -148,7 +148,7 @@ static void lock_all_tables(sim::mysql::Connection& mysql, LockKind lock_kind) {
 }
 
 static void print_help(const char* program_name) {
-    if (not program_name) {
+    if (!program_name) {
         program_name = "sim-upgrader";
     }
 
