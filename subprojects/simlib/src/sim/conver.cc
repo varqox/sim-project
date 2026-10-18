@@ -106,9 +106,6 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
         if (not exists_in_pkg(config.manager) or not is_source(config.manager)) {
             THROW("Communication manager source was not found: ", config.manager);
         }
-        if (sf.config_file()["checker"].is_set()) {
-            THROW("Communication problems cannot specify a checker");
-        }
         for (auto dir : {"check/", "checker/"}) {
             pc.for_each_with_prefix(from_unsafe{concat(main_dir, dir)}, [&](StringView path) {
                 if (is_source(path)) {
@@ -747,8 +744,7 @@ void Conver::reset_time_limits_using_jugde_reports(
     Simfile& sf,
     const JudgeReport& jrep1,
     const JudgeReport& jrep2,
-    const ResetTimeLimitsOptions& opts,
-    ExecutionFormat execution_format
+    const ResetTimeLimitsOptions& opts
 ) {
     STACK_UNWINDING_MARK;
 
@@ -762,17 +758,13 @@ void Conver::reset_time_limits_using_jugde_reports(
         THROW("solution_runtime_coefficient has to be non-negative");
     }
 
-    if (sf.communication) {
-        execution_format = ExecutionFormat::Communication;
-    }
-
     // Map every test to its time limit
     std::map<StringView, nanoseconds> tls; // test name => time limit
     for (auto ptr : {&jrep1, &jrep2}) {
         auto&& rep = *ptr;
         for (auto&& g : rep.groups) {
             for (auto&& t : g.tests) {
-                if (execution_format == ExecutionFormat::Communication and
+                if (sf.communication and
                     (t.status != JudgeReport::Test::OK or t.score_ratio != 1 or
                      not t.communication or not t.communication->complete))
                 {
@@ -796,7 +788,7 @@ void Conver::reset_time_limits_using_jugde_reports(
         }
     }
 
-    if (execution_format == ExecutionFormat::Communication) {
+    if (sf.communication) {
         for (const auto& group : sf.tgroups) {
             for (const auto& test : group.tests) {
                 if (tls.find(test.name) == tls.end()) {

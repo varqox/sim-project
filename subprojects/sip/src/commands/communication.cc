@@ -57,9 +57,7 @@ void communication(ArgvParser args) {
         return regen(format);
     }
     if (command == "pack") {
-        SipPackage sp(format);
-        sp.rebuild_full_simfile();
-        return zip();
+        return pack(format);
     }
     throw SipError("unknown communication command: ", command);
 }

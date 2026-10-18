@@ -9,7 +9,6 @@
 #include <simlib/file_path.hh>
 #include <simlib/logger.hh>
 #include <simlib/macros/stack_unwinding.hh>
-#include <simlib/sim/communication_config.hh>
 #include <simlib/sim/execution_format.hh>
 #include <simlib/sim/judge/compilation_cache.hh>
 #include <simlib/sim/judge/language_suite/suite.hh>
@@ -459,8 +458,6 @@ struct JudgeWorkerOptions {
 class JudgeWorker {
     TemporaryDirectory tmp_dir{"/tmp/judge-worker.XXXXXX"};
     Simfile sf;
-    ExecutionFormat execution_format = ExecutionFormat::Legacy;
-    std::optional<CommunicationConfig> communication;
     std::unique_ptr<judge::language_suite::Suite> checker_suite;
     std::unique_ptr<judge::language_suite::Suite> solution_suite;
 

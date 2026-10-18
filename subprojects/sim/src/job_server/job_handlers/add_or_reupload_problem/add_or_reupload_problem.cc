@@ -124,8 +124,7 @@ std::optional<sim::Simfile> construct_simfile(Logger& logger, ConstructSimfileOp
                 construction_res.simfile,
                 initial_judge_report,
                 final_judge_report,
-                rtl_options,
-                construction_res.simfile.execution_format()
+                rtl_options
             );
         } catch (const std::exception& e) {
             logger("Conver failed: ", e.what());

@@ -23,8 +23,6 @@ struct CommunicationConfig {
     std::optional<uint32_t> min_instances;
     uint32_t max_concurrent = 1;
 
-    CommunicationConfig() = default;
-
     static void validate_memory_limits(
         uint32_t concurrent,
         uint64_t program_memory,

@@ -11,7 +11,7 @@ void gen(std::optional<sim::ExecutionFormat> format) {
     sp.generate_test_input_files();
 
     sp.simfile.load_interactive();
-    if (not sp.simfile.communication and not sp.simfile.interactive) {
+    if (not sp.simfile.interactive) {
         sp.generate_test_output_files();
     }
 

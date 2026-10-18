@@ -20,7 +20,6 @@ public:
     Sipfile sipfile;
 
 private:
-    sim::ExecutionFormat execution_format = sim::ExecutionFormat::Legacy;
     std::optional<sim::JudgeWorker> jworker;
     std::optional<TestsFiles> tests_files;
 

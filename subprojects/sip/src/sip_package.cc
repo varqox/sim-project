@@ -105,7 +105,7 @@ void SipPackage::prepare_judge_worker() {
         .score_cut_lambda = SCORE_CUT_LAMBDA,
     });
 
-    jworker.value().load_package(".", full_simfile.dump(), execution_format);
+    jworker.value().load_package(".", full_simfile.dump(), simfile.execution_format());
 }
 
 static uint64_t test_name_hash(StringView test_name) {
@@ -383,7 +383,6 @@ void SipPackage::reload_simfile_from_str(string contents) {
     try {
         simfile = sim::Simfile(std::move(contents));
         simfile.load_communication();
-        execution_format = simfile.execution_format();
     } catch (const std::exception& e) {
         throw SipError("(Simfile) ", e.what());
     }
@@ -404,7 +403,7 @@ SipPackage::SipPackage(std::optional<sim::ExecutionFormat> required_format) {
         simfile_contents = get_file_contents("Simfile");
         reload_simfile_from_str(simfile_contents);
     }
-    if (required_format && *required_format != execution_format) {
+    if (required_format && *required_format != simfile.execution_format()) {
         throw SipError("communication commands require communication: true in Simfile");
     }
     if (access("Sipfile", F_OK) == 0) {
@@ -528,7 +527,7 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
 void SipPackage::generate_test_output_files() {
     STACK_UNWINDING_MARK;
 
-    if (execution_format == sim::ExecutionFormat::Communication) {
+    if (simfile.communication) {
         throw SipError("communication problems have no output files; use sip gen");
     }
 
@@ -622,7 +621,7 @@ void SipPackage::generate_test_output_files() {
 
     // Adjust time limits
     sim::Conver::reset_time_limits_using_jugde_reports(
-        full_simfile, jrep1, jrep2, conver_options(false).rtl_opts, execution_format
+        full_simfile, jrep1, jrep2, conver_options(false).rtl_opts
     );
     jworker = std::nullopt; // Time limits have changed
 }
@@ -655,7 +654,7 @@ void SipPackage::judge_solution(StringView solution, bool reset_time_limits) {
     // Adjust time limits according to the main solution judge times
     if (reset_time_limits and solution == full_simfile.solutions.front()) {
         sim::Conver::reset_time_limits_using_jugde_reports(
-            full_simfile, jrep1, jrep2, conver_options(false).rtl_opts, execution_format
+            full_simfile, jrep1, jrep2, conver_options(false).rtl_opts
         );
         jworker = std::nullopt; // Time limits have changed
     }
@@ -694,10 +693,7 @@ void SipPackage::compile_checker() {
 
     prepare_judge_worker();
 
-    stdlog(
-        execution_format == sim::ExecutionFormat::Communication ? "Compiling manager..."
-                                                                : "Compiling checker..."
-    )
+    stdlog(full_simfile.communication ? "Compiling manager..." : "Compiling checker...")
         .flush_no_nl();
     std::string compilation_errors;
     auto compilation_cache = compilation_cache::get_cache();
@@ -707,7 +703,7 @@ void SipPackage::compile_checker() {
             &compilation_errors,
             COMPILATION_ERRORS_MAX_LENGTH,
             &compilation_cache,
-            execution_format == sim::ExecutionFormat::Communication
+            full_simfile.communication
                 ? concat_tostr("manager:", full_simfile.communication->manager)
                 : full_simfile.checker ? concat_tostr("checker:", *full_simfile.checker)
                                        : std::string{"default_checker"}
@@ -833,7 +829,7 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
     STACK_UNWINDING_MARK;
 
     sim::Conver::Options copts;
-    copts.execution_format = execution_format;
+    copts.execution_format = simfile.execution_format();
     copts.reset_time_limits_using_main_solution = set_default_time_limits;
     copts.ignore_simfile = false;
     copts.seek_for_new_tests = true;

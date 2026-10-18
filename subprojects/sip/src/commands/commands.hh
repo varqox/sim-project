@@ -60,7 +60,7 @@ void test(ArgvParser args, std::optional<sim::ExecutionFormat> format = std::nul
 
 void unset(ArgvParser args);
 
-void pack();
+void pack(std::optional<sim::ExecutionFormat> format = std::nullopt);
 
 void zip();
 

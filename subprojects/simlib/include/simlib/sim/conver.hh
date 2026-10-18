@@ -130,8 +130,7 @@ public:
         Simfile& sf,
         const JudgeReport& jrep1,
         const JudgeReport& jrep2,
-        const ResetTimeLimitsOptions& opts,
-        ExecutionFormat execution_format = ExecutionFormat::Legacy
+        const ResetTimeLimitsOptions& opts
     );
 
     static constexpr std::chrono::duration<double> solution_runtime_to_time_limit(

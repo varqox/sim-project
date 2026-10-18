@@ -484,9 +484,7 @@ TEST_F(CommunicationPackage, calibration_requires_complete_full_score) {
     );
     auto& test = report.groups.back().tests.back();
     auto reset = [&] {
-        sim::Conver::reset_time_limits_using_jugde_reports(
-            sf, {}, report, {}, sim::ExecutionFormat::Communication
-        );
+        sim::Conver::reset_time_limits_using_jugde_reports(sf, {}, report, {});
     };
     EXPECT_THROW(reset(), std::exception);
     test.communication.emplace();
@@ -497,9 +495,6 @@ TEST_F(CommunicationPackage, calibration_requires_complete_full_score) {
     EXPECT_NO_THROW(reset());
     test.status = sim::JudgeReport::Test::WA;
     EXPECT_THROW(reset(), std::exception);
-    EXPECT_THROW(
-        sim::Conver::reset_time_limits_using_jugde_reports(sf, {}, report, {}), std::exception
-    );
     auto legacy = sf;
     legacy.communication.reset();
     EXPECT_NO_THROW(sim::Conver::reset_time_limits_using_jugde_reports(legacy, {}, report, {}));

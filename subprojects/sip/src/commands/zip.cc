@@ -7,9 +7,9 @@
 
 namespace commands {
 
-void pack() {
+void pack(std::optional<sim::ExecutionFormat> format) {
     STACK_UNWINDING_MARK;
-    SipPackage sp;
+    SipPackage sp(format);
     sp.rebuild_full_simfile();
     zip();
 }

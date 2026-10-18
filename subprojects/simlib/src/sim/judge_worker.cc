@@ -11,6 +11,7 @@
 #include <simlib/file_info.hh>
 #include <simlib/libzip.hh>
 #include <simlib/noexcept_concat.hh>
+#include <simlib/sim/communication_config.hh>
 #include <simlib/sim/judge/language_suite/c_gcc.hh>
 #include <simlib/sim/judge/language_suite/cpp_gcc.hh>
 #include <simlib/sim/judge/language_suite/pascal.hh>
@@ -174,6 +175,7 @@ int JudgeWorker::compile_checker(
     }
 
     auto [source_path, lang] = [&]() -> std::pair<std::string, SolutionLanguage> {
+        const auto& communication = sf.communication;
         if (communication) {
             auto path = package_loader->load_as_file(communication->manager, "manager");
             return {
@@ -299,11 +301,10 @@ void JudgeWorker::load_package(
     }
 
     sf.load_communication();
-    communication = sf.communication;
+    const auto& communication = sf.communication;
     if (not communication and format == ExecutionFormat::Communication) {
         THROW("Communication problems require communication: true in Simfile");
     }
-    execution_format = communication ? ExecutionFormat::Communication : ExecutionFormat::Legacy;
     if (communication) {
         if (not is_source(communication->manager)) {
             THROW("Invalid communication manager source");
@@ -501,6 +502,7 @@ JudgeReport JudgeWorker::judge(
     const std::optional<std::function<void(const JudgeReport&)>>& partial_report_callback
 ) const {
     STACK_UNWINDING_MARK;
+    const auto& communication = sf.communication;
     auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
         STACK_UNWINDING_MARK;
 

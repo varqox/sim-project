@@ -99,7 +99,7 @@ void reset_problem_time_limits(
     rtl_options.min_time_limit = sim::MIN_TIME_LIMIT;
     rtl_options.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
     sim::Conver::reset_time_limits_using_jugde_reports(
-        simfile, initial_judge_report, final_judge_report, rtl_options, problem_execution_format
+        simfile, initial_judge_report, final_judge_report, rtl_options
     );
 
     auto current_datetime = utc_mysql_datetime();

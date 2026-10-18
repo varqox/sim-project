@@ -211,6 +211,13 @@ public:
      *   validation error occurs
      */
     void load_label();
+
+    void load_communication();
+
+    [[nodiscard]] ExecutionFormat execution_format() const {
+        return communication ? ExecutionFormat::Communication : ExecutionFormat::Legacy;
+    }
+
     /**
      * @brief Loads problem's interactive setting
      * @details Fields:
@@ -219,12 +226,6 @@ public:
      * @errors Throws an exception of type std::runtime_error if any
      *   validation error occurs
      */
-    void load_communication();
-
-    [[nodiscard]] ExecutionFormat execution_format() const {
-        return communication ? ExecutionFormat::Communication : ExecutionFormat::Legacy;
-    }
-
     void load_interactive();
     /**
      * @brief Loads path to checker source file (if there is any)
