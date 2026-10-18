@@ -214,7 +214,7 @@ TestReport test_on_communication_test(CommunicationTestArgs args) {
         THROW("memfd_create()", errmsg());
     }
     auto manager = manager_program.start_fresh(
-        {{"--sim-communication-v1", "/in"}},
+        {{"--sim-communication", "/in"}},
         {
             .stdin_fd = manager_stdin.readable,
             .stdout_fd = manager_stdout.writable,

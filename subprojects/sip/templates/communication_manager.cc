@@ -130,7 +130,7 @@ public:
 } // namespace communication
 
 int main(int argc, char** argv) {
-    if (argc != 3 || std::string_view{argv[1]} != "--sim-communication-v1") {
+    if (argc != 3 || std::string_view{argv[1]} != "--sim-communication") {
         return 1;
     }
     std::ifstream input{argv[2]};
