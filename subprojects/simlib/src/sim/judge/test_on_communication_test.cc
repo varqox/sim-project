@@ -281,6 +281,9 @@ TestReport test_on_communication_test(CommunicationTestArgs args) {
         return true;
     };
     auto event = [&](Event type, uint32_t id, std::string_view data = {}) {
+        if (manager_failure || program_failure) {
+            return;
+        }
         if (not reserve_storage(12 + data.size())) {
             if (type == Event::Output) {
                 instances[id - 1].status = Status::OutputSizeLimitExceeded;

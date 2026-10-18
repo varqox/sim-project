@@ -68,9 +68,6 @@ void change_problem_statement(
         simfile.load_all();
     }
 
-    auto new_problem_file_id = sim::internal_files::new_internal_file_id(mysql);
-    auto new_problem_package_path = sim::internal_files::path_of(new_problem_file_id);
-
     // Escape path_for_new_statement
     if (path_for_new_statement.empty()) {
         path_for_new_statement = WONT_THROW(simfile.statement.value());
@@ -103,6 +100,8 @@ void change_problem_statement(
     simfile.statement = path_for_new_statement;
 
     // Copy old package contests and update the Simfile
+    auto new_problem_file_id = sim::internal_files::new_internal_file_id(mysql);
+    auto new_problem_package_path = sim::internal_files::path_of(new_problem_file_id);
     auto simfile_as_str = simfile.dump();
     auto new_problem_package_remover = FileRemover{new_problem_package_path};
     auto dest_zip = ZipFile{new_problem_package_path, ZIP_CREATE | ZIP_TRUNCATE};
