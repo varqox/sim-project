@@ -4,6 +4,8 @@
 #include <optional>
 #include <simlib/config_file.hh>
 #include <simlib/ctype.hh>
+#include <simlib/sim/communication_config.hh>
+#include <simlib/sim/execution_format.hh>
 #include <simlib/string_view.hh>
 #include <utility>
 
@@ -87,6 +89,7 @@ public:
     std::optional<std::string> label; // Is unset only if not loaded
     std::optional<std::string> statement; // Is unset only if not loaded
     bool interactive = false;
+    std::optional<CommunicationConfig> communication;
     std::optional<std::string> checker; // std::nullopt if default checker should be used
     std::vector<std::string> solutions;
     std::optional<uint64_t> global_mem_limit; // in bytes
@@ -142,6 +145,11 @@ public:
             "name",
             "label",
             "interactive",
+            "communication",
+            "manager",
+            "instances",
+            "min_instances",
+            "max_concurrent",
             "checker",
             "statement",
             "solutions",
@@ -211,6 +219,12 @@ public:
      * @errors Throws an exception of type std::runtime_error if any
      *   validation error occurs
      */
+    void load_communication();
+
+    [[nodiscard]] ExecutionFormat execution_format() const {
+        return communication ? ExecutionFormat::Communication : ExecutionFormat::Legacy;
+    }
+
     void load_interactive();
     /**
      * @brief Loads path to checker source file (if there is any)

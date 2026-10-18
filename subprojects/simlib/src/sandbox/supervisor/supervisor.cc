@@ -317,6 +317,9 @@ void close_request_fds_except_result_fd_and_kill_tracee_fd(const request::Reques
     if (req.seccomp_bpf_fd && close(*req.seccomp_bpf_fd)) {
         die_with_error("close()");
     }
+    if (req.started_fd && close(*req.started_fd)) {
+        die_with_error("close()");
+    }
 }
 
 void sigpipe_handler(int /**/) noexcept {}
@@ -1157,6 +1160,7 @@ void main(int argc, char** argv) noexcept {
                 .stdin_fd = request.stdin_fd,
                 .stdout_fd = request.stdout_fd,
                 .stderr_fd = request.stderr_fd,
+                .started_fd = request.started_fd,
                 .argv = std::move(request.argv),
                 .env = std::move(request.env),
                 .supervisor_pidfd = supervisor_pidfd,

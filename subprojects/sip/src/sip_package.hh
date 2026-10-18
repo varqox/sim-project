@@ -20,6 +20,7 @@ public:
     Sipfile sipfile;
 
 private:
+    sim::ExecutionFormat execution_format = sim::ExecutionFormat::Legacy;
     std::optional<sim::JudgeWorker> jworker;
     std::optional<TestsFiles> tests_files;
 
@@ -54,7 +55,7 @@ private:
 public:
     // Initializes the package - loads Simfile (if exists) and Sipfile (if
     // exists)
-    SipPackage();
+    explicit SipPackage(std::optional<sim::ExecutionFormat> required_format = std::nullopt);
 
     void warn_about_tests_not_specified_as_static_or_generated();
 
@@ -69,7 +70,7 @@ public:
     void generate_test_output_files();
 
     // Runs specified solution on all tests
-    void judge_solution(StringView solution);
+    void judge_solution(StringView solution, bool reset_time_limits = true);
 
     // Compiles specified solution
     void compile_solution(StringView solution);

@@ -67,7 +67,9 @@ string Simfile::dump() const {
         back_insert(res, "label: ", ConfigFile::escape_string(*label), '\n');
     }
 
-    if (interactive) {
+    if (communication) {
+        back_insert(res, "communication: true\n", communication->dump_settings());
+    } else if (interactive) {
         back_insert(res, "interactive: ", interactive, '\n');
     }
 
@@ -172,7 +174,33 @@ void Simfile::load_label() {
     label = var.as_string();
 }
 
+void Simfile::load_communication() {
+    auto&& var = config["communication"];
+    CHECK_IF_NOT_ARR(var, "communication");
+    communication.reset();
+    if (not var.is_set()) {
+        return;
+    }
+    const auto& value = var.as_string();
+    if (not(var.as_bool() or value == "0" or lower_equal(value, "off") or
+            lower_equal(value, "false")))
+    {
+        THROW("Simfile: invalid communication flag");
+    }
+    if (var.as_bool()) {
+        communication.emplace(config);
+        if (config["checker"].is_set()) {
+            THROW("Communication problems cannot specify a checker");
+        }
+    }
+}
+
 void Simfile::load_interactive() {
+    load_communication();
+    if (communication) {
+        interactive = true;
+        return;
+    }
     auto&& var = config["interactive"];
     CHECK_IF_NOT_ARR(var, "label");
     if (var.as_string().empty()) {
@@ -184,6 +212,10 @@ void Simfile::load_interactive() {
 
 void Simfile::load_checker() {
     load_interactive();
+    if (communication) {
+        checker = std::nullopt;
+        return;
+    }
 
     auto&& var = config["checker"];
     CHECK_IF_NOT_ARR(var, "checker");

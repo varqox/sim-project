@@ -1,10 +1,14 @@
 #pragma once
 
+#include <optional>
 #include <simlib/argv_parser.hh>
+#include <simlib/sim/execution_format.hh>
 
 namespace commands {
 
 void checker(ArgvParser args);
+
+void communication(ArgvParser args);
 
 void clean();
 
@@ -18,11 +22,11 @@ void genin();
 
 void genout();
 
-void gen();
+void gen(std::optional<sim::ExecutionFormat> format = std::nullopt);
 
 void regenin();
 
-void regen();
+void regen(std::optional<sim::ExecutionFormat> format = std::nullopt);
 
 void reseed();
 
@@ -52,9 +56,11 @@ void statement(ArgvParser args);
 
 void template_command(ArgvParser args);
 
-void test(ArgvParser args);
+void test(ArgvParser args, std::optional<sim::ExecutionFormat> format = std::nullopt);
 
 void unset(ArgvParser args);
+
+void pack();
 
 void zip();
 

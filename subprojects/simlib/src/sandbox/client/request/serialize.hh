@@ -11,7 +11,7 @@
 namespace sandbox::client::request {
 
 struct SerializedReuest {
-    ArrayVec<int, 7> fds;
+    ArrayVec<int, 8> fds;
     std::array<std::byte, sizeof(communication::client_supervisor::request::body_len_t)> header;
     std::unique_ptr<std::byte[]> body;
     size_t body_len;

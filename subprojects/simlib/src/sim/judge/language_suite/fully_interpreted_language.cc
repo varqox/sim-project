@@ -17,9 +17,11 @@ FullyInterpretedLanguage::FullyInterpretedLanguage(
 
 Result<std::optional<sandbox::result::Ok>, FileDescriptor>
 FullyInterpretedLanguage::compile(FilePath source, CompileOptions /*options*/) {
+    source_file_is_ready = false;
     if (copy(source, source_tmp_file.path())) {
         THROW("copy()", errmsg());
     }
+    source_file_is_ready = true;
     return Ok<std::optional<sandbox::result::Ok>>{std::nullopt};
 }
 

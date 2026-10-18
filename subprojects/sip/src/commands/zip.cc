@@ -7,6 +7,13 @@
 
 namespace commands {
 
+void pack() {
+    STACK_UNWINDING_MARK;
+    SipPackage sp;
+    sp.rebuild_full_simfile();
+    zip();
+}
+
 void zip() {
     STACK_UNWINDING_MARK;
     clean();

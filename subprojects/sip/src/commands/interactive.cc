@@ -10,6 +10,9 @@ void interactive(ArgvParser args) {
 
     SipPackage sp;
     if (args.size() > 0) {
+        if (sp.simfile.communication) {
+            throw SipError("communication problems do not use the interactive flag");
+        }
         auto new_interactive = args.extract_next();
         if (not is_one_of(new_interactive, "true", "false")) {
             throw SipError("interactive should have a value of true or false");

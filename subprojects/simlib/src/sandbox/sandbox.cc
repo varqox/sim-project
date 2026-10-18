@@ -8,6 +8,7 @@
 #include <exception>
 #include <fcntl.h>
 #include <optional>
+#include <simlib/call_in_destructor.hh>
 #include <simlib/errmsg.hh>
 #include <simlib/file_contents.hh>
 #include <simlib/file_descriptor.hh>
@@ -59,9 +60,95 @@ static void write_file(int error_fd, FilePath file_path, StringView data) noexce
     }
 }
 
+static std::string create_owned_cgroup() {
+    static constexpr auto cgroup_fs_path = std::string_view{"/sys/fs/cgroup"};
+    auto cgroup_path = get_file_contents("/proc/self/cgroup");
+    auto pos = cgroup_path.find(':');
+    if (pos == std::string::npos) {
+        THROW("invalid contents of file: /proc/self/cgroup");
+    }
+    pos = cgroup_path.find(':', pos + 1);
+    if (pos == std::string::npos) {
+        THROW("invalid contents of file: /proc/self/cgroup");
+    }
+    cgroup_path.erase(0, pos + 1);
+    cgroup_path.insert(0, cgroup_fs_path);
+    while (cgroup_path.back() == '\n' || cgroup_path.back() == '/') {
+        cgroup_path.pop_back();
+    }
+    auto get_file_owner = [](const char* path) {
+        struct stat64 st;
+        if (stat64(path, &st)) {
+            THROW("stat64()", errmsg());
+        }
+        return st.st_uid;
+    };
+    auto euid = geteuid();
+    if (get_file_owner(cgroup_path.c_str()) != euid) {
+        return {};
+    }
+    size_t len = cgroup_path.size();
+    while (len > cgroup_fs_path.size()) {
+        size_t saved_len = len;
+        --len;
+        while (cgroup_path[len] != '/') {
+            --len;
+        }
+        cgroup_path[len] = '\0';
+        if (get_file_owner(cgroup_path.c_str()) != euid) {
+            cgroup_path[len] = '/';
+            len = saved_len;
+            break;
+        }
+    }
+    cgroup_path.resize(len);
+    constexpr size_t new_cgroup_name_len = 16;
+    cgroup_path += '/';
+    cgroup_path.resize(cgroup_path.size() + new_cgroup_name_len);
+    for (;;) {
+        for (size_t i = cgroup_path.size() - new_cgroup_name_len; i < cgroup_path.size(); ++i) {
+            cgroup_path[i] = get_random('0', '9');
+        }
+        if (!mkdir(cgroup_path.c_str(), S_0755)) {
+            return cgroup_path;
+        }
+        if (errno == EEXIST) {
+            continue;
+        }
+        if (errno == EACCES) {
+            return {};
+        }
+        THROW("mkdir()", errmsg());
+    }
+}
+
+static void remove_owned_cgroup(const std::string& path) {
+    if (path.empty()) {
+        return;
+    }
+    for (unsigned attempt = 0; attempt < 1000; ++attempt) {
+        for (const auto* child : {"tracee", "pid1", "supervisor", "test_nsdelegate"}) {
+            auto child_path = path + '/' + child;
+            if (rmdir(child_path.c_str()) && errno != ENOENT && errno != EBUSY) {
+                THROW("rmdir()", errmsg());
+            }
+        }
+        if (!rmdir(path.c_str()) || errno == ENOENT) {
+            return;
+        }
+        if (errno != EBUSY && errno != ENOTEMPTY) {
+            THROW("rmdir()", errmsg());
+        }
+        usleep(1000);
+    }
+    THROW("failed to remove sandbox cgroup: ", path);
+}
+
 namespace sandbox {
 
-[[noreturn]] void execute_supervisor(int error_fd, int sock_fd) noexcept {
+[[noreturn]] void execute_supervisor(
+    int error_fd, int sock_fd, bool cgroup_prepared, const std::string& owned_cgroup_path
+) noexcept {
     /* Set up file descriptors:
      * error_fd will become STDERR_FILENO
      * sock_fd need to be greater than STDERR_FILENO
@@ -110,174 +197,106 @@ namespace sandbox {
         do_die_with_error(error_fd, "write()");
     }
 
-    static constexpr auto cgroup_fs_path = std::string_view{"/sys/fs/cgroup"};
-    auto cgroup_path = [&] {
+    std::string cgroup_path;
+    try {
+        cgroup_path = cgroup_prepared ? owned_cgroup_path : create_owned_cgroup();
+    } catch (const std::exception& e) {
+        do_die_with_msg(error_fd, "exception: ", e.what());
+    }
+    if (!cgroup_path.empty()) {
+        constexpr size_t new_cgroup_name_len = 16;
+        /* Successfully created cgroup, move the current process to the created cgroup and
+         * remaining processes to an other cgroup */
+
         try {
-            std::string str = get_file_contents("/proc/self/cgroup");
-            auto pos = str.find(':');
-            if (pos == std::string::npos) {
-                do_die_with_msg(error_fd, "invalid contents of file: /proc/self/cgorup");
-            }
-            pos = str.find(':', pos + 1);
-            if (pos == std::string::npos) {
-                do_die_with_msg(error_fd, "invalid contents of file: /proc/self/cgorup");
-            }
-            str.erase(0, pos + 1); // Remove prefix
-            str.insert(0, cgroup_fs_path);
-            while (str.back() == '\n' || str.back() == '/') {
-                str.pop_back();
-            }
-            return str;
+            cgroup_path += "/cgroup.procs";
         } catch (const std::exception& e) {
             do_die_with_msg(error_fd, "exception: ", e.what());
         }
-    }();
-
-    auto get_file_owner = [error_fd](const char* cgroup_path) {
-        struct stat64 st;
-        if (stat64(cgroup_path, &st)) {
-            do_die_with_error(error_fd, "stat64()");
+        int new_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
+        if (new_cgroup_procs_fd == -1) {
+            do_die_with_error(error_fd, "open()");
         }
-        return st.st_uid;
-    };
 
-    auto euid = geteuid();
-    if (get_file_owner(cgroup_path.c_str()) == euid) {
-        // Find top-most cgroup that we are owner of
-        size_t len = cgroup_path.size();
-        while (len > cgroup_fs_path.size()) {
-            size_t saved_len = len;
-            --len;
-            while (cgroup_path[len] != '/') {
-                --len;
-            }
-            cgroup_path[len] = '\0';
-            if (get_file_owner(cgroup_path.c_str()) != euid) {
-                cgroup_path[len] = '/';
-                len = saved_len;
+        cgroup_path.resize(cgroup_path.size() - new_cgroup_name_len - std::strlen("/cgroup.procs"));
+        cgroup_path += "cgroup.procs"; // won't throw
+        auto cgroup_procs_fd = open(cgroup_path.c_str(), O_RDONLY | O_CLOEXEC);
+        if (cgroup_procs_fd == -1) {
+            do_die_with_error(error_fd, "open()");
+        }
+
+        // Acquire the lock to prevent race conditions
+        for (;;) {
+            if (!flock(cgroup_procs_fd, LOCK_EX)) {
                 break;
             }
+            if (errno == EINTR) {
+                continue;
+            }
+            do_die_with_error(error_fd, "flock()");
         }
-        cgroup_path.resize(len);
 
-        constexpr size_t new_cgroup_name_len = 16;
+        // Move the current proces to the created cgroup
+        if (write(new_cgroup_procs_fd, "0", 1) != 1) {
+            do_die_with_error(error_fd, "write()");
+        }
+
+        // Create "others" cgroup
+        cgroup_path.resize(cgroup_path.size() - std::strlen("cgroup.procs"));
+        cgroup_path += "others"; // won't throw
+        if (mkdir(cgroup_path.c_str(), S_0755) && errno != EEXIST) {
+            do_die_with_error(error_fd, "mkdir()");
+        }
+
         try {
-            cgroup_path += '/';
-            cgroup_path.resize(cgroup_path.size() + new_cgroup_name_len);
+            cgroup_path += "/cgroup.procs";
         } catch (const std::exception& e) {
             do_die_with_msg(error_fd, "exception: ", e.what());
         }
+        auto others_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
+        if (others_cgroup_procs_fd == -1) {
+            do_die_with_error(error_fd, "open()");
+        }
 
-        // Try creating a new cgroup
+        std::array<char, sizeof(pid_t) * 3 /*3 digits for one byte*/ + 1 /*newline*/> buff;
         for (;;) {
-            for (size_t i = cgroup_path.size() - new_cgroup_name_len; i < cgroup_path.size(); ++i) {
-                cgroup_path[i] = get_random('0', '9');
+            auto rc = pread(cgroup_procs_fd, buff.data(), buff.size(), 0);
+            if (rc == 0) {
+                break; // no more pids
             }
-            if (mkdir(cgroup_path.c_str(), S_0755)) {
-                if (errno == EEXIST) {
-                    continue; // try with different name
+            auto str = StringView{buff.data(), static_cast<size_t>(rc)};
+            auto pos = str.find('\n');
+            if (pos != StringView::npos) {
+                str = str.substring(0, pos);
+            }
+            auto written = write(others_cgroup_procs_fd, str.data(), str.size());
+            if (written == -1) {
+                if (errno == ESRCH) {
+                    continue; // process died before we changed its cgroup
                 }
-                if (errno == EACCES) {
-                    break; // run supervisor with systemd-run
-                }
-                do_die_with_error(error_fd, "mkdir()");
-            }
-
-            /* Successfully created cgroup, move the current process to the created cgroup and
-             * remaining processes to an other cgroup */
-
-            try {
-                cgroup_path += "/cgroup.procs";
-            } catch (const std::exception& e) {
-                do_die_with_msg(error_fd, "exception: ", e.what());
-            }
-            int new_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
-            if (new_cgroup_procs_fd == 1) {
-                do_die_with_error(error_fd, "open()");
-            }
-
-            cgroup_path.resize(
-                cgroup_path.size() - new_cgroup_name_len - std::strlen("/cgroup.procs")
-            );
-            cgroup_path += "cgroup.procs"; // won't throw
-            auto cgroup_procs_fd = open(cgroup_path.c_str(), O_RDONLY | O_CLOEXEC);
-            if (cgroup_procs_fd == -1) {
-                do_die_with_error(error_fd, "open()");
-            }
-
-            // Acquire the lock to prevent race conditions
-            for (;;) {
-                if (!flock(cgroup_procs_fd, LOCK_EX)) {
-                    break;
-                }
-                if (errno == EINTR) {
-                    continue;
-                }
-                do_die_with_error(error_fd, "flock()");
-            }
-
-            // Move the current proces to the created cgroup
-            if (write(new_cgroup_procs_fd, "0", 1) != 1) {
                 do_die_with_error(error_fd, "write()");
             }
-
-            // Create "others" cgroup
-            cgroup_path.resize(cgroup_path.size() - std::strlen("cgroup.procs"));
-            cgroup_path += "others"; // won't throw
-            if (mkdir(cgroup_path.c_str(), S_0755) && errno != EEXIST) {
-                do_die_with_error(error_fd, "mkdir()");
+            if (static_cast<size_t>(written) != str.size()) {
+                do_die_with_msg(error_fd, "partial write()");
             }
-
-            try {
-                cgroup_path += "/cgroup.procs";
-            } catch (const std::exception& e) {
-                do_die_with_msg(error_fd, "exception: ", e.what());
-            }
-            auto others_cgroup_procs_fd = open(cgroup_path.c_str(), O_WRONLY | O_CLOEXEC);
-            if (others_cgroup_procs_fd == -1) {
-                do_die_with_error(error_fd, "open()");
-            }
-
-            std::array<char, sizeof(pid_t) * 3 /*3 digits for one byte*/ + 1 /*newline*/> buff;
-            for (;;) {
-                auto rc = pread(cgroup_procs_fd, buff.data(), buff.size(), 0);
-                if (rc == 0) {
-                    break; // no more pids
-                }
-                auto str = StringView{buff.data(), static_cast<size_t>(rc)};
-                auto pos = str.find('\n');
-                if (pos != StringView::npos) {
-                    str = str.substring(0, pos);
-                }
-                auto written = write(others_cgroup_procs_fd, str.data(), str.size());
-                if (written == -1) {
-                    if (errno == ESRCH) {
-                        continue; // process died before we changed its cgroup
-                    }
-                    do_die_with_error(error_fd, "write()");
-                }
-                if (static_cast<size_t>(written) != str.size()) {
-                    do_die_with_msg(error_fd, "partial write()");
-                }
-            }
-            // Release the lock here (not in execveat()) to minimize the critical section
-            if (close(cgroup_procs_fd)) {
-                do_die_with_error(error_fd, "close()");
-            }
-
-            // Enable needed controllers in the new cgroup (needs to be done after moving out
-            // processes from the cgroup)
-            cgroup_path.resize(cgroup_path.size() - std::strlen("others/cgroup.procs"));
-            cgroup_path += "cgroup.subtree_control"; // won't throw
-            write_file(error_fd, cgroup_path.c_str(), "+pids +memory +cpu");
-            // Execute the supervisor
-            char argv0[] = "";
-            auto sock_as_str = to_string(sock_fd);
-            char* const argv[] = {argv0, sock_as_str.data(), nullptr};
-            char* const env[] = {nullptr};
-            syscalls::execveat(supervisor_exe_fd, "", argv, env, AT_EMPTY_PATH);
-            do_die_with_error(error_fd, "execveat()");
         }
+        // Release the lock here (not in execveat()) to minimize the critical section
+        if (close(cgroup_procs_fd)) {
+            do_die_with_error(error_fd, "close()");
+        }
+
+        // Enable needed controllers in the new cgroup (needs to be done after moving out
+        // processes from the cgroup)
+        cgroup_path.resize(cgroup_path.size() - std::strlen("others/cgroup.procs"));
+        cgroup_path += "cgroup.subtree_control"; // won't throw
+        write_file(error_fd, cgroup_path.c_str(), "+pids +memory +cpu");
+        // Execute the supervisor
+        char argv0[] = "";
+        auto sock_as_str = to_string(sock_fd);
+        char* const argv[] = {argv0, sock_as_str.data(), nullptr};
+        char* const env[] = {nullptr};
+        syscalls::execveat(supervisor_exe_fd, "", argv, env, AT_EMPTY_PATH);
+        do_die_with_error(error_fd, "execveat()");
     }
 
     // Execute the supervisor using systemd-run
@@ -313,7 +332,10 @@ namespace sandbox {
     do_die_with_error(error_fd, "execveat()");
 }
 
-SupervisorConnection spawn_supervisor() {
+SupervisorConnection spawn_supervisor(SpawnOptions options) {
+    auto owned_cgroup_path = options.cleanup_cgroup ? create_owned_cgroup() : std::string{};
+    auto cleanup_cgroup = CallInDtor{[&] { remove_owned_cgroup(owned_cgroup_path); }};
+
     int supervisor_error_fd = memfd_create("sandbox supervisor errors", MFD_CLOEXEC);
     if (supervisor_error_fd == -1) {
         THROW("memfd_create()", errmsg());
@@ -329,6 +351,13 @@ SupervisorConnection spawn_supervisor() {
     }
     int sock_fd = sock_fds[0];
     int supervisor_sock_fd = sock_fds[1];
+    if (options.nonblocking_requests && fcntl(sock_fd, F_SETFL, O_NONBLOCK)) {
+        int errnum = errno;
+        (void)close(supervisor_sock_fd);
+        (void)close(sock_fd);
+        (void)close(supervisor_error_fd);
+        THROW("fcntl()", errmsg(errnum));
+    }
 
     // Sadly, we cannot use clone3() with .flags == CLONE_PIDFD because it causes malloc() to hang
     // indefinitely occasionally in the child process if the parent process (the current process) is
@@ -342,9 +371,26 @@ SupervisorConnection spawn_supervisor() {
         THROW("fork()", errmsg(errnum));
     }
     if (pid == 0) {
+        if (options.reset_signal_mask) {
+            sigset_t mask;
+            if (sigemptyset(&mask) || sigprocmask(SIG_SETMASK, &mask, nullptr)) {
+                do_die_with_error(supervisor_error_fd, "sigprocmask()");
+            }
+        }
         // sock_fd and pipe_opt->readable will be closed by exec()
-        execute_supervisor(supervisor_error_fd, supervisor_sock_fd);
+        execute_supervisor(
+            supervisor_error_fd, supervisor_sock_fd, options.cleanup_cgroup, owned_cgroup_path
+        );
     }
+
+    auto kill_child = CallInDtor{[&] {
+        if (options.cleanup_cgroup) {
+            (void)kill(pid, SIGKILL);
+            siginfo_t si;
+            while (syscalls::waitid(P_PID, pid, &si, WEXITED, nullptr) && errno == EINTR) {
+            }
+        }
+    }};
 
     // We don't have to synchronize with the child process, because pidfd_open() works on non-reaped
     // (even zombie) processes.
@@ -366,7 +412,11 @@ SupervisorConnection spawn_supervisor() {
         THROW("close()", errmsg(errnum));
     }
 
-    return SupervisorConnection{sock_fd, supervisor_pidfd, supervisor_error_fd};
+    kill_child.cancel();
+    cleanup_cgroup.cancel();
+    return SupervisorConnection{
+        sock_fd, supervisor_pidfd, supervisor_error_fd, std::move(owned_cgroup_path)
+    };
 }
 
 SupervisorConnection::KillRequestHandle::~KillRequestHandle() noexcept(false) {
@@ -616,8 +666,8 @@ Si SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
         close_errnum = errno;
     }
 
-    mark_supervisor_is_dead_and_waited(
-    ); // this has to be done before potentially throwing operations
+    mark_supervisor_is_dead_and_waited(); // this has to be done before potentially throwing
+                                          // operations
 
     // Check for errors
     if (pidfd_send_signal_errnum) {
@@ -677,6 +727,7 @@ Si SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
 }
 
 SupervisorConnection::~SupervisorConnection() noexcept(false) {
+    auto cleanup_cgroup = CallInDtor{[&] { remove_owned_cgroup(owned_cgroup_path); }};
     // We cannot throw during the stack unwinding
     bool can_throw = uncaught_exceptions_in_constructor == std::uncaught_exceptions();
     // Kill the supervisor no matter if we are during the stack unwinding or we destruct normally.
@@ -696,6 +747,7 @@ SupervisorConnection::~SupervisorConnection() noexcept(false) {
         if (sock_fd != -1 && close(sock_fd)) {
             THROW("close()", errmsg());
         }
+        cleanup_cgroup.call_and_cancel();
     } else {
         if (!supervisor_is_dead_and_waited()) {
             kill_and_wait_supervisor();

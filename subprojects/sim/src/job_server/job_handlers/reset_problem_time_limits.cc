@@ -32,9 +32,12 @@ void reset_problem_time_limits(
     auto transaction = mysql.start_repeatable_read_transaction();
 
     decltype(Problem::file_id) problem_file_id;
+    decltype(Problem::execution_format) problem_execution_format;
     {
-        auto stmt = mysql.execute(Select("file_id").from("problems").where("id=?", problem_id));
-        stmt.res_bind(problem_file_id);
+        auto stmt = mysql.execute(
+            Select("file_id, execution_format").from("problems").where("id=?", problem_id)
+        );
+        stmt.res_bind(problem_file_id, problem_execution_format);
         if (!stmt.next()) {
             logger("The problem with id: ", problem_id, " does not exist");
             mark_job_as_cancelled(mysql, logger, job_id);
@@ -46,7 +49,7 @@ void reset_problem_time_limits(
     auto input_package_path = sim::internal_files::path_of(problem_file_id);
     sim::JudgeWorker judge_worker;
     logger("Loading problem package...");
-    judge_worker.load_package(input_package_path, std::nullopt);
+    judge_worker.load_package(input_package_path, std::nullopt, problem_execution_format);
     logger("... done.");
 
     auto& simfile = judge_worker.simfile();
@@ -96,7 +99,7 @@ void reset_problem_time_limits(
     rtl_options.min_time_limit = sim::MIN_TIME_LIMIT;
     rtl_options.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
     sim::Conver::reset_time_limits_using_jugde_reports(
-        simfile, initial_judge_report, final_judge_report, rtl_options
+        simfile, initial_judge_report, final_judge_report, rtl_options, problem_execution_format
     );
 
     auto current_datetime = utc_mysql_datetime();

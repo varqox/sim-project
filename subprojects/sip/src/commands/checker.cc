@@ -11,6 +11,9 @@ void checker(ArgvParser args) {
 
     SipPackage sp;
     if (args.size() > 0) {
+        if (sp.simfile.communication) {
+            throw SipError("communication problems use a manager instead of a checker");
+        }
         auto checker = args.extract_next();
         if (not checker.empty() and access(checker, F_OK) != 0) {
             throw SipError("checker: ", checker, " does not exist");

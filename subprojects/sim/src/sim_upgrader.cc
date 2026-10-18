@@ -25,6 +25,7 @@
 #include <simlib/spawner.hh>
 #include <simlib/string_traits.hh>
 #include <simlib/string_view.hh>
+#include <simlib/utilities.hh>
 #include <unistd.h>
 
 using std::string;
@@ -40,15 +41,23 @@ run_command(const vector<string>& args, const Spawner::Options& options = {}) {
 
 // Update the below hash and body of the function do_perform_upgrade()
 constexpr StringView NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE =
-    "622fce0821e5c7178c4171db5d3809b03a38446dcd0ce95ba05fc4dc32c6e4b5";
+    "5e1d1807c56ccb25de3495865cdc8612a7693a9e7a742622ff70e7e9577a2838";
 
 static void do_perform_upgrade(
-    [[maybe_unused]] const string& sim_dir, [[maybe_unused]] sim::mysql::Connection& mysql
+    [[maybe_unused]] const string& sim_dir,
+    sim::mysql::Connection& mysql,
+    bool add_submissions_full_status_index
 ) {
     STACK_UNWINDING_MARK;
 
     // Upgrade here
-    mysql.execute("ALTER TABLE submissions ADD KEY `full_status` (`full_status`,`id`)");
+    if (add_submissions_full_status_index) {
+        mysql.execute("ALTER TABLE submissions ADD KEY `full_status` (`full_status`,`id`)");
+    }
+    mysql.execute(
+        "ALTER TABLE problems ADD COLUMN IF NOT EXISTS execution_format "
+        "tinyint(3) unsigned NOT NULL DEFAULT 0, ALGORITHM=INSTANT"
+    );
 }
 
 enum class LockKind {
@@ -71,10 +80,19 @@ static int perform_upgrade(const string& sim_dir, sim::mysql::Connection& mysql)
         stdlog("\033[1;32mNo upgrade is needed.\033[m");
         return 0;
     }
-    if (normalized_schema_hash == NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE) {
+    constexpr StringView schema_before_full_status_index =
+        "622fce0821e5c7178c4171db5d3809b03a38446dcd0ce95ba05fc4dc32c6e4b5";
+    if (is_one_of(
+            StringView{normalized_schema_hash},
+            NORMALIZED_SCHEMA_HASH_BEFORE_UPGRADE,
+            schema_before_full_status_index
+        ))
+    {
         stdlog("\033[1;34mStarted the sim upgrade.\033[m");
         lock_all_tables(mysql, LockKind::WRITE);
-        do_perform_upgrade(sim_dir, mysql);
+        do_perform_upgrade(
+            sim_dir, mysql, normalized_schema_hash == schema_before_full_status_index
+        );
         stdlog("\033[1;32mSim upgrading is complete.\033[m");
 
         normalized_schema = normalized(sim::db::get_db_schema(mysql));

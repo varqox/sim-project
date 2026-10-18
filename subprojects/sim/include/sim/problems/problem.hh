@@ -7,6 +7,7 @@
 #include <sim/sql/fields/varbinary.hh>
 #include <sim/users/user.hh>
 #include <simlib/macros/enum_with_string_conversions.hh>
+#include <simlib/sim/execution_format.hh>
 
 namespace sim::problems {
 
@@ -26,7 +27,8 @@ struct Problem {
     sql::fields::Blob simfile;
     std::optional<decltype(users::User::id)> owner_id;
     sql::fields::Datetime updated_at;
-    static constexpr size_t COLUMNS_NUM = 9;
+    ExecutionFormat execution_format = ExecutionFormat::Legacy;
+    static constexpr size_t COLUMNS_NUM = 10;
 
     static constexpr uint64_t NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MiB
 };

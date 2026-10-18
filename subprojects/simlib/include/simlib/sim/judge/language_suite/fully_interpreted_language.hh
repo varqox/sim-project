@@ -16,6 +16,7 @@ protected:
     std::string interpreter_executable_path;
     TemporaryFile source_tmp_file{"/tmp/sim_fully_interpreted_language_suite_source.XXXXXX"};
     FileDescriptor seccomp_bpf_fd;
+    bool source_file_is_ready = false;
 
 public:
     explicit FullyInterpretedLanguage(

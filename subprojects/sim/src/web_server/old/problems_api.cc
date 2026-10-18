@@ -5,6 +5,7 @@
 #include <sim/problem_tags/old_problem_tag.hh>
 #include <sim/problems/old_problem.hh>
 #include <sim/problems/permissions.hh>
+#include <sim/problems/problem.hh>
 #include <sim/sql/sql.hh>
 #include <sim/users/user.hh>
 #include <simlib/config_file.hh>
@@ -66,7 +67,8 @@ void Sim::api_problems() {
         OWNER_ID,
         OWN_USERNAME,
         SFULL_STATUS,
-        SIMFILE
+        SIMFILE,
+        EXECUTION_FORMAT
     };
 
     auto overall_perms = sim::problems::get_overall_permissions(
@@ -149,7 +151,7 @@ void Sim::api_problems() {
             mask |= ID_COND;
 
         } else if (cond == '=' and ~mask & ID_COND) {
-            qfields.append(", p.simfile");
+            qfields.append(", p.simfile, p.execution_format");
             select_specified_problem = true;
             qwhere.append(" AND p.id", arg);
             mask |= ID_COND;
@@ -194,7 +196,8 @@ void Sim::api_problems() {
                "]},"
                "\"color_class\","
                "\"simfile\","
-               "\"memory_limit\""
+               "\"memory_limit\","
+               "\"execution_format\""
            "]}");
     // clang-format on
 
@@ -370,6 +373,18 @@ void Sim::api_problems() {
                 json_stringify(res[SIMFILE]), // simfile
                 ',',
                 json_stringify(cf.get_var("memory_limit").as_string())
+            );
+        }
+
+        if (select_specified_problem) {
+            if (not uint(problem_perms & PERMS::VIEW_SIMFILE)) {
+                append(",null,null");
+            }
+            append(
+                ',',
+                sim::ExecutionFormat{
+                    str2num<sim::ExecutionFormat::UnderlyingType>(res[EXECUTION_FORMAT]).value()
+                }.to_quoted_str()
             );
         }
 

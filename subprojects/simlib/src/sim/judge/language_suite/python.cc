@@ -1,5 +1,6 @@
 #include <cerrno>
 #include <chrono>
+#include <simlib/macros/throw.hh>
 #include <simlib/merge.hh>
 #include <simlib/sandbox/sandbox.hh>
 #include <simlib/sandbox/seccomp/allow_common_safe_syscalls.hh>
@@ -28,13 +29,42 @@ Python::Python()
                                return bpf.export_to_fd();
                            }()} {}
 
+Suite::PreparedProgram Python::prepared_program() {
+    if (!source_file_is_ready) {
+        THROW("cannot run without successful compilation preceding the run");
+    }
+    return prepare_program(
+        source_tmp_file.path(), seccomp_bpf_fd, interpreter_executable_path, run
+    );
+}
+
 Suite::RunHandle Python::async_run(
     Slice<std::string_view> args,
     RunOptions options,
     Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops
 ) {
-    return RunHandle{sc.send_request(
+    return run(
+        sc,
+        source_tmp_file.path(),
+        seccomp_bpf_fd,
         interpreter_executable_path,
+        args,
+        std::move(options),
+        mount_ops
+    );
+}
+
+Suite::RunHandle Python::run(
+    sandbox::SupervisorConnection& sc,
+    FilePath artifact,
+    int seccomp_bpf_fd,
+    std::string_view interpreter,
+    Slice<std::string_view> args,
+    RunOptions options,
+    Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops
+) {
+    return RunHandle{sc.send_request(
+        interpreter,
         merge(std::vector<std::string_view>{"python3", "source.py"}, args),
         {
             .stdin_fd = options.stdin_fd,
@@ -93,7 +123,7 @@ Suite::RunHandle Python::async_run(
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = source_tmp_file.path(),
+                                        .source = {artifact.data(), artifact.size()},
                                         .dest = "/../source.py",
                                         .no_exec = false,
                                     },
@@ -123,6 +153,7 @@ Suite::RunHandle Python::async_run(
             .time_limit = options.time_limit,
             .cpu_time_limit = options.cpu_time_limit,
             .seccomp_bpf_fd = seccomp_bpf_fd,
+            .started_fd = options.started_fd,
         }
     )};
 }

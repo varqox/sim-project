@@ -43,6 +43,7 @@ void judge_or_rejudge_submission(
     decltype(Submission::user_id) submission_user_id;
     decltype(Submission::problem_id) submission_problem_id;
     decltype(Problem::file_id) problem_file_id;
+    decltype(Problem::execution_format) problem_execution_format;
     decltype(Submission::contest_problem_id) submission_contest_problem_id;
     decltype(Submission::language) submission_language;
     decltype(Submission::last_judgment_began_at) submission_last_judgment_began_at;
@@ -50,8 +51,10 @@ void judge_or_rejudge_submission(
 
     auto transaction = mysql.start_repeatable_read_transaction();
     auto stmt =
-        mysql.execute(Select("s.file_id, s.user_id, s.problem_id, p.file_id, s.contest_problem_id, "
-                             "s.language, s.last_judgment_began_at, j.created_at")
+        mysql.execute(Select(
+                          "s.file_id, s.user_id, s.problem_id, p.file_id, s.contest_problem_id, "
+                          "s.language, s.last_judgment_began_at, j.created_at, p.execution_format"
+        )
                           .from("submissions s")
                           .inner_join("problems p")
                           .on("p.id=s.problem_id")
@@ -66,7 +69,8 @@ void judge_or_rejudge_submission(
         submission_contest_problem_id,
         submission_language,
         submission_last_judgment_began_at,
-        job_created_at
+        job_created_at,
+        problem_execution_format
     );
     if (!stmt.next()) {
         logger("Submission has been deleted.");
@@ -88,7 +92,9 @@ void judge_or_rejudge_submission(
     logger("Judging submission ", submission_id, " (problem: ", submission_problem_id, ')');
     sim::JudgeWorker judge_worker;
     logger("Loading problem package...");
-    judge_worker.load_package(sim::internal_files::path_of(problem_file_id), std::nullopt);
+    judge_worker.load_package(
+        sim::internal_files::path_of(problem_file_id), std::nullopt, problem_execution_format
+    );
     logger("... done.");
 
     auto update_submission = [&, submission_id](
@@ -308,6 +314,56 @@ void judge_or_rejudge_submission(
                 }
             }
             back_insert(report, "</ul>");
+        }
+        for (const auto& group : judge_report.groups) {
+            for (const auto& test : group.tests) {
+                if (!test.communication) {
+                    continue;
+                }
+                const auto& communication = *test.communication;
+                back_insert(
+                    report,
+                    "<details><summary>Communication: ",
+                    html_escape(test.name),
+                    "</summary><p>Total CPU: ",
+                    to_string(communication.total_cpu_time, false),
+                    " s; elapsed: ",
+                    to_string(communication.elapsed, false),
+                    " s</p><table class=\"table\"><thead><tr><th>Instance</th><th>Result</th>"
+                    "<th>CPU [s]</th><th>Memory [KiB]</th><th>Output "
+                    "[bytes]</th></tr></thead><tbody>"
+                );
+                for (const auto& instance : communication.instances) {
+                    const char* status = [&] {
+                        using Status = sim::judge::TestReport::Status;
+                        switch (instance.status) {
+                        case Status::TimeLimitExceeded: return "Time limit exceeded";
+                        case Status::MemoryLimitExceeded: return "Memory limit exceeded";
+                        case Status::OutputSizeLimitExceeded: return "Output size limit exceeded";
+                        case Status::RuntimeError: return "Runtime error";
+                        case Status::CheckerError: return "Checker error";
+                        case Status::WrongAnswer: return "Wrong answer";
+                        case Status::OK: return "OK";
+                        }
+                        THROW("invalid instance.status");
+                    }();
+                    back_insert(
+                        report,
+                        "<tr><td>",
+                        instance.id,
+                        "</td><td>",
+                        instance.cancelled ? "Cancelled" : status,
+                        "</td><td>",
+                        to_string(instance.program.cpu_time, false),
+                        "</td><td>",
+                        instance.program.peak_memory_in_bytes >> 10,
+                        "</td><td>",
+                        instance.output_size,
+                        "</td></tr>"
+                    );
+                }
+                back_insert(report, "</tbody></table></details>");
+            }
         }
         return report;
     };

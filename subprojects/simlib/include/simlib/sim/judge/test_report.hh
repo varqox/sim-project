@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace sim::judge {
 
@@ -34,6 +35,23 @@ struct TestReport {
     };
 
     std::optional<Checker> checker;
+
+    struct Communication {
+        struct Instance {
+            uint32_t id;
+            Status status;
+            Program program;
+            uint64_t output_size;
+            bool cancelled;
+        };
+
+        std::vector<Instance> instances;
+        std::chrono::microseconds total_cpu_time{};
+        std::chrono::nanoseconds elapsed{};
+        bool complete = false;
+    };
+
+    std::optional<Communication> communication = std::nullopt;
 };
 
 } // namespace sim::judge

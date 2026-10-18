@@ -84,9 +84,9 @@ void add_problem(sim::mysql::Connection& mysql, Logger& logger, decltype(Job::id
     auto problem_id =
         mysql
             .execute(InsertInto("problems (created_at, file_id, visibility, name, label, "
-                                "simfile, owner_id, updated_at)")
+                                "simfile, owner_id, updated_at, execution_format)")
                          .values(
-                             "?, ?, ?, ?, ?, ?, ?, ?",
+                             "?, ?, ?, ?, ?, ?, ?, ?, ?",
                              current_datetime,
                              create_package_res->new_package_file_id,
                              add_problem_job.visibility,
@@ -94,7 +94,8 @@ void add_problem(sim::mysql::Connection& mysql, Logger& logger, decltype(Job::id
                              simfile->label.value(),
                              simfile->dump(),
                              job_creator,
-                             current_datetime
+                             current_datetime,
+                             simfile->execution_format()
                          ))
             .insert_id();
 

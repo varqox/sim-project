@@ -248,7 +248,7 @@ SerializedReuest serialize(
     const RequestOptions& options
 ) {
     namespace request = communication::client_supervisor::request;
-    auto fds = ArrayVec<int, 7>{result_fd, kill_fd};
+    auto fds = ArrayVec<int, 8>{result_fd, kill_fd};
     if (std::holds_alternative<int>(executable)) {
         fds.emplace(std::get<int>(executable));
     }
@@ -265,15 +265,23 @@ SerializedReuest serialize(
         fds.emplace(*options.seccomp_bpf_fd);
     }
 
+    if (options.started_fd) {
+        fds.emplace(*options.started_fd);
+    }
+
     auto do_serialize = [&](auto& writer) {
         namespace fds = request::fds;
-        writer.write_flags({
-            {std::holds_alternative<int>(executable), fds::mask::sending_executable_fd},
-            {options.stdin_fd.has_value(), fds::mask::sending_stdin_fd},
-            {options.stdout_fd.has_value(), fds::mask::sending_stdout_fd},
-            {options.stderr_fd.has_value(), fds::mask::sending_stderr_fd},
-            {options.seccomp_bpf_fd.has_value(), fds::mask::sending_seccomp_bpf_fd},
-        }, as<fds::mask_t>);
+        writer.write_flags(
+            {
+                {std::holds_alternative<int>(executable), fds::mask::sending_executable_fd},
+                {options.stdin_fd.has_value(), fds::mask::sending_stdin_fd},
+                {options.stdout_fd.has_value(), fds::mask::sending_stdout_fd},
+                {options.stderr_fd.has_value(), fds::mask::sending_stderr_fd},
+                {options.seccomp_bpf_fd.has_value(), fds::mask::sending_seccomp_bpf_fd},
+                {options.started_fd.has_value(), fds::mask::sending_started_fd},
+            },
+            as<fds::mask_t>
+        );
 
         if (std::holds_alternative<std::string_view>(executable)) {
             auto executable_path = std::get<std::string_view>(executable);

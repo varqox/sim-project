@@ -4,17 +4,20 @@
 
 namespace commands {
 
-void gen() {
+void gen(std::optional<sim::ExecutionFormat> format) {
     STACK_UNWINDING_MARK;
 
-    SipPackage sp;
+    SipPackage sp(format);
     sp.generate_test_input_files();
 
     sp.simfile.load_interactive();
-    if (not sp.simfile.interactive) {
+    if (not sp.simfile.communication and not sp.simfile.interactive) {
         sp.generate_test_output_files();
     }
 
+    if (sp.simfile.communication) {
+        sp.rebuild_full_simfile();
+    }
     if (access("Simfile", F_OK) == 0) {
         sp.save_limits();
     }

@@ -48,12 +48,14 @@ void change_problem_statement(
 
     std::string problem_package_path;
     sim::Simfile simfile;
+    decltype(Problem::execution_format) problem_execution_format;
     {
         decltype(Problem::file_id) problem_file_id;
         decltype(Problem::simfile) simfile_as_str;
-        auto stmt =
-            mysql.execute(Select("file_id, simfile").from("problems").where("id=?", problem_id));
-        stmt.res_bind(problem_file_id, simfile_as_str);
+        auto stmt = mysql.execute(
+            Select("file_id, simfile, execution_format").from("problems").where("id=?", problem_id)
+        );
+        stmt.res_bind(problem_file_id, simfile_as_str, problem_execution_format);
         if (!stmt.next()) {
             logger("The problem with id: ", problem_id, " does not exist");
             mark_job_as_cancelled(mysql, logger, job_id);
@@ -74,6 +76,15 @@ void change_problem_statement(
         path_for_new_statement = WONT_THROW(simfile.statement.value());
     } else {
         path_for_new_statement = path_absolute(path_for_new_statement).erase(0, 1);
+    }
+
+    if (problem_execution_format == sim::ExecutionFormat::Communication and
+        has_prefix(path_for_new_statement, "manager/"))
+    {
+        logger("Invalid new statement path - it would overwrite communication files");
+        mark_job_as_cancelled(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
 
     // Replace old statement with the new statement

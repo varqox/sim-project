@@ -564,8 +564,10 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
         return ctx.response_403();
     }
     auto stmt = ctx.mysql.execute(
-        Select("p.name, p.label, u.username, u.first_name, u.last_name, p.created_at, "
-               "p.updated_at, s.full_status, p.simfile")
+        Select(
+            "p.name, p.label, u.username, u.first_name, u.last_name, p.created_at, "
+            "p.updated_at, s.full_status, p.simfile, p.execution_format"
+        )
             .from("problems p")
             .left_join("users u")
             .on("u.id=p.owner_id")
@@ -578,6 +580,7 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
             .where("p.id=?", problem_id)
     );
     decltype(Problem::simfile) simfile;
+    decltype(Problem::execution_format) execution_format;
     stmt.res_bind(
         p.name,
         p.label,
@@ -587,7 +590,8 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
         p.created_at,
         p.updated_at,
         p.final_submission_full_status,
-        simfile
+        simfile,
+        execution_format
     );
     throw_assert(stmt.next());
 
@@ -610,6 +614,7 @@ Response view_problem(Context& ctx, decltype(Problem::id) problem_id) {
     p.append_to(obj, caps, public_tags, hidden_tags);
     if (caps.view_simfile) {
         obj.prop("simfile", simfile);
+        obj.prop("execution_format", execution_format);
         ConfigFile cf;
         cf.add_vars("memory_limit");
         cf.load_config_from_string(simfile);
