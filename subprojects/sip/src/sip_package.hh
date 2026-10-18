@@ -87,7 +87,9 @@ public:
     void remove_test_files_not_specified_in_sipfile();
 
     // Runs Conver to generate the full_simfile
-    void rebuild_full_simfile(bool set_default_time_limits = false);
+    void rebuild_full_simfile(
+        bool set_default_time_limits = false, bool require_existing_limits = false
+    );
 
     // Saves scoring into the Simfile
     void save_scoring();

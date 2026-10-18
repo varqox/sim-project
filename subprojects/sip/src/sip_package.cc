@@ -863,13 +863,16 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
     return copts;
 }
 
-void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
+void SipPackage::rebuild_full_simfile(bool set_default_time_limits, bool require_existing_limits) {
     STACK_UNWINDING_MARK;
 
     sim::Conver conver;
     conver.package_path(".");
     sim::Conver::ConstructionResult cr =
         conver.construct_simfile(conver_options(set_default_time_limits));
+    if (require_existing_limits and cr.status != sim::Conver::Status::COMPLETE) {
+        throw SipError("--keep-limits requires an existing time limit for every test");
+    }
 
     // Filter out every line except warnings
     StringView report = conver.report();

@@ -27,7 +27,7 @@ void test(ArgvParser args, std::optional<sim::ExecutionFormat> format) {
     }
     args = ArgvParser(patterns.size(), patterns.data());
 
-    sp.rebuild_full_simfile();
+    sp.rebuild_full_simfile(false, not reset_time_limits);
     if (sp.full_simfile.solutions.empty()) {
         throw SipError("no solution was found");
     }

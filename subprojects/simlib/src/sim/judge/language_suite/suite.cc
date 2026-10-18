@@ -35,9 +35,7 @@ struct Suite::PreparedProgram::Impl {
         if (!seccomp_bpf_fd.is_open()) {
             THROW("fcntl()", errmsg());
         }
-        if (copy(source, artifact.path())) {
-            THROW("copy()", errmsg());
-        }
+        thread_fork_safe_copy(source, artifact.path(), S_IRUSR | S_IWUSR | S_IXUSR);
     }
 };
 
