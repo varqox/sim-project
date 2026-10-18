@@ -764,15 +764,8 @@ void Conver::reset_time_limits_using_jugde_reports(
         auto&& rep = *ptr;
         for (auto&& g : rep.groups) {
             for (auto&& t : g.tests) {
-                if (sf.communication and
-                    (t.status != JudgeReport::Test::OK or t.score_ratio != 1 or
-                     not t.communication or not t.communication->complete))
-                {
-                    THROW(
-                        "Communication model solution did not complete with full score on test `",
-                        t.name,
-                        "`"
-                    );
+                if (sf.communication and (not t.communication or not t.communication->complete)) {
+                    THROW("Communication model solution did not complete on test `", t.name, "`");
                 }
                 // Only allow OK and WA to pass through
                 if (not is_one_of(t.status, JudgeReport::Test::OK, JudgeReport::Test::WA)) {

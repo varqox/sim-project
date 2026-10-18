@@ -52,11 +52,8 @@ cmp "$tmp_dir/Simfile" "$pkg/Simfile"
 "$sip" -C "$pkg" communication test model --keep-limits > "$tmp_dir/partial-alias-report"
 grep 'Total score:.*50 / 100' "$tmp_dir/partial-alias-report"
 cmp "$tmp_dir/Simfile" "$pkg/Simfile"
-if "$sip" -C "$pkg" test > "$tmp_dir/calibration-report" 2>&1; then
-    exit 1
-fi
-grep 'Communication model solution did not complete with full score' "$tmp_dir/calibration-report"
-cmp "$tmp_dir/Simfile" "$pkg/Simfile"
+"$sip" -C "$pkg" test > "$tmp_dir/calibration-report"
+grep 'Total score:.*50 / 100' "$tmp_dir/calibration-report"
 cp "$tmp_dir/manager.cc" "$pkg/manager/manager.cc"
 "$sip" -C "$pkg" regen
 if "$sip" -C "$pkg" genout; then

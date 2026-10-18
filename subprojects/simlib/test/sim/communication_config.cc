@@ -467,7 +467,7 @@ TEST_F(CommunicationPackage, worker_rechecks_manager_memory_override) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(CommunicationPackage, calibration_requires_complete_full_score) {
+TEST_F(CommunicationPackage, calibration_requires_complete_report) {
     write("Simfile", from_unsafe{complete_simfile()});
     options.execution_format = sim::ExecutionFormat::Communication;
     auto sf = conver.construct_simfile(options).simfile;
@@ -490,10 +490,12 @@ TEST_F(CommunicationPackage, calibration_requires_complete_full_score) {
     test.communication.emplace();
     test.communication->complete = true;
     test.score_ratio = 0.5;
-    EXPECT_THROW(reset(), std::exception);
+    EXPECT_NO_THROW(reset());
     test.score_ratio = 1;
     EXPECT_NO_THROW(reset());
     test.status = sim::JudgeReport::Test::WA;
+    EXPECT_NO_THROW(reset());
+    test.communication->complete = false;
     EXPECT_THROW(reset(), std::exception);
     auto legacy = sf;
     legacy.communication.reset();
