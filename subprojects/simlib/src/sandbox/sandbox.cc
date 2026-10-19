@@ -384,11 +384,8 @@ SupervisorConnection spawn_supervisor(SpawnOptions options) {
     }
 
     auto kill_child = CallInDtor{[&] {
-        if (options.cleanup_cgroup) {
-            (void)kill(pid, SIGKILL);
-            siginfo_t si;
-            while (syscalls::waitid(P_PID, pid, &si, WEXITED, nullptr) && errno == EINTR) {
-            }
+        (void)kill(pid, SIGKILL);
+        while (syscalls::waitid(P_PID, pid, nullptr, WEXITED, nullptr) && errno == EINTR) {
         }
     }};
 
@@ -640,7 +637,10 @@ Result SupervisorConnection::await_result(RequestHandle&& request_handle) {
 void SupervisorConnection::kill_and_wait_supervisor() noexcept {
     (void)syscalls::pidfd_send_signal(supervisor_pidfd, SIGKILL, nullptr, 0);
     // Try to wait the supervisor process, otherwise it will become zombie until this process dies
-    (void)syscalls::waitid(P_PIDFD, supervisor_pidfd, nullptr, __WALL | WEXITED, nullptr);
+    while (syscalls::waitid(P_PIDFD, supervisor_pidfd, nullptr, __WALL | WEXITED, nullptr) &&
+           errno == EINTR)
+    {
+    }
     (void)close(supervisor_pidfd);
     (void)close(supervisor_error_fd);
     mark_supervisor_is_dead_and_waited();
@@ -657,8 +657,11 @@ Si SupervisorConnection::kill_and_wait_supervisor_and_receive_errors() {
         pidfd_send_signal_errnum = errno;
     }
     // Try to wait the supervisor process, otherwise it will become zombie until this process dies
-    if (syscalls::waitid(P_PIDFD, supervisor_pidfd, &si, __WALL | WEXITED, nullptr)) {
-        waitid_errnum = errno;
+    while (syscalls::waitid(P_PIDFD, supervisor_pidfd, &si, __WALL | WEXITED, nullptr)) {
+        if (errno != EINTR) {
+            waitid_errnum = errno;
+            break;
+        }
     }
 
     optional<int> close_errnum = std::nullopt;

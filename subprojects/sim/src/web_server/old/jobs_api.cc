@@ -508,15 +508,20 @@ void Sim::api_job_cancel() {
 
     if (uint(~jobs_perms & PERM::CANCEL)) {
         if (uint(jobs_perms & PERM::VIEW)) {
-            return api_error400("Job has already been cancelled or done");
+            return api_error400("Job is no longer pending");
         }
         return api_error403();
     }
 
     // Cancel job
-    auto old_mysql = old_mysql::ConnectionView{mysql};
-    old_mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
-        .bind_and_execute(EnumVal(OldJob::Status::CANCELLED), jobs_jid);
+    auto stmt = mysql.execute(
+        sim::sql::Update("jobs")
+            .set("status=?", OldJob::Status::CANCELLED)
+            .where("id=? AND status=?", jobs_jid, OldJob::Status::PENDING)
+    );
+    if (stmt.affected_rows() == 0) {
+        return api_error400("Job is no longer pending");
+    }
 }
 
 void Sim::api_job_restart() {

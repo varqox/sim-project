@@ -467,7 +467,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
                     report_.append(
                         "\033[1;35mwarning\033[m: \"tests_files\":"
                         " test output file: `",
-                        input.value(),
+                        output.value(),
                         "` specified,"
                         " but the problem is interactive - ignoring file"
                     );

@@ -10,7 +10,9 @@ void restart_job(mysql::Connection& mysql, StringView job_id, bool notify_job_se
     STACK_UNWINDING_MARK;
 
     auto stmt = mysql.execute(
-        sql::Update("jobs").set("status=?", Job::Status::PENDING).where("id=?", job_id)
+        sql::Update("jobs")
+            .set("status=?", Job::Status::PENDING)
+            .where("id=? AND status IN (?, ?)", job_id, Job::Status::FAILED, Job::Status::CANCELLED)
     );
 
     if (notify_job_server) {

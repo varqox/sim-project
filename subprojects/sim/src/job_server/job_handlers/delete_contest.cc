@@ -5,14 +5,19 @@
 #include <sim/jobs/job.hh>
 #include <sim/mysql/mysql.hh>
 #include <sim/sql/sql.hh>
+#include <sim/submissions/submission.hh>
+#include <sim/submissions/update_final.hh>
 #include <simlib/macros/stack_unwinding.hh>
 #include <simlib/time.hh>
+#include <utility>
+#include <vector>
 
 using sim::contests::Contest;
 using sim::jobs::Job;
 using sim::sql::DeleteFrom;
 using sim::sql::InsertInto;
 using sim::sql::Select;
+using sim::submissions::Submission;
 
 namespace job_server::job_handlers {
 
@@ -65,8 +70,26 @@ void delete_contest(
                       .from("contest_files")
                       .where("contest_id=?", contest_id));
 
+    std::vector<std::pair<decltype(Submission::user_id), decltype(Submission::problem_id)>>
+        finals_to_update;
+    {
+        auto stmt = mysql.execute(Select("DISTINCT user_id, problem_id")
+                                      .from("submissions")
+                                      .where("contest_id=? FOR UPDATE", contest_id));
+        decltype(Submission::user_id) user_id;
+        decltype(Submission::problem_id) problem_id;
+        stmt.res_bind(user_id, problem_id);
+        while (stmt.next()) {
+            finals_to_update.emplace_back(user_id, problem_id);
+        }
+    }
+
     // Delete contest (all necessary actions will take place thanks to foreign key constraints)
     mysql.execute(DeleteFrom("contests").where("id=?", contest_id));
+
+    for (const auto& [user_id, problem_id] : finals_to_update) {
+        sim::submissions::update_final(mysql, user_id, problem_id, std::nullopt);
+    }
 
     mark_job_as_done(mysql, logger, job_id);
     transaction.commit();

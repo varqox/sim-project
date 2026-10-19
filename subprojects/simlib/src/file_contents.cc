@@ -37,7 +37,7 @@ size_t pread_all(int fd, off64_t pos, void* buff, size_t count) noexcept {
             if (errno == EINTR) {
                 continue;
             }
-            return pos; // Error
+            return bytes_read; // Error
         }
         if (k == 0) {
             break; // No more bytes to read

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <set>
 #include <simlib/inplace_buff.hh>
 #include <simlib/libzip.hh>
@@ -12,14 +13,14 @@ class PackageContents {
         size_t begin, end;
     };
 
-    InplaceBuff<0> buff;
+    std::unique_ptr<InplaceBuff<0>> buff;
 
     struct Comparer {
         struct is_transparent;
 
-        decltype(buff)* buff_ref;
+        InplaceBuff<0>* buff_ref;
 
-        explicit Comparer(decltype(buff)& br) : buff_ref(&br) {}
+        explicit Comparer(InplaceBuff<0>* br) : buff_ref(br) {}
 
         static StringView to_str(StringView str) noexcept { return str; }
 
@@ -33,10 +34,10 @@ class PackageContents {
         }
     };
 
-    std::set<Span, Comparer> entries{Comparer(buff)};
+    std::set<Span, Comparer> entries{Comparer(nullptr)};
 
     [[nodiscard]] StringView to_str(Span x) const {
-        return {buff.data() + x.begin, x.end - x.begin};
+        return {buff->data() + x.begin, x.end - x.begin};
     }
 
 public:
@@ -51,9 +52,13 @@ public:
 
     template <class... Args, std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
     void add_entry(Args&&... args) {
-        auto prev_size = buff.size;
-        buff.append(std::forward<Args>(args)...);
-        entries.insert({prev_size, buff.size});
+        if (not buff) {
+            buff = std::make_unique<InplaceBuff<0>>();
+            entries = decltype(entries){Comparer(buff.get())};
+        }
+        auto prev_size = buff->size;
+        buff->append(std::forward<Args>(args)...);
+        entries.insert({prev_size, buff->size});
     }
 
     // Returns bool denoting whether the erasing took place
