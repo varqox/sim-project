@@ -754,6 +754,7 @@ namespace sandbox::pid1 {
             .stdin_fd = args.stdin_fd,
             .stdout_fd = args.stdout_fd,
             .stderr_fd = args.stderr_fd,
+            .started_fd = args.started_fd,
             .argv = std::move(args.argv),
             .env = std::move(args.env),
             .proc_dirfd = proc_dirfd,

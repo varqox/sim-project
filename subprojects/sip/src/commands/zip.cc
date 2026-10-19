@@ -7,6 +7,13 @@
 
 namespace commands {
 
+void pack(std::optional<sim::ExecutionFormat> format) {
+    STACK_UNWINDING_MARK;
+    SipPackage sp(format);
+    sp.rebuild_full_simfile();
+    zip();
+}
+
 void zip() {
     STACK_UNWINDING_MARK;
     clean();

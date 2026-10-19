@@ -45,6 +45,15 @@ static void parse_options(int& argc, char** argv) {
             } else if (0 == strcmp(argv[i], "-q") or 0 == strcmp(argv[i], "--quiet")) {
                 stdlog.open("/dev/null");
 
+            } else if (
+                ((new_argc >= 2 and 0 == strcmp(argv[1], "test")) or
+                 (new_argc >= 3 and 0 == strcmp(argv[1], "communication") and
+                  0 == strcmp(argv[2], "test"))) and
+                0 == strcmp(argv[i], "--keep-limits")
+            )
+            {
+                argv[new_argc++] = argv[i];
+
             } else { // Unknown
                 (void)fprintf(stderr, "Unknown option: '%s'\n", argv[i]);
             }
@@ -68,6 +77,9 @@ static void run_command(int argc, char** argv) {
     }
 
     // Commands
+    if (command == "communication") {
+        return commands::communication(args);
+    }
     if (command == "checker") {
         return commands::checker(args);
     }
@@ -151,6 +163,9 @@ static void run_command(int argc, char** argv) {
     }
     if (command == "version") {
         return commands::version();
+    }
+    if (command == "pack") {
+        return commands::pack();
     }
     if (command == "zip") {
         return commands::zip();

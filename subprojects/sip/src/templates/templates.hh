@@ -7,6 +7,8 @@ namespace templates {
 
 std::string checker_cc();
 
+std::string communication_manager_cc();
+
 std::string interactive_checker_cc();
 
 std::string sim_statement_cls();

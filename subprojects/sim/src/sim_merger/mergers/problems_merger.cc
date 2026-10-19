@@ -117,9 +117,10 @@ void ProblemsMerger::merge_and_save() {
     // Save other problems
     auto other_problems_copying_progress_printer =
         ProgressPrinter<decltype(Problem::id)>{"progress: copying other problem with id:"};
-    static_assert(Problem::COLUMNS_NUM == 9, "Update the statements below");
+    static_assert(Problem::COLUMNS_NUM == 10, "Update the statements below");
     auto stmt = other_sim.mysql.execute(
-        Select("id, created_at, file_id, visibility, name, label, simfile, owner_id, updated_at")
+        Select("id, created_at, file_id, visibility, name, label, "
+               "simfile, owner_id, updated_at, execution_format")
             .from("problems")
             .order_by("id DESC")
     );
@@ -134,15 +135,16 @@ void ProblemsMerger::merge_and_save() {
         problem.label,
         problem.simfile,
         problem.owner_id,
-        problem.updated_at
+        problem.updated_at,
+        problem.execution_format
     );
     while (stmt.next()) {
         other_problems_copying_progress_printer.note_id(problem.id);
         main_sim.mysql.execute(
             InsertInto("problems (id, created_at, file_id, visibility, name, "
-                       "label, simfile, owner_id, updated_at)")
+                       "label, simfile, owner_id, updated_at, execution_format)")
                 .values(
-                    "?, ?, ?, ?, ?, ?, ?, ?, ?",
+                    "?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
                     other_id_to_new_id(problem.id),
                     problem.created_at,
                     internal_files_merger.other_id_to_new_id(problem.file_id),
@@ -153,7 +155,8 @@ void ProblemsMerger::merge_and_save() {
                     problem.owner_id
                         ? std::optional{users_merger.other_id_to_new_id(*problem.owner_id)}
                         : std::nullopt,
-                    problem.updated_at
+                    problem.updated_at,
+                    problem.execution_format
                 )
         );
     }

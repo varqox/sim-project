@@ -53,6 +53,7 @@ private:
 
     std::atomic_bool immediate_pause_{};
     FileDescriptor immediate_pause_fd_;
+    std::unique_ptr<EventQueue*> owner_;
 
     handler_id_t new_handler_id() noexcept { return next_handler_id_++; }
 

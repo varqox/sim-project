@@ -30,6 +30,9 @@ using std::optional;
 using std::string;
 
 extern "C" {
+extern const unsigned char communication_manager_cc[];
+extern const unsigned communication_manager_cc_len;
+
 extern const unsigned char checker_cc[];
 extern const unsigned checker_cc_len;
 
@@ -84,6 +87,12 @@ static string replace(StringView text, Subst&&... substitutions) {
 }
 
 namespace templates {
+
+string communication_manager_cc() {
+    return get_template(
+        "communication_manager.cc", ::communication_manager_cc, ::communication_manager_cc_len
+    );
+}
 
 string checker_cc() { return get_template("checker.cc", ::checker_cc, ::checker_cc_len); }
 

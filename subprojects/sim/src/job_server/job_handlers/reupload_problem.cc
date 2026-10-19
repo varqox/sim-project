@@ -96,12 +96,13 @@ void reupload_problem(
     // Update problem
     mysql.execute(Update("problems")
                       .set(
-                          "file_id=?, name=?, label=?, simfile=?, updated_at=?",
+                          "file_id=?, name=?, label=?, simfile=?, updated_at=?, execution_format=?",
                           create_package_res->new_package_file_id,
                           simfile->name.value(),
                           simfile->label.value(),
                           simfile->dump(),
-                          current_datetime
+                          current_datetime,
+                          simfile->execution_format()
                       )
                       .where("id=?", problem_id));
 

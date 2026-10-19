@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <simlib/file_descriptor.hh>
 #include <simlib/result.hh>
@@ -65,6 +66,7 @@ public:
         } rootfs = {};
 
         std::vector<std::string_view> env = {};
+        std::optional<int> started_fd = std::nullopt;
     };
 
     struct [[nodiscard]] RunHandle {
@@ -81,6 +83,61 @@ public:
     ) = 0;
 
     virtual sandbox::result::Ok await_result(RunHandle&& run_handle);
+
+    class PreparedProgram;
+
+    class Execution {
+        struct Impl;
+        std::unique_ptr<Impl> impl;
+
+        explicit Execution(std::unique_ptr<Impl> impl);
+        friend class PreparedProgram;
+
+    public:
+        Execution(const Execution&) = delete;
+        Execution(Execution&&) noexcept;
+        Execution& operator=(const Execution&) = delete;
+        Execution& operator=(Execution&&) = delete;
+        ~Execution() noexcept;
+
+        [[nodiscard]] int pollable_fd() const noexcept;
+        [[nodiscard]] int started_fd() const noexcept;
+        void kill();
+        void cancel();
+        sandbox::result::Ok await_result();
+    };
+
+    class PreparedProgram {
+        struct Impl;
+        std::shared_ptr<const Impl> impl;
+
+        explicit PreparedProgram(std::shared_ptr<const Impl> impl);
+        friend class Suite;
+        friend class Execution;
+
+    public:
+        [[nodiscard]] Execution start_fresh(
+            Slice<std::string_view> args,
+            RunOptions options,
+            Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops = {}
+        ) const;
+    };
+
+    [[nodiscard]] virtual PreparedProgram prepared_program() = 0;
+
+protected:
+    using Runner = RunHandle (*)(
+        sandbox::SupervisorConnection&,
+        FilePath,
+        int,
+        std::string_view,
+        Slice<std::string_view>,
+        RunOptions,
+        Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation>
+    );
+
+    static PreparedProgram
+    prepare_program(FilePath artifact, int seccomp_bpf_fd, std::string interpreter, Runner runner);
 };
 
 } // namespace sim::judge::language_suite

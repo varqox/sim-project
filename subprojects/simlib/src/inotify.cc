@@ -1,3 +1,5 @@
+#include <fcntl.h>
+#include <simlib/directory.hh>
 #include <simlib/errmsg.hh>
 #include <simlib/inotify.hh>
 #include <simlib/macros/throw.hh>
@@ -35,6 +37,9 @@ void FileModificationMonitor::init_watching() {
             ptr += sizeof(inotify_event) + len;
 
             process_event(event);
+            if (event.mask & IN_Q_OVERFLOW) {
+                return;
+            }
         }
     });
 
@@ -44,6 +49,48 @@ void FileModificationMonitor::init_watching() {
 }
 
 void FileModificationMonitor::process_event(const simlib_inotify_event& event) {
+    if (event.mask & IN_Q_OVERFLOW) {
+        FileDescriptor fd(inotify_init1(IN_CLOEXEC));
+        if (not fd.is_open()) {
+            THROW("inotify_init1()", errmsg());
+        }
+        while (dup3(fd, intfy_fd_, O_CLOEXEC) == -1) {
+            if (errno != EINTR) {
+                THROW("dup3()", errmsg());
+            }
+        }
+
+        // Events, including IN_IGNORED, may have been lost. Rebuild every watch.
+        watched_files_.clear();
+        unwatched_files_.clear();
+        for (const auto& finfo : added_files_) {
+            unwatched_files_.emplace(&finfo);
+        }
+        process_unwatched_files(false);
+        schedule_processing_unwatched_files();
+        for (const auto& [_, finfo] : watched_files_) {
+            run_modification_handler(finfo, finfo->path);
+            Directory dir(finfo->path);
+            if (not dir.is_open()) {
+                if (errno != ENOTDIR and errno != ENOENT) {
+                    watching_log_->read_failed(errno);
+                }
+                continue;
+            }
+            for_each_dir_component(
+                dir,
+                [&](dirent* file) {
+                    const char* missing_slash = &"/"[has_suffix(finfo->path, "/")];
+                    run_modification_handler(
+                        finfo, concat_tostr(finfo->path, missing_slash, file->d_name)
+                    );
+                },
+                [&] { watching_log_->read_failed(errno); }
+            );
+        }
+        return;
+    }
+
     const FileInfo* finfo = WONT_THROW(watched_files_.at(event.wd));
     if (event.mask & IN_IGNORED) {
         // File is no longer being watched

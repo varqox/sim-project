@@ -108,6 +108,7 @@ struct RequestOptions {
     // - sched_yield()
     // - write()
     std::optional<int> seccomp_bpf_fd = std::nullopt;
+    std::optional<int> started_fd = std::nullopt;
 };
 
 namespace result {
@@ -134,28 +135,42 @@ struct Error {
 
 using Result = std::variant<result::Ok, result::Error>;
 
+struct SpawnOptions {
+    bool cleanup_cgroup = false;
+    bool nonblocking_requests = false;
+    bool reset_signal_mask = false;
+};
+
 class SupervisorConnection {
     int sock_fd; // may be closed later than pidfd and error fd because of the unread responses to
                  // the already processed requests
     int supervisor_pidfd;
     int supervisor_error_fd;
+    std::string owned_cgroup_path;
     int uncaught_exceptions_in_constructor = std::uncaught_exceptions();
 
-    SupervisorConnection(int sock_fd_, int supervisor_pidfd_, int supervisor_error_fd_) noexcept
+    SupervisorConnection(
+        int sock_fd_,
+        int supervisor_pidfd_,
+        int supervisor_error_fd_,
+        std::string owned_cgroup_path_
+    ) noexcept
     : sock_fd{sock_fd_}
     , supervisor_pidfd{supervisor_pidfd_}
-    , supervisor_error_fd{supervisor_error_fd_} {}
+    , supervisor_error_fd{supervisor_error_fd_}
+    , owned_cgroup_path{std::move(owned_cgroup_path_)} {}
 
 public:
     // Spawns supervisor process. Throws on error.
-    friend SupervisorConnection spawn_supervisor();
+    friend SupervisorConnection spawn_supervisor(SpawnOptions options);
 
     SupervisorConnection(const SupervisorConnection&) = delete;
 
     SupervisorConnection(SupervisorConnection&& sc) noexcept
     : sock_fd{std::exchange(sc.sock_fd, -1)}
     , supervisor_pidfd{std::exchange(sc.supervisor_pidfd, -1)}
-    , supervisor_error_fd{std::exchange(sc.supervisor_error_fd, -1)} {}
+    , supervisor_error_fd{std::exchange(sc.supervisor_error_fd, -1)}
+    , owned_cgroup_path{std::exchange(sc.owned_cgroup_path, std::string{})} {}
 
     SupervisorConnection& operator=(const SupervisorConnection&) = delete;
     SupervisorConnection& operator=(SupervisorConnection&&) noexcept = delete;
@@ -265,6 +280,6 @@ private:
     void mark_supervisor_is_dead_and_waited() noexcept { supervisor_pidfd = -1; }
 };
 
-SupervisorConnection spawn_supervisor();
+SupervisorConnection spawn_supervisor(SpawnOptions options = {});
 
 } // namespace sandbox

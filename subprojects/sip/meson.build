@@ -70,6 +70,7 @@ sip = executable('sip',
     implicit_include_directories : false,
     sources : [
         'src/commands/checker.cc',
+        'src/commands/communication.cc',
         'src/commands/clean.cc',
         'src/commands/devclean.cc',
         'src/commands/devzip.cc',
@@ -103,6 +104,10 @@ sip = executable('sip',
         'src/templates/templates.cc',
         'src/tests_files.cc',
         'src/utils.cc',
+        dump_file_as_c_array_gen.process(
+            'templates/communication_manager.cc',
+            extra_args : 'communication_manager_cc'
+        ),
         dump_file_as_c_array_gen.process(
             'templates/checker.cc',
             extra_args : 'checker_cc'

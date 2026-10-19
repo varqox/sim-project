@@ -5,6 +5,7 @@
 #include <simlib/file_info.hh>
 #include <simlib/libzip.hh>
 #include <simlib/meta/max.hh>
+#include <simlib/sim/communication_config.hh>
 #include <simlib/sim/conver.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/problem_package.hh>
@@ -72,7 +73,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 
     // Load the Simfile from the package
     Simfile sf;
-    if (not opts.ignore_simfile and exists_in_pkg("Simfile")) {
+    if (exists_in_pkg("Simfile")) {
         try {
             sf = Simfile([&] {
                 if (package_path_.back() == '/') {
@@ -83,8 +84,36 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
                 return zip.extract_to_str(zip.get_index(concat(main_dir, "Simfile")));
             }());
         } catch (const ConfigFile::ParseError& e) {
-            THROW(concat_tostr("(Simfile) ", e.what(), '\n', e.diagnostics()));
+            if (not opts.ignore_simfile) {
+                THROW(concat_tostr("(Simfile) ", e.what(), '\n', e.diagnostics()));
+            }
         }
+        if (opts.ignore_simfile) {
+            if (sf.config_file()["communication"].as_bool()) {
+                THROW("Cannot ignore Simfile for a communication problem");
+            }
+            sf = Simfile{};
+        }
+    }
+
+    sf.load_communication();
+    if (not sf.communication and opts.execution_format == ExecutionFormat::Communication) {
+        THROW("Communication problems require communication: true in Simfile");
+    }
+    auto& communication = sf.communication;
+    if (communication) {
+        const auto& config = *communication;
+        if (not exists_in_pkg(config.manager) or not is_source(config.manager)) {
+            THROW("Communication manager source was not found: ", config.manager);
+        }
+        for (auto dir : {"check/", "checker/"}) {
+            pc.for_each_with_prefix(from_unsafe{concat(main_dir, dir)}, [&](StringView path) {
+                if (is_source(path)) {
+                    THROW("Communication problems cannot contain a legacy checker: ", path);
+                }
+            });
+        }
+        pc.remove_with_prefix(from_unsafe{concat(main_dir, "manager/")});
     }
 
     // Name
@@ -133,49 +162,63 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
     };
 
     // Checker
-    try {
-        sf.load_checker();
+    if (not communication) {
+        try {
+            sf.load_checker();
+            if (not sf.checker.has_value()) {
+                report_.append(
+                    "Missing checker in the package's Simfile -"
+                    " searching for one"
+                );
+            } else if (not exists_in_pkg(sf.checker.value())) {
+                report_.append(
+                    "Invalid checker specified in the package's Simfile"
+                    " - searching for one"
+                );
+                sf.checker = std::nullopt;
+            }
+        } catch (...) {
+            report_.append(
+                "Invalid checker specified in the package's Simfile -"
+                " searching for one"
+            );
+        }
+
+        // Interactive
+        if (opts.interactive.has_value()) {
+            sf.interactive = opts.interactive.value();
+        }
+
         if (not sf.checker.has_value()) {
-            report_.append("Missing checker in the package's Simfile -"
-                           " searching for one");
-        } else if (not exists_in_pkg(sf.checker.value())) {
-            report_.append("Invalid checker specified in the package's Simfile"
-                           " - searching for one");
-            sf.checker = std::nullopt;
+            // Scan check/ and checker/ directory
+            auto x = collect_files(concat(main_dir, "check/"), is_source);
+            {
+                auto y = collect_files(concat(main_dir, "checker/"), is_source);
+                x.insert(x.end(), y.begin(), y.end());
+            }
+            if (!x.empty()) {
+                // Choose the one with the shortest path to be the checker
+                std::swap(x.front(), *std::min_element(x.begin(), x.end(), [](auto&& a, auto&& b) {
+                              return a.size() < b.size();
+                          }));
+
+                sf.checker = x.front().substr(main_dir.size()).to_string();
+                report_.append("Chosen checker: ", sf.checker.value());
+
+            } else if (sf.interactive) {
+                report_.append("No checker was found");
+                THROW(
+                    "No checker was found, but interactive problems require "
+                    "checker"
+                );
+            } else {
+                report_.append("No checker was found - the default checker will be used");
+            }
         }
-    } catch (...) {
-        report_.append("Invalid checker specified in the package's Simfile -"
-                       " searching for one");
-    }
 
-    // Interactive
-    if (opts.interactive.has_value()) {
-        sf.interactive = opts.interactive.value();
-    }
-
-    if (not sf.checker.has_value()) {
-        // Scan check/ and checker/ directory
-        auto x = collect_files(concat(main_dir, "check/"), is_source);
-        {
-            auto y = collect_files(concat(main_dir, "checker/"), is_source);
-            x.insert(x.end(), y.begin(), y.end());
-        }
-        if (!x.empty()) {
-            // Choose the one with the shortest path to be the checker
-            std::swap(x.front(), *std::min_element(x.begin(), x.end(), [](auto&& a, auto&& b) {
-                          return a.size() < b.size();
-                      }));
-
-            sf.checker = x.front().substr(main_dir.size()).to_string();
-            report_.append("Chosen checker: ", sf.checker.value());
-
-        } else if (sf.interactive) {
-            report_.append("No checker was found");
-            THROW("No checker was found, but interactive problems require "
-                  "checker");
-        } else {
-            report_.append("No checker was found - the default checker will be used");
-        }
+    } else {
+        sf.interactive = true;
+        sf.checker = std::nullopt;
     }
 
     // Exclude check/ and checker/ directories from future searches
@@ -424,7 +467,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
                     report_.append(
                         "\033[1;35mwarning\033[m: \"tests_files\":"
                         " test output file: `",
-                        input.value(),
+                        output.value(),
                         "` specified,"
                         " but the problem is interactive - ignoring file"
                     );
@@ -655,6 +698,16 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
         sf.tgroups.emplace_back(std::move(tg));
     }
 
+    if (communication) {
+        for (const auto& group : sf.tgroups) {
+            for (const auto& test : group.tests) {
+                CommunicationConfig::validate_memory_limits(
+                    communication->max_concurrent, test.memory_limit
+                );
+            }
+        }
+    }
+
     // Override the time limits
     if (opts.global_time_limit.has_value()) {
         run_main_solution = opts.reset_time_limits_using_main_solution;
@@ -711,6 +764,9 @@ void Conver::reset_time_limits_using_jugde_reports(
         auto&& rep = *ptr;
         for (auto&& g : rep.groups) {
             for (auto&& t : g.tests) {
+                if (sf.communication and (not t.communication or not t.communication->complete)) {
+                    THROW("Communication model solution did not complete on test `", t.name, "`");
+                }
                 // Only allow OK and WA to pass through
                 if (not is_one_of(t.status, JudgeReport::Test::OK, JudgeReport::Test::WA)) {
                     THROW(
@@ -721,6 +777,16 @@ void Conver::reset_time_limits_using_jugde_reports(
                 tls[t.name] = floor_to_10ms(solution_runtime_to_time_limit(
                     t.runtime, opts.solution_runtime_coefficient, opts.min_time_limit
                 ));
+            }
+        }
+    }
+
+    if (sf.communication) {
+        for (const auto& group : sf.tgroups) {
+            for (const auto& test : group.tests) {
+                if (tls.find(test.name) == tls.end()) {
+                    THROW("Missing communication model solution report for test `", test.name, "`");
+                }
             }
         }
     }

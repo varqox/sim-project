@@ -7,6 +7,7 @@
 #include <sim/problems/problem.hh>
 #include <sim/sql/sql.hh>
 #include <simlib/concat_tostr.hh>
+#include <simlib/file_contents.hh>
 #include <simlib/libzip.hh>
 #include <simlib/logger.hh>
 #include <simlib/macros/stack_unwinding.hh>
@@ -28,12 +29,14 @@ void deduplicate_problems(const SimInstance& main_sim) {
 
     auto merge_checking_problem_progress_printer =
         ProgressPrinter<decltype(Problem::id)>{"progress: merge-checking problem with id:"};
-    auto stmt =
-        main_sim.mysql.execute(Select("id, file_id, simfile").from("problems").order_by("id"));
+    auto stmt = main_sim.mysql.execute(
+        Select("id, file_id, simfile, execution_format").from("problems").order_by("id")
+    );
     decltype(Problem::id) problem_id;
     decltype(Problem::file_id) problem_file_id;
     decltype(Problem::simfile) problem_simfile;
-    stmt.res_bind(problem_id, problem_file_id, problem_simfile);
+    decltype(Problem::execution_format) problem_execution_format;
+    stmt.res_bind(problem_id, problem_file_id, problem_simfile, problem_execution_format);
 
     std::unordered_map<std::string, decltype(Problem::id)> statement_hash_to_problem_id;
     while (stmt.next()) {
@@ -51,7 +54,11 @@ void deduplicate_problems(const SimInstance& main_sim) {
         auto statement_full_path = concat_tostr(main_dir, statement_path);
         auto statement = zip.extract_to_str(zip.get_index(statement_full_path));
 
-        auto hash = sha3_512(statement).to_string();
+        auto hash = concat_tostr(problem_execution_format.to_str(), ":", sha3_512(statement));
+        if (problem_execution_format == sim::ExecutionFormat::Communication) {
+            auto package = get_file_contents(zip_path);
+            back_insert(hash, ':', sha3_512(package));
+        }
 
         // Check if problem has a duplicate
         auto [it, inserted] = statement_hash_to_problem_id.try_emplace(hash, problem_id);

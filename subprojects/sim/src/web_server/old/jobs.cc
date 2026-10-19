@@ -74,7 +74,6 @@ Sim::JobPermissions Sim::jobs_get_permissions(
     if (session->user_type == User::Type::ADMIN) {
         switch (job_status) {
         case JS::PENDING:
-        case JS::IN_PROGRESS:
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
                 PERM::CANCEL;
 
@@ -83,6 +82,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
                 PERM::RESTART;
 
+        case JS::IN_PROGRESS:
         case JS::DONE:
             return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL;
         }
@@ -91,7 +91,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(
     if (creator_id.has_value() and
         session->user_id == str2num<decltype(session->user_id)>(creator_id.value()))
     {
-        if (is_one_of(job_status, JS::PENDING, JS::IN_PROGRESS)) {
+        if (job_status == JS::PENDING) {
             return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
         }
 

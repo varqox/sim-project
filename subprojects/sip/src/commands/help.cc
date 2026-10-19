@@ -15,6 +15,11 @@ void help(const char* program_name) {
     puts(R"==(Sip is a tool for preparing and managing Sim problem packages
 
 Commands:
+  communication <command> [args...]
+                        Initialize or manage a problem with communication: true.
+                          Commands: init, test, gen, regen, pack.
+                          test --keep-limits runs with existing limits, without
+                          calibrating them from the main solution.
   checker [value]       If [value] is specified: set checker to [value].
                           Otherwise print its current value.
   clean                 Prepare package to archiving: remove unnecessary files
@@ -81,6 +86,7 @@ Commands:
   unset <names...>      Remove variables names... form Simfile e.g.
                           sip unset label interactive
   version               Display version
+  pack                  Validate the package and compress it into zip
   zip                   Run clean command and compress the package into zip
                           (named after the current directory) within the upper
                           directory.

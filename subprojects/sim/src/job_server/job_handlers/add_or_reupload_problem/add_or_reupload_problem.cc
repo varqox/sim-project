@@ -75,7 +75,11 @@ std::optional<sim::Simfile> construct_simfile(Logger& logger, ConstructSimfileOp
     case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
         logger("Loading the problem package for judging the main solution...");
         sim::JudgeWorker judge_worker;
-        judge_worker.load_package(std::move(options).package_path, construction_res.simfile.dump());
+        judge_worker.load_package(
+            options.package_path,
+            construction_res.simfile.dump(),
+            construction_res.simfile.execution_format()
+        );
         const auto& main_solution_path = construction_res.simfile.solutions[0];
         logger("Judging the model solution: ", main_solution_path);
 
@@ -117,7 +121,10 @@ std::optional<sim::Simfile> construct_simfile(Logger& logger, ConstructSimfileOp
             rtl_options.min_time_limit = sim::MIN_TIME_LIMIT;
             rtl_options.solution_runtime_coefficient = sim::SOLUTION_RUNTIME_COEFFICIENT;
             sim::Conver::reset_time_limits_using_jugde_reports(
-                construction_res.simfile, initial_judge_report, final_judge_report, rtl_options
+                construction_res.simfile,
+                initial_judge_report,
+                final_judge_report,
+                rtl_options
             );
         } catch (const std::exception& e) {
             logger("Conver failed: ", e.what());

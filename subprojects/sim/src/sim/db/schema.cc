@@ -116,6 +116,7 @@ const DbSchema& get_schema() {
                         "  `simfile` mediumblob NOT NULL,"
                         "  `owner_id` bigint(20) unsigned DEFAULT NULL," // TODO: remove and add problem_users
                         "  `updated_at` datetime NOT NULL,"
+                        "  `execution_format` tinyint(3) unsigned NOT NULL DEFAULT 0,"
                         "  PRIMARY KEY (`id`),"
                         "  KEY `file_id` (`file_id`),"
                         "  KEY `owner_id_2` (`owner_id`,`visibility`,`id`),"

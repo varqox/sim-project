@@ -11,12 +11,14 @@
 #include <simlib/file_info.hh>
 #include <simlib/libzip.hh>
 #include <simlib/noexcept_concat.hh>
+#include <simlib/sim/communication_config.hh>
 #include <simlib/sim/judge/language_suite/c_gcc.hh>
 #include <simlib/sim/judge/language_suite/cpp_gcc.hh>
 #include <simlib/sim/judge/language_suite/pascal.hh>
 #include <simlib/sim/judge/language_suite/python.hh>
 #include <simlib/sim/judge/language_suite/rust.hh>
 #include <simlib/sim/judge/language_suite/suite.hh>
+#include <simlib/sim/judge/test_on_communication_test.hh>
 #include <simlib/sim/judge/test_on_interactive_test.hh>
 #include <simlib/sim/judge/test_on_test.hh>
 #include <simlib/sim/judge_worker.hh>
@@ -173,6 +175,14 @@ int JudgeWorker::compile_checker(
     }
 
     auto [source_path, lang] = [&]() -> std::pair<std::string, SolutionLanguage> {
+        const auto& communication = sf.communication;
+        if (communication) {
+            auto path = package_loader->load_as_file(communication->manager, "manager");
+            return {
+                has_prefix(path, "/") ? path : concat_tostr(get_cwd(), path),
+                filename_to_lang(communication->manager)
+            };
+        }
         if (sf.checker.has_value()) {
             return {
                 [](auto path) {
@@ -273,7 +283,9 @@ int JudgeWorker::compile_solution(
     return 0;
 }
 
-void JudgeWorker::load_package(FilePath package_path, std::optional<string> simfile) {
+void JudgeWorker::load_package(
+    FilePath package_path, std::optional<string> simfile, ExecutionFormat format
+) {
     STACK_UNWINDING_MARK;
 
     if (is_directory(package_path)) {
@@ -288,8 +300,27 @@ void JudgeWorker::load_package(FilePath package_path, std::optional<string> simf
         sf = Simfile(package_loader->load_as_str("Simfile"));
     }
 
-    sf.load_tests_with_files();
-    sf.load_checker();
+    sf.load_communication();
+    const auto& communication = sf.communication;
+    if (not communication and format == ExecutionFormat::Communication) {
+        THROW("Communication problems require communication: true in Simfile");
+    }
+    if (communication) {
+        if (not is_source(communication->manager)) {
+            THROW("Invalid communication manager source");
+        }
+        sf.load_tests_with_files();
+        for (const auto& group : sf.tgroups) {
+            for (const auto& test : group.tests) {
+                CommunicationConfig::validate_memory_limits(
+                    communication->max_concurrent, test.memory_limit, checker_memory_limit_in_bytes
+                );
+            }
+        }
+    } else {
+        sf.load_tests_with_files();
+        sf.load_checker();
+    }
 }
 
 // Real time limit is set to 1.5 * time_limit + 0.5s, because CPU time is
@@ -471,10 +502,33 @@ JudgeReport JudgeWorker::judge(
     const std::optional<std::function<void(const JudgeReport&)>>& partial_report_callback
 ) const {
     STACK_UNWINDING_MARK;
+    const auto& communication = sf.communication;
     auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
         STACK_UNWINDING_MARK;
 
-        auto tr = sf.interactive
+        auto tr = communication
+            ? judge::test_on_communication_test({
+                  .compiled_program = *solution_suite,
+                  .compiled_manager = *checker_suite,
+                  .test_input = package_loader->load_as_file(test.in, "test.in"),
+                  .instances = communication->instances,
+                  .min_instances = communication->min_instances,
+                  .max_concurrent = communication->max_concurrent,
+                  .program =
+                      {
+                          .time_limit = cpu_time_limit_to_real_time_limit(test.time_limit),
+                          .cpu_time_limit = test.time_limit,
+                          .memory_limit_in_bytes = test.memory_limit,
+                      },
+                  .manager =
+                      {
+                          .time_limit = cpu_time_limit_to_real_time_limit(checker_time_limit),
+                          .cpu_time_limit = checker_time_limit,
+                          .memory_limit_in_bytes = checker_memory_limit_in_bytes,
+                          .max_comment_len = 256,
+                      },
+              })
+            : sf.interactive
             ? judge::test_on_interactive_test({
                   .compiled_program = *solution_suite,
                   .compiled_checker = *checker_suite,
@@ -526,6 +580,8 @@ JudgeReport JudgeWorker::judge(
 
         group_score_ratio = std::min(group_score_ratio, tr.score);
         test_report.comment = tr.comment;
+        test_report.score_ratio = tr.score;
+        test_report.communication = tr.communication;
 
         switch (tr.status) {
         case judge::TestReport::Status::TimeLimitExceeded: {

@@ -54,7 +54,7 @@ private:
 public:
     // Initializes the package - loads Simfile (if exists) and Sipfile (if
     // exists)
-    SipPackage();
+    explicit SipPackage(std::optional<sim::ExecutionFormat> required_format = std::nullopt);
 
     void warn_about_tests_not_specified_as_static_or_generated();
 
@@ -69,7 +69,7 @@ public:
     void generate_test_output_files();
 
     // Runs specified solution on all tests
-    void judge_solution(StringView solution);
+    void judge_solution(StringView solution, bool reset_time_limits = true);
 
     // Compiles specified solution
     void compile_solution(StringView solution);
@@ -87,7 +87,9 @@ public:
     void remove_test_files_not_specified_in_sipfile();
 
     // Runs Conver to generate the full_simfile
-    void rebuild_full_simfile(bool set_default_time_limits = false);
+    void rebuild_full_simfile(
+        bool set_default_time_limits = false, bool require_existing_limits = false
+    );
 
     // Saves scoring into the Simfile
     void save_scoring();

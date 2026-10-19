@@ -107,6 +107,32 @@ public:
             );
         }
         logger(line);
+        if (judge_test_report.communication) {
+            const auto& communication = *judge_test_report.communication;
+            logger(
+                "    Communication: ",
+                communication.instances.size(),
+                " instances, total CPU: ",
+                ::to_string(communication.total_cpu_time, false),
+                " s, elapsed: ",
+                ::to_string(communication.elapsed, false),
+                " s"
+            );
+            for (const auto& instance : communication.instances) {
+                logger(
+                    "      Instance ",
+                    instance.id,
+                    ": CPU: ",
+                    ::to_string(instance.program.cpu_time, false),
+                    " s, memory: ",
+                    instance.program.peak_memory_in_bytes >> 10,
+                    " KiB, output: ",
+                    instance.output_size,
+                    " bytes",
+                    instance.cancelled ? " (cancelled)" : ""
+                );
+            }
+        }
     }
 
     void group_score(int64_t score, int64_t max_score, double score_ratio) override {

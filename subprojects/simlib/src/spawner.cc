@@ -230,7 +230,10 @@ Spawner::ExitStat Spawner::run(
 
     int cpid = fork();
     if (cpid == -1) {
-        THROW("fork()", errmsg());
+        int errnum = errno;
+        close(pfd[0]);
+        close(pfd[1]);
+        THROW("fork()", errmsg(errnum));
     }
     if (cpid == 0) {
         close(pfd[0]);
@@ -240,23 +243,28 @@ Spawner::ExitStat Spawner::run(
     close(pfd[1]);
     FileDescriptor pipe0_closer(pfd[0]);
 
+    // Useful when exception is thrown
+    CallInDtor kill_and_wait_child_guard([&] {
+        kill(-cpid, SIGKILL);
+        kill(cpid, SIGKILL);
+        while (syscalls::waitid(P_PID, cpid, nullptr, WEXITED, nullptr) && errno == EINTR) {
+        }
+    });
+
     // Wait for child to be ready
     siginfo_t si;
     rusage ru{};
-    if (syscalls::waitid(P_PID, cpid, &si, WSTOPPED | WEXITED, &ru) == -1) {
-        THROW("waitid()", errmsg());
+    while (syscalls::waitid(P_PID, cpid, &si, WSTOPPED | WEXITED, &ru) == -1) {
+        if (errno != EINTR) {
+            THROW("waitid()", errmsg());
+        }
     }
 
     // If something went wrong
     if (si.si_code != CLD_STOPPED) {
+        kill_and_wait_child_guard.cancel();
         return {0ns, 0ns, si.si_code, si.si_status, ru, 0, receive_error_message(si, pfd[0])};
     }
-
-    // Useful when exception is thrown
-    CallInDtor kill_and_wait_child_guard([&] {
-        kill(-cpid, SIGKILL);
-        syscalls::waitid(P_PID, cpid, &si, WEXITED, nullptr);
-    });
 
     do_in_parent_after_fork(cpid);
 
@@ -271,14 +279,22 @@ Spawner::ExitStat Spawner::run(
     kill(cpid, SIGCONT); // There is only one process now, so '-' is not needed
 
     // Wait for death of the child
-    syscalls::waitid(P_PID, cpid, &si, WEXITED | WNOWAIT, nullptr);
+    while (syscalls::waitid(P_PID, cpid, &si, WEXITED | WNOWAIT, nullptr) == -1) {
+        if (errno != EINTR) {
+            THROW("waitid()", errmsg());
+        }
+    }
 
     // Get runtime and cpu runtime
     auto runtime = timer.deactivate_and_get_runtime();
     auto cpu_runtime = cpu_timer.deactivate_and_get_runtime();
 
+    while (syscalls::waitid(P_PID, cpid, &si, WEXITED, &ru) == -1) {
+        if (errno != EINTR) {
+            THROW("waitid()", errmsg());
+        }
+    }
     kill_and_wait_child_guard.cancel();
-    syscalls::waitid(P_PID, cpid, &si, WEXITED, &ru);
 
     if (si.si_code != CLD_EXITED or si.si_status != 0) {
         return {

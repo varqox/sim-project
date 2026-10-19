@@ -302,7 +302,7 @@ public:
         return res;
     }
 
-    auto entry_size(zip_uint16_t index) {
+    auto entry_size(index_t index) {
         STACK_UNWINDING_MARK;
         zip_stat_t sb;
         sb.valid = ZIP_STAT_SIZE;
@@ -317,7 +317,11 @@ public:
         auto entry = get_entry(index);
         decltype(size) pos = 0;
         while (pos < size) {
-            pos += entry.read(res.data() + pos, size - pos);
+            auto rc = entry.read(res.data() + pos, size - pos);
+            if (rc == 0) {
+                THROW("Unexpected end of zip entry");
+            }
+            pos += rc;
         }
 
         return res;

@@ -14,17 +14,19 @@
 using time_point = std::chrono::system_clock::time_point;
 using handler_id_t = EventQueue::handler_id_t;
 
-EventQueue::EventQueue() : immediate_pause_fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) {
+EventQueue::EventQueue()
+: immediate_pause_fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK))
+, owner_(std::make_unique<EventQueue*>(this)) {
     if (not immediate_pause_fd_.is_open()) {
         THROW("eventfd()", errmsg());
     }
 
     // Add handler to make ppoll() wake if an immediate pause is requested
-    add_file_handler(immediate_pause_fd_, FileEvent::READABLE, [this] {
+    add_file_handler(immediate_pause_fd_, FileEvent::READABLE, [owner = owner_.get()] {
         // If this happens before the memory is synchronized with thread
         // requesting pause  thread, be sure to set this flag, so that it is
         // indeed an *immediate* pause
-        immediate_pause_.store(true, std::memory_order_release);
+        (*owner)->immediate_pause_.store(true, std::memory_order_release);
     });
 }
 
@@ -35,9 +37,17 @@ EventQueue::EventQueue(EventQueue&& other) noexcept
 , poll_events_(std::move(other.poll_events_))
 , poll_events_idx_to_hid_(std::move(other.poll_events_idx_to_hid_))
 , immediate_pause_(other.immediate_pause_.load(std::memory_order_acquire))
-, immediate_pause_fd_(std::move(other.immediate_pause_fd_)) {}
+, immediate_pause_fd_(std::move(other.immediate_pause_fd_))
+, owner_(std::move(other.owner_)) {
+    if (owner_) {
+        *owner_ = this;
+    }
+}
 
 EventQueue& EventQueue::operator=(EventQueue&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
     next_handler_id_ = other.next_handler_id_;
     handlers_ = std::move(other.handlers_);
     timed_handlers_ = std::move(other.timed_handlers_);
@@ -47,6 +57,10 @@ EventQueue& EventQueue::operator=(EventQueue&& other) noexcept {
         other.immediate_pause_.load(std::memory_order_acquire), std::memory_order_release
     );
     immediate_pause_fd_ = std::move(other.immediate_pause_fd_);
+    owner_ = std::move(other.owner_);
+    if (owner_) {
+        *owner_ = this;
+    }
     return *this;
 }
 
@@ -82,13 +96,15 @@ void EventQueue::add_repeating_handler(
 ) {
     STACK_UNWINDING_MARK;
     assert(interval >= decltype(interval)::zero());
-    auto impl = [this, interval, handler = shared_function(std::move(handler))](auto& self) {
+    auto impl = [owner = owner_.get(),
+                 interval,
+                 handler = shared_function(std::move(handler))](auto& self) {
         if (handler() == stop_repeating) {
             return;
         }
 
         // Continue repeating
-        add_time_handler(interval, [self] { self(self); });
+        (*owner)->add_time_handler(interval, [self] { self(self); });
     };
 
     add_time_handler(interval, [impl = std::move(impl)] { impl(impl); });

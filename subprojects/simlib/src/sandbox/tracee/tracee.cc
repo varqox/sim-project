@@ -179,6 +179,12 @@ namespace sandbox::tracee {
 
     save_exec_start_times();
     signal_pid1_that_exec_start_times_are_saved();
+    if (args.started_fd) {
+        uint64_t value = 1;
+        if (write(*args.started_fd, &value, sizeof(value)) != sizeof(value)) {
+            die_with_error("write()");
+        }
+    }
     std::visit(
         overloaded{
             [&](int fd) {

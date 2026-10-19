@@ -317,7 +317,14 @@ CheckStatus check_for_and_process_a_new_job(
     auto worker = idle_workers.pop();
     // Set job status after we acquire a worker so that number of in-progress jobs is not greater
     // than the number of workers.
-    mysql.execute(Update("jobs").set("status=?", Job::Status::IN_PROGRESS).where("id=?", id));
+    auto claim = mysql.execute(Update("jobs")
+                                   .set("status=?", Job::Status::IN_PROGRESS)
+                                   .where("id=? AND status=?", id, Job::Status::PENDING));
+    if (claim.affected_rows() == 0) {
+        new_job_filter_builder.get().second.remove_in_progress_job(id);
+        idle_workers.push(worker);
+        return CheckStatus::MAY_BE_MORE_JOBS;
+    }
     // Pass the job to the worker.
     worker->task_channel.push(Task{
         .job_id = id,
@@ -491,7 +498,9 @@ int main() {
 
     // Block signals so that the worker threads inherit the blocked signal mask
     sigset_t sigset;
-    if (sigaddset(&sigset, SIGINT) || sigaddset(&sigset, SIGTERM) || sigaddset(&sigset, SIGQUIT)) {
+    if (sigemptyset(&sigset) || sigaddset(&sigset, SIGINT) || sigaddset(&sigset, SIGTERM) ||
+        sigaddset(&sigset, SIGQUIT))
+    {
         errlog("sigaddset()", errmsg());
         return 1;
     }

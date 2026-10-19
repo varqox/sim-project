@@ -5519,6 +5519,11 @@ function view_problem(as_oldmodal, problem_id, opt_hash /*= ''*/) {
 			})
 		}));
 
+		if (problem.execution_format === 'communication')
+			$(this).find('.problem-info').append($('<div>', {
+				html: $('<label>', {text: 'Problem execution'}).add('<span>', {text: 'Communication'})
+			}));
+
 		if (actions.indexOf('o') !== -1)
 			$(this).find('.problem-info').append($('<div>', {
 					class: 'owner',

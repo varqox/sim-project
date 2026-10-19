@@ -105,6 +105,13 @@ FullyCompiledLanguage::compile(FilePath source, CompileOptions options) {
     );
 }
 
+Suite::PreparedProgram FullyCompiledLanguage::prepared_program() {
+    if (!executable_file_is_ready) {
+        THROW("cannot run without successful compilation preceding the run");
+    }
+    return prepare_program(executable_tmp_file.path(), executable_seccomp_bpf_fd, "", run);
+}
+
 Suite::RunHandle FullyCompiledLanguage::async_run(
     Slice<std::string_view> args,
     RunOptions options,
@@ -113,6 +120,26 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
     if (!executable_file_is_ready) {
         THROW("cannot run without successful compilation preceding the run");
     }
+    return run(
+        sc,
+        executable_tmp_file.path(),
+        executable_seccomp_bpf_fd,
+        "",
+        args,
+        std::move(options),
+        mount_ops
+    );
+}
+
+Suite::RunHandle FullyCompiledLanguage::run(
+    sandbox::SupervisorConnection& sc,
+    FilePath artifact,
+    int seccomp_bpf_fd,
+    std::string_view /*interpreter*/,
+    Slice<std::string_view> args,
+    RunOptions options,
+    Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops
+) {
     return RunHandle{sc.send_request(
         "/exe",
         merge(std::vector<std::string_view>{""}, args),
@@ -167,7 +194,7 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
                                         .no_exec = false,
                                     },
                                     BindMount{
-                                        .source = executable_tmp_file.path(),
+                                        .source = {artifact.data(), artifact.size()},
                                         .dest = "/../exe",
                                         .no_exec = false,
                                     },
@@ -196,7 +223,8 @@ Suite::RunHandle FullyCompiledLanguage::async_run(
                 },
             .time_limit = options.time_limit,
             .cpu_time_limit = options.cpu_time_limit,
-            .seccomp_bpf_fd = executable_seccomp_bpf_fd,
+            .seccomp_bpf_fd = seccomp_bpf_fd,
+            .started_fd = options.started_fd,
         }
     )};
 }

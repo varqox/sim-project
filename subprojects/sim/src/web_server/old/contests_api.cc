@@ -1384,9 +1384,7 @@ Sim::api_contest_problem_edit(StringView contest_problem_id, sim::contests::Perm
 
     bool reselect_final_sumbissions =
         (old_method_of_choosing_final_submission != method_of_choosing_final_submission or
-         (method_of_choosing_final_submission ==
-              ContestProblem::MethodOfChoosingFinalSubmission::HIGHEST_SCORE and
-          score_revealing != old_score_revealing));
+         score_revealing != old_score_revealing);
 
     auto old_mysql = old_mysql::ConnectionView{mysql};
     if (reselect_final_sumbissions) {

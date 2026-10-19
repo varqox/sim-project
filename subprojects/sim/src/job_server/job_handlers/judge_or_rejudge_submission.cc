@@ -43,6 +43,7 @@ void judge_or_rejudge_submission(
     decltype(Submission::user_id) submission_user_id;
     decltype(Submission::problem_id) submission_problem_id;
     decltype(Problem::file_id) problem_file_id;
+    decltype(Problem::execution_format) problem_execution_format;
     decltype(Submission::contest_problem_id) submission_contest_problem_id;
     decltype(Submission::language) submission_language;
     decltype(Submission::last_judgment_began_at) submission_last_judgment_began_at;
@@ -50,8 +51,10 @@ void judge_or_rejudge_submission(
 
     auto transaction = mysql.start_repeatable_read_transaction();
     auto stmt =
-        mysql.execute(Select("s.file_id, s.user_id, s.problem_id, p.file_id, s.contest_problem_id, "
-                             "s.language, s.last_judgment_began_at, j.created_at")
+        mysql.execute(Select(
+                          "s.file_id, s.user_id, s.problem_id, p.file_id, s.contest_problem_id, "
+                          "s.language, s.last_judgment_began_at, j.created_at, p.execution_format"
+        )
                           .from("submissions s")
                           .inner_join("problems p")
                           .on("p.id=s.problem_id")
@@ -66,7 +69,8 @@ void judge_or_rejudge_submission(
         submission_contest_problem_id,
         submission_language,
         submission_last_judgment_began_at,
-        job_created_at
+        job_created_at,
+        problem_execution_format
     );
     if (!stmt.next()) {
         logger("Submission has been deleted.");
@@ -88,25 +92,36 @@ void judge_or_rejudge_submission(
     logger("Judging submission ", submission_id, " (problem: ", submission_problem_id, ')');
     sim::JudgeWorker judge_worker;
     logger("Loading problem package...");
-    judge_worker.load_package(sim::internal_files::path_of(problem_file_id), std::nullopt);
+    judge_worker.load_package(
+        sim::internal_files::path_of(problem_file_id), std::nullopt, problem_execution_format
+    );
     logger("... done.");
 
     auto update_submission = [&, submission_id](
                                  decltype(Submission::initial_status) initial_status,
                                  decltype(Submission::full_status) full_status,
                                  decltype(Submission::score) score,
-                                 decltype(Submission::initial_report) initial_report,
-                                 decltype(Submission::final_report) final_report
+                                 const std::string& initial_report,
+                                 const std::string& final_report,
+                                 bool judgment_finished = true
                              ) {
-        // Submission type might have changed between transactions, get the actual type.
         decltype(Submission::type) submission_type;
         std::optional<decltype(ContestProblem::score_revealing)> contest_problem_score_revealing;
-        auto stmt = mysql.execute(Select("s.type, cp.score_revealing")
+        auto stmt = mysql.execute(Select(
+                                      "s.type, cp.score_revealing, s.user_id, s.problem_id, "
+                                      "s.contest_problem_id"
+        )
                                       .from("submissions s")
                                       .left_join("contest_problems cp")
                                       .on("cp.id=s.contest_problem_id")
-                                      .where("s.id=?", submission_id));
-        stmt.res_bind(submission_type, contest_problem_score_revealing);
+                                      .where("s.id=? FOR UPDATE", submission_id));
+        stmt.res_bind(
+            submission_type,
+            contest_problem_score_revealing,
+            submission_user_id,
+            submission_problem_id,
+            submission_contest_problem_id
+        );
         if (!stmt.next()) {
             logger("Will not update submission because it disappeared.");
             return;
@@ -117,7 +132,8 @@ void judge_or_rejudge_submission(
                 .set(
                     "initial_final_candidate=?, final_candidate=?, initial_status=?, "
                     "full_status=?, score=?, "
-                    "initial_report=?, final_report=?",
+                    "initial_report=?, final_report=?, "
+                    "last_judgment_began_at=IF(?, ?, last_judgment_began_at)",
                     sim::submissions::is_initial_final_candidate(
                         submission_type,
                         initial_status,
@@ -130,7 +146,11 @@ void judge_or_rejudge_submission(
                     full_status,
                     score,
                     initial_report,
-                    final_report
+                    final_report,
+                    judgment_finished &&
+                        full_status != Submission::Status::CHECKER_COMPILATION_ERROR &&
+                        full_status != Submission::Status::JUDGE_ERROR,
+                    current_judgment_began_at
                 )
                 .where("id=?", submission_id)
         );
@@ -309,6 +329,56 @@ void judge_or_rejudge_submission(
             }
             back_insert(report, "</ul>");
         }
+        for (const auto& group : judge_report.groups) {
+            for (const auto& test : group.tests) {
+                if (!test.communication) {
+                    continue;
+                }
+                const auto& communication = *test.communication;
+                back_insert(
+                    report,
+                    "<details><summary>Communication: ",
+                    html_escape(test.name),
+                    "</summary><p>Total CPU: ",
+                    to_string(communication.total_cpu_time, false),
+                    " s; elapsed: ",
+                    to_string(communication.elapsed, false),
+                    " s</p><table class=\"table\"><thead><tr><th>Instance</th><th>Result</th>"
+                    "<th>CPU [s]</th><th>Memory [KiB]</th><th>Output "
+                    "[bytes]</th></tr></thead><tbody>"
+                );
+                for (const auto& instance : communication.instances) {
+                    const char* status = [&] {
+                        using Status = sim::judge::TestReport::Status;
+                        switch (instance.status) {
+                        case Status::TimeLimitExceeded: return "Time limit exceeded";
+                        case Status::MemoryLimitExceeded: return "Memory limit exceeded";
+                        case Status::OutputSizeLimitExceeded: return "Output size limit exceeded";
+                        case Status::RuntimeError: return "Runtime error";
+                        case Status::CheckerError: return "Checker error";
+                        case Status::WrongAnswer: return "Wrong answer";
+                        case Status::OK: return "OK";
+                        }
+                        THROW("invalid instance.status");
+                    }();
+                    back_insert(
+                        report,
+                        "<tr><td>",
+                        instance.id,
+                        "</td><td>",
+                        instance.cancelled ? "Cancelled" : status,
+                        "</td><td>",
+                        to_string(instance.program.cpu_time, false),
+                        "</td><td>",
+                        instance.program.peak_memory_in_bytes >> 10,
+                        "</td><td>",
+                        instance.output_size,
+                        "</td></tr>"
+                    );
+                }
+                back_insert(report, "</tbody></table></details>");
+            }
+        }
         return report;
     };
 
@@ -340,7 +410,6 @@ void judge_or_rejudge_submission(
         return Submission::Status::OK;
     };
 
-    std::optional<std::string> initial_report;
     auto process_judge_report = [&,
                                  initial_report = std::optional<std::string>{},
                                  initial_score = int64_t{0},
@@ -355,33 +424,38 @@ void judge_or_rejudge_submission(
             score += group.score;
         }
 
-        sim::mysql::repeat_if_deadlocked(128, [&] {
-            auto transaction = mysql.start_repeatable_read_transaction();
-            if (!final) {
-                initial_report = report;
-                initial_score = score;
-                initial_status = status;
-                update_submission(
-                    initial_status,
-                    (initial_status != Submission::Status::OK ? initial_status
-                                                              : Submission::Status::PENDING),
-                    std::nullopt,
-                    std::move(report),
-                    ""
-                );
-                update_job_log(mysql, logger, job_id);
-                transaction.commit();
-                return;
-            }
-            // Final
+        if (!final) {
+            initial_report = report;
+            initial_score = score;
+            initial_status = status;
+        } else {
             score += initial_score;
             if (initial_status != Submission::Status::OK &&
                 status != Submission::Status::JUDGE_ERROR)
             {
                 status = initial_status;
             }
+        }
+
+        sim::mysql::repeat_if_deadlocked(128, [&] {
+            auto transaction = mysql.start_repeatable_read_transaction();
+            if (!final) {
+                update_submission(
+                    initial_status,
+                    (initial_status != Submission::Status::OK ? initial_status
+                                                              : Submission::Status::PENDING),
+                    std::nullopt,
+                    report,
+                    "",
+                    false
+                );
+                update_job_log(mysql, logger, job_id);
+                transaction.commit();
+                return;
+            }
+            // Final
             update_submission(
-                initial_status, status, score, initial_report.value_or(""), std::move(report)
+                initial_status, status, score, initial_report.value_or(""), report, !partial
             );
             if (partial) {
                 update_job_log(mysql, logger, job_id);

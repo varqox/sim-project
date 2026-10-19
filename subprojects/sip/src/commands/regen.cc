@@ -4,10 +4,10 @@
 
 namespace commands {
 
-void regen() {
+void regen(std::optional<sim::ExecutionFormat> format) {
     STACK_UNWINDING_MARK;
 
-    SipPackage sp;
+    SipPackage sp(format);
     sp.remove_test_files_not_specified_in_sipfile();
     sp.generate_test_input_files();
 
@@ -16,6 +16,9 @@ void regen() {
         sp.generate_test_output_files();
     }
 
+    if (sp.simfile.communication) {
+        sp.rebuild_full_simfile();
+    }
     if (access("Simfile", F_OK) == 0) {
         sp.save_limits();
     }

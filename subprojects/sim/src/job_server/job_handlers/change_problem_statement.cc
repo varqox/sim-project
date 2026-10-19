@@ -48,12 +48,14 @@ void change_problem_statement(
 
     std::string problem_package_path;
     sim::Simfile simfile;
+    decltype(Problem::execution_format) problem_execution_format;
     {
         decltype(Problem::file_id) problem_file_id;
         decltype(Problem::simfile) simfile_as_str;
-        auto stmt =
-            mysql.execute(Select("file_id, simfile").from("problems").where("id=?", problem_id));
-        stmt.res_bind(problem_file_id, simfile_as_str);
+        auto stmt = mysql.execute(
+            Select("file_id, simfile, execution_format").from("problems").where("id=?", problem_id)
+        );
+        stmt.res_bind(problem_file_id, simfile_as_str, problem_execution_format);
         if (!stmt.next()) {
             logger("The problem with id: ", problem_id, " does not exist");
             mark_job_as_cancelled(mysql, logger, job_id);
@@ -66,14 +68,20 @@ void change_problem_statement(
         simfile.load_all();
     }
 
-    auto new_problem_file_id = sim::internal_files::new_internal_file_id(mysql);
-    auto new_problem_package_path = sim::internal_files::path_of(new_problem_file_id);
-
     // Escape path_for_new_statement
     if (path_for_new_statement.empty()) {
         path_for_new_statement = WONT_THROW(simfile.statement.value());
     } else {
         path_for_new_statement = path_absolute(path_for_new_statement).erase(0, 1);
+    }
+
+    if (problem_execution_format == sim::ExecutionFormat::Communication and
+        has_prefix(path_for_new_statement, "manager/"))
+    {
+        logger("Invalid new statement path - it would overwrite communication files");
+        mark_job_as_cancelled(mysql, logger, job_id);
+        transaction.commit();
+        return;
     }
 
     // Replace old statement with the new statement
@@ -92,6 +100,8 @@ void change_problem_statement(
     simfile.statement = path_for_new_statement;
 
     // Copy old package contests and update the Simfile
+    auto new_problem_file_id = sim::internal_files::new_internal_file_id(mysql);
+    auto new_problem_package_path = sim::internal_files::path_of(new_problem_file_id);
     auto simfile_as_str = simfile.dump();
     auto new_problem_package_remover = FileRemover{new_problem_package_path};
     auto dest_zip = ZipFile{new_problem_package_path, ZIP_CREATE | ZIP_TRUNCATE};

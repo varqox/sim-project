@@ -1,5 +1,6 @@
 #pragma once
 
+#include <simlib/sim/execution_format.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/simfile.hh>
 #include <simlib/utilities.hh>
@@ -51,6 +52,7 @@ public:
     };
 
     struct Options {
+        ExecutionFormat execution_format = ExecutionFormat::Legacy;
         // Leave unset to detect it from the Simfile in the package
         std::optional<std::string> name;
         // Leave unset to detect it from the Simfile in the package

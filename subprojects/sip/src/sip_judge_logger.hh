@@ -111,6 +111,32 @@ public:
             );
         }
 
+        if (judge_test_report.communication) {
+            const auto& session = *judge_test_report.communication;
+            tmplog(
+                " [per-instance maximum; total CPU: ",
+                to_string(session.total_cpu_time, false),
+                " s; instances: ",
+                session.instances.size(),
+                ']'
+            );
+            if (sip_verbose) {
+                for (const auto& instance : session.instances) {
+                    tmplog(
+                        " Instance ",
+                        instance.id,
+                        ": [CPU: ",
+                        to_string(instance.program.cpu_time, false),
+                        " RT: ",
+                        to_string(instance.program.runtime, false),
+                        "] ",
+                        mem_to_str(instance.program.peak_memory_in_bytes),
+                        instance.cancelled ? " cancelled" : ""
+                    );
+                }
+            }
+        }
+
         if (judge_test_report.checker &&
             (sip_verbose || (test_report.status != sim::JudgeReport::Test::OK)))
         {

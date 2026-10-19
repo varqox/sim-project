@@ -9,6 +9,7 @@
 #include <simlib/file_path.hh>
 #include <simlib/logger.hh>
 #include <simlib/macros/stack_unwinding.hh>
+#include <simlib/sim/execution_format.hh>
 #include <simlib/sim/judge/compilation_cache.hh>
 #include <simlib/sim/judge/language_suite/suite.hh>
 #include <simlib/sim/judge/test_report.hh>
@@ -57,6 +58,8 @@ public:
         uint64_t memory_consumed; // in bytes
         uint64_t memory_limit; // in bytes
         std::string comment;
+        double score_ratio = 0;
+        std::optional<judge::TestReport::Communication> communication;
 
         Test(
             std::string n,
@@ -113,6 +116,17 @@ public:
                 );
                 // Status
                 res += span_status(test.status);
+
+                if (test.communication) {
+                    back_insert(
+                        res,
+                        " [per-instance maximum; total CPU: ",
+                        ::to_string(test.communication->total_cpu_time, false),
+                        " s; instances: ",
+                        test.communication->instances.size(),
+                        ']'
+                    );
+                }
 
                 // Comment
                 if (!test.comment.empty()) {
@@ -316,6 +330,31 @@ public:
             " ]"
         );
 
+        if (judge_test_report.communication) {
+            const auto& session = *judge_test_report.communication;
+            tmplog(
+                " [per-instance maximum; total CPU: ",
+                ::to_string(session.total_cpu_time, false),
+                " s; session: ",
+                ::to_string(session.elapsed, false),
+                " s]"
+            );
+            for (const auto& instance : session.instances) {
+                tmplog(
+                    " Instance ",
+                    instance.id,
+                    ": [CPU: ",
+                    ::to_string(instance.program.cpu_time, false),
+                    " RT: ",
+                    ::to_string(instance.program.runtime, false),
+                    "] ",
+                    instance.program.peak_memory_in_bytes >> 10,
+                    " KiB",
+                    instance.cancelled ? " cancelled" : ""
+                );
+            }
+        }
+
         if (judge_test_report.checker) {
             tmplog(
                 "  Checker: [ CPU: ",
@@ -441,7 +480,11 @@ public:
 
     /// Loads package from @p package_path using @p simfile (if not specified,
     /// uses one found in the package)
-    void load_package(FilePath package_path, std::optional<std::string> simfile);
+    void load_package(
+        FilePath package_path,
+        std::optional<std::string> simfile,
+        ExecutionFormat format = ExecutionFormat::Legacy
+    );
 
     // Returns a reference to the loaded package's Simfile
     Simfile& simfile() noexcept { return sf; }

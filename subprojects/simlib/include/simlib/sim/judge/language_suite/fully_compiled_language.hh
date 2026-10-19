@@ -38,6 +38,8 @@ public:
     Result<std::optional<sandbox::result::Ok>, FileDescriptor>
     compile(FilePath source, CompileOptions options) final;
 
+    [[nodiscard]] PreparedProgram prepared_program() final;
+
     RunHandle async_run(
         Slice<std::string_view> args,
         RunOptions options,
@@ -50,6 +52,16 @@ protected:
     virtual sandbox::Result compile_impl(
         FilePath source, FilePath executable, int compilation_errors_fd, CompileOptions options
     ) = 0;
+
+private:
+    static RunHandle
+    run(sandbox::SupervisorConnection& sc,
+        FilePath artifact,
+        int seccomp_bpf_fd,
+        std::string_view interpreter,
+        Slice<std::string_view> args,
+        RunOptions options,
+        Slice<sandbox::RequestOptions::LinuxNamespaces::Mount::Operation> mount_ops);
 };
 
 } // namespace sim::judge::language_suite
